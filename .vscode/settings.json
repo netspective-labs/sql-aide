@@ -1,4 +1,7 @@
 {
+  "files.associations": {
+    ".githooks/prepare-commit-msg": "typescript"
+  },
   "files.trimTrailingWhitespace": true,
   "[markdown]": {
     "files.trimTrailingWhitespace": false,

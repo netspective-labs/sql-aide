@@ -12,7 +12,7 @@ const subjectMinLen = 4;
 const subjectMaxLen = 120;
 // start with lowercase or number, then some constrained characters
 const subjectRegEx =
-  `[a-z0-9][A-Za-z0-9_. -]{${subjectMinLen},${subjectMaxLen}}`;
+  `[a-z0-9\.][A-Za-z0-9_\. -]{${subjectMinLen},${subjectMaxLen}}`;
 
 //# Build the Regular Expression String.
 const commitHeadRegEx = new RegExp(
