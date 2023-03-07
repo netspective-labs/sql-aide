@@ -3,7 +3,7 @@
     "init": "git config core.hooksPath .githooks",
     "doctor": "git config core.hooksPath",
     "update-deno-deps": "udd deps.ts deps-test.ts",
-    "git-hook-pre-commit": "deno fmt --check && deno lint && deno test",
+    "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts') && deno fmt --check && deno lint && deno test",
     "git-hook-pre-push": "deno test",
     "prepare-publish": "git semtag final"
   }

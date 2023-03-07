@@ -21,10 +21,8 @@ jobs:
 
       - run: deno --version
 
-      # TODO: syntax check all files in case tests don't exist
-      # Tried on March 7, 2023 and saw this in GitHub Actions:
-      #   error: Module not found "file:///home/runner/work/sql-aide/sql-aide/**/*.ts".
-      # - run: deno check **/*.ts
+      # syntax check all files in case tests don't exist
+      - run: deno check --no-lock --unstable $(find . -name '*.ts')
 
       # Run all test files in the repository and collect code coverage.
       # The example runs with all permissions, but it is recommended to run
