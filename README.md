@@ -1,4 +1,6 @@
-# SQL Aide (SQLa) Typescript template literal text supplier optimized for SQL
+# SQL Aide (SQLa) Typescript template literals optimized for emitting SQL
+
+[![codecov](https://codecov.io/gh/netspective-labs/sql-aide/branch/main/graph/badge.svg?token=DPJICL8F4O)](https://codecov.io/gh/netspective-labs/sql-aide)
 
 This module is a Deno Typescript module designed to help generate SQL DDL and
 other SQL text in a type-safe, well-formatted, and composable manner.
@@ -133,3 +135,7 @@ There are many other features available in generated templates, including:
 
 Need to document all the different features of SQLa, but for now check out
 `mod_test.ts` for examples.
+
+## Test Coverage
+
+![Test Code Coverage](https://codecov.io/gh/netspective-labs/sql-aide/branch/main/graphs/sunburst.svg?token=DPJICL8F4O)
