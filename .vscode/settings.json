@@ -1,0 +1,29 @@
+{
+  "files.trimTrailingWhitespace": true,
+  "[markdown]": {
+    "files.trimTrailingWhitespace": false,
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "git.autofetch": true,
+  "terminal.integrated.fontFamily": "CascadianCode NF",
+  "deno.enable": true,
+  "deno.lint": true,
+  "deno.unstable": true,
+  "deno.codeLens.implementations": false,
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "git.decorations.enabled": true,
+  "workbench.editor.decorations.colors": true,
+  "workbench.editor.decorations.badges": true,
+  "hediet.vscode-drawio.theme": "atlas",
+  "deno.inlayHints.enumMemberValues.enabled": false,
+  "deno.inlayHints.functionLikeReturnTypes.enabled": false,
+  "deno.inlayHints.parameterNames.enabled": "none",
+  "deno.inlayHints.parameterNames.suppressWhenArgumentMatchesName": false,
+  "deno.inlayHints.parameterTypes.enabled": false,
+  "deno.inlayHints.propertyDeclarationTypes.enabled": false,
+  "deno.inlayHints.variableTypes.enabled": false,
+  "deno.inlayHints.variableTypes.suppressWhenTypeMatchesName": false
+}

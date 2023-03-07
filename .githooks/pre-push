@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e    # cancel if Taskfile.ts git-hook-pre-push returns non-zero
+GITHOOK_CWD=`pwd` GITHOOK_SCRIPT=$0 \
+  deno task git-hook-pre-push

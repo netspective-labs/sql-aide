@@ -1,0 +1,45 @@
+#!/usr/bin/env -S deno run
+
+import * as c from "https://deno.land/std@0.173.0/fmt/colors.ts";
+
+// From: https://dev.to/craicoverflow/enforcing-conventional-commits-using-git-hooks-1o5p
+// Build the Regular Expression Options.
+const types = "build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test";
+const scopeMinLen = 1;
+const scopeMaxLen = 16;
+const scopeRegEx = `[a-z0-9_.-]{${scopeMinLen},${scopeMaxLen}}`;
+const subjectMinLen = 4;
+const subjectMaxLen = 120;
+// start with lowercase or number, then some constrained characters
+const subjectRegEx =
+  `[a-z0-9][A-Za-z0-9_. -]{${subjectMinLen},${subjectMaxLen}}`;
+
+//# Build the Regular Expression String.
+const commitHeadRegEx = new RegExp(
+  `^(revert: )?(${types})(\(${scopeRegEx}\))?!?: ${subjectRegEx}[^.]{1,}$`,
+);
+
+// Git will call this script and the first argument will be the commit message
+const commitMessage = Deno.args[0];
+if(commitMessage) {
+  const commitMsgFirstLine = Deno.args[0].split("\n")[0];
+  if (commitMsgFirstLine && commitMsgFirstLine.trim().length > 0) {
+    //deno-fmt-ignore
+    if(!commitHeadRegEx.test(commitMsgFirstLine)) {
+      console.info(c.red("💡 The commit message was not formatted correctly. Rejecting the commit request."));
+      console.info(c.dim("    - https://www.conventionalcommits.org/en/v1.0.0/"));
+      console.info(c.dim("    - https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional\n"));
+      console.info(c.dim("    Having trouble with the format? Just not sure of how to commit correctly? https://commitlint.io/"));
+      console.info(c.dim("    Something else happening? Use https://regexr.com/ with the following expression to validate your commit."));
+      console.info(c.dim(`    - RegEx: /${commitHeadRegEx}/`));
+      Deno.exit(101);
+    } else {
+      // all commit message checks passed
+      Deno.exit(0);
+    }
+  }
+}
+
+//deno-fmt-ignore
+console.info(c.red("💡 No commit message supplied. Rejecting the commit request."));
+Deno.exit(102);
