@@ -19,6 +19,9 @@ jobs:
 
       - run: deno --version
 
+      # syntax check all files in case tests don't exist
+      - run: deno check **/*.ts
+
       # Run all test files in the repository and collect code coverage.
       # The example runs with all permissions, but it is recommended to run
       # with the minimal permissions your program needs (for example --allow-read).
@@ -29,8 +32,8 @@ jobs:
       # as Codecov, Coveralls and Travis CI.
       - run: deno coverage --lcov cov/ > ./cov.lcov
 
-      - name: Collect coverage
-        uses: codecov/codecov-action@v1.0.10 # upload the report on Codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
         with:
           file: ./cov.lcov
 
