@@ -14,8 +14,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: "setup" # check: https://github.com/actions/virtual-environments/issues/1777
-        uses: denolib/setup-deno@v2
+      # see https://github.com/denoland/setup-deno
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
 
       - run: deno --version
 
