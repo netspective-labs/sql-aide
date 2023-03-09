@@ -76,17 +76,25 @@ export function isSqlDomain<Context extends tmpl.SqlEmitContext>(
   return false;
 }
 
-export interface SqlDomainsSupplier<
+export type SqlDomains<
+  ZodRawShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
-  ZTA extends z.ZodTypeAny = z.ZodTypeAny,
-> {
-  domains: SqlDomain<ZTA, Context>[];
+> = {
+  [Property in keyof ZodRawShape]: SqlDomain<
+    ZodRawShape[Property] extends z.ZodType<infer T, infer D, infer I>
+      ? z.ZodType<T, D, I>
+      : never,
+    Context
+  >;
+};
+
+export interface SqlDomainsSupplier<Context extends tmpl.SqlEmitContext> {
+  readonly domains: SqlDomain<z.ZodTypeAny, Context>[];
 }
 
-export function isSqlDomainsSupplier<
-  Context extends tmpl.SqlEmitContext,
-  ZTA extends z.ZodTypeAny = z.ZodTypeAny,
->(o: unknown): o is SqlDomainsSupplier<Context, ZTA> {
+export function isSqlDomainsSupplier<Context extends tmpl.SqlEmitContext>(
+  o: unknown,
+): o is SqlDomainsSupplier<Context> {
   if (!o || typeof o !== "object") return false;
   if ("domains" in o) return true;
   return false;
@@ -155,17 +163,20 @@ export const sqlDomain = <
 };
 
 export function sqlDomains<
-  ZRT extends z.ZodRawShape,
+  ZodRawShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
 >(
-  zodRawShape: ZRT,
+  zodRawShape: ZodRawShape,
 ) {
+  const sdSchema: SqlDomains<ZodRawShape, Context> = {} as Any;
   const domains: SqlDomain<z.ZodTypeAny, Context>[] = [];
-  const schema = z.object(zodRawShape).strict();
-  const { shape, keys: shapeKeys } = schema._getCached();
+  const zSchema = z.object(zodRawShape).strict();
+  const { shape, keys: shapeKeys } = zSchema._getCached();
   for (const key of shapeKeys) {
     const member = shape[key];
-    domains.push(sqlDomain(member, { identity: key }));
+    const sd = sqlDomain(member, { identity: key });
+    (sdSchema[key] as Any) = sd;
+    domains.push(sd);
   }
 
   // we let Typescript infer function return to allow generics to be more
@@ -174,8 +185,8 @@ export function sqlDomains<
   // ESSENTIAL: be sure it adheres to SqlDomainsSupplier contract
   const lintIssues: l.SqlLintIssueSupplier[] = [];
   return {
-    isSqlDomains: true as true,
-    schema,
+    zSchema,
+    sdSchema,
     domains,
     lintIssues,
     registerLintIssue: (...slis: l.SqlLintIssueSupplier[]) => {
