@@ -1,9 +1,13 @@
 import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
-import * as zd from "./zod-domain.ts";
+import * as zd from "./domain.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
+
+const expectType = <T>(_value: T) => {
+  // Do nothing, the TypeScript compiler handles this for us
+};
 
 Deno.test("Zod-based SQL domains", async (tc) => {
   await tc.step("valid domains", () => {
@@ -15,10 +19,6 @@ Deno.test("Zod-based SQL domains", async (tc) => {
       // TODO: add all the other scalars and types
     });
     ta.assert(zd.isSqlDomainsSupplier(syntheticSchema));
-
-    const expectType = <T>(_value: T) => {
-      // Do nothing, the TypeScript compiler handles this for us
-    };
 
     expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
       syntheticSchema.sdSchema.text,
@@ -35,6 +35,12 @@ Deno.test("Zod-based SQL domains", async (tc) => {
       text: "required",
       int: 0,
     };
+    expectType<{
+      text: string;
+      int: number;
+      text_nullable?: string | undefined;
+      int_nullable?: number | undefined;
+    }>(synthetic);
     ta.assert(synthetic);
     ta.assertEquals(synthetic.text, "required");
     ta.assertEquals(syntheticSchema.lintIssues.length, 0);

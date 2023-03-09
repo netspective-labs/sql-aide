@@ -28,15 +28,15 @@ type Any = any; // make it easy on linter
  * - defining a list of arguments for a stored function
  */
 
-export type DomainsMemberIdentity = string;
-
 export type SqlDomain<
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainIdentity extends string = string,
 > = tmpl.SqlSymbolSupplier<Context> & {
   readonly isSqlDomain: true;
   readonly zodSchema: ZTA;
-  readonly identity: DomainsMemberIdentity;
+  readonly identity: DomainIdentity;
+  readonly isOptional?: boolean;
   readonly sqlDataType: (
     purpose:
       | "create table column"
@@ -60,11 +60,14 @@ export type SqlDomain<
       | "create table, column defn decorators"
       | "create table, after all column definitions",
   ) => tmpl.SqlTextSupplier<Context>[] | undefined;
-  readonly reference: <ForeignIdentity extends string>(
-    options?: { readonly foreignIdentity?: ForeignIdentity },
+  readonly reference: (
+    options?: { readonly foreignIdentity?: string },
   ) => Omit<SqlDomain<ZTA, Context>, "reference">;
-  readonly referenceSD: (inherit: {
-    readonly identity: DomainsMemberIdentity;
+  readonly referenceSD: (inherit?: {
+    readonly identity?: string;
+  }) => SqlDomain<ZTA, Context>;
+  readonly referenceNullableSD: (inherit?: {
+    readonly identity?: string;
   }) => SqlDomain<ZTA, Context>;
 };
 
@@ -73,6 +76,47 @@ export function isSqlDomain<Context extends tmpl.SqlEmitContext>(
 ): o is SqlDomain<Any, Context> {
   if (!o || typeof o !== "object") return false;
   if ("isSqlDomain" in o && "sqlDataType" in o) return true;
+  return false;
+}
+
+export type MutatableSqlDomainSupplier<
+  ZTA extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+  DomainIdentity extends string = string,
+> = {
+  sqlDomain: SqlDomain<ZTA, Context, DomainIdentity>;
+};
+
+export function mutateSqlDomainSupplier<
+  ZTA extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+  DomainIdentity extends string = string,
+>(mutate: ZTA, sqlDomain: SqlDomain<ZTA, Context, DomainIdentity>) {
+  // TODO: will this be a memory leak because ZTA has sqlDomain
+  //       and sqlDomain has zodSchema (circular reference?)
+  (mutate as unknown as MutatableSqlDomainSupplier<
+    ZTA,
+    Context,
+    DomainIdentity
+  >).sqlDomain = sqlDomain;
+  return mutate;
+}
+
+export type SqlDomainSupplier<
+  ZTA extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+  DomainIdentity extends string = string,
+> = Readonly<MutatableSqlDomainSupplier<ZTA, Context, DomainIdentity>>;
+
+export function isSqlDomainSupplier<
+  ZTA extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+  DomainIdentity extends string = string,
+>(
+  o: unknown,
+): o is SqlDomainSupplier<ZTA, Context, DomainIdentity> {
+  if (!o || typeof o !== "object") return false;
+  if ("sqlDomain" in o && isSqlDomain(o)) return true;
   return false;
 }
 
@@ -100,32 +144,54 @@ export function isSqlDomainsSupplier<Context extends tmpl.SqlEmitContext>(
   return false;
 }
 
+export const SQL_DOMAIN_NOT_IN_COLLECTION =
+  "SQL_DOMAIN_NOT_IN_COLLECTION" as const;
+
 export const sqlDomain = <
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
->(zta: ZTA, init: {
-  readonly identity: DomainsMemberIdentity;
+  DomainIdentity extends string = string,
+>(zta: ZTA, init?: {
+  readonly identity?: DomainIdentity;
   readonly isOptional?: boolean;
 }): SqlDomain<ZTA, Context> => {
+  if (isSqlDomainSupplier<ZTA, Context>(zta)) {
+    // TODO: will this be a memory leak because ZTA has sqlDomain?
+    return zta.sqlDomain;
+  }
+
   const lintIssues: l.SqlLintIssueSupplier[] = [];
   const referenceSD = (inherit?: {
-    readonly identity?: DomainsMemberIdentity | undefined;
+    readonly identity?: string | undefined;
   }) =>
     sqlDomain(zta, {
-      identity: inherit?.identity ?? init.identity,
+      identity: inherit?.identity ?? init?.identity ??
+        SQL_DOMAIN_NOT_IN_COLLECTION,
     });
+  const referenceNullableSD = (inherit?: {
+    readonly identity?: string | undefined;
+  }) =>
+    sqlDomain(zta, {
+      identity: inherit?.identity ?? init?.identity ??
+        SQL_DOMAIN_NOT_IN_COLLECTION,
+      isOptional: true,
+    });
+
   const defaults = {
     isSqlDomain: true as true, // must not be a boolean but `true`
     zodSchema: zta,
-    identity: init.identity,
+    identity: init?.identity as DomainIdentity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
     sqlSymbol: (ctx: Context) =>
       ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
-        init.identity,
+        init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
       ),
     reference: (rOptions?: { readonly foreignIdentity?: string }) => {
-      return referenceSD({ identity: rOptions?.foreignIdentity });
+      return referenceSD({
+        identity: rOptions?.foreignIdentity,
+      });
     },
     referenceSD,
+    referenceNullableSD,
     lintIssues,
     registerLintIssue: (...slis: l.SqlLintIssueSupplier[]) => {
       lintIssues.push(...slis);
@@ -135,10 +201,15 @@ export const sqlDomain = <
   const zodDef = zta._def;
   switch (zodDef.typeName) {
     case z.ZodFirstPartyTypeKind.ZodOptional: {
-      return sqlDomain<ZTA, Context>(zta._def.innerType, {
-        ...init,
-        isOptional: true,
-      });
+      return sqlDomain<ZTA, Context>(
+        zta._def.innerType,
+        init
+          ? {
+            ...init,
+            isOptional: true,
+          }
+          : { isOptional: true },
+      );
     }
 
     case z.ZodFirstPartyTypeKind.ZodString: {
