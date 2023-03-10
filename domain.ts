@@ -92,17 +92,29 @@ export type MutatableSqlDomainSupplier<
   sqlDomain: SqlDomain<ZTA, Context, DomainIdentity>;
 };
 
-export function mutateSqlDomainSupplier<
-  ZTA extends z.ZodTypeAny,
+/**
+ * Wrap a native Zod type's _def instance to hold our custom SqlDomain props
+ * in a single object and then just return the zod schema so it can be used
+ * as-is by any Zod consumers. We do this "patching" because it allows any
+ * Zod type to be used in Typescript with a strongly-typed SqlDomain.
+ * @param zodSchema the Zod scalar we want to wrap
+ * @param sqlDomain the extra SQL domain properties we want to store
+ * @returns the zodSchema instance passed-in with _def.sqlDomain mutated
+ */
+export function zodTypeSqlDomain<
+  ZodIn extends z.ZodTypeAny,
+  SqlDomainOut extends SqlDomain<ZodIn, Context, DomainIdentity>,
   Context extends tmpl.SqlEmitContext,
   DomainIdentity extends string = string,
->(mutate: ZTA, sqlDomain: SqlDomain<ZTA, Context, DomainIdentity>) {
-  (mutate._def as unknown as MutatableSqlDomainSupplier<
-    ZTA,
+>(zodSchema: ZodIn, sqlDomain: SqlDomain<ZodIn, Context, DomainIdentity>) {
+  (zodSchema._def as unknown as MutatableSqlDomainSupplier<
+    ZodIn,
     Context,
     DomainIdentity
   >).sqlDomain = sqlDomain;
-  return mutate;
+  // after this point, isSqlDomainSupplier(zodSchema) will return true
+  // and sqlDomain() will use that to find its SqlDomain properties.
+  return zodSchema as ZodIn & SqlDomainOut;
 }
 
 export type SqlDomainSupplier<

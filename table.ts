@@ -111,12 +111,12 @@ export function primaryKey<Context extends tmpl.SqlEmitContext>() {
       return sqlDomain.sqlPartial?.(dest);
     },
   };
-  // we're "wrapping" a Zod type so we mutate the zod schema to hold our custom
-  // properties in a single object and then just return the zod schema so it can
-  // be used as-is
-  return d.mutateSqlDomainSupplier(zodSchema, aipkSD) as
-    & z.ZodString
-    & typeof aipkSD;
+
+  // trick Typescript into thinking the Zod instance is also a SqlDomain
+  return d.zodTypeSqlDomain<z.ZodString, typeof aipkSD, Context, string>(
+    zodSchema,
+    aipkSD,
+  );
 }
 
 export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
@@ -142,14 +142,12 @@ export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
         return sqlDomain.sqlPartial?.(dest);
       },
     };
-  // we're "wrapping" a Zod type so we mutate the zod schema to hold our custom
-  // properties in a single object and then just return the zod schema so it can
-  // be used as-is; we need to "teach" TypeScript that the mutated zod object is
-  // a TablePrimaryKeyColumnDefn and TableColumnInsertDmlExclusionSupplier
-  // because the tableDefinition() function picks up those "cues"
-  return d.mutateSqlDomainSupplier(zodSchema, aipkSD) as
-    & z.ZodNumber
-    & typeof aipkSD;
+
+  // trick Typescript into thinking the Zod instance is also a SqlDomain
+  return d.zodTypeSqlDomain<z.ZodNumber, typeof aipkSD, Context, string>(
+    zodSchema,
+    aipkSD,
+  );
 }
 
 /**

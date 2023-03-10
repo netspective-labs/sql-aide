@@ -22,7 +22,7 @@ const sqlGen = () => {
 };
 
 Deno.test("Zod-based SQL domains", async (tc) => {
-  await tc.step("valid domains", async (innerTC) => {
+  await tc.step("native zod domains", async (innerTC) => {
     const domains = d.sqlDomains({
       text: z.string(),
       text_nullable: z.string().optional(),
@@ -88,7 +88,7 @@ Deno.test("Zod-based SQL domains", async (tc) => {
     });
   });
 
-  await tc.step("custom domain", async (innerTC) => {
+  await tc.step("native zod domains plus a custom domain", async (innerTC) => {
     type MyCustomColumnDefn = {
       readonly isCustomProperty1: true;
       readonly customPropertyValue: number;
@@ -111,14 +111,22 @@ Deno.test("Zod-based SQL domains", async (tc) => {
       };
       ta.assert(isMyCustomColumnDefn(customSD));
 
-      // we're "wrapping" a Zod type so we mutate the zod schema to hold our custom
-      // properties in a single object and then just return the zod schema so it can
-      // be used as-is; we need to "teach" TypeScript that the mutated zod object is
-      // a TablePrimaryKeyColumnDefn and TableColumnInsertDmlExclusionSupplier
-      // because the tableDefinition() function picks up those "cues"
-      return d.mutateSqlDomainSupplier(zodSchema, customSD) as
-        & z.ZodNumber
-        & typeof customSD;
+      // we're "wrapping" a Zod type so we mutate the zod schema to hold our
+      // custom properties in a single object and then just return the zod
+      // schema so it can be used as-is; we need to "teach" (or "trick")
+      // TypeScript into thinking that the mutated zod object is a
+      // MyCustomColumnDefn in case any further strongly typed actions need to
+      // take place (like downstream type-building)
+      const trickTypeScript = d.zodTypeSqlDomain<
+        z.ZodNumber,
+        typeof customSD,
+        Context,
+        string
+      >(zodSchema, customSD);
+      expectType<
+        z.ZodNumber & d.SqlDomain<z.ZodNumber, Context> & MyCustomColumnDefn
+      >(trickTypeScript);
+      return trickTypeScript;
     }
 
     const domains = d.sqlDomains({
