@@ -1,9 +1,10 @@
 import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
-import * as tmpl from "./sql.ts";
-import * as zd from "./domain.ts";
-import * as t from "./table.ts";
 import { unindentWhitespace as uws } from "./whitespace.ts";
+import * as tmpl from "./sql.ts";
+import * as d from "./domain.ts";
+import * as t from "./table.ts";
+import * as s from "./select.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -74,26 +75,26 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     "[1] valid table and columns (without any PKs)",
     async (innerTC) => {
       const { tableWithoutPK: table } = syntheticSchema;
-      ta.assert(zd.isSqlDomainsSupplier(table));
+      ta.assert(d.isSqlDomainsSupplier(table));
       ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
       ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
 
       await innerTC.step("type safety", () => {
-        expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
+        expectType<d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
           table.sdSchema.text,
         );
         expectType<
-          zd.SqlDomain<
+          d.SqlDomain<
             z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>,
             Any
           >
         >(table.sdSchema.text_nullable);
-        expectType<zd.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
+        expectType<d.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
           table.sdSchema.int,
         );
         expectType<
-          zd.SqlDomain<
+          d.SqlDomain<
             z.ZodType<number | undefined, z.ZodOptionalDef<z.ZodNumber>>,
             Any
           >
@@ -154,6 +155,15 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
       );
     });
 
+    await innerTC.step("primary key definition", () => {
+      ta.assertEquals(
+        table.domains.filter((d) =>
+          t.isTablePrimaryKeyColumnDefn(d) ? true : false
+        ).map((d) => d.identity),
+        ["auto_inc_primary_key"],
+      );
+    });
+
     await innerTC.step("SQL DDL with no lint issues", () => {
       const { ctx, ddlOptions, lintState } = sqlGen();
       ta.assertEquals(
@@ -165,7 +175,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         -- no SQL lint issues (typicalSqlTextLintManager)
 
         CREATE TABLE "synthetic_table_with_auto_inc_pk" (
-            "auto_inc_primary_key" INTEGER NOT NULL,
+            "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
             "text" TEXT NOT NULL,
             "text_nullable" TEXT NOT NULL,
             "int" INTEGER NOT NULL,
@@ -202,7 +212,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         -- no SQL lint issues (typicalSqlTextLintManager)
 
         CREATE TABLE "synthetic_table_with_text_pk" (
-            "text_primary_key" TEXT NOT NULL,
+            "text_primary_key" TEXT PRIMARY KEY,
             "text" TEXT NOT NULL,
             "text_nullable" TEXT NOT NULL,
             "int" INTEGER NOT NULL,
@@ -283,6 +293,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
           text: "text",
           int: 423,
         });
+        ta.assert(insertable);
         expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
           insertable.text,
         );
@@ -291,18 +302,88 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         );
       });
 
-      await innerTC.step("SQL DML", () => {
+      await innerTC.step("SQL DML basic", () => {
         const { ctx } = sqlGen();
-        const insertable = tableRF.prepareInsertable({
-          text: "text",
-          int: 423,
-        });
-        ta.assert(insertable);
         ta.assertEquals(
-          tableRF.insertDML(insertable).SQL(ctx),
-          `INSERT INTO "synthetic_table_with_auto_inc_pk" ("auto_inc_primary_key", "text", "text_nullable", "int", "int_nullable") VALUES (NULL, 'text', NULL, 423, NULL)`,
+          tableRF.insertDML({ text: "text", int: 423 }).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, 423, NULL)`,
         );
       });
+
+      await innerTC.step(
+        "SQL DML with SQL expression as insertable value",
+        () => {
+          const { ctx } = sqlGen();
+          ta.assertEquals(
+            tableRF.insertDML({
+              // { symbolsFirst: true } means that ${XYZ} in dql.select()`${XYZ}`
+              // will try to find name of object first
+              text: s.untypedSelect(ctx, {
+                symbolsFirst: true,
+              })`select ${table.sdSchema.text} from ${table}`, // the value will be a SQL expression
+              int: 477,
+            }).SQL(ctx),
+            `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ((select "text" from "synthetic_table_with_auto_inc_pk"), NULL, 477, NULL)`,
+          );
+        },
+      );
+
+      await innerTC.step(
+        "SQL DML returning all inserted values",
+        () => {
+          const { ctx } = sqlGen();
+          ta.assertEquals(
+            tableRF.insertDML({ text: "text", int: 423 }, { returning: "*" })
+              .SQL(ctx),
+            `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, 423, NULL) RETURNING *`,
+          );
+        },
+      );
+
+      await innerTC.step(
+        "SQL DML returning inserted primary key values",
+        () => {
+          const { ctx } = sqlGen();
+          ta.assertEquals(
+            tableRF.insertDML({ text: "text", int: 423 }, {
+              returning: "primary-keys",
+            }).SQL(ctx),
+            `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, 423, NULL) RETURNING "auto_inc_primary_key"`,
+          );
+        },
+      );
+
+      await innerTC.step(
+        "SQL DML returning specific column and ignoring on conflict",
+        () => {
+          const { ctx } = sqlGen();
+          ta.assertEquals(
+            tableRF.insertDML({ text: "text-value", int: 7123 }, {
+              returning: { columns: ["text"] },
+              onConflict: {
+                SQL: () => `ON CONFLICT ("synthetic_table1_id") IGNORE`,
+              },
+            }).SQL(ctx),
+            `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text-value', NULL, 7123, NULL) ON CONFLICT ("synthetic_table1_id") IGNORE RETURNING "text"`,
+          );
+        },
+      );
+
+      await innerTC.step(
+        "SQL DML returning specific expression and ignoring on conflict",
+        () => {
+          const { ctx } = sqlGen();
+          ta.assertEquals(
+            tableRF.insertDML({ text: "text-value", int: 7123 }, {
+              returning: { exprs: [`"text" || 'something else'`] },
+              onConflict: {
+                SQL: () => `ON CONFLICT ("synthetic_table1_id") IGNORE`,
+              },
+            }).SQL(ctx),
+            `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text-value', NULL, 7123, NULL) ON CONFLICT ("synthetic_table1_id") IGNORE RETURNING "text" || 'something else'`,
+          );
+        },
+      );
     },
   );
 

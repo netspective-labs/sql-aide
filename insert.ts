@@ -231,11 +231,7 @@ export function typicalInsertStmtSqlPreparerSync<
             ).join(", ")
           }`;
         } else {
-          returningSQL = ` RETURNING ${
-            returning!.exprs!.map((n) =>
-              ns.tableColumnName({ tableName, columnName: String(n) })
-            ).join(", ")
-          }`;
+          returningSQL = ` RETURNING ${returning!.exprs!.join(", ")}`;
         }
       }
       // deno-fmt-ignore

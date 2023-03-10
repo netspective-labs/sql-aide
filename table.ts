@@ -938,9 +938,7 @@ export function tableColumnsRowFactory<
     >;
   },
 ) {
-  const sd = d.sqlDomains(props);
-
-  type ZodRecord = z.infer<typeof sd.zSchema>;
+  const td = tableDefinition(tableName, props);
 
   // deno-lint-ignore ban-types
   type requiredKeys<T extends object> = {
@@ -1019,11 +1017,11 @@ export function tableColumnsRowFactory<
       tableName,
       (group) => {
         if (group === "primary-keys") {
-          return sd.domains.filter((d) =>
+          return td.domains.filter((d) =>
             isTablePrimaryKeyColumnDefn(d) ? true : false
           );
         }
-        return sd.domains.filter((d) =>
+        return td.domains.filter((d) =>
           isTableColumnInsertDmlExclusionSupplier(d) &&
             d.isExcludedFromInsertDML
             ? false

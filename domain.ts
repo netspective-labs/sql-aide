@@ -97,9 +97,7 @@ export function mutateSqlDomainSupplier<
   Context extends tmpl.SqlEmitContext,
   DomainIdentity extends string = string,
 >(mutate: ZTA, sqlDomain: SqlDomain<ZTA, Context, DomainIdentity>) {
-  // TODO: will this be a memory leak because ZTA has sqlDomain
-  //       and sqlDomain has zodSchema (circular reference?)
-  (mutate as unknown as MutatableSqlDomainSupplier<
+  (mutate._def as unknown as MutatableSqlDomainSupplier<
     ZTA,
     Context,
     DomainIdentity
@@ -121,7 +119,7 @@ export function isSqlDomainSupplier<
   o: unknown,
 ): o is SqlDomainSupplier<ZTA, Context, DomainIdentity> {
   if (!o || typeof o !== "object") return false;
-  if ("sqlDomain" in o && isSqlDomain(o)) return true;
+  if ("sqlDomain" in o && isSqlDomain(o.sqlDomain)) return true;
   return false;
 }
 
@@ -152,6 +150,9 @@ export function isSqlDomainsSupplier<Context extends tmpl.SqlEmitContext>(
 export const SQL_DOMAIN_NOT_IN_COLLECTION =
   "SQL_DOMAIN_NOT_IN_COLLECTION" as const;
 
+export const SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE =
+  "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE" as const;
+
 export const sqlDomain = <
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
@@ -160,9 +161,14 @@ export const sqlDomain = <
   readonly identity?: DomainIdentity;
   readonly isOptional?: boolean;
 }): SqlDomain<ZTA, Context> => {
-  if (isSqlDomainSupplier<ZTA, Context>(zta)) {
-    // TODO: will this be a memory leak because ZTA has sqlDomain?
-    return zta.sqlDomain;
+  if (isSqlDomainSupplier<ZTA, Context>(zta._def)) {
+    // this means is custom prepared SqlDomain instance attached to a ZTA so
+    // we're just going to rename it and use it as-is
+    if (zta._def.sqlDomain.identity && SQL_DOMAIN_NOT_IN_COLLECTION) {
+      (zta._def.sqlDomain.identity as string) = init?.identity ??
+        SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE;
+    }
+    return zta._def.sqlDomain;
   }
 
   const lintIssues: l.SqlLintIssueSupplier[] = [];
