@@ -37,32 +37,45 @@ const sqlGen = () => {
   return { ctx, ddlOptions, lintState };
 };
 
-const syntheticColumns = {
-  text: z.string(),
-  text_nullable: z.string().optional(),
-  int: z.number(),
-  int_nullable: z.number().optional(),
-  // TODO: add all the other scalars and types
-};
+const syntheticSchema = () => {
+  const commonColumns = {
+    text: z.string(),
+    text_nullable: z.string().optional(),
+    int: z.number(),
+    int_nullable: z.number().optional(),
+    // TODO: add all the other scalars and types
+  };
 
-const syntheticSchema = {
-  tableWithoutPK: t.tableDefinition("synthetic_table_without_pk", {
-    ...syntheticColumns,
-  }),
-  tableWithAutoIncPK: t.tableDefinition("synthetic_table_with_auto_inc_pk", {
-    auto_inc_primary_key: t.autoIncPrimaryKey(),
-    ...syntheticColumns,
-  }),
-  tableWithTextPK: t.tableDefinition("synthetic_table_with_text_pk", {
+  const tableWithoutPK = t.tableDefinition("synthetic_table_without_pk", {
+    ...commonColumns,
+  });
+  const tableWithAutoIncPK = t.tableDefinition(
+    "synthetic_table_with_auto_inc_pk",
+    {
+      auto_inc_primary_key: t.autoIncPrimaryKey(),
+      ...commonColumns,
+    },
+  );
+  const tableWithTextPK = t.tableDefinition("synthetic_table_with_text_pk", {
     text_primary_key: t.primaryKey(),
-    ...syntheticColumns,
-  }),
-  tableWithOnDemandPK: t.tableDefinition("synthetic_table_with_uaod_pk", {
-    ua_on_demand_primary_key: t.uaDefaultableTextPrimaryKey(
-      z.string().default(() => "ON_DEMAND_PK"),
-    ),
-    ...syntheticColumns,
-  }),
+    ...commonColumns,
+  });
+  const tableWithOnDemandPK = t.tableDefinition(
+    "synthetic_table_with_uaod_pk",
+    {
+      ua_on_demand_primary_key: t.uaDefaultableTextPrimaryKey(
+        z.string().default(() => "ON_DEMAND_PK"),
+      ),
+      ...commonColumns,
+    },
+  );
+
+  return {
+    tableWithoutPK,
+    tableWithAutoIncPK,
+    tableWithTextPK,
+    tableWithOnDemandPK,
+  };
 };
 
 Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
@@ -81,7 +94,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   await tc.step(
     "[1] valid table and columns (without any PKs)",
     async (innerTC) => {
-      const { tableWithoutPK: table } = syntheticSchema;
+      const { tableWithoutPK: table } = syntheticSchema();
       ta.assert(d.isSqlDomainsSupplier(table));
       ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
@@ -149,7 +162,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   );
 
   await tc.step("[2] valid auto-inc PK table and columns", async (innerTC) => {
-    const { tableWithAutoIncPK: table } = syntheticSchema;
+    const { tableWithAutoIncPK: table } = syntheticSchema();
     ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
 
     await innerTC.step("type safety", () => {
@@ -193,7 +206,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   });
 
   await tc.step("[3] valid text PK table and columns", async (innerTC) => {
-    const { tableWithTextPK: table } = syntheticSchema;
+    const { tableWithTextPK: table } = syntheticSchema();
     ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
     ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
     ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
@@ -232,7 +245,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   await tc.step(
     "[4] valid defaultable text PK table and columns",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table } = syntheticSchema;
+      const { tableWithOnDemandPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk")); // if you want Typescript to type-check specific table
       ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
@@ -293,7 +306,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[1] valid insert statement for a table without primary keys",
     async (innerTC) => {
-      const { tableWithoutPK: table } = syntheticSchema;
+      const { tableWithoutPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_without_pk",
@@ -331,7 +344,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[2] valid insert statement for a table with auto-inc primary key",
     async (innerTC) => {
-      const { tableWithAutoIncPK: table } = syntheticSchema;
+      const { tableWithAutoIncPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_with_auto_inc_pk",
@@ -442,7 +455,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[3] valid insert statement for a table with text primary key",
     async (innerTC) => {
-      const { tableWithTextPK: table } = syntheticSchema;
+      const { tableWithTextPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
 
       const tableRF = t.tableColumnsRowFactory(
@@ -486,7 +499,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[4] valid insert statement for a table with UA-defaultable (on demand) text primary key",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table } = syntheticSchema;
+      const { tableWithOnDemandPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
 
       const tableRF = t.tableColumnsRowFactory(
@@ -527,7 +540,7 @@ Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
   await tc.step(
     "valid select statement for a table",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table } = syntheticSchema;
+      const { tableWithOnDemandPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
       const tableSF = t.tableSelectFactory(
         table.tableName,
