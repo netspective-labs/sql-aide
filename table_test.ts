@@ -57,6 +57,12 @@ const syntheticSchema = {
     text_primary_key: t.primaryKey(),
     ...syntheticColumns,
   }),
+  tableWithOnDemandPK: t.tableDefinition("synthetic_table_with_uaod_pk", {
+    ua_on_demand_primary_key: t.uaDefaultableTextPrimaryKey(
+      z.string().default(() => "ON_DEMAND_PK"),
+    ),
+    ...syntheticColumns,
+  }),
 };
 
 Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
@@ -66,6 +72,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
    *         can be properly defined and are type-safe.
    * Step 2. Check that auto-inc primary keys can be defined and are type-safe
    * Step 3. Check that text primary keys can be defined and are type-safe
+   * Step 4. Check that UA-defaultable text primary keys can be defined and are type-safe
    *
    * General approach is to separate the tests so that no duplicate testing is
    * done (meaning don't just test the same stuff in Step 3 was in 2 and 1).
@@ -222,6 +229,49 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     });
   });
 
+  await tc.step(
+    "[4] valid defaultable text PK table and columns",
+    async (innerTC) => {
+      const { tableWithOnDemandPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk")); // if you want Typescript to type-check specific table
+      ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
+
+      await innerTC.step("type safety", () => {
+        // tableDefinition() properly "types" table.primaryKey to be the collection
+        // of PKs - since we have a single PK, make sure it has at least that one
+        expectType<
+          {
+            ua_on_demand_primary_key:
+              typeof table.primaryKey.ua_on_demand_primary_key;
+          }
+        >(
+          table.primaryKey,
+        );
+      });
+
+      await innerTC.step("SQL DDL with no lint issues", () => {
+        const { ctx, ddlOptions, lintState } = sqlGen();
+        ta.assertEquals(
+          tmpl.SQL(ddlOptions)`
+        ${lintState.sqlTextLintSummary}
+
+        ${table}`.SQL(ctx),
+          uws(`
+        -- no SQL lint issues (typicalSqlTextLintManager)
+
+        CREATE TABLE "synthetic_table_with_uaod_pk" (
+            "ua_on_demand_primary_key" TEXT PRIMARY KEY,
+            "text" TEXT NOT NULL,
+            "text_nullable" TEXT NOT NULL,
+            "int" INTEGER NOT NULL,
+            "int_nullable" INTEGER NOT NULL
+        );`),
+        );
+      });
+    },
+  );
+
   await tc.step("TODO: foreign keys", () => {});
   await tc.step("TODO: indexes", () => {});
   await tc.step("TODO: constraints", () => {});
@@ -233,7 +283,8 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
    * Test strategy:
    * Step 1. Validate Insert DML for a table without primary keys.
    * Step 2. Validate Insert DML for a table with auto-inc primary key.
-   * Step 2. Validate Insert DML for a table with text primary key.
+   * Step 3. Validate Insert DML for a table with text primary key.
+   * Step 4. Validate Insert DML for a table with defaultable primary key.
    *
    * General approach is to separate the tests so that no duplicate testing is
    * done (meaning don't just test the same stuff in Step 3 was in 2 and 1).
@@ -262,7 +313,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         );
       });
 
-      await innerTC.step("SQL DML", () => {
+      await innerTC.step("SQL DML raw without Zod parse", () => {
         const { ctx } = sqlGen();
         const insertable = tableRF.prepareInsertable({
           text: "text",
@@ -270,7 +321,7 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         });
         ta.assert(insertable);
         ta.assertEquals(
-          tableRF.insertDML(insertable).SQL(ctx),
+          tableRF.insertRawDML(insertable).SQL(ctx),
           `INSERT INTO "synthetic_table_without_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, 423, NULL)`,
         );
       });
@@ -315,7 +366,8 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         () => {
           const { ctx } = sqlGen();
           ta.assertEquals(
-            tableRF.insertDML({
+            // we use .insertRawDML() because Zod parse will fail on SQL expression
+            tableRF.insertRawDML({
               // { symbolsFirst: true } means that ${XYZ} in dql.select()`${XYZ}`
               // will try to find name of object first
               text: s.untypedSelect(ctx, {
@@ -426,6 +478,45 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         ta.assertEquals(
           tableRF.insertDML(insertable).SQL(ctx),
           `INSERT INTO "synthetic_table_with_text_pk" ("text_primary_key", "text", "text_nullable", "int", "int_nullable") VALUES ('PK-value', 'text', NULL, 423, NULL)`,
+        );
+      });
+    },
+  );
+
+  await tc.step(
+    "[4] valid insert statement for a table with UA-defaultable (on demand) text primary key",
+    async (innerTC) => {
+      const { tableWithOnDemandPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
+
+      const tableRF = t.tableColumnsRowFactory(
+        table.tableName,
+        table.zSchema.shape,
+      );
+
+      await innerTC.step("type safety", () => {
+        const insertable = tableRF.prepareInsertable({
+          text: "text",
+          int: 423,
+        });
+        expectType<
+          string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext> | undefined
+        >(
+          insertable.ua_on_demand_primary_key,
+        );
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
+
+      await innerTC.step("SQL DML", () => {
+        const { ctx } = sqlGen();
+        ta.assertEquals(
+          tableRF.insertDML({ text: "text", int: 423 }).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_uaod_pk" ("ua_on_demand_primary_key", "text", "text_nullable", "int", "int_nullable") VALUES ('ON_DEMAND_PK', 'text', NULL, 423, NULL)`,
         );
       });
     },

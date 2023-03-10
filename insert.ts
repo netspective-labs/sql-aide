@@ -262,7 +262,7 @@ export function typicalInsertStmtPreparerSync<
   candidateColumns: (
     group?: "all" | "primary-keys",
   ) => d.SqlDomain<Any, Context>[],
-  mutateValues?: (ir: safety.Writeable<InsertableRecord>) => void,
+  mutateValues?: (ir: safety.Writeable<InsertableRecord>) => InsertableRecord,
   defaultIspOptions?: InsertStmtPreparerOptions<
     TableName,
     InsertableRecord,
@@ -276,7 +276,8 @@ export function typicalInsertStmtPreparerSync<
   Context
 > {
   return (ir, ispOptions = defaultIspOptions) => {
-    if (mutateValues) mutateValues(ir);
+    // typically used when Zod parser should be invoked before SQL generated
+    if (mutateValues) ir = mutateValues(ir);
     return {
       insertable: ir,
       returnable: (ir) => ir as unknown as ReturnableRecord,
@@ -300,7 +301,9 @@ export function typicalInsertStmtPreparer<
   candidateColumns: (
     group?: "all" | "primary-keys",
   ) => d.SqlDomain<Any, Context>[],
-  mutateValues?: (ir: safety.Writeable<InsertableRecord>) => Promise<void>,
+  mutateValues?: (
+    ir: safety.Writeable<InsertableRecord>,
+  ) => Promise<InsertableRecord>,
   defaultIspOptions?: InsertStmtPreparerOptions<
     TableName,
     InsertableRecord,
@@ -309,7 +312,8 @@ export function typicalInsertStmtPreparer<
   >,
 ): InsertStmtPreparer<TableName, InsertableRecord, ReturnableRecord, Context> {
   return async (ir, ispOptions = defaultIspOptions) => {
-    if (mutateValues) await mutateValues(ir);
+    // typically used when Zod parser should be invoked before SQL generated
+    if (mutateValues) ir = await mutateValues(ir);
     return {
       insertable: ir,
       returnable: (ir) => ir as unknown as ReturnableRecord,

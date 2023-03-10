@@ -222,7 +222,8 @@ export const sqlDomain = <
 
   const zodDef = zta._def;
   switch (zodDef.typeName) {
-    case z.ZodFirstPartyTypeKind.ZodOptional: {
+    case z.ZodFirstPartyTypeKind.ZodOptional:
+    case z.ZodFirstPartyTypeKind.ZodDefault: {
       return sqlDomain<ZTA, Context>(
         zta._def.innerType,
         init

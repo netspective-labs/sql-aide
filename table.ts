@@ -8,9 +8,6 @@ import * as ns from "./namespace.ts";
 import * as i from "./insert.ts";
 import * as r from "./record.ts";
 
-// TODO:
-// - remove all references for "axiom" to be independent of zod/axiom ... e.g. "ColumnsShape" vs. "ZodRawShape"
-
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
@@ -120,11 +117,15 @@ export function primaryKey<Context extends tmpl.SqlEmitContext>() {
 }
 
 export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
-  const zodSchema = z.number();
-  const sqlDomain = d.sqlDomain<z.ZodNumber, Context>(zodSchema);
+  // the zodSchema is optional() because the actual value is computed in the DB
+  const zodSchema = z.number().optional();
+  const sqlDomain = d.sqlDomain<z.ZodOptional<z.ZodNumber>, Context>(zodSchema);
   const aipkSD:
-    & TablePrimaryKeyColumnDefn<z.ZodNumber, Context>
-    & TableColumnInsertDmlExclusionSupplier<z.ZodNumber, Context> = {
+    & TablePrimaryKeyColumnDefn<z.ZodOptional<z.ZodNumber>, Context>
+    & TableColumnInsertDmlExclusionSupplier<
+      z.ZodOptional<z.ZodNumber>,
+      Context
+    > = {
       ...sqlDomain,
       isPrimaryKey: true,
       isExcludedFromInsertDML: true,
@@ -144,7 +145,12 @@ export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
     };
 
   // trick Typescript into thinking the Zod instance is also a SqlDomain
-  return d.zodTypeSqlDomain<z.ZodNumber, typeof aipkSD, Context, string>(
+  return d.zodTypeSqlDomain<
+    z.ZodOptional<z.ZodNumber>,
+    typeof aipkSD,
+    Context,
+    string
+  >(
     zodSchema,
     aipkSD,
   );
@@ -154,46 +160,51 @@ export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
  * Declare a "user agent defaultable" (`uaDefaultable`) primary key domain.
  * uaDefaultable means that the primary key is required on the way into the
  * database but can be defaulted on the user agent ("UA") side. This type of
- * AxiomSqlDomain is useful when the primary key is assigned a value from the
- * client app/service before going into the database.
- * @param axiom
+ * SqlDomain is useful when the primary key is assigned a value from the client
+ * app/service before going into the database.
  * @returns
  */
-// export function uaDefaultablePrimaryKey<
-//   ColumnTsType extends z.ZodTypeAny,
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   axiom:
-//     & d.SqlDomain<ColumnTsType, Context>
-//     & ax.DefaultableAxiomSerDe<ColumnTsType>,
-// ) {
-//   const result:
-//     & d.SqlDomain<ColumnTsType, Context>
-//     & ax.DefaultableAxiomSerDe<ColumnTsType>
-//     & TablePrimaryKeyColumnDefn<ColumnTsType, Context>
-//     & TableColumnInsertableOptionalSupplier<ColumnTsType, Context> = {
-//       ...axiom,
-//       isPrimaryKey: true,
-//       isAutoIncrement: false,
-//       isOptionalInInsertableRecord: true,
-//       sqlPartial: (dest) => {
-//         if (dest === "create table, column defn decorators") {
-//           const ctcdd = axiom?.sqlPartial?.(
-//             "create table, column defn decorators",
-//           );
-//           const decorators: tmpl.SqlTextSupplier<Context> = {
-//             SQL: () => `PRIMARY KEY`,
-//           };
-//           return ctcdd ? [decorators, ...ctcdd] : [decorators];
-//         }
-//         return axiom.sqlPartial?.(dest);
-//       },
-//     };
-//   return result;
-// }
+export function uaDefaultableTextPrimaryKey<
+  Context extends tmpl.SqlEmitContext,
+>(
+  zodSchema: z.ZodDefault<z.ZodString>,
+) {
+  const sqlDomain = d.sqlDomain<z.ZodDefault<z.ZodString>, Context>(zodSchema);
+  const uadPK:
+    & TablePrimaryKeyColumnDefn<z.ZodDefault<z.ZodString>, Context>
+    & TableColumnInsertableOptionalSupplier<
+      z.ZodDefault<z.ZodString>,
+      Context
+    > = {
+      ...sqlDomain,
+      isPrimaryKey: true,
+      isAutoIncrement: false,
+      isOptionalInInsertableRecord: true,
+      sqlPartial: (dest) => {
+        if (dest === "create table, column defn decorators") {
+          const ctcdd = sqlDomain?.sqlPartial?.(
+            "create table, column defn decorators",
+          );
+          const decorators: tmpl.SqlTextSupplier<Context> = {
+            SQL: () => `PRIMARY KEY`,
+          };
+          return ctcdd ? [decorators, ...ctcdd] : [decorators];
+        }
+        return sqlDomain.sqlPartial?.(dest);
+      },
+    };
 
-export const uaDefaultablesTextPkUndefined =
-  "uaDefaultablesTextPkUndefined" as const;
+  // trick Typescript into thinking the Zod instance is also a SqlDomain
+  return d.zodTypeSqlDomain<
+    z.ZodDefault<z.ZodString>,
+    typeof uadPK,
+    Context,
+    string
+  >(
+    zodSchema,
+    uadPK,
+  );
+}
 
 /**
  * Declare an async or sync "user agent defaultables" (`uaDefaultables`)
@@ -936,6 +947,8 @@ export function tableColumnsRowFactory<
     >;
   },
 ) {
+  // we compute the tableDefn here instead of having it passed in because
+  // Typescript cannot carry all the proper types if we don't generate it here
   const td = tableDefinition(tableName, props);
 
   // deno-lint-ignore ban-types
@@ -1006,7 +1019,7 @@ export function tableColumnsRowFactory<
       rowState?: r.TransformTabularRecordsRowState<InsertableRecord>,
       options?: r.TransformTabularRecordOptions<InsertableRecord>,
     ) => r.transformTabularRecord(o, rowState, options),
-    insertDML: i.typicalInsertStmtPreparerSync<
+    insertRawDML: i.typicalInsertStmtPreparerSync<
       TableName,
       InsertableRecord,
       EntireRecord,
@@ -1027,6 +1040,29 @@ export function tableColumnsRowFactory<
         );
       },
       undefined,
+      tdrfOptions?.defaultIspOptions,
+    ),
+    insertDML: i.typicalInsertStmtPreparerSync<
+      TableName,
+      InsertableRecord,
+      EntireRecord,
+      Context
+    >(
+      tableName,
+      (group) => {
+        if (group === "primary-keys") {
+          return td.domains.filter((d) =>
+            isTablePrimaryKeyColumnDefn(d) ? true : false
+          );
+        }
+        return td.domains.filter((d) =>
+          isTableColumnInsertDmlExclusionSupplier(d) &&
+            d.isExcludedFromInsertDML
+            ? false
+            : true
+        );
+      },
+      (ir) => td.zSchema.parse(ir) as InsertableRecord,
       tdrfOptions?.defaultIspOptions,
     ),
   };
