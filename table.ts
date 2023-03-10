@@ -7,6 +7,8 @@ import * as js from "./js.ts";
 import * as ns from "./namespace.ts";
 import * as i from "./insert.ts";
 import * as r from "./record.ts";
+import * as cr from "./criteria.ts";
+import * as s from "./select.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -205,114 +207,6 @@ export function uaDefaultableTextPrimaryKey<
     uadPK,
   );
 }
-
-/**
- * Declare an async or sync "user agent defaultables" (`uaDefaultables`)
- * primary key domain. uaDefaultables means that the primary key is required
- * on the way into the database but can be defaulted on the user agent ("UA")
- * side using one or more "default value generator" rules. This type of
- * AxiomSqlDomain is useful when the primary key is assigned a value from the
- * client app/service before going into the database but the actual value can
- * be a hash, UUID, ULID, or other source.
- * @param defaultables the default value computers
- * @returns an AxiomSqlDomain which loops through defaults when necessary
- */
-// export function uaDefaultablesTextPK<Context extends tmpl.SqlEmitContext>(
-//   ...defaultables: ax.DefaultableAxiomSerDe<string>[]
-// ) {
-//   const axiom = d.text();
-//   const result:
-//     & d.SqlDomain<string, Context>
-//     & ax.DefaultableAxiomSerDe<string>
-//     & TablePrimaryKeyColumnDefn<string, Context>
-//     & TableColumnInsertableOptionalSupplier<string, Context> = {
-//       ...axiom,
-//       isPrimaryKey: true,
-//       isAutoIncrement: false,
-//       isOptionalInInsertableRecord: true,
-//       sqlPartial: (dest) => {
-//         if (dest === "create table, column defn decorators") {
-//           const ctcdd = axiom?.sqlPartial?.(
-//             "create table, column defn decorators",
-//           );
-//           const decorators: tmpl.SqlTextSupplier<Context> = {
-//             SQL: () => `PRIMARY KEY`,
-//           };
-//           return ctcdd ? [decorators, ...ctcdd] : [decorators];
-//         }
-//         return axiom.sqlPartial?.(dest);
-//       },
-//       isDefaultable: (value?: string | undefined) => {
-//         return value === undefined ? true : false;
-//       },
-//       defaultValue: async (currentValue?) => {
-//         if (currentValue) return currentValue;
-
-//         for (const rule of defaultables) {
-//           const dv = await rule.defaultValue(currentValue);
-//           // !rule.isDefaultable(dv) means that dv was set to a proper value;
-//           // usually 'undefined' means improper but sometimes, like for a digest
-//           // value it might mean a 'placeholder' so we let the rule decide
-//           // whether the value was properly set
-//           if (!rule.isDefaultable(dv)) return dv;
-//         }
-//         return uaDefaultablesTextPkUndefined;
-//       },
-//     };
-//   return result;
-// }
-
-/**
- * Declare a synchronous "user agent defaultables" (`uaDefaultables`) primary
- * key domain. Same as uaDefaultablesTextPK except only supports default value
- * rules that are not async.
- * @param defaultables the sync-only default value computers
- * @returns an AxiomSqlDomain which loops through defaults when necessary
- */
-// export function uaDefaultablesTextPkSync<Context extends tmpl.SqlEmitContext>(
-//   ...defaultables: ax.DefaultableAxiomSerDeSync<string>[]
-// ) {
-//   const axiom = d.text();
-//   const result:
-//     & d.SqlDomain<string, Context>
-//     & ax.DefaultableAxiomSerDeSync<string>
-//     & TablePrimaryKeyColumnDefn<string, Context>
-//     & TableColumnInsertableOptionalSupplier<string, Context> = {
-//       ...axiom,
-//       isPrimaryKey: true,
-//       isAutoIncrement: false,
-//       isOptionalInInsertableRecord: true,
-//       sqlPartial: (dest) => {
-//         if (dest === "create table, column defn decorators") {
-//           const ctcdd = axiom?.sqlPartial?.(
-//             "create table, column defn decorators",
-//           );
-//           const decorators: tmpl.SqlTextSupplier<Context> = {
-//             SQL: () => `PRIMARY KEY`,
-//           };
-//           return ctcdd ? [decorators, ...ctcdd] : [decorators];
-//         }
-//         return axiom.sqlPartial?.(dest);
-//       },
-//       isDefaultable: (value?: string | undefined) => {
-//         return value === undefined ? true : false;
-//       },
-//       defaultValue: (currentValue?) => {
-//         if (currentValue) return currentValue;
-
-//         for (const rule of defaultables) {
-//           const dv = rule.defaultValue(currentValue);
-//           // !rule.isDefaultable(dv) means that dv was set to a proper value;
-//           // usually 'undefined' means improper but sometimes, like for a digest
-//           // value it might mean a 'placeholder' so we let the rule decide
-//           // whether the value was properly set
-//           if (!rule.isDefaultable(dv)) return dv;
-//         }
-//         return uaDefaultablesTextPkUndefined;
-//       },
-//     };
-//   return result;
-// }
 
 export type TableBelongsToForeignKeyRelNature<
   Context extends tmpl.SqlEmitContext,
@@ -949,7 +843,7 @@ export function tableColumnsRowFactory<
 ) {
   // we compute the tableDefn here instead of having it passed in because
   // Typescript cannot carry all the proper types if we don't generate it here
-  const td = tableDefinition(tableName, props);
+  const td = tableDefinition(tableName, props, tdrfOptions);
 
   // deno-lint-ignore ban-types
   type requiredKeys<T extends object> = {
@@ -1069,83 +963,100 @@ export function tableColumnsRowFactory<
   return result;
 }
 
-// export function tableSelectFactory<
-//   TableName extends string,
-//   TPropAxioms extends d.SqlDomains<Any, Context>,
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   tableName: TableName,
-//   props: TPropAxioms,
-//   tdrfOptions?: TableDefnOptions<TPropAxioms, Context> & {
-//     defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
-//     defaultSspOptions?: ss.SelectStmtPreparerOptions<
-//       TableName,
-//       Any,
-//       Any,
-//       Context
-//     >;
-//   },
-// ) {
-//   const sd = d.sqlDomains(props, tdrfOptions);
+export function tableSelectFactory<
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+>(
+  tableName: TableName,
+  props: ColumnsShape,
+  tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
+    defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
+    defaultSspOptions?: s.SelectStmtPreparerOptions<
+      TableName,
+      Any,
+      Any,
+      Context
+    >;
+  },
+) {
+  const td = tableDefinition(tableName, props, tdrfOptions);
 
-//   type OptionalInInsertableRecord = {
-//     [
-//       Property in keyof TPropAxioms as Extract<
-//         Property,
-//         TPropAxioms[Property] extends { isOptionalInInsertableRecord: true }
-//           ? Property
-//           : never
-//       >
-//     ]: true;
-//   };
-//   type OptionalKeysInInsertableRecord = Extract<
-//     keyof EntireRecord,
-//     keyof OptionalInInsertableRecord
-//   >;
+  type OptionalInInsertableRecord = {
+    [
+      Property in keyof ColumnsShape as Extract<
+        Property,
+        ColumnsShape[Property] extends { isOptionalInInsertableRecord: true }
+          ? Property
+          : never
+      >
+    ]: true;
+  };
+  type OptionalKeysInInsertableRecord = Extract<
+    keyof EntireRecord,
+    keyof OptionalInInsertableRecord
+  >;
 
-//   type EntireRecord =
-//     & tr.UntypedTabularRecordObject
-//     & cr.FilterableRecordValues<ax.AxiomType<typeof sd>, Context>;
+  // deno-lint-ignore ban-types
+  type requiredKeys<T extends object> = {
+    [k in keyof T]: undefined extends T[k] ? never : k;
+  }[keyof T];
 
-//   type FilterableRecord =
-//     & Omit<EntireRecord, OptionalKeysInInsertableRecord>
-//     & Partial<Pick<EntireRecord, OptionalKeysInInsertableRecord>>;
-//   type FilterableColumnName = keyof FilterableRecord & string;
-//   type FilterableObject = r.TabularRecordToObject<FilterableRecord>;
+  type addQuestionMarks<
+    // deno-lint-ignore ban-types
+    T extends object,
+    R extends keyof T = requiredKeys<T>,
+  > // O extends keyof T = optionalKeys<T>
+   = Pick<Required<T>, R> & Partial<T>;
 
-//   // we let Typescript infer function return to allow generics in sqlDomains to
-//   // be more effective but we want other parts of the `result` to be as strongly
-//   // typed as possible
-//   return {
-//     prepareFilterable: (
-//       o: FilterableObject,
-//       rowState?: r.TransformTabularRecordsRowState<FilterableRecord>,
-//       options?: r.TransformTabularRecordOptions<FilterableRecord>,
-//     ) => r.transformTabularRecord(o, rowState, options),
-//     select: s.entitySelectStmtPreparer<
-//       TableName,
-//       FilterableRecord,
-//       EntireRecord,
-//       Context
-//     >(
-//       tableName,
-//       cr.filterCriteriaPreparer((group) => {
-//         if (group === "primary-keys") {
-//           return sd.domains.filter((d) =>
-//             isTablePrimaryKeyColumnDefn(d) ? true : false
-//           ).map((d) => d.identity) as FilterableColumnName[];
-//         }
-//         return sd.domains.filter((d) =>
-//           isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
-//             d.isExcludedFromFilterCriteriaDql
-//             ? false
-//             : true
-//         ).map((d) => d.identity) as FilterableColumnName[];
-//       }, tdrfOptions?.defaultFcpOptions),
-//       tdrfOptions?.defaultSspOptions,
-//     ),
-//   };
-// }
+  type EntireRecord = addQuestionMarks<
+    {
+      [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
+        z.ZodType<infer T, infer D, infer I>
+        ? z.infer<z.ZodType<T, D, I>> | tmpl.SqlTextSupplier<Context>
+        : never;
+    }
+  >;
+
+  type FilterableRecord =
+    & Omit<EntireRecord, OptionalKeysInInsertableRecord>
+    & Partial<Pick<EntireRecord, OptionalKeysInInsertableRecord>>;
+  type FilterableColumnName = keyof FilterableRecord & string;
+  type FilterableObject = r.TabularRecordToObject<FilterableRecord>;
+
+  // we let Typescript infer function return to allow generics in sqlDomains to
+  // be more effective but we want other parts of the `result` to be as strongly
+  // typed as possible
+  return {
+    prepareFilterable: (
+      o: FilterableObject,
+      rowState?: r.TransformTabularRecordsRowState<FilterableRecord>,
+      options?: r.TransformTabularRecordOptions<FilterableRecord>,
+    ) => r.transformTabularRecord(o, rowState, options),
+    select: s.entitySelectStmtPreparer<
+      TableName,
+      FilterableRecord,
+      EntireRecord,
+      Context
+    >(
+      tableName,
+      cr.filterCriteriaPreparer((group) => {
+        if (group === "primary-keys") {
+          return td.domains.filter((d) =>
+            isTablePrimaryKeyColumnDefn(d) ? true : false
+          ).map((d) => d.identity) as FilterableColumnName[];
+        }
+        return td.domains.filter((d) =>
+          isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
+            d.isExcludedFromFilterCriteriaDql
+            ? false
+            : true
+        ).map((d) => d.identity) as FilterableColumnName[];
+      }, tdrfOptions?.defaultFcpOptions),
+      tdrfOptions?.defaultSspOptions,
+    ),
+  };
+}
 
 // export function tableDomainsViewWrapper<
 //   ViewName extends string,
@@ -1198,210 +1109,210 @@ export function tableColumnsRowFactory<
 //   return vw.safeViewDefinitionCustom(viewName, props, selectStmt, tdvwOptions);
 // }
 
-// export type TableNamePrimaryKeyLintOptions = {
-//   readonly ignoreTableLacksPrimaryKey?:
-//     | boolean
-//     | ((tableName: string) => boolean);
-// };
+export type TableNamePrimaryKeyLintOptions = {
+  readonly ignoreTableLacksPrimaryKey?:
+    | boolean
+    | ((tableName: string) => boolean);
+};
 
-// /**
-//  * Lint rule which checks that a given table name has a primary key
-//  * @param tableDefn the table definition to check
-//  * @returns a lint rule which, when executed and is not being ignored, will add
-//  *          a lintIssue to a given LintIssuesSupplier
-//  */
-// export const tableLacksPrimaryKeyLintRule = <
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-// ) => {
-//   const rule: l.SqlLintRule<TableNamePrimaryKeyLintOptions> = {
-//     lint: (lis, lOptions) => {
-//       const { ignoreTableLacksPrimaryKey: iptn } = lOptions ?? {};
-//       const ignoreRule = iptn
-//         ? (typeof iptn === "boolean" ? iptn : iptn(tableDefn.tableName))
-//         : false;
-//       if (!ignoreRule) {
-//         const pkColumn = tableDefn.domains.find((ap) =>
-//           isTablePrimaryKeyColumnDefn<Any, Context>(ap)
-//         ) as unknown as (
-//           | (
-//             & d.IdentifiableSqlDomain<string, Context>
-//             & TablePrimaryKeyColumnDefn<Any, Context>
-//           )
-//           | undefined
-//         );
-//         if (!pkColumn) {
-//           lis.registerLintIssue({
-//             lintIssue:
-//               `table '${tableDefn.tableName}' has no primary key column(s)`,
-//             consequence: l.SqlLintIssueConsequence.WARNING_DDL,
-//           });
-//         }
-//       }
-//     },
-//   };
-//   return rule;
-// };
+/**
+ * Lint rule which checks that a given table name has a primary key
+ * @param tableDefn the table definition to check
+ * @returns a lint rule which, when executed and is not being ignored, will add
+ *          a lintIssue to a given LintIssuesSupplier
+ */
+export const tableLacksPrimaryKeyLintRule = <
+  Context extends tmpl.SqlEmitContext,
+>(
+  tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+) => {
+  const rule: l.SqlLintRule<TableNamePrimaryKeyLintOptions> = {
+    lint: (lis, lOptions) => {
+      const { ignoreTableLacksPrimaryKey: iptn } = lOptions ?? {};
+      const ignoreRule = iptn
+        ? (typeof iptn === "boolean" ? iptn : iptn(tableDefn.tableName))
+        : false;
+      if (!ignoreRule) {
+        const pkColumn = tableDefn.domains.find((ap) =>
+          isTablePrimaryKeyColumnDefn<Any, Context>(ap)
+        ) as unknown as (
+          | (
+            & d.SqlDomain<z.ZodTypeAny, Context>
+            & TablePrimaryKeyColumnDefn<Any, Context>
+          )
+          | undefined
+        );
+        if (!pkColumn) {
+          lis.registerLintIssue({
+            lintIssue:
+              `table '${tableDefn.tableName}' has no primary key column(s)`,
+            consequence: l.SqlLintIssueConsequence.WARNING_DDL,
+          });
+        }
+      }
+    },
+  };
+  return rule;
+};
 
-// export type TableNameConsistencyLintOptions = {
-//   readonly ignorePluralTableName?: boolean | ((tableName: string) => boolean);
-// };
+export type TableNameConsistencyLintOptions = {
+  readonly ignorePluralTableName?: boolean | ((tableName: string) => boolean);
+};
 
-// /**
-//  * Lint rule which checks that a given table name is not pluralized (does not
-//  * end with an 's').
-//  * @param tableName the table name to check
-//  * @returns a lint rule which, when executed and is not being ignored, will add
-//  *          a lintIssue to a given LintIssuesSupplier
-//  */
-// export const tableNameConsistencyLintRule = (tableName: string) => {
-//   const rule: l.SqlLintRule<TableNameConsistencyLintOptions> = {
-//     lint: (lis, lOptions) => {
-//       const { ignorePluralTableName: iptn } = lOptions ?? {};
-//       const ignoreRule = iptn
-//         ? (typeof iptn === "boolean" ? iptn : iptn(tableName))
-//         : false;
-//       if (!ignoreRule && tableName.endsWith("s")) {
-//         lis.registerLintIssue({
-//           lintIssue:
-//             `table name '${tableName}' ends with an 's' (should be singular, not plural)`,
-//           consequence: l.SqlLintIssueConsequence.CONVENTION_DDL,
-//         });
-//       }
-//     },
-//   };
-//   return rule;
-// };
+/**
+ * Lint rule which checks that a given table name is not pluralized (does not
+ * end with an 's').
+ * @param tableName the table name to check
+ * @returns a lint rule which, when executed and is not being ignored, will add
+ *          a lintIssue to a given LintIssuesSupplier
+ */
+export const tableNameConsistencyLintRule = (tableName: string) => {
+  const rule: l.SqlLintRule<TableNameConsistencyLintOptions> = {
+    lint: (lis, lOptions) => {
+      const { ignorePluralTableName: iptn } = lOptions ?? {};
+      const ignoreRule = iptn
+        ? (typeof iptn === "boolean" ? iptn : iptn(tableName))
+        : false;
+      if (!ignoreRule && tableName.endsWith("s")) {
+        lis.registerLintIssue({
+          lintIssue:
+            `table name '${tableName}' ends with an 's' (should be singular, not plural)`,
+          consequence: l.SqlLintIssueConsequence.CONVENTION_DDL,
+        });
+      }
+    },
+  };
+  return rule;
+};
 
-// /**
-//  * A lint rule which looks at each domain (column) and, if it has any lint
-//  * issues, will add them to the supplied LintIssuesSupplier
-//  * @param tableDefn the table whose columns (domains) should be checked
-//  * @returns a lint rule which, when executed and is not being ignored, will
-//  *          add each column defnintion lintIssue to a given LintIssuesSupplier
-//  */
-// export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
-//   tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-// ) {
-//   const rule: l.SqlLintRule = {
-//     lint: (lis) => {
-//       for (const col of tableDefn.domains) {
-//         if (l.isSqlLintIssuesSupplier(col)) {
-//           lis.registerLintIssue(
-//             ...col.lintIssues.map((li) => ({
-//               ...li,
-//               location: () => `table ${tableDefn.tableName} definition`,
-//             })),
-//           );
-//         }
-//       }
-//     },
-//   };
-//   return rule;
-// }
+/**
+ * A lint rule which looks at each domain (column) and, if it has any lint
+ * issues, will add them to the supplied LintIssuesSupplier
+ * @param tableDefn the table whose columns (domains) should be checked
+ * @returns a lint rule which, when executed and is not being ignored, will
+ *          add each column defnintion lintIssue to a given LintIssuesSupplier
+ */
+export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
+  tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+) {
+  const rule: l.SqlLintRule = {
+    lint: (lis) => {
+      for (const col of tableDefn.domains) {
+        if (l.isSqlLintIssuesSupplier(col)) {
+          lis.registerLintIssue(
+            ...col.lintIssues.map((li) => ({
+              ...li,
+              location: () => `table ${tableDefn.tableName} definition`,
+            })),
+          );
+        }
+      }
+    },
+  };
+  return rule;
+}
 
-// export type FKeyColNameConsistencyLintOptions<
-//   Context extends tmpl.SqlEmitContext,
-// > = {
-//   readonly ignoreFKeyColNameMissing_id?:
-//     | boolean
-//     | ((
-//       col: TableForeignKeyColumnDefn<Any, Any, Context>,
-//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-//     ) => boolean);
-//   readonly ignoreColName_idNotFKey?:
-//     | boolean
-//     | ((
-//       col: d.IdentifiableSqlDomain<Any, Context>,
-//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-//     ) => boolean);
-// };
+export type FKeyColNameConsistencyLintOptions<
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly ignoreFKeyColNameMissing_id?:
+    | boolean
+    | ((
+      col: TableForeignKeyColumnDefn<Any, Any, Context>,
+      tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+    ) => boolean);
+  readonly ignoreColName_idNotFKey?:
+    | boolean
+    | ((
+      col: d.SqlDomain<Any, Context>,
+      tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+    ) => boolean);
+};
 
-// /**
-//  * A lint rule which looks at each domain (column) and, if it has any lint
-//  * issues, will add them to the supplied LintIssuesSupplier
-//  * @param tableDefn the table whose columns (domains) should be checked
-//  * @returns a lint rule which, when executed and is not being ignored, will
-//  *          add each column defnintion lintIssue to a given LintIssuesSupplier
-//  */
-// export function tableFKeyColNameConsistencyLintRule<
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-// ) {
-//   const rule: l.SqlLintRule<FKeyColNameConsistencyLintOptions<Context>> = {
-//     lint: (lis, lOptions) => {
-//       for (const col of tableDefn.domains) {
-//         if (isTableForeignKeyColumnDefn(col)) {
-//           const { ignoreFKeyColNameMissing_id: ifkcnm } = lOptions ?? {};
-//           const ignoreRule = ifkcnm
-//             ? (typeof ifkcnm === "boolean" ? ifkcnm : ifkcnm(col, tableDefn))
-//             : false;
-//           if (!ignoreRule) {
-//             let suggestion = `end with '_id'`;
-//             if (d.isIdentifiableSqlDomain(col.foreignDomain)) {
-//               // if the foreign key column name is the same as our column we're usually OK
-//               if (col.foreignDomain.identity == col.identity) {
-//                 continue;
-//               }
-//               suggestion =
-//                 `should be named "${col.foreignDomain.identity}" or end with '_id'`;
-//             }
-//             if (!col.identity.endsWith("_id")) {
-//               lis.registerLintIssue(
-//                 d.domainLintIssue(
-//                   `Foreign key column "${col.identity}" in "${tableDefn.tableName}" ${suggestion}`,
-//                   { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
-//                 ),
-//               );
-//             }
-//           }
-//         } else {
-//           const { ignoreColName_idNotFKey: icnnfk } = lOptions ?? {};
-//           const ignoreRule = icnnfk
-//             ? (typeof icnnfk === "boolean" ? icnnfk : icnnfk(col, tableDefn))
-//             : false;
-//           if (
-//             !ignoreRule && (!isTablePrimaryKeyColumnDefn(col) &&
-//               col.identity.endsWith("_id"))
-//           ) {
-//             lis.registerLintIssue(
-//               d.domainLintIssue(
-//                 `Column "${col.identity}" in "${tableDefn.tableName}" ends with '_id' but is neither a primary key nor a foreign key.`,
-//                 { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
-//               ),
-//             );
-//           }
-//         }
-//       }
-//     },
-//   };
-//   return rule;
-// }
+/**
+ * A lint rule which looks at each domain (column) and, if it has any lint
+ * issues, will add them to the supplied LintIssuesSupplier
+ * @param tableDefn the table whose columns (domains) should be checked
+ * @returns a lint rule which, when executed and is not being ignored, will
+ *          add each column defnintion lintIssue to a given LintIssuesSupplier
+ */
+export function tableFKeyColNameConsistencyLintRule<
+  Context extends tmpl.SqlEmitContext,
+>(
+  tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+) {
+  const rule: l.SqlLintRule<FKeyColNameConsistencyLintOptions<Context>> = {
+    lint: (lis, lOptions) => {
+      for (const col of tableDefn.domains) {
+        if (isTableForeignKeyColumnDefn(col)) {
+          const { ignoreFKeyColNameMissing_id: ifkcnm } = lOptions ?? {};
+          const ignoreRule = ifkcnm
+            ? (typeof ifkcnm === "boolean" ? ifkcnm : ifkcnm(col, tableDefn))
+            : false;
+          if (!ignoreRule) {
+            let suggestion = `end with '_id'`;
+            if (d.isSqlDomain(col.foreignDomain)) {
+              // if the foreign key column name is the same as our column we're usually OK
+              if (col.foreignDomain.identity == col.identity) {
+                continue;
+              }
+              suggestion =
+                `should be named "${col.foreignDomain.identity}" or end with '_id'`;
+            }
+            if (!col.identity.endsWith("_id")) {
+              lis.registerLintIssue(
+                d.domainLintIssue(
+                  `Foreign key column "${col.identity}" in "${tableDefn.tableName}" ${suggestion}`,
+                  { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
+                ),
+              );
+            }
+          }
+        } else {
+          const { ignoreColName_idNotFKey: icnnfk } = lOptions ?? {};
+          const ignoreRule = icnnfk
+            ? (typeof icnnfk === "boolean" ? icnnfk : icnnfk(col, tableDefn))
+            : false;
+          if (
+            !ignoreRule && (!isTablePrimaryKeyColumnDefn(col) &&
+              col.identity.endsWith("_id"))
+          ) {
+            lis.registerLintIssue(
+              d.domainLintIssue(
+                `Column "${col.identity}" in "${tableDefn.tableName}" ends with '_id' but is neither a primary key nor a foreign key.`,
+                { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
+              ),
+            );
+          }
+        }
+      }
+    },
+  };
+  return rule;
+}
 
-// export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
-//   const rules = {
-//     tableNameConsistency: tableNameConsistencyLintRule,
-//     columnLintIssues: tableColumnsLintIssuesRule,
-//     fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
-//     noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
-//     typical: (
-//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-//       ...additionalRules: l.SqlLintRule<Any>[]
-//     ) => {
-//       return l.aggregatedSqlLintRules<
-//         & TableNameConsistencyLintOptions
-//         & FKeyColNameConsistencyLintOptions<Context>
-//         & TableNamePrimaryKeyLintOptions
-//       >(
-//         rules.tableNameConsistency(tableDefn.tableName),
-//         rules.noPrimaryKeyDefined(tableDefn),
-//         rules.columnLintIssues(tableDefn),
-//         rules.fKeyColNameConsistency(tableDefn),
-//         ...additionalRules,
-//       );
-//     },
-//   };
-//   return rules;
-// }
+export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
+  const rules = {
+    tableNameConsistency: tableNameConsistencyLintRule,
+    columnLintIssues: tableColumnsLintIssuesRule,
+    fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
+    noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
+    typical: (
+      tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+      ...additionalRules: l.SqlLintRule<Any>[]
+    ) => {
+      return l.aggregatedSqlLintRules<
+        & TableNameConsistencyLintOptions
+        & FKeyColNameConsistencyLintOptions<Context>
+        & TableNamePrimaryKeyLintOptions
+      >(
+        rules.tableNameConsistency(tableDefn.tableName),
+        rules.noPrimaryKeyDefined(tableDefn),
+        rules.columnLintIssues(tableDefn),
+        rules.fKeyColNameConsistency(tableDefn),
+        ...additionalRules,
+      );
+    },
+  };
+  return rules;
+}

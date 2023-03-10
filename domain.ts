@@ -289,6 +289,23 @@ export function sqlDomains<
   };
 }
 
+export function domainLintIssue(
+  lintIssue: string,
+  options?: Partial<Omit<l.SqlLintIssueSupplier, "lintIssue">>,
+): l.SqlLintIssueSupplier {
+  const { location, consequence } = options ?? {};
+  return {
+    lintIssue,
+    location: location
+      ? (typeof location === "string"
+        ? ((options) =>
+          options?.maxLength ? location!.slice(0, options.maxLength) : location)
+        : location)
+      : undefined,
+    consequence,
+  };
+}
+
 /**
  * Transform a Zod schema with "methods", basically functions attached to the
  * parsed result that make it convenient to enhanced the parsed object. The idea

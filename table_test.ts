@@ -522,3 +522,38 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
     },
   );
 });
+
+Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
+  await tc.step(
+    "valid select statement for a table",
+    async (innerTC) => {
+      const { tableWithOnDemandPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
+      const tableSF = t.tableSelectFactory(
+        table.tableName,
+        table.zSchema.shape,
+      );
+
+      await innerTC.step("type safety", () => {
+        const insertable = tableSF.prepareFilterable({
+          text: "text",
+          int: 423,
+        });
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
+
+      await innerTC.step("SQL DQL", () => {
+        const { ctx } = sqlGen();
+        ta.assertEquals(
+          tableSF.select({ text: "text", int: 423 }).SQL(ctx),
+          `SELECT "ua_on_demand_primary_key" FROM "synthetic_table_with_uaod_pk" WHERE "text" = 'text' AND "int" = 423`,
+        );
+      });
+    },
+  );
+});
