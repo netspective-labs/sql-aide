@@ -1,5 +1,6 @@
 import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
+import * as tmpl from "./sql.ts";
 import * as zd from "./domain.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -9,44 +10,82 @@ const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
 };
 
+type SyntheticContext = tmpl.SqlEmitContext;
+
+const sqlGen = () => {
+  const ctx: SyntheticContext = tmpl.typicalSqlEmitContext();
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions();
+  const lintState = tmpl.typicalSqlLintSummaries(
+    ddlOptions.sqlTextLintState,
+  );
+  return { ctx, ddlOptions, lintState };
+};
+
 Deno.test("Zod-based SQL domains", async (tc) => {
-  await tc.step("valid domains", () => {
-    const syntheticSchema = zd.sqlDomains({
+  await tc.step("valid domains", async (innerTC) => {
+    const domains = zd.sqlDomains({
       text: z.string(),
       text_nullable: z.string().optional(),
       int: z.number(),
       int_nullable: z.number().optional(),
       // TODO: add all the other scalars and types
     });
-    ta.assert(zd.isSqlDomainsSupplier(syntheticSchema));
+    ta.assert(zd.isSqlDomainsSupplier(domains));
 
-    expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
-      syntheticSchema.sdSchema.text,
-    );
-    expectType<
-      zd.SqlDomain<
-        z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>,
-        Any
-      >
-    >(syntheticSchema.sdSchema.text_nullable);
+    await innerTC.step("Type safety", () => {
+      expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
+        domains.sdSchema.text,
+      );
+      expectType<
+        zd.SqlDomain<
+          z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>,
+          Any
+        >
+      >(domains.sdSchema.text_nullable);
+      expectType<zd.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
+        domains.sdSchema.int,
+      );
+      expectType<
+        zd.SqlDomain<
+          z.ZodType<number | undefined, z.ZodOptionalDef<z.ZodNumber>>,
+          Any
+        >
+      >(domains.sdSchema.int_nullable);
 
-    type SyntheticSchema = z.infer<typeof syntheticSchema.zSchema>;
-    const synthetic: SyntheticSchema = {
-      text: "required",
-      int: 0,
-    };
-    expectType<{
-      text: string;
-      int: number;
-      text_nullable?: string | undefined;
-      int_nullable?: number | undefined;
-    }>(synthetic);
-    ta.assert(synthetic);
-    ta.assertEquals(synthetic.text, "required");
-    ta.assertEquals(syntheticSchema.lintIssues.length, 0);
-    ta.assertEquals(synthetic.int, 0);
-    ta.assertEquals(synthetic.text_nullable, undefined);
-    ta.assertEquals(synthetic.int_nullable, undefined);
+      type SyntheticSchema = z.infer<typeof domains.zSchema>;
+      const synthetic: SyntheticSchema = {
+        text: "required",
+        int: 0,
+      };
+      expectType<{
+        text: string;
+        int: number;
+        text_nullable?: string | undefined;
+        int_nullable?: number | undefined;
+      }>(synthetic);
+      ta.assert(synthetic);
+      ta.assertEquals(synthetic.text, "required");
+      ta.assertEquals(domains.lintIssues.length, 0);
+      ta.assertEquals(synthetic.int, 0);
+      ta.assertEquals(synthetic.text_nullable, undefined);
+      ta.assertEquals(synthetic.int_nullable, undefined);
+    });
+
+    await innerTC.step("SQL types", () => {
+      const { ctx } = sqlGen();
+      ta.assertEquals(
+        domains.domains.map((d) => ({
+          identifier: d.identity,
+          sqlDataType: d.sqlDataType("create table column").SQL(ctx),
+        })),
+        [
+          { identifier: "text", sqlDataType: "TEXT" },
+          { identifier: "text_nullable", sqlDataType: "TEXT" },
+          { identifier: "int", sqlDataType: "INTEGER" },
+          { identifier: "int_nullable", sqlDataType: "INTEGER" },
+        ],
+      );
+    });
   });
 });
 

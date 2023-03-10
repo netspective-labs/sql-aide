@@ -2,6 +2,13 @@ import { zod as z } from "./deps.ts";
 import * as tmpl from "./sql.ts";
 import * as l from "./lint.ts";
 
+// TODO:
+// - Keeping sqlDomain inside Zod instance and keeping zodSchema in SqlDomain
+//   might cause memory issues (circular reference); instead, consider creating
+//   a Zod symbol table where each Zod instance has a unique symbol and then
+//   a SqlDomain instance has the same symbol reference and that's how they
+//   know about each other?
+
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
