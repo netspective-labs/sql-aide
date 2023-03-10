@@ -3,11 +3,10 @@ import * as tmpl from "./sql.ts";
 import * as l from "./lint.ts";
 
 // TODO:
-// - Keeping sqlDomain inside Zod instance and keeping zodSchema in SqlDomain
-//   might cause memory issues (circular reference); instead, consider creating
-//   a Zod symbol table where each Zod instance has a unique symbol and then
-//   a SqlDomain instance has the same symbol reference and that's how they
-//   know about each other?
+// - consider creating new, native, Zod instances instead of wrapping Zod
+//   https://github.com/jaylmiller/zodsql/blob/main/src/column.ts
+// - consider monkey-patching Zod instances
+//   https://github.com/IvanovES/zod-metadata/blob/main/src/index.ts
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -41,7 +40,6 @@ export type SqlDomain<
   DomainIdentity extends string = string,
 > = tmpl.SqlSymbolSupplier<Context> & {
   readonly isSqlDomain: true;
-  readonly zodSchema: ZTA;
   readonly identity: DomainIdentity;
   readonly isOptional?: boolean;
   readonly sqlDataType: (
@@ -186,7 +184,6 @@ export const sqlDomain = <
 
   const defaults = {
     isSqlDomain: true as true, // must not be a boolean but `true`
-    zodSchema: zta,
     identity: init?.identity as DomainIdentity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
     sqlSymbol: (ctx: Context) =>
       ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(

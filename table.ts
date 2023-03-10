@@ -90,6 +90,7 @@ export function isTableColumnFilterCriteriaDqlExclusionSupplier<
 }
 
 export function primaryKey<Context extends tmpl.SqlEmitContext>() {
+  const zodSchema = z.string();
   const sqlDomain = d.sqlDomain<z.ZodString, Context>(z.string());
   const aipkSD: TablePrimaryKeyColumnDefn<z.ZodString, Context> = {
     ...sqlDomain,
@@ -111,13 +112,14 @@ export function primaryKey<Context extends tmpl.SqlEmitContext>() {
   // we're "wrapping" a Zod type so we mutate the zod schema to hold our custom
   // properties in a single object and then just return the zod schema so it can
   // be used as-is
-  return d.mutateSqlDomainSupplier(sqlDomain.zodSchema, aipkSD) as
+  return d.mutateSqlDomainSupplier(zodSchema, aipkSD) as
     & z.ZodString
     & typeof aipkSD;
 }
 
 export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
-  const sqlDomain = d.sqlDomain<z.ZodNumber, Context>(z.number());
+  const zodSchema = z.number();
+  const sqlDomain = d.sqlDomain<z.ZodNumber, Context>(zodSchema);
   const aipkSD:
     & TablePrimaryKeyColumnDefn<z.ZodNumber, Context>
     & TableColumnInsertDmlExclusionSupplier<z.ZodNumber, Context> = {
@@ -143,7 +145,7 @@ export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
   // be used as-is; we need to "teach" TypeScript that the mutated zod object is
   // a TablePrimaryKeyColumnDefn and TableColumnInsertDmlExclusionSupplier
   // because the tableDefinition() function picks up those "cues"
-  return d.mutateSqlDomainSupplier(sqlDomain.zodSchema, aipkSD) as
+  return d.mutateSqlDomainSupplier(zodSchema, aipkSD) as
     & z.ZodNumber
     & typeof aipkSD;
 }
