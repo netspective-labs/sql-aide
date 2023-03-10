@@ -13,6 +13,16 @@ import * as s from "./select.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+export type TableColumnDefn<
+  TableName,
+  ColumnName,
+  ColumnTsType extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+> = d.SqlDomain<ColumnTsType, Context> & {
+  readonly tableName: TableName;
+  readonly columnName: ColumnName;
+};
+
 export type TablePrimaryKeyColumnDefn<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
@@ -621,9 +631,12 @@ export function tableDefinition<
 
   type ColumnDefns = {
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
-      z.ZodType<infer T, infer D, infer I> ? 
-        & d.SqlDomain<z.ZodType<T, D, I>, Context>
-        & TablePrimaryKeyColumnDefn<z.ZodType<T, D, I>, Context>
+      z.ZodType<infer T, infer D, infer I> ? TableColumnDefn<
+        TableName,
+        Extract<Property, string>,
+        z.ZodType<T, D, I>,
+        Context
+      >
       : never;
   };
 
@@ -648,6 +661,9 @@ export function tableDefinition<
       columnDefnsSS.push({ SQL: typicalSQL });
     }
     // TODO: figure out why "Any" is required
+    (columnDefn as unknown as { tableName: TableName }).tableName = tableName;
+    (columnDefn as unknown as { columnName: string }).columnName =
+      columnDefn.identity;
     (columns[columnDefn.identity] as Any) = columnDefn;
   }
 

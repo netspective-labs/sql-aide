@@ -100,16 +100,26 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
       ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
 
+      type TableColumnDefn<ColumnName, ColumnTsType extends z.ZodTypeAny> =
+        t.TableColumnDefn<
+          "synthetic_table_without_pk",
+          ColumnName,
+          ColumnTsType,
+          SyntheticContext
+        >;
+
       await innerTC.step("type safety", () => {
-        expectType<d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
-          table.sdSchema.text,
+        // the table has the zod shape, domains, and columns all typed so we can
+        // access it multiple ways, as shown here
+        expectType<TableColumnDefn<"text", z.ZodType<string, z.ZodStringDef>>>(
+          table.columns.text,
         );
         expectType<
-          d.SqlDomain<
-            z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>,
-            Any
+          TableColumnDefn<
+            "text_nullable",
+            z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>
           >
-        >(table.sdSchema.text_nullable);
+        >(table.columns.text_nullable);
         expectType<d.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
           table.sdSchema.int,
         );
