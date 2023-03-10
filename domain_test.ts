@@ -1,7 +1,7 @@
 import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
 import * as tmpl from "./sql.ts";
-import * as zd from "./domain.ts";
+import * as d from "./domain.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -23,30 +23,30 @@ const sqlGen = () => {
 
 Deno.test("Zod-based SQL domains", async (tc) => {
   await tc.step("valid domains", async (innerTC) => {
-    const domains = zd.sqlDomains({
+    const domains = d.sqlDomains({
       text: z.string(),
       text_nullable: z.string().optional(),
       int: z.number(),
       int_nullable: z.number().optional(),
       // TODO: add all the other scalars and types
     });
-    ta.assert(zd.isSqlDomainsSupplier(domains));
+    ta.assert(d.isSqlDomainsSupplier(domains));
 
     await innerTC.step("Type safety", () => {
-      expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
+      expectType<d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
         domains.sdSchema.text,
       );
       expectType<
-        zd.SqlDomain<
+        d.SqlDomain<
           z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>,
           Any
         >
       >(domains.sdSchema.text_nullable);
-      expectType<zd.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
+      expectType<d.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
         domains.sdSchema.int,
       );
       expectType<
-        zd.SqlDomain<
+        d.SqlDomain<
           z.ZodType<number | undefined, z.ZodOptionalDef<z.ZodNumber>>,
           Any
         >
@@ -96,7 +96,7 @@ Deno.test("Zod Schema Proxy", () => {
     number: z.number(),
   });
 
-  const proxiedSchema = zd.zodSchemaProxy(syntheticSchema, {
+  const proxiedSchema = d.zodSchemaProxy(syntheticSchema, {
     // First argument to argument will be Zod-parsed value
     isText: (synthetic, value: string) => {
       return synthetic.text === value;

@@ -58,7 +58,7 @@ const syntheticSchema = {
   }),
 };
 
-Deno.test("SQL Aide (SQLa) table structure", async (tc) => {
+Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   /**
    * Test strategy:
    * Step 1. Validate that a table with all columns types except primary keys
@@ -79,7 +79,7 @@ Deno.test("SQL Aide (SQLa) table structure", async (tc) => {
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
       ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
 
-      await innerTC.step("Type safety", () => {
+      await innerTC.step("type safety", () => {
         expectType<zd.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
           table.sdSchema.text,
         );
@@ -144,7 +144,7 @@ Deno.test("SQL Aide (SQLa) table structure", async (tc) => {
     const { tableWithAutoIncPK: table } = syntheticSchema;
     ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
 
-    await innerTC.step("Type safety", () => {
+    await innerTC.step("type safety", () => {
       // tableDefinition() properly "types" table.primaryKey to be the collection
       // of PKs - since we have a single PK, make sure it has at least that one
       expectType<
@@ -181,7 +181,7 @@ Deno.test("SQL Aide (SQLa) table structure", async (tc) => {
     ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
     ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
 
-    await innerTC.step("Type safety", () => {
+    await innerTC.step("type safety", () => {
       // tableDefinition() properly "types" table.primaryKey to be the collection
       // of PKs - since we have a single PK, make sure it has at least that one
       expectType<
@@ -215,4 +215,138 @@ Deno.test("SQL Aide (SQLa) table structure", async (tc) => {
   await tc.step("TODO: foreign keys", () => {});
   await tc.step("TODO: indexes", () => {});
   await tc.step("TODO: constraints", () => {});
+  await tc.step("TODO: lint messages", () => {});
+});
+
+Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
+  /**
+   * Test strategy:
+   * Step 1. Validate Insert DML for a table without primary keys.
+   * Step 2. Validate Insert DML for a table with auto-inc primary key.
+   * Step 2. Validate Insert DML for a table with text primary key.
+   *
+   * General approach is to separate the tests so that no duplicate testing is
+   * done (meaning don't just test the same stuff in Step 3 was in 2 and 1).
+   */
+
+  await tc.step(
+    "[1] valid insert statement for a table without primary keys",
+    async (innerTC) => {
+      const { tableWithoutPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk"));
+      const tableRF = t.tableColumnsRowFactory(
+        "synthetic_table_without_pk",
+        table.zSchema.shape,
+      );
+
+      await innerTC.step("type safety", () => {
+        const insertable = tableRF.prepareInsertable({
+          text: "text",
+          int: 423,
+        });
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
+
+      await innerTC.step("SQL DML", () => {
+        const { ctx } = sqlGen();
+        const insertable = tableRF.prepareInsertable({
+          text: "text",
+          int: 423,
+        });
+        ta.assert(insertable);
+        ta.assertEquals(
+          tableRF.insertDML(insertable).SQL(ctx),
+          `INSERT INTO "synthetic_table_without_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, 423, NULL)`,
+        );
+      });
+    },
+  );
+
+  await tc.step(
+    "[2] valid insert statement for a table with auto-inc primary key",
+    async (innerTC) => {
+      const { tableWithAutoIncPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
+      const tableRF = t.tableColumnsRowFactory(
+        "synthetic_table_with_auto_inc_pk",
+        table.zSchema.shape,
+      );
+
+      await innerTC.step("type safety", () => {
+        const insertable = tableRF.prepareInsertable({
+          // autoInc should not show up here, it's not "insertable"
+          text: "text",
+          int: 423,
+        });
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
+
+      await innerTC.step("SQL DML", () => {
+        const { ctx } = sqlGen();
+        const insertable = tableRF.prepareInsertable({
+          text: "text",
+          int: 423,
+        });
+        ta.assert(insertable);
+        ta.assertEquals(
+          tableRF.insertDML(insertable).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_auto_inc_pk" ("auto_inc_primary_key", "text", "text_nullable", "int", "int_nullable") VALUES (NULL, 'text', NULL, 423, NULL)`,
+        );
+      });
+    },
+  );
+
+  await tc.step(
+    "[3] valid insert statement for a table with text primary key",
+    async (innerTC) => {
+      const { tableWithTextPK: table } = syntheticSchema;
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
+
+      const tableRF = t.tableColumnsRowFactory(
+        "synthetic_table_with_text_pk",
+        table.zSchema.shape,
+      );
+
+      await innerTC.step("type safety", () => {
+        const insertable = tableRF.prepareInsertable({
+          textPrimaryKey: "PK-value",
+          text: "text",
+          int: 423,
+        });
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text_primary_key,
+        );
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
+
+      await innerTC.step("SQL DML", () => {
+        const { ctx } = sqlGen();
+        const insertable = tableRF.prepareInsertable({
+          textPrimaryKey: "PK-value",
+          text: "text",
+          int: 423,
+        });
+        ta.assert(insertable);
+        ta.assertEquals(
+          tableRF.insertDML(insertable).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_text_pk" ("text_primary_key", "text", "text_nullable", "int", "int_nullable") VALUES ('PK-value', 'text', NULL, 423, NULL)`,
+        );
+      });
+    },
+  );
 });

@@ -5,6 +5,8 @@ import * as l from "./lint.ts";
 import * as d from "./domain.ts";
 import * as js from "./js.ts";
 import * as ns from "./namespace.ts";
+import * as i from "./insert.ts";
+import * as r from "./record.ts";
 
 // TODO:
 // - remove all references for "axiom" to be independent of zod/axiom ... e.g. "ColumnsShape" vs. "ZodRawShape"
@@ -920,143 +922,120 @@ export function tableDefinition<
   };
 }
 
-// export type TableColumnsScalarValuesOrSqlExprs<
-//   T,
-//   Context extends tmpl.SqlEmitContext,
-// > = {
-//   [K in keyof T]: T[K] | tmpl.SqlTextSupplier<Context>;
-// };
+export function tableColumnsRowFactory<
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+>(
+  tableName: TableName,
+  props: ColumnsShape,
+  tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
+    defaultIspOptions?: i.InsertStmtPreparerOptions<
+      TableName,
+      Any,
+      Any,
+      Context
+    >;
+  },
+) {
+  const sd = d.sqlDomains(props);
 
-// export function tableDomainsRowFactory<
-//   TableName extends string,
-//   TPropAxioms extends d.SqlDomains<Any, Context>,
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   tableName: TableName,
-//   props: TPropAxioms,
-//   tdrfOptions?: TableDefnOptions<TPropAxioms, Context> & {
-//     defaultIspOptions?: dml.InsertStmtPreparerOptions<
-//       TableName,
-//       Any,
-//       Any,
-//       Context
-//     >;
-//   },
-// ) {
-//   const sd = d.sqlDomains(props, tdrfOptions);
+  type ZodRecord = z.infer<typeof sd.zSchema>;
 
-//   type EntireRecord = TableColumnsScalarValuesOrSqlExprs<
-//     ax.AxiomType<typeof sd>,
-//     Context
-//   >;
-//   type ExcludeFromInsertDML = {
-//     [
-//       Property in keyof TPropAxioms as Extract<
-//         Property,
-//         TPropAxioms[Property] extends { isExcludedFromInsertDML: true }
-//           ? Property
-//           : never
-//       >
-//     ]: true;
-//   };
-//   type ExcludeKeysFromFromInsertDML = Extract<
-//     keyof EntireRecord,
-//     keyof ExcludeFromInsertDML
-//   >;
+  // deno-lint-ignore ban-types
+  type requiredKeys<T extends object> = {
+    [k in keyof T]: undefined extends T[k] ? never : k;
+  }[keyof T];
 
-//   type OptionalInInsertableRecord = {
-//     [
-//       Property in keyof TPropAxioms as Extract<
-//         Property,
-//         TPropAxioms[Property] extends { isOptionalInInsertableRecord: true }
-//           ? Property
-//           : never
-//       >
-//     ]: true;
-//   };
-//   type OptionalKeysInInsertableRecord = Extract<
-//     keyof EntireRecord,
-//     keyof OptionalInInsertableRecord
-//   >;
+  type addQuestionMarks<
+    // deno-lint-ignore ban-types
+    T extends object,
+    R extends keyof T = requiredKeys<T>,
+  > // O extends keyof T = optionalKeys<T>
+   = Pick<Required<T>, R> & Partial<T>;
 
-//   type AllButExcludedAndOptional = Omit<
-//     Omit<EntireRecord, ExcludeKeysFromFromInsertDML>,
-//     OptionalKeysInInsertableRecord
-//   >;
-//   type InsertableRecord =
-//     & AllButExcludedAndOptional
-//     & Partial<Pick<EntireRecord, OptionalKeysInInsertableRecord>>;
-//   type InsertableColumnName = keyof InsertableRecord & string;
-//   type InsertableObject = tr.TabularRecordToObject<InsertableRecord>;
+  type EntireRecord = addQuestionMarks<
+    {
+      [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
+        z.ZodType<infer T, infer D, infer I>
+        ? z.infer<z.ZodType<T, D, I>> | tmpl.SqlTextSupplier<Context>
+        : never;
+    }
+  >;
+  type ExcludeFromInsertDML = {
+    [
+      Property in keyof ColumnsShape as Extract<
+        Property,
+        ColumnsShape[Property] extends { isExcludedFromInsertDML: true }
+          ? Property
+          : never
+      >
+    ]: true;
+  };
+  type ExcludeKeysFromFromInsertDML = Extract<
+    keyof EntireRecord,
+    keyof ExcludeFromInsertDML
+  >;
 
-//   const defaultables = ax.axiomSerDeObjectDefaultables<TPropAxioms>(
-//     ...sd.domains,
-//   );
+  type OptionalInInsertableRecord = {
+    [
+      Property in keyof ColumnsShape as Extract<
+        Property,
+        ColumnsShape[Property] extends { isOptionalInInsertableRecord: true }
+          ? Property
+          : never
+      >
+    ]: true;
+  };
+  type OptionalKeysInInsertableRecord = Extract<
+    keyof EntireRecord,
+    keyof OptionalInInsertableRecord
+  >;
 
-//   // we let Typescript infer function return to allow generics in sqlDomains to
-//   // be more effective but we want other parts of the `result` to be as strongly
-//   // typed as possible
-//   const result = {
-//     prepareInsertable: (
-//       o: InsertableObject,
-//       rowState?: tr.TransformTabularRecordsRowState<InsertableRecord>,
-//       options?: tr.TransformTabularRecordOptions<InsertableRecord>,
-//     ) => tr.transformTabularRecord(o, rowState, options),
-//     insertDML: dml.typicalInsertStmtPreparerSync<
-//       TableName,
-//       InsertableRecord,
-//       EntireRecord,
-//       Context
-//     >(
-//       tableName,
-//       (group) => {
-//         if (group === "primary-keys") {
-//           return sd.domains.filter((d) =>
-//             isTablePrimaryKeyColumnDefn(d) ? true : false
-//           );
-//         }
-//         return sd.domains.filter((d) =>
-//           isTableColumnInsertDmlExclusionSupplier(d) &&
-//             d.isExcludedFromInsertDML
-//             ? false
-//             : true
-//         );
-//       },
-//       undefined,
-//       tdrfOptions?.defaultIspOptions,
-//     ),
-//     insertCustomDML: (
-//       mutateValues: (
-//         ir: safety.Writeable<InsertableRecord>,
-//         defaultable: typeof defaultables,
-//       ) => Promise<void>,
-//     ) =>
-//       dml.typicalInsertStmtPreparer<
-//         TableName,
-//         InsertableRecord,
-//         EntireRecord,
-//         Context
-//       >(
-//         tableName,
-//         (group) => {
-//           if (group === "primary-keys") {
-//             return sd.domains.filter((d) =>
-//               isTablePrimaryKeyColumnDefn(d) ? true : false
-//             );
-//           }
-//           return sd.domains.filter((d) =>
-//             isTableColumnInsertDmlExclusionSupplier(d) &&
-//               d.isExcludedFromInsertDML
-//               ? false
-//               : true
-//           );
-//         },
-//         (ir) => mutateValues(ir, defaultables),
-//         tdrfOptions?.defaultIspOptions,
-//       ),
-//   };
-//   return result;
-// }
+  type AllButExcludedAndOptional = Omit<
+    Omit<EntireRecord, ExcludeKeysFromFromInsertDML>,
+    OptionalKeysInInsertableRecord
+  >;
+  type InsertableRecord =
+    & AllButExcludedAndOptional
+    & Partial<Pick<EntireRecord, OptionalKeysInInsertableRecord>>;
+  type InsertableObject = r.TabularRecordToObject<InsertableRecord>;
+
+  // we let Typescript infer function return to allow generics in sqlDomains to
+  // be more effective but we want other parts of the `result` to be as strongly
+  // typed as possible
+  const result = {
+    prepareInsertable: (
+      o: InsertableObject,
+      rowState?: r.TransformTabularRecordsRowState<InsertableRecord>,
+      options?: r.TransformTabularRecordOptions<InsertableRecord>,
+    ) => r.transformTabularRecord(o, rowState, options),
+    insertDML: i.typicalInsertStmtPreparerSync<
+      TableName,
+      InsertableRecord,
+      EntireRecord,
+      Context
+    >(
+      tableName,
+      (group) => {
+        if (group === "primary-keys") {
+          return sd.domains.filter((d) =>
+            isTablePrimaryKeyColumnDefn(d) ? true : false
+          );
+        }
+        return sd.domains.filter((d) =>
+          isTableColumnInsertDmlExclusionSupplier(d) &&
+            d.isExcludedFromInsertDML
+            ? false
+            : true
+        );
+      },
+      undefined,
+      tdrfOptions?.defaultIspOptions,
+    ),
+  };
+  return result;
+}
 
 // export function tableSelectFactory<
 //   TableName extends string,
@@ -1100,7 +1079,7 @@ export function tableDefinition<
 //     & Omit<EntireRecord, OptionalKeysInInsertableRecord>
 //     & Partial<Pick<EntireRecord, OptionalKeysInInsertableRecord>>;
 //   type FilterableColumnName = keyof FilterableRecord & string;
-//   type FilterableObject = tr.TabularRecordToObject<FilterableRecord>;
+//   type FilterableObject = r.TabularRecordToObject<FilterableRecord>;
 
 //   // we let Typescript infer function return to allow generics in sqlDomains to
 //   // be more effective but we want other parts of the `result` to be as strongly
@@ -1108,10 +1087,10 @@ export function tableDefinition<
 //   return {
 //     prepareFilterable: (
 //       o: FilterableObject,
-//       rowState?: tr.TransformTabularRecordsRowState<FilterableRecord>,
-//       options?: tr.TransformTabularRecordOptions<FilterableRecord>,
-//     ) => tr.transformTabularRecord(o, rowState, options),
-//     select: ss.entitySelectStmtPreparer<
+//       rowState?: r.TransformTabularRecordsRowState<FilterableRecord>,
+//       options?: r.TransformTabularRecordOptions<FilterableRecord>,
+//     ) => r.transformTabularRecord(o, rowState, options),
+//     select: s.entitySelectStmtPreparer<
 //       TableName,
 //       FilterableRecord,
 //       EntireRecord,
