@@ -13,62 +13,30 @@ type Any = any; // make it easy on linter
 
 export type ReferenceSource = {
   readonly isReferenceSource: true;
+  readonly incomingRefs: Set<ReferenceDestination>;
 };
 
 export type ReferenceDestination = {
   readonly isReferenceDestination: true;
-  readonly incomingRefs: Set<ReferenceSource>;
 };
 
-export function referenceSource<Original extends z.ZodTypeAny>(
+export function referencedSource<Original extends z.ZodTypeAny>(
   original: Original,
-): [Original, ReferenceDestination] {
-  const untypedClone = (value: Any): Any | never => {
-    const typeofValue = typeof value;
-    // primatives are copied by value.
-    if (
-      [
-        "string",
-        "number",
-        "boolean",
-        "string",
-        "bigint",
-        "symbol",
-        "null",
-        "undefined",
-        "function",
-      ].includes(typeofValue)
-    ) {
-      return value;
-    }
-    if (Array.isArray(value)) {
-      return value.map(untypedClone);
-    }
-    if (typeofValue === "object") {
-      // deno-lint-ignore no-explicit-any
-      const clone: any = {};
-      for (const prop in value) {
-        clone[prop] = untypedClone(value[prop]);
-      }
-      return clone;
-    }
-    throw new Error(`You've tried to clone something that can't be cloned`);
-  };
-
-  const typedClone = (zta: z.ZodTypeAny): z.ZodTypeAny => {
+): [Original, ReferenceSource] {
+  const clone = (zta: Original): Original => {
     const zodTypeName = zta._def.typeName;
     switch (zodTypeName) {
       case z.ZodFirstPartyTypeKind.ZodOptional:
       case z.ZodFirstPartyTypeKind.ZodDefault: {
-        return typedClone(zta._def.innerType);
+        return clone(zta._def.innerType);
       }
 
       case z.ZodFirstPartyTypeKind.ZodString: {
-        return z.string({ ...zta._def });
+        return z.string({ ...zta._def }) as unknown as Original;
       }
 
       case z.ZodFirstPartyTypeKind.ZodNumber: {
-        return z.number({ ...zta._def });
+        return z.number({ ...zta._def }) as unknown as Original;
       }
 
       default:
@@ -78,19 +46,19 @@ export function referenceSource<Original extends z.ZodTypeAny>(
     }
   };
 
-  const cloned = typedClone(original);
-  const refSrc = cloned as unknown as ReferenceSource;
-  ((refSrc.isReferenceSource) as Any) = true;
-
-  const refDest = original as unknown as ReferenceDestination;
+  const cloned = clone(original);
+  const refDest = cloned as unknown as ReferenceDestination;
   ((refDest.isReferenceDestination) as Any) = true;
-  let incomingRefs = refDest.incomingRefs;
+
+  const refSrc = original as unknown as ReferenceSource;
+  ((refSrc.isReferenceSource) as Any) = true;
+  let incomingRefs = refSrc.incomingRefs;
   if (!incomingRefs) {
-    incomingRefs = new Set<ReferenceSource>();
-    ((refDest.incomingRefs) as Any) = incomingRefs;
+    incomingRefs = new Set<ReferenceDestination>();
+    ((refSrc.incomingRefs) as Any) = incomingRefs;
   }
-  incomingRefs.add(refSrc);
-  return [cloned as Original, refDest];
+  incomingRefs.add(refDest);
+  return [cloned, refSrc];
 }
 
 /**
@@ -366,20 +334,20 @@ export function sqlDomains<
   // we track all references/referenced (TODO: will this be a memory leak due
   // to circular references?); each copy will "deoptionalize" meaning it's
   // going to not be optional as a reference even if it's optional in the src
-  type References = {
+  type Referencables = {
     [Property in keyof ZodRawShape]: () => ZodRawShape[Property] extends
       z.ZodOptionalType<Any>
-      ? z.deoptional<ZodRawShape[Property]> & ReferenceSource
+      ? z.deoptional<ZodRawShape[Property]> & ReferenceDestination
       : (ZodRawShape[Property] extends z.ZodType<infer T, infer D, infer I>
-        ? z.ZodType<T, D, I> & ReferenceSource
+        ? z.ZodType<T, D, I> & ReferenceDestination
         : never);
   };
-  const references: References = {} as Any;
-  const referenced = new Set<ReferenceDestination>();
+  const referencables: Referencables = {} as Any;
+  const referenced = new Set<ReferenceSource>();
   for (const key of shapeKeys) {
-    (references[key] as Any) = () => {
+    (referencables[key] as Any) = () => {
       // expensive but easiest approach -- let Zod make a "copy" for us
-      const [newInstance, rd] = referenceSource(zSchema.shape[key as Any]);
+      const [newInstance, rd] = referencedSource(zSchema.shape[key as Any]);
       referenced.add(rd);
       return newInstance;
     };
@@ -392,7 +360,7 @@ export function sqlDomains<
   const lintIssues: l.SqlLintIssueSupplier[] = [];
   return {
     zSchema,
-    references,
+    referencables,
     referenced,
     sdSchema,
     domains,

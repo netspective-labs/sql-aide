@@ -100,31 +100,36 @@ Deno.test("Zod-based SQL domains", async (tc) => {
       ),
       // TODO: add all the other scalars and types
     });
+    const srcRefs = srcDomains.referencables;
 
     await innerTC.step("src type safety", () => {
-      expectType<z.ZodType<string, z.ZodStringDef, string> & d.ReferenceSource>(
-        srcDomains.references.text1(),
+      expectType<
+        z.ZodType<string, z.ZodStringDef, string> & d.ReferenceDestination
+      >(
+        srcRefs.text1(),
       );
-      expectType<z.ZodString>(srcDomains.references.text2_src_nullable());
-      expectType<z.ZodType<number, z.ZodNumberDef, number> & d.ReferenceSource>(
-        srcDomains.references.int1(),
+      expectType<z.ZodString>(srcRefs.text2_src_nullable());
+      expectType<
+        z.ZodType<number, z.ZodNumberDef, number> & d.ReferenceDestination
+      >(
+        srcRefs.int1(),
       );
-      expectType<z.ZodNumber & d.ReferenceSource>(
-        srcDomains.references.int2_src_nullable(),
+      expectType<z.ZodNumber & d.ReferenceDestination>(
+        srcRefs.int2_src_nullable(),
       );
     });
 
     await innerTC.step("destination type safety", async (innerInnerTC) => {
       const refDomains = d.sqlDomains({
-        ref_text1: srcDomains.references.text1().describe(
+        ref_text1: srcRefs.text1().describe(
           "refDomains.ref_text1",
         ),
-        ref_text1_nullable: srcDomains.references.text1().optional().describe(
+        ref_text1_nullable: srcRefs.text1().optional().describe(
           "refDomains.ref_text1_nullable",
         ),
-        ref_text2_dest_not_nullable: srcDomains.references.text2_src_nullable()
+        ref_text2_dest_not_nullable: srcRefs.text2_src_nullable()
           .describe("refDomains.ref_text2_dest_not_nullable"),
-        ref_text2_dest_nullable: srcDomains.references.text2_src_nullable()
+        ref_text2_dest_nullable: srcRefs.text2_src_nullable()
           .optional().describe("refDomains.ref_text2_dest_nullable"),
       });
 
@@ -154,7 +159,8 @@ Deno.test("Zod-based SQL domains", async (tc) => {
             z.ZodType<
               string | undefined,
               z.ZodOptionalDef<
-                z.ZodType<string, z.ZodStringDef, string> & d.ReferenceSource
+                & z.ZodType<string, z.ZodStringDef, string>
+                & d.ReferenceDestination
               >,
               string | undefined
             >,
@@ -175,7 +181,7 @@ Deno.test("Zod-based SQL domains", async (tc) => {
           d.SqlDomain<
             z.ZodType<
               string | undefined,
-              z.ZodOptionalDef<z.ZodString & d.ReferenceSource>,
+              z.ZodOptionalDef<z.ZodString & d.ReferenceDestination>,
               string | undefined
             >,
             tmpl.SqlEmitContext,
