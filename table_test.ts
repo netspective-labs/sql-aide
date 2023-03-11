@@ -71,6 +71,7 @@ const syntheticSchema = () => {
   );
 
   return {
+    commonColumns,
     tableWithoutPK,
     tableWithAutoIncPK,
     tableWithTextPK,
