@@ -88,6 +88,120 @@ Deno.test("Zod-based SQL domains", async (tc) => {
     });
   });
 
+  await tc.step("references", async (innerTC) => {
+    const srcDomains = d.sqlDomains({
+      text1: z.string().describe("srcDomains.text1"),
+      text2_src_nullable: z.string().optional().describe(
+        "srcDomains.text2_src_nullable",
+      ),
+      int1: z.number().describe("srcDomains.int1"),
+      int2_src_nullable: z.number().optional().describe(
+        "srcDomains.int2_src_nullable",
+      ),
+      // TODO: add all the other scalars and types
+    });
+
+    await innerTC.step("src type safety", () => {
+      expectType<z.ZodType<string, z.ZodStringDef, string> & d.ReferenceSource>(
+        srcDomains.references.text1(),
+      );
+      expectType<z.ZodString>(srcDomains.references.text2_src_nullable());
+      expectType<z.ZodType<number, z.ZodNumberDef, number> & d.ReferenceSource>(
+        srcDomains.references.int1(),
+      );
+      expectType<z.ZodNumber & d.ReferenceSource>(
+        srcDomains.references.int2_src_nullable(),
+      );
+    });
+
+    await innerTC.step("destination type safety", async (innerInnerTC) => {
+      const refDomains = d.sqlDomains({
+        ref_text1: srcDomains.references.text1().describe(
+          "refDomains.ref_text1",
+        ),
+        ref_text1_nullable: srcDomains.references.text1().optional().describe(
+          "refDomains.ref_text1_nullable",
+        ),
+        ref_text2_dest_not_nullable: srcDomains.references.text2_src_nullable()
+          .describe("refDomains.ref_text2_dest_not_nullable"),
+        ref_text2_dest_nullable: srcDomains.references.text2_src_nullable()
+          .optional().describe("refDomains.ref_text2_dest_nullable"),
+      });
+
+      await innerInnerTC.step("equivalence but not identical", () => {
+        // need to make sure references don't just return their original sources
+        // but instead create new copies
+        ta.assert(
+          (srcDomains.zSchema.shape.text1 as Any) !==
+            (refDomains.zSchema.shape.ref_text1 as Any),
+        );
+        ta.assert(
+          srcDomains.zSchema.shape.text1.description ==
+            "srcDomains.text1",
+        );
+        ta.assert(
+          refDomains.zSchema.shape.ref_text1.description ==
+            "refDomains.ref_text1",
+        );
+      });
+
+      await innerInnerTC.step("type expectations", () => {
+        expectType<d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
+          refDomains.sdSchema.ref_text1,
+        );
+        expectType<
+          d.SqlDomain<
+            z.ZodType<
+              string | undefined,
+              z.ZodOptionalDef<
+                z.ZodType<string, z.ZodStringDef, string> & d.ReferenceSource
+              >,
+              string | undefined
+            >,
+            tmpl.SqlEmitContext,
+            string
+          >
+        >(refDomains.sdSchema.ref_text1_nullable);
+        expectType<
+          d.SqlDomain<
+            z.ZodType<string, z.ZodStringDef, string>,
+            tmpl.SqlEmitContext,
+            string
+          >
+        >(
+          refDomains.sdSchema.ref_text2_dest_not_nullable,
+        );
+        expectType<
+          d.SqlDomain<
+            z.ZodType<
+              string | undefined,
+              z.ZodOptionalDef<z.ZodString & d.ReferenceSource>,
+              string | undefined
+            >,
+            tmpl.SqlEmitContext,
+            string
+          >
+        >(
+          refDomains.sdSchema.ref_text2_dest_nullable,
+        );
+
+        type SyntheticSchema = z.infer<typeof refDomains.zSchema>;
+        const synthetic: SyntheticSchema = {
+          ref_text1: "ref-text1",
+          ref_text2_dest_not_nullable:
+            "ref-text2 must be non-nullable in destination even though it's nullable in the source",
+          ref_text2_dest_nullable: undefined, // this one is OK to be undefined since it's marked as such in the destination
+        };
+        ta.assert(synthetic);
+        expectType<SyntheticSchema>(synthetic);
+      });
+
+      await innerInnerTC.step("TODO: referenced/references graph", () => {
+        // TODO: add test cases to make sure all the refs are proper
+      });
+    });
+  });
+
   await tc.step("native zod domains plus a custom domain", async (innerTC) => {
     type MyCustomColumnDefn = {
       readonly isCustomProperty1: true;

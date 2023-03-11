@@ -11,6 +11,88 @@ import * as l from "./lint.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+export type ReferenceSource = {
+  readonly isReferenceSource: true;
+};
+
+export type ReferenceDestination = {
+  readonly isReferenceDestination: true;
+  readonly incomingRefs: Set<ReferenceSource>;
+};
+
+export function referenceSource<Original extends z.ZodTypeAny>(
+  original: Original,
+): [Original, ReferenceDestination] {
+  const untypedClone = (value: Any): Any | never => {
+    const typeofValue = typeof value;
+    // primatives are copied by value.
+    if (
+      [
+        "string",
+        "number",
+        "boolean",
+        "string",
+        "bigint",
+        "symbol",
+        "null",
+        "undefined",
+        "function",
+      ].includes(typeofValue)
+    ) {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.map(untypedClone);
+    }
+    if (typeofValue === "object") {
+      // deno-lint-ignore no-explicit-any
+      const clone: any = {};
+      for (const prop in value) {
+        clone[prop] = untypedClone(value[prop]);
+      }
+      return clone;
+    }
+    throw new Error(`You've tried to clone something that can't be cloned`);
+  };
+
+  const typedClone = (zta: z.ZodTypeAny): z.ZodTypeAny => {
+    const zodTypeName = zta._def.typeName;
+    switch (zodTypeName) {
+      case z.ZodFirstPartyTypeKind.ZodOptional:
+      case z.ZodFirstPartyTypeKind.ZodDefault: {
+        return typedClone(zta._def.innerType);
+      }
+
+      case z.ZodFirstPartyTypeKind.ZodString: {
+        return z.string({ ...zta._def });
+      }
+
+      case z.ZodFirstPartyTypeKind.ZodNumber: {
+        return z.number({ ...zta._def });
+      }
+
+      default:
+        throw new Error(
+          `Unable to map Zod type ${zodTypeName} in referenceSource(src).duplicate(zta)`,
+        );
+    }
+  };
+
+  const cloned = typedClone(original);
+  const refSrc = cloned as unknown as ReferenceSource;
+  ((refSrc.isReferenceSource) as Any) = true;
+
+  const refDest = original as unknown as ReferenceDestination;
+  ((refDest.isReferenceDestination) as Any) = true;
+  let incomingRefs = refDest.incomingRefs;
+  if (!incomingRefs) {
+    incomingRefs = new Set<ReferenceSource>();
+    ((refDest.incomingRefs) as Any) = incomingRefs;
+  }
+  incomingRefs.add(refSrc);
+  return [cloned as Original, refDest];
+}
+
 /**
  * A `domain` is an Zod scalar schema valuable for many use cases:
  * - defining a column of a table that may generate create table DDL
@@ -166,6 +248,8 @@ export const SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE =
   "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE" as const;
 
 // DELETE_ME: more help available at:
+// - https://github.com/github.com/RobinTail/express-zod-api/blob/main/src/metadata.ts
+// - https://github.com/github.com/anfivewer/an5wer/blob/main/packages/util-react/src/mst/zod/zod-to-mst.ts
 // - https://github.com/sachinraja/zod-to-ts/blob/main/src/index.ts
 // - https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-zod/src/pg/index.ts
 
@@ -278,6 +362,29 @@ export function sqlDomains<
     domains.push(sd);
   }
 
+  // we use this if we want to make a copy of a type (like foreign key ref);
+  // we track all references/referenced (TODO: will this be a memory leak due
+  // to circular references?); each copy will "deoptionalize" meaning it's
+  // going to not be optional as a reference even if it's optional in the src
+  type References = {
+    [Property in keyof ZodRawShape]: () => ZodRawShape[Property] extends
+      z.ZodOptionalType<Any>
+      ? z.deoptional<ZodRawShape[Property]> & ReferenceSource
+      : (ZodRawShape[Property] extends z.ZodType<infer T, infer D, infer I>
+        ? z.ZodType<T, D, I> & ReferenceSource
+        : never);
+  };
+  const references: References = {} as Any;
+  const referenced = new Set<ReferenceDestination>();
+  for (const key of shapeKeys) {
+    (references[key] as Any) = () => {
+      // expensive but easiest approach -- let Zod make a "copy" for us
+      const [newInstance, rd] = referenceSource(zSchema.shape[key as Any]);
+      referenced.add(rd);
+      return newInstance;
+    };
+  }
+
   // we let Typescript infer function return to allow generics to be more
   // easily passed to consumers (if we typed it to an interface we'd limit
   // the type-safety)
@@ -285,6 +392,8 @@ export function sqlDomains<
   const lintIssues: l.SqlLintIssueSupplier[] = [];
   return {
     zSchema,
+    references,
+    referenced,
     sdSchema,
     domains,
     lintIssues,
