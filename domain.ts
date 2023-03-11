@@ -91,7 +91,7 @@ export type SqlDomain<
 > = tmpl.SqlSymbolSupplier<Context> & {
   readonly isSqlDomain: true;
   readonly identity: DomainIdentity;
-  readonly isNullable?: boolean;
+  readonly isNullable: () => boolean;
   readonly sqlDataType: (
     purpose:
       | "create table column"
@@ -258,7 +258,7 @@ export const sqlDomain = <
 
   const defaults = {
     isSqlDomain: true as true, // must not be a boolean but `true`
-    isNullable: zta.isOptional(),
+    isNullable: () => init?.isNullable || zta.isOptional() || zta.isNullable(),
     identity: init?.identity as DomainIdentity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
     sqlSymbol: (ctx: Context) =>
       ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(

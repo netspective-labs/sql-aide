@@ -163,9 +163,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 
           CREATE TABLE "synthetic_table_without_pk" (
               "text" TEXT NOT NULL,
-              "text_nullable" TEXT NOT NULL,
+              "text_nullable" TEXT,
               "int" INTEGER NOT NULL,
-              "int_nullable" INTEGER NOT NULL
+              "int_nullable" INTEGER
           );`),
         );
       });
@@ -208,9 +208,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         CREATE TABLE "synthetic_table_with_auto_inc_pk" (
             "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
             "text" TEXT NOT NULL,
-            "text_nullable" TEXT NOT NULL,
+            "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
-            "int_nullable" INTEGER NOT NULL
+            "int_nullable" INTEGER
         );`),
       );
     });
@@ -245,9 +245,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         CREATE TABLE "synthetic_table_with_text_pk" (
             "text_primary_key" TEXT PRIMARY KEY,
             "text" TEXT NOT NULL,
-            "text_nullable" TEXT NOT NULL,
+            "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
-            "int_nullable" INTEGER NOT NULL
+            "int_nullable" INTEGER
         );`),
       );
     });
@@ -287,9 +287,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         CREATE TABLE "synthetic_table_with_uaod_pk" (
             "ua_on_demand_primary_key" TEXT PRIMARY KEY,
             "text" TEXT NOT NULL,
-            "text_nullable" TEXT NOT NULL,
+            "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
-            "int_nullable" INTEGER NOT NULL
+            "int_nullable" INTEGER
         );`),
         );
       });

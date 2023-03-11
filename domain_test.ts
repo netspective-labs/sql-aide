@@ -33,6 +33,15 @@ Deno.test("Zod-based SQL domains", async (tc) => {
     ta.assert(d.isSqlDomainsSupplier(domains));
 
     await innerTC.step("type safety", () => {
+      ta.assert(
+        !domains.sdSchema.text.isNullable(),
+        "text column should not be nullable",
+      );
+      ta.assert(
+        domains.sdSchema.text_nullable.isNullable(),
+        "text_nullable column should be nullable",
+      );
+
       expectType<d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any>>(
         domains.sdSchema.text,
       );
