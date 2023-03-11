@@ -23,6 +23,30 @@ export type TableColumnDefn<
   readonly columnName: ColumnName;
 };
 
+export function isTableColumnDefn<
+  TableName,
+  ColumnName,
+  ColumnTsType extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+>(
+  o: unknown,
+  args?: { checkTableName: TableName; checkColumnName: ColumnName },
+): o is TableColumnDefn<TableName, ColumnName, ColumnTsType, Context> {
+  const isTCD = safety.typeGuard<
+    TableColumnDefn<TableName, ColumnName, ColumnTsType, Context>
+  >("tableName", "columnName");
+  if (isTCD(o) && d.isSqlDomain(o)) {
+    if (args?.checkTableName && o.tableName != args?.checkTableName) {
+      return false;
+    }
+    if (args?.checkColumnName && o.columnName != args?.checkColumnName) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 export type TablePrimaryKeyColumnDefn<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
@@ -419,7 +443,7 @@ export function foreignKeyNullable<
     foreignDomain,
     foreignDomain.referenceNullableSD(),
     foreignRelNature,
-    { isOptional: true, ...domainOptions },
+    { isNullable: true, ...domainOptions },
   );
 }
 
@@ -449,7 +473,7 @@ export function selfRefForeignKeyNullable<
     selfRefTableNamePlaceholder,
     domain,
     { isSelfRef: true },
-    { isOptional: true, ...domainOptions },
+    { isNullable: true, ...domainOptions },
   );
 }
 
@@ -477,7 +501,7 @@ export function typicalTableColumnDefnSQL<
       ? ` ${decorations.map((d) => d.SQL(ctx)).join(" ")}`
       : "";
     const notNull = decoratorsSQL.length == 0
-      ? isd.isOptional ? "" : " NOT NULL"
+      ? isd.isNullable ? "" : " NOT NULL"
       : "";
     const defaultValue = isd.sqlDefaultValue
       ? ` DEFAULT ${isd.sqlDefaultValue("create table column").SQL(ctx)}`

@@ -41,7 +41,7 @@ export type SqlDomain<
 > = tmpl.SqlSymbolSupplier<Context> & {
   readonly isSqlDomain: true;
   readonly identity: DomainIdentity;
-  readonly isOptional?: boolean;
+  readonly isNullable?: boolean;
   readonly sqlDataType: (
     purpose:
       | "create table column"
@@ -165,13 +165,17 @@ export const SQL_DOMAIN_NOT_IN_COLLECTION =
 export const SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE =
   "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE" as const;
 
+// DELETE_ME: more help available at:
+// - https://github.com/sachinraja/zod-to-ts/blob/main/src/index.ts
+// - https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-zod/src/pg/index.ts
+
 export const sqlDomain = <
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
   DomainIdentity extends string = string,
 >(zta: ZTA, init?: {
   readonly identity?: DomainIdentity;
-  readonly isOptional?: boolean;
+  readonly isNullable?: boolean;
 }): SqlDomain<ZTA, Context> => {
   if (isSqlDomainSupplier<ZTA, Context>(zta._def)) {
     // this means is custom prepared SqlDomain instance attached to a ZTA so
@@ -197,11 +201,12 @@ export const sqlDomain = <
     sqlDomain(zta, {
       identity: inherit?.identity ?? init?.identity ??
         SQL_DOMAIN_NOT_IN_COLLECTION,
-      isOptional: true,
+      isNullable: true,
     });
 
   const defaults = {
     isSqlDomain: true as true, // must not be a boolean but `true`
+    isNullable: zta.isOptional(),
     identity: init?.identity as DomainIdentity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
     sqlSymbol: (ctx: Context) =>
       ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
@@ -229,9 +234,9 @@ export const sqlDomain = <
         init
           ? {
             ...init,
-            isOptional: true,
+            isNullable: true,
           }
-          : { isOptional: true },
+          : { isNullable: true },
       );
     }
 
