@@ -38,6 +38,7 @@ const sqlGen = () => {
 };
 
 const syntheticSchema = () => {
+  const tablesGraph = t.tablesGraph();
   const commonColumns = {
     text: z.string(),
     text_nullable: z.string().optional(),
@@ -48,18 +49,19 @@ const syntheticSchema = () => {
 
   const tableWithoutPK = t.tableDefinition("synthetic_table_without_pk", {
     ...commonColumns,
-  });
+  }, tablesGraph);
   const tableWithAutoIncPK = t.tableDefinition(
     "synthetic_table_with_auto_inc_pk",
     {
       auto_inc_primary_key: t.autoIncPrimaryKey(),
       ...commonColumns,
     },
+    tablesGraph,
   );
   const tableWithTextPK = t.tableDefinition("synthetic_table_with_text_pk", {
     text_primary_key: t.primaryKey(),
     ...commonColumns,
-  });
+  }, tablesGraph);
   const tableWithOnDemandPK = t.tableDefinition(
     "synthetic_table_with_uaod_pk",
     {
@@ -68,6 +70,7 @@ const syntheticSchema = () => {
       ),
       ...commonColumns,
     },
+    tablesGraph,
   );
 
   return {
@@ -76,6 +79,7 @@ const syntheticSchema = () => {
     tableWithAutoIncPK,
     tableWithTextPK,
     tableWithOnDemandPK,
+    tablesGraph,
   };
 };
 
@@ -317,11 +321,12 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[1] valid insert statement for a table without primary keys",
     async (innerTC) => {
-      const { tableWithoutPK: table } = syntheticSchema();
+      const { tableWithoutPK: table, tablesGraph } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_without_pk",
         table.zSchema.shape,
+        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -355,11 +360,12 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[2] valid insert statement for a table with auto-inc primary key",
     async (innerTC) => {
-      const { tableWithAutoIncPK: table } = syntheticSchema();
+      const { tableWithAutoIncPK: table, tablesGraph } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_with_auto_inc_pk",
         table.zSchema.shape,
+        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -466,12 +472,13 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[3] valid insert statement for a table with text primary key",
     async (innerTC) => {
-      const { tableWithTextPK: table } = syntheticSchema();
+      const { tableWithTextPK: table, tablesGraph } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
 
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_with_text_pk",
         table.zSchema.shape,
+        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -510,12 +517,13 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[4] valid insert statement for a table with UA-defaultable (on demand) text primary key",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table } = syntheticSchema();
+      const { tableWithOnDemandPK: table, tablesGraph } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
 
       const tableRF = t.tableColumnsRowFactory(
         table.tableName,
         table.zSchema.shape,
+        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -551,11 +559,12 @@ Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
   await tc.step(
     "valid select statement for a table",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table } = syntheticSchema();
+      const { tableWithOnDemandPK: table, tablesGraph } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
       const tableSF = t.tableSelectFactory(
         table.tableName,
         table.zSchema.shape,
+        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {

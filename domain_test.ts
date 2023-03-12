@@ -113,17 +113,21 @@ Deno.test("Zod-based SQL domains", async (tc) => {
 
     await innerTC.step("src type safety", () => {
       expectType<
-        z.ZodType<string, z.ZodStringDef, string> & d.ReferenceDestination
+        & z.ZodType<string, z.ZodStringDef, string>
+        & d.NativeReferenceDest<SyntheticContext>
       >(
         srcRefs.text1(),
       );
-      expectType<z.ZodString>(srcRefs.text2_src_nullable());
+      expectType<z.ZodString & d.NativeReferenceDest<SyntheticContext>>(
+        srcRefs.text2_src_nullable(),
+      );
       expectType<
-        z.ZodType<number, z.ZodNumberDef, number> & d.ReferenceDestination
+        & z.ZodType<number, z.ZodNumberDef, number>
+        & d.NativeReferenceDest<SyntheticContext>
       >(
         srcRefs.int1(),
       );
-      expectType<z.ZodNumber & d.ReferenceDestination>(
+      expectType<z.ZodNumber & d.NativeReferenceDest<SyntheticContext>>(
         srcRefs.int2_src_nullable(),
       );
     });
@@ -168,8 +172,7 @@ Deno.test("Zod-based SQL domains", async (tc) => {
             z.ZodType<
               string | undefined,
               z.ZodOptionalDef<
-                & z.ZodType<string, z.ZodStringDef, string>
-                & d.ReferenceDestination
+                z.ZodString & d.NativeReferenceDest<SyntheticContext>
               >,
               string | undefined
             >,
@@ -190,7 +193,9 @@ Deno.test("Zod-based SQL domains", async (tc) => {
           d.SqlDomain<
             z.ZodType<
               string | undefined,
-              z.ZodOptionalDef<z.ZodString & d.ReferenceDestination>,
+              z.ZodOptionalDef<
+                z.ZodString & d.NativeReferenceDest<SyntheticContext>
+              >,
               string | undefined
             >,
             tmpl.SqlEmitContext,
@@ -213,6 +218,7 @@ Deno.test("Zod-based SQL domains", async (tc) => {
 
       await innerInnerTC.step("TODO: referenced/references graph", () => {
         // TODO: add test cases to make sure all the refs are proper
+        // console.dir(d.globalDefaultDomainsGraph, { depth: 5 });
       });
     });
   });

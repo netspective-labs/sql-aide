@@ -20,6 +20,15 @@ an RDBMS. Instead, `SQLa` is merely a convenient SQL _generator_ and assembler.
 It makes the preparation of SQL DDL, DML, and DQL easier for developers but it
 does not rewrite SQL or attempt to remove SQL knowledge.
 
+## Init after clone
+
+This repo uses git hooks for maintenance, after cloning the repo in your sandbox
+please do the following:
+
+```bash
+deno task init
+```
+
 ## Terminology
 
 - `domain` refers to the same concept as described in the SQL standard.

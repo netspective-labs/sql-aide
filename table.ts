@@ -242,128 +242,90 @@ export function uaDefaultableTextPrimaryKey<
   );
 }
 
-export type TableBelongsToForeignKeyRelNature<
+export type ForeignKeyRefPlaceholderLifecycle = "init" | "final";
+export type ForeignKeyRefPlaceholder<
+  TableName extends string,
+  ColumnName extends string,
+  ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
 > = {
-  readonly isBelongsToRel: true;
-  readonly collectionName?: js.JsTokenSupplier<Context>;
-};
-
-export type TableSelfRefForeignKeyRelNature = {
-  readonly isSelfRef: true;
-};
-
-export type TableForeignKeyRelNature<Context extends tmpl.SqlEmitContext> =
-  | TableBelongsToForeignKeyRelNature<Context>
-  | TableSelfRefForeignKeyRelNature
-  | { readonly isExtendsRel: true }
-  | { readonly isInheritsRel: true };
-
-export function belongsTo<
-  Context extends tmpl.SqlEmitContext,
->(
-  singularSnakeCaseCollName?: string,
-  pluralSnakeCaseCollName = singularSnakeCaseCollName
-    ? `${singularSnakeCaseCollName}s`
-    : undefined,
-): TableBelongsToForeignKeyRelNature<Context> {
-  return {
-    isBelongsToRel: true,
-    collectionName: singularSnakeCaseCollName
-      ? js.jsSnakeCaseToken(
-        singularSnakeCaseCollName,
-        pluralSnakeCaseCollName,
-      )
-      : undefined,
-  };
-}
-
-export function isTableBelongsToForeignKeyRelNature<
-  Context extends tmpl.SqlEmitContext,
->(o: unknown): o is TableBelongsToForeignKeyRelNature<Context> {
-  const isTBFKRN = safety.typeGuard<TableBelongsToForeignKeyRelNature<Context>>(
-    "isBelongsToRel",
-    "collectionName",
-  );
-  return isTBFKRN(o);
-}
-
-export const isTableSelfRefForeignKeyRelNature = safety.typeGuard<
-  TableSelfRefForeignKeyRelNature
->("isSelfRef");
-
-export type TableForeignKeyColumnDefn<
-  ColumnTsType extends z.ZodTypeAny,
-  ForeignTableName extends string,
-  Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
-  readonly foreignTableName: ForeignTableName;
-  readonly foreignDomain: d.SqlDomain<
-    ColumnTsType,
-    Context
-  >;
-  readonly foreignRelNature?: TableForeignKeyRelNature<Context>;
-};
-
-export function isTableForeignKeyColumnDefn<
-  ColumnTsType extends z.ZodTypeAny,
-  ForeignTableName extends string,
-  Context extends tmpl.SqlEmitContext,
->(
-  o: unknown,
-): o is TableForeignKeyColumnDefn<
-  ColumnTsType,
-  ForeignTableName,
-  Context
-> {
-  const isTFKCD = safety.typeGuard<
-    TableForeignKeyColumnDefn<
+  readonly foreignKeyRefPlaceholderLC: ForeignKeyRefPlaceholderLifecycle;
+  readonly finalizeForeignKeyRefPlaceholder: (
+    foreignKeyRefDest: TableReferenceDest<
+      TableName,
+      ColumnName,
       ColumnTsType,
-      ForeignTableName,
       Context
-    >
-  >("foreignTableName", "foreignDomain");
-  return isTFKCD(o);
-}
+    >,
+  ) => void;
+};
 
-const selfRefTableNamePlaceholder = "SELFREF_TABLE_NAME_PLACEHOLDER" as const;
-
-export function foreignKeyCustom<
+export function foreignKeyReferenceInit<
+  TableName extends string,
+  ColumnName extends string,
   ColumnTsType extends z.ZodTypeAny,
-  ForeignTableName extends string,
   Context extends tmpl.SqlEmitContext,
 >(
-  foreignTableName: ForeignTableName,
-  foreignDomain: d.SqlDomain<
-    ColumnTsType,
-    Context
-  >,
-  domain: d.SqlDomain<ColumnTsType, Context>,
-  foreignRelNature?: TableForeignKeyRelNature<Context>,
+  zodSchema: ColumnTsType,
+  foreignKeyRefSource: TableReferenceSource<Any, Any, ColumnTsType, Context>,
+  finalizeForeignKeyRefPlaceholder?: (
+    foreignKeyRefDest: TableReferenceDest<
+      TableName,
+      ColumnName,
+      ColumnTsType,
+      Context
+    >,
+  ) => void,
+  foreignKeyRelNature?: TableRefDestRelNature<Context>,
   domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-): TableForeignKeyColumnDefn<
-  ColumnTsType,
-  ForeignTableName,
-  Context
-> {
-  const result: TableForeignKeyColumnDefn<
-    ColumnTsType,
-    ForeignTableName,
-    Context
-  > = {
-    foreignTableName,
-    foreignDomain,
-    foreignRelNature,
-    ...domain,
-    ...domainOptions,
-    sqlPartial: (dest) => {
-      if (dest === "create table, after all column definitions") {
-        const aacd = domain?.sqlPartial?.(
-          "create table, after all column definitions",
-        );
-        const fkClause: tmpl.SqlTextSupplier<Context> = {
-          SQL: d.isSqlDomain(result)
-            ? ((ctx) => {
+) {
+  const domain = d.sqlDomain<typeof zodSchema, Context>(zodSchema);
+  const result:
+    & d.SqlDomain<typeof zodSchema, Context>
+    & {
+      readonly foreignKeyRefSource: TableReferenceSource<
+        Any,
+        Any,
+        Any,
+        Context
+      >;
+      readonly foreignKeyRefDest: TableReferenceDest<
+        TableName,
+        ColumnName,
+        Any,
+        Context
+      >;
+      readonly foreignKeyRelNature?: TableRefDestRelNature<Context>;
+    }
+    & ForeignKeyRefPlaceholder<
+      TableName,
+      ColumnName,
+      ColumnTsType,
+      Context
+    > = {
+      foreignKeyRefPlaceholderLC: "init",
+      foreignKeyRefSource,
+      foreignKeyRefDest: undefined as Any, // this is not set until finalize() is called
+      foreignKeyRelNature,
+      ...domain,
+      ...domainOptions,
+      finalizeForeignKeyRefPlaceholder: (foreignKeyRefDest) => {
+        finalizeForeignKeyRefPlaceholder?.(foreignKeyRefDest);
+        (result.foreignKeyRefDest as Any) = foreignKeyRefDest;
+        ((result.foreignKeyRefPlaceholderLC) as "final") = "final";
+      },
+      sqlPartial: (dest) => {
+        if (!(result.foreignKeyRefPlaceholderLC === "final")) {
+          throw Error(
+            `foreignKeyReferenceInit.sqlPartial called without finalizing the placeholder`,
+          );
+        }
+        if (dest === "create table, after all column definitions") {
+          const aacd = domain?.sqlPartial?.(
+            "create table, after all column definitions",
+          );
+          const fkClause: tmpl.SqlTextSupplier<Context> = {
+            SQL: ((ctx) => {
               const ns = ctx.sqlNamingStrategy(ctx, {
                 quoteIdentifiers: true,
               });
@@ -371,111 +333,41 @@ export function foreignKeyCustom<
               const cn = ns.tableColumnName;
               // don't use the foreignTableName passed in because it could be
               // mutated for self-refs in table definition phase
-              const ftName = result.foreignTableName;
+              const ftName = result.foreignKeyRefDest.tableColumnDefn.tableName;
               return `FOREIGN KEY(${
                 cn({
                   tableName: "TODO",
                   columnName: result.identity,
                 })
               }) REFERENCES ${tn(ftName)}(${
-                cn({
-                  tableName: ftName,
-                  columnName: d.isSqlDomain(foreignDomain)
-                    ? foreignDomain.identity
-                    : "/* FOREIGN KEY REFERENCE is not IdentifiableSqlDomain */",
-                })
+                cn(result.foreignKeyRefSource.tableColumnDefn)
               })`;
-            })
-            : (() => {
-              console.dir(result);
-              return `/* FOREIGN KEY sqlPartial in "create table, after all column definitions" is not IdentifiableSqlDomain */`;
             }),
-        };
-        return aacd ? [...aacd, fkClause] : [fkClause];
-      }
-      return domain.sqlPartial?.(dest);
-    },
-  };
+          };
+          return aacd ? [...aacd, fkClause] : [fkClause];
+        }
+        return domain.sqlPartial?.(dest);
+      },
+    };
   return result;
 }
 
-export function foreignKey<
-  ColumnTsType extends z.ZodTypeAny,
-  ForeignTableName extends string,
-  Context extends tmpl.SqlEmitContext,
->(
-  foreignTableName: ForeignTableName,
-  foreignDomain: d.SqlDomain<
-    ColumnTsType,
-    Context
-  >,
-  foreignRelNature?: TableForeignKeyRelNature<Context>,
-  domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-): TableForeignKeyColumnDefn<
-  ColumnTsType,
-  ForeignTableName,
-  Context
-> {
-  return foreignKeyCustom(
-    foreignTableName,
-    foreignDomain,
-    foreignDomain.referenceSD(),
-    foreignRelNature,
-    domainOptions,
-  );
-}
+// const selfRefTableNamePlaceholder = "SELFREF_TABLE_NAME_PLACEHOLDER" as const;
 
-export function foreignKeyNullable<
-  ColumnTsType extends z.ZodTypeAny,
-  ForeignTableName extends string,
-  Context extends tmpl.SqlEmitContext,
->(
-  foreignTableName: ForeignTableName,
-  foreignDomain: d.SqlDomain<
-    ColumnTsType,
-    Context
-  >,
-  foreignRelNature?: TableForeignKeyRelNature<Context>,
-  domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-) {
-  return foreignKeyCustom<ColumnTsType, ForeignTableName, Context>(
-    foreignTableName,
-    foreignDomain,
-    foreignDomain.referenceNullableSD(),
-    foreignRelNature,
-    { isNullable: () => true, ...domainOptions },
-  );
-}
-
-export function selfRefForeignKey<
-  ColumnTsType extends z.ZodTypeAny,
-  Context extends tmpl.SqlEmitContext,
->(
-  domain: d.SqlDomain<ColumnTsType, Context>,
-  domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-) {
-  return foreignKey(
-    selfRefTableNamePlaceholder,
-    domain,
-    { isSelfRef: true },
-    domainOptions,
-  );
-}
-
-export function selfRefForeignKeyNullable<
-  ColumnTsType extends z.ZodTypeAny,
-  Context extends tmpl.SqlEmitContext,
->(
-  domain: d.SqlDomain<ColumnTsType, Context>,
-  domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-) {
-  return foreignKeyNullable(
-    selfRefTableNamePlaceholder,
-    domain,
-    { isSelfRef: true },
-    { isNullable: () => true, ...domainOptions },
-  );
-}
+// export function selfRefForeignKey<
+//   ColumnTsType extends z.ZodTypeAny,
+//   Context extends tmpl.SqlEmitContext,
+// >(
+//   domain: d.SqlDomain<ColumnTsType, Context>,
+//   domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
+// ) {
+//   return foreignKey(
+//     selfRefTableNamePlaceholder,
+//     domain,
+//     { isSelfRef: true },
+//     domainOptions,
+//   );
+// }
 
 export function typicalTableColumnDefnSQL<
   TableName extends string,
@@ -612,6 +504,156 @@ export const isUniqueTableColumn = safety.typeGuard<UniqueTableColumn>(
   "isUnique",
 );
 
+export type TableBelongsToRefDestNature<
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly isBelongsToRel: true;
+  readonly collectionName?: js.JsTokenSupplier<Context>;
+};
+
+export type TableSelfRefDestNature = {
+  readonly isSelfRef: true;
+};
+
+export type TableRefDestRelNature<Context extends tmpl.SqlEmitContext> =
+  | TableBelongsToRefDestNature<Context>
+  | TableSelfRefDestNature
+  | { readonly isExtendsRel: true }
+  | { readonly isInheritsRel: true };
+
+export function belongsToRelation<
+  Context extends tmpl.SqlEmitContext,
+>(
+  singularSnakeCaseCollName?: string,
+  pluralSnakeCaseCollName = singularSnakeCaseCollName
+    ? `${singularSnakeCaseCollName}s`
+    : undefined,
+): TableBelongsToRefDestNature<Context> {
+  return {
+    isBelongsToRel: true,
+    collectionName: singularSnakeCaseCollName
+      ? js.jsSnakeCaseToken(
+        singularSnakeCaseCollName,
+        pluralSnakeCaseCollName,
+      )
+      : undefined,
+  };
+}
+
+export function isTableBelongsToRefDestNature<
+  Context extends tmpl.SqlEmitContext,
+>(o: unknown): o is TableBelongsToRefDestNature<Context> {
+  const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature<Context>>(
+    "isBelongsToRel",
+    "collectionName",
+  );
+  return isTBFKRN(o);
+}
+
+export const isTableSelfRefDestNature = safety.typeGuard<
+  TableSelfRefDestNature
+>("isSelfRef");
+
+export const TableRefSourceType = "foreignKeySource" as const;
+export const TableRefDestType = "foreignKeyDest" as const;
+
+export type TableReferenceDest<
+  TableName extends string,
+  ColumnName extends string,
+  ColumnTsType extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+> =
+  & d.ReferenceDestination<typeof TableRefDestType, Context>
+  & {
+    readonly tableColumnDefn: TableColumnDefn<
+      TableName,
+      ColumnName,
+      ColumnTsType,
+      Context
+    >;
+  }
+  // TODO: make this required once we figure out how to specify it
+  & { readonly tableRefRelNature?: TableRefDestRelNature<Context> };
+
+export type TableReferenceSource<
+  TableName extends string,
+  ColumnName extends string,
+  ColumnTsType extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+> =
+  & d.ReferenceSource<
+    typeof TableRefSourceType,
+    TableReferenceDest<TableName, Any, Any, Context>,
+    TableName,
+    TableDefinition<TableName, Context> & d.SqlDomains<Any, Context>,
+    Context
+  >
+  & {
+    readonly tableColumnDefn: TableColumnDefn<
+      TableName,
+      ColumnName,
+      ColumnTsType,
+      Context
+    >;
+  };
+
+export type TableReferencesFactory<
+  TableName extends string,
+  Context extends tmpl.SqlEmitContext,
+> = d.SqlDomainReferencesFactory<
+  TableReferenceSource<TableName, Any, Any, Context>,
+  TableReferenceDest<TableName, Any, Any, Context>,
+  TableColumnDefn<TableName, Any, Any, Context>,
+  Context
+>;
+
+export function tableReferencesFactory<
+  TableName extends string,
+  Context extends tmpl.SqlEmitContext,
+>(_tableName: TableName) {
+  const result: TableReferencesFactory<TableName, Context> = {
+    prepareSource: (o) =>
+      d.asReferenceSource<
+        typeof TableRefSourceType,
+        TableReferenceDest<TableName, Any, Any, Context>,
+        TableReferenceSource<TableName, Any, Any, Context>,
+        TableName,
+        TableDefinition<TableName, Context> & d.SqlDomains<Any, Context>,
+        Context
+      >(o, TableRefSourceType, (enhanced) => {
+        // o is usually the ZodType._def
+        if (isTableColumnDefn(o)) {
+          ((enhanced.tableColumnDefn) as Any) = o;
+          return enhanced;
+        }
+        console.dir(o);
+        throw Error(
+          `tableReferencesFactory.prepareSource.enhance requires a TableColumnDefn`,
+        );
+      }),
+    prepareDest: (o, tableColumnDefn) =>
+      d.asReferenceDestination<
+        TableReferenceDest<TableName, Any, Any, Context>,
+        typeof TableRefDestType
+      >(
+        o,
+        TableRefDestType,
+        (enhance) => {
+          const enhanced = enhance as TableReferenceDest<
+            TableName,
+            Any,
+            Any,
+            Context
+          >;
+          // TODO: ((enhanced.tableRefRelNature) as Any) = tableName;
+          ((enhanced.tableColumnDefn) as Any) = tableColumnDefn;
+          return enhanced;
+        },
+      ),
+  };
+  return result;
+}
+
 export interface TableDefnOptions<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
@@ -628,6 +670,80 @@ export interface TableDefnOptions<
     columnsShape: ColumnsShape,
     tableName: TableName,
   ) => TableColumnsConstraint<ColumnsShape, Context>[];
+  readonly refGraph?: <TableName extends string>(
+    tableName: TableName,
+  ) => TableReferencesFactory<TableName, Context>;
+}
+
+export type TablesGraph<
+  TableName extends string,
+  Context extends tmpl.SqlEmitContext,
+> = d.SqlDomainsGraph<
+  TableName,
+  TableReferenceSource<TableName, Any, Any, Context>,
+  TableReferenceDest<TableName, Any, Any, Context>,
+  d.SqlDomainReferencesFactory<
+    TableReferenceSource<TableName, Any, Any, Context>,
+    TableReferenceDest<TableName, Any, Any, Context>,
+    TableColumnDefn<TableName, Any, Any, Context>,
+    Context
+  >,
+  Context
+>;
+
+export function tablesGraph<
+  Context extends tmpl.SqlEmitContext,
+>() {
+  let anonymousTableIndex = 0;
+  const tablesRefsGraphs = new Map<
+    string,
+    d.SqlDomainReferencesFactory<Any, Any, Any, Context>
+  >();
+  const referenced = new Set<TableReferenceSource<Any, Any, Any, Context>>();
+  const references = new Set<TableReferenceDest<Any, Any, Any, Context>>();
+  const result: TablesGraph<Any, Context> = {
+    referenced,
+    references,
+    anonymousIdentity: (zSchema) => {
+      anonymousTableIndex++;
+      const { keys: shapeKeys } = zSchema._getCached();
+      return `anonymousTable${anonymousTableIndex}://${shapeKeys.join(",")}`;
+    },
+    domainRefsFactory: (identity) => {
+      let drg = tablesRefsGraphs.get(identity);
+      if (!drg) {
+        drg = tableReferencesFactory<Any, Context>(identity);
+        tablesRefsGraphs.set(identity, drg!);
+      }
+      return drg!;
+    },
+    prepareRef: (original, destDomain) => {
+      const sds = original._def;
+      if (isTableColumnDefn(destDomain)) {
+        const drefsGraph = result.domainRefsFactory(sds.tableName);
+        const cloned = d.clonedZodType(original);
+        const refDest = drefsGraph.prepareDest(cloned._def, destDomain);
+        const refSrc = drefsGraph.prepareSource(original._def);
+        result.register(refDest, refSrc);
+        return cloned as Any; // TODO: properly type this for better maintenance
+      } else {
+        console.dir(original);
+        throw Error(
+          `tablesGraph.prepareRef ${original} does not have a tableColumnDefn in ZodType._def`,
+        );
+      }
+    },
+    register: (rd, rs) => {
+      rs.register(rd);
+      referenced.add(rs);
+      references.add(rd);
+    },
+  };
+  return {
+    anonymousTableIndex,
+    tablesRefsGraphs,
+    ...result,
+  };
 }
 
 export function tableDefinition<
@@ -637,21 +753,31 @@ export function tableDefinition<
 >(
   tableName: TableName,
   props: ColumnsShape,
+  tablesGraph: TablesGraph<TableName, Context>,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
   const columnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: TableColumnsConstraint<ColumnsShape, Context>[] = [];
-  const sd = d.sqlDomains(props);
-  for (const columnDefn of sd.domains) {
-    if (
-      isTableForeignKeyColumnDefn(columnDefn) &&
-      isTableSelfRefForeignKeyRelNature(columnDefn.foreignRelNature)
-    ) {
-      // manually "fix" the table name since self-refs are special
-      (columnDefn as { foreignTableName: string }).foreignTableName = tableName;
-    }
-  }
+  const sd = d.sqlDomains<
+    typeof props,
+    TablesGraph<TableName, Context>,
+    Context,
+    TableName
+  >(
+    props,
+    tablesGraph,
+  );
+  // TODO: handle self-ref foreign keys
+  // for (const columnDefn of sd.domains) {
+  //   if (
+  //     isTableForeignKeyColumnDefn(columnDefn) &&
+  //     isTableSelfRefForeignKeyRelNature(columnDefn.foreignRelNature)
+  //   ) {
+  //     // manually "fix" the table name since self-refs are special
+  //     (columnDefn as { foreignTableName: string }).foreignTableName = tableName;
+  //   }
+  // }
 
   type ColumnDefns = {
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
@@ -729,63 +855,31 @@ export function tableDefinition<
   }
 
   type ForeignKeyRefs = {
-    [Property in keyof ColumnsShape]: (
-      foreignRelNature?: TableForeignKeyRelNature<Context>,
-      domainOptions?: Partial<
-        ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I>
-          ? d.SqlDomain<z.ZodType<T, D, I>, Context>
-          : never
-      >,
-    ) => TableForeignKeyColumnDefn<
-      ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I>
-        ? z.ZodType<T, D, I>
-        : never,
-      TableName,
-      Context
-    >;
+    [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
+      z.ZodType<infer T, infer D, infer I>
+      ? (nature?: TableRefDestRelNature<Context>) =>
+        & d.SqlDomain<z.ZodType<T, D, I>, Context>
+        & TableReferenceDest<
+          TableName,
+          Extract<Property, string>,
+          z.ZodType<T, D, I>,
+          Context
+        >
+      : never;
   };
 
-  type ForeignKeyNullableRefs = {
-    [Property in keyof ColumnsShape]: (
-      foreignRelNature?: TableForeignKeyRelNature<Context>,
-      domainOptions?: Partial<
-        ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I>
-          ? d.SqlDomain<z.ZodType<T, D, I>, Context>
-          : never
-      >,
-    ) => TableForeignKeyColumnDefn<
-      ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I>
-        ? z.ZodType<T, D, I>
-        : never,
-      TableName,
-      Context
-    >;
-  };
-  const fkRef: ForeignKeyRefs = {} as Any;
-  const fkNullableRef: ForeignKeyNullableRefs = {} as Any;
+  const drf = tablesGraph.domainRefsFactory(tableName);
+  const references: ForeignKeyRefs = {} as Any;
   for (const column of sd.domains) {
-    fkRef[column.identity as (keyof ForeignKeyRefs)] = (
-      foreignRelNature,
-      domainOptions,
+    (references[column.identity] as Any) = (
+      foreignRelNature?: TableRefDestRelNature<Context>,
     ) => {
       // TODO: figure out to make it type-safe without 'any'
-      return foreignKey(
-        tableName,
-        column,
+      return foreignKeyReferenceInit(
+        props[column.identity as Any] as Any,
+        drf.prepareSource(props[column.identity as Any]._def),
+        undefined,
         foreignRelNature,
-        domainOptions,
-      ) as Any;
-    };
-    fkNullableRef[column.identity as (keyof ColumnsShape)] = (
-      foreignRelNature,
-      domainOptions,
-    ) => {
-      // TODO: figure out to make it type-safe without 'any'
-      return foreignKeyNullable(
-        tableName,
-        column,
-        foreignRelNature,
-        domainOptions,
       ) as Any;
     };
   }
@@ -802,8 +896,7 @@ export function tableDefinition<
       readonly columns: ColumnDefns;
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
-      readonly foreignKeyRef: ForeignKeyRefs;
-      readonly fkNullableRef: ForeignKeyNullableRefs;
+      readonly references: ForeignKeyRefs;
       readonly sqlNS?: ns.SqlNamespaceSupplier;
     }
     & tmpl.SqlSymbolSupplier<Context>
@@ -851,8 +944,7 @@ export function tableDefinition<
       columns,
       primaryKey,
       unique,
-      foreignKeyRef: fkRef,
-      fkNullableRef: fkNullableRef,
+      references,
       sqlNS: tdOptions?.sqlNS,
     };
 
@@ -872,6 +964,7 @@ export function tableColumnsRowFactory<
 >(
   tableName: TableName,
   props: ColumnsShape,
+  tablesGraph: TablesGraph<TableName, Context>,
   tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
     defaultIspOptions?: i.InsertStmtPreparerOptions<
       TableName,
@@ -883,7 +976,7 @@ export function tableColumnsRowFactory<
 ) {
   // we compute the tableDefn here instead of having it passed in because
   // Typescript cannot carry all the proper types if we don't generate it here
-  const td = tableDefinition(tableName, props, tdrfOptions);
+  const td = tableDefinition(tableName, props, tablesGraph, tdrfOptions);
 
   // deno-lint-ignore ban-types
   type requiredKeys<T extends object> = {
@@ -1010,6 +1103,7 @@ export function tableSelectFactory<
 >(
   tableName: TableName,
   props: ColumnsShape,
+  tablesGraph: TablesGraph<TableName, Context>,
   tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
     defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
     defaultSspOptions?: s.SelectStmtPreparerOptions<
@@ -1020,7 +1114,7 @@ export function tableSelectFactory<
     >;
   },
 ) {
-  const td = tableDefinition(tableName, props, tdrfOptions);
+  const td = tableDefinition(tableName, props, tablesGraph, tdrfOptions);
 
   type OptionalInInsertableRecord = {
     [
@@ -1252,90 +1346,90 @@ export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
   return rule;
 }
 
-export type FKeyColNameConsistencyLintOptions<
-  Context extends tmpl.SqlEmitContext,
-> = {
-  readonly ignoreFKeyColNameMissing_id?:
-    | boolean
-    | ((
-      col: TableForeignKeyColumnDefn<Any, Any, Context>,
-      tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-    ) => boolean);
-  readonly ignoreColName_idNotFKey?:
-    | boolean
-    | ((
-      col: d.SqlDomain<Any, Context>,
-      tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-    ) => boolean);
-};
+// export type FKeyColNameConsistencyLintOptions<
+//   Context extends tmpl.SqlEmitContext,
+// > = {
+//   readonly ignoreFKeyColNameMissing_id?:
+//     | boolean
+//     | ((
+//       col: TableForeignKeyColumnDefn<Any, Any, Context>,
+//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+//     ) => boolean);
+//   readonly ignoreColName_idNotFKey?:
+//     | boolean
+//     | ((
+//       col: d.SqlDomain<Any, Context>,
+//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+//     ) => boolean);
+// };
 
-/**
- * A lint rule which looks at each domain (column) and, if it has any lint
- * issues, will add them to the supplied LintIssuesSupplier
- * @param tableDefn the table whose columns (domains) should be checked
- * @returns a lint rule which, when executed and is not being ignored, will
- *          add each column defnintion lintIssue to a given LintIssuesSupplier
- */
-export function tableFKeyColNameConsistencyLintRule<
-  Context extends tmpl.SqlEmitContext,
->(
-  tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-) {
-  const rule: l.SqlLintRule<FKeyColNameConsistencyLintOptions<Context>> = {
-    lint: (lis, lOptions) => {
-      for (const col of tableDefn.domains) {
-        if (isTableForeignKeyColumnDefn(col)) {
-          const { ignoreFKeyColNameMissing_id: ifkcnm } = lOptions ?? {};
-          const ignoreRule = ifkcnm
-            ? (typeof ifkcnm === "boolean" ? ifkcnm : ifkcnm(col, tableDefn))
-            : false;
-          if (!ignoreRule) {
-            let suggestion = `end with '_id'`;
-            if (d.isSqlDomain(col.foreignDomain)) {
-              // if the foreign key column name is the same as our column we're usually OK
-              if (col.foreignDomain.identity == col.identity) {
-                continue;
-              }
-              suggestion =
-                `should be named "${col.foreignDomain.identity}" or end with '_id'`;
-            }
-            if (!col.identity.endsWith("_id")) {
-              lis.registerLintIssue(
-                d.domainLintIssue(
-                  `Foreign key column "${col.identity}" in "${tableDefn.tableName}" ${suggestion}`,
-                  { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
-                ),
-              );
-            }
-          }
-        } else {
-          const { ignoreColName_idNotFKey: icnnfk } = lOptions ?? {};
-          const ignoreRule = icnnfk
-            ? (typeof icnnfk === "boolean" ? icnnfk : icnnfk(col, tableDefn))
-            : false;
-          if (
-            !ignoreRule && (!isTablePrimaryKeyColumnDefn(col) &&
-              col.identity.endsWith("_id"))
-          ) {
-            lis.registerLintIssue(
-              d.domainLintIssue(
-                `Column "${col.identity}" in "${tableDefn.tableName}" ends with '_id' but is neither a primary key nor a foreign key.`,
-                { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
-              ),
-            );
-          }
-        }
-      }
-    },
-  };
-  return rule;
-}
+// /**
+//  * A lint rule which looks at each domain (column) and, if it has any lint
+//  * issues, will add them to the supplied LintIssuesSupplier
+//  * @param tableDefn the table whose columns (domains) should be checked
+//  * @returns a lint rule which, when executed and is not being ignored, will
+//  *          add each column defnintion lintIssue to a given LintIssuesSupplier
+//  */
+// export function tableFKeyColNameConsistencyLintRule<
+//   Context extends tmpl.SqlEmitContext,
+// >(
+//   tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+// ) {
+//   const rule: l.SqlLintRule<FKeyColNameConsistencyLintOptions<Context>> = {
+//     lint: (lis, lOptions) => {
+//       for (const col of tableDefn.domains) {
+//         if (isTableForeignKeyColumnDefn(col)) {
+//           const { ignoreFKeyColNameMissing_id: ifkcnm } = lOptions ?? {};
+//           const ignoreRule = ifkcnm
+//             ? (typeof ifkcnm === "boolean" ? ifkcnm : ifkcnm(col, tableDefn))
+//             : false;
+//           if (!ignoreRule) {
+//             let suggestion = `end with '_id'`;
+//             if (d.isSqlDomain(col.foreignDomain)) {
+//               // if the foreign key column name is the same as our column we're usually OK
+//               if (col.foreignDomain.identity == col.identity) {
+//                 continue;
+//               }
+//               suggestion =
+//                 `should be named "${col.foreignDomain.identity}" or end with '_id'`;
+//             }
+//             if (!col.identity.endsWith("_id")) {
+//               lis.registerLintIssue(
+//                 d.domainLintIssue(
+//                   `Foreign key column "${col.identity}" in "${tableDefn.tableName}" ${suggestion}`,
+//                   { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
+//                 ),
+//               );
+//             }
+//           }
+//         } else {
+//           const { ignoreColName_idNotFKey: icnnfk } = lOptions ?? {};
+//           const ignoreRule = icnnfk
+//             ? (typeof icnnfk === "boolean" ? icnnfk : icnnfk(col, tableDefn))
+//             : false;
+//           if (
+//             !ignoreRule && (!isTablePrimaryKeyColumnDefn(col) &&
+//               col.identity.endsWith("_id"))
+//           ) {
+//             lis.registerLintIssue(
+//               d.domainLintIssue(
+//                 `Column "${col.identity}" in "${tableDefn.tableName}" ends with '_id' but is neither a primary key nor a foreign key.`,
+//                 { consequence: l.SqlLintIssueConsequence.CONVENTION_DDL },
+//               ),
+//             );
+//           }
+//         }
+//       }
+//     },
+//   };
+//   return rule;
+// }
 
 export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
   const rules = {
     tableNameConsistency: tableNameConsistencyLintRule,
     columnLintIssues: tableColumnsLintIssuesRule,
-    fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
+    // fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
     noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
     typical: (
       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
@@ -1343,13 +1437,13 @@ export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
     ) => {
       return l.aggregatedSqlLintRules<
         & TableNameConsistencyLintOptions
-        & FKeyColNameConsistencyLintOptions<Context>
+        // & FKeyColNameConsistencyLintOptions<Context>
         & TableNamePrimaryKeyLintOptions
       >(
         rules.tableNameConsistency(tableDefn.tableName),
         rules.noPrimaryKeyDefined(tableDefn),
         rules.columnLintIssues(tableDefn),
-        rules.fKeyColNameConsistency(tableDefn),
+        // rules.fKeyColNameConsistency(tableDefn),
         ...additionalRules,
       );
     },
