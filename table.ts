@@ -858,13 +858,8 @@ export function tableDefinition<
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
       z.ZodType<infer T, infer D, infer I>
       ? (nature?: TableRefDestRelNature<Context>) =>
-        & d.SqlDomain<z.ZodType<T, D, I>, Context>
-        & TableReferenceDest<
-          TableName,
-          Extract<Property, string>,
-          z.ZodType<T, D, I>,
-          Context
-        >
+        & z.ZodType<T, D, I>
+        & ReturnType<typeof foreignKeyReferenceInit>
       : never;
   };
 

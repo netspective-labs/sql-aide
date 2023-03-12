@@ -300,10 +300,83 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     },
   );
 
-  await tc.step("TODO: foreign keys", () => {});
   await tc.step("TODO: indexes", () => {});
   await tc.step("TODO: constraints", () => {});
   await tc.step("TODO: lint messages", () => {});
+});
+
+Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
+  await tc.step(
+    "[1] valid insert statement for a table without primary keys",
+    async (innerTC) => {
+      // const {
+      //   commonColumns,
+      //   tableWithOnDemandPK,
+      //   // tableWithAutoIncPK,
+      //   tablesGraph,
+      // } = syntheticSchema();
+      // const table = t.tableDefinition(
+      //   "synthetic_table_with_foreign_keys",
+      //   {
+      //     auto_inc_primary_key: t.autoIncPrimaryKey(),
+      //     fk_text_primary_key: tableWithOnDemandPK.references
+      //       .ua_on_demand_primary_key(),
+      //     // fk_int_primary_key: t.references(
+      //     //   tableWithAutoIncPK.columns.auto_inc_primary_key,
+      //     // ),
+      //     // fk_text_primary_key_nullable: t.references(
+      //     //   tableWithOnDemandPK.columns.ua_on_demand_primary_key,
+      //     // ),
+      //     ...commonColumns,
+      //     // fk_int_primary_key_nullable: t.references(
+      //     //   tableWithAutoIncPK.columns.auto_inc_primary_key,
+      //     // ),
+      //   },
+      //   tablesGraph,
+      // );
+
+      await innerTC.step("type safety", () => {
+        // expectType<
+        //   t.TableColumnDefn<
+        //     "synthetic_table_with_uaod_pk",
+        //     "ua_on_demand_primary_key",
+        //     z.ZodType<string, z.ZodDefaultDef<z.ZodString>, string>,
+        //     SyntheticContext
+        //   >
+        // >(
+        //   table.columns.fk_text_primary_key,
+        // );
+      });
+
+      await innerTC.step("SQL DDL with no lint issues", () => {
+        // const { ctx, ddlOptions, lintState } = sqlGen();
+        // console.log(table.SQL(ctx));
+        // ta.assertEquals(
+        //   tmpl.SQL(ddlOptions)`
+        // ${lintState.sqlTextLintSummary}
+
+        // ${table}`.SQL(ctx),
+        //   uws(`
+        //   -- no SQL lint issues (typicalSqlTextLintManager)
+
+        //   CREATE TABLE "synthetic_table_with_foreign_keys" (
+        //       "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
+        //       "fk_text_primary_key" TEXT NOT NULL,
+        //       "fk_text_primary_key_nullable" TEXT,
+        //       "fk_int_primary_key" INTEGER NOT NULL,
+        //       "fk_int_primary_key_nullable" INTEGER,
+        //       FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+        //       FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+        //       FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
+        //       FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
+        //   );`),
+        // );
+      });
+
+      await innerTC.step("TODO: tables graph", () => {
+      });
+    },
+  );
 });
 
 Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
