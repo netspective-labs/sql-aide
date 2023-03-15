@@ -128,6 +128,117 @@ Deno.test("Zod Aide enrichments", async (tc) => {
   });
 });
 
+Deno.test("Zod Aide ZodType Baggage", async (tc) => {
+  type SyntheticBaggage = {
+    property1: string;
+    property2: number;
+  };
+
+  type SyntheticBaggageSupplier = {
+    syntheticBaggage: SyntheticBaggage;
+  };
+
+  const sb = za.zodBaggage<SyntheticBaggage, SyntheticBaggageSupplier>(
+    "syntheticBaggage",
+  );
+
+  await tc.step("originals zodEnrichment", async (innerTC) => {
+    const unenrichedText = z.string();
+    const unenrichedTextOptional = z.string().optional();
+    const unenrichedTextDefaultable = z.string().default("defaultValue");
+    const unenrichedTextOptionalDefaultable = z.string().optional().default(
+      "defaultValue",
+    );
+    const unenrichedTextNullable = z.string().nullable();
+
+    const baggageText = sb.zodTypeBaggage(unenrichedText, {
+      property1: "baggageText",
+      property2: 1285,
+    });
+    const baggageTextOptional = sb.zodTypeBaggage(unenrichedTextOptional);
+    const baggageTextDefaultable = sb.zodTypeBaggage(unenrichedTextDefaultable);
+    const baggageTextOptionalDefaultable = sb.introspectableZodTypeBaggage(
+      unenrichedTextOptionalDefaultable,
+      {
+        property1: "baggageTextOptionalDefaultable",
+        property2: 456,
+      },
+    );
+    const baggageTextNullable = sb.zodTypeBaggage(unenrichedTextNullable);
+
+    baggageTextOptional.syntheticBaggage = {
+      property1: "baggageTextOptional",
+      property2: 5648,
+    };
+    baggageTextDefaultable.syntheticBaggage = {
+      property1: "baggageTextDefaultable",
+      property2: 348,
+    };
+    baggageTextNullable.syntheticBaggage = {
+      property1: "baggageTextNullable",
+      property2: 12398,
+    };
+
+    await innerTC.step("compile-time type safety", () => {
+      expectType<z.ZodString & SyntheticBaggageSupplier>(baggageText);
+      expectType<z.ZodOptional<z.ZodString> & SyntheticBaggageSupplier>(
+        baggageTextOptional,
+      );
+      expectType<z.ZodDefault<z.ZodString> & SyntheticBaggageSupplier>(
+        baggageTextDefaultable,
+      );
+      expectType<
+        z.ZodDefault<z.ZodOptional<z.ZodString>> & SyntheticBaggageSupplier
+      >(baggageTextOptionalDefaultable);
+      expectType<{
+        readonly proxiedZodType: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+        readonly coreZTA: () => z.ZodString;
+        readonly wrappedZTAs: () => z.ZodTypeAny[];
+        readonly cloned: () => z.ZodDefault<z.ZodOptional<z.ZodString>>;
+        readonly clonedCoreZTA: () => z.ZodString;
+      }>(baggageTextOptionalDefaultable.zodIntrospection);
+      expectType<z.ZodNullable<z.ZodString> & SyntheticBaggageSupplier>(
+        baggageTextNullable,
+      );
+    });
+
+    await innerTC.step("run-time type safety", () => {
+      ta.assert(sb.isBaggageSupplier(baggageText));
+      ta.assert(sb.isBaggageSupplier(baggageTextOptional));
+      ta.assert(sb.isBaggageSupplier(baggageTextDefaultable));
+      ta.assert(sb.isBaggageSupplier(baggageTextOptionalDefaultable));
+      ta.assert(sb.isBaggageSupplier(baggageTextNullable));
+
+      ta.assertEquals(baggageText.syntheticBaggage, {
+        property1: "baggageText",
+        property2: 1285,
+      });
+      ta.assertEquals(baggageTextOptional.syntheticBaggage, {
+        property1: "baggageTextOptional",
+        property2: 5648,
+      });
+      ta.assertEquals(baggageTextDefaultable.syntheticBaggage, {
+        property1: "baggageTextDefaultable",
+        property2: 348,
+      });
+      ta.assertEquals(baggageTextOptionalDefaultable.syntheticBaggage, {
+        property1: "baggageTextOptionalDefaultable",
+        property2: 456,
+      });
+      ta.assertEquals(
+        baggageTextOptionalDefaultable.zodIntrospection.wrappedZTAs().map((
+          zta,
+        ) => zta._def.typeName),
+        ["ZodString", "ZodOptional", "ZodDefault"],
+      );
+      ta.assertEquals(baggageTextNullable.syntheticBaggage, {
+        property1: "baggageTextNullable",
+        property2: 12398,
+      });
+    });
+  });
+});
+
 Deno.test("Zod Schema Proxy", () => {
   const syntheticSchema = z.object({
     text: z.string(),

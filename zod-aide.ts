@@ -29,6 +29,122 @@ export function coreZTA<
     : original as unknown as Result;
 }
 
+/**
+ * Look through the given ZodType and return an array of the deepest level
+ * first, next level second, and so on until we reach the original
+ * @param search the ZodType to inspect
+ * @returns an array of ZodType elements starting with the innermost child
+ */
+export function wrappedZTAs<T extends z.ZodTypeAny>(search: T) {
+  const result: z.ZodTypeAny[] = [search];
+  let cursor: z.ZodTypeAny = search;
+  while (cursor._def && "innerType" in cursor._def) {
+    cursor = cursor._def.innerType;
+    if (cursor) result.unshift(cursor);
+  }
+  return result;
+}
+
+export type ZodTypedBaggage<
+  ZTA extends z.ZodTypeAny,
+  Baggage,
+  BaggageSupplier extends { [key: string]: Baggage },
+  Result = ZTA & BaggageSupplier,
+> = Result;
+
+export function zodBaggage<
+  Baggage,
+  BaggageSupplier extends { [key: string]: Baggage } = {
+    [key: string]: Baggage;
+  },
+  BaggageProp extends keyof BaggageSupplier = keyof BaggageSupplier,
+>(baggageProperty: BaggageProp) {
+  const isBaggageSupplier = (o: unknown): o is BaggageSupplier => {
+    if (o && typeof o === "object" && (o as Any)[baggageProperty]) return true;
+    return false;
+  };
+
+  function zodTypeBaggage<ZodType extends z.ZodTypeAny>(
+    origin: ZodType,
+    defaultValue?: Baggage | undefined,
+    options?: {
+      readonly forceCreate: boolean;
+    },
+  ) {
+    let store: Baggage | undefined = defaultValue;
+    return new Proxy<ZodType>(origin, {
+      set(target, property, value) {
+        if (typeof property === "string" && property == baggageProperty) {
+          if (store && !options?.forceCreate) return false;
+          store = value;
+          return true;
+        }
+        return Reflect.set(target, property, value);
+      },
+      get(target, property) {
+        if (typeof property === "string" && property == baggageProperty) {
+          return store;
+        }
+        return Reflect.get(target, property);
+      },
+    }) as ZodTypedBaggage<ZodType, Baggage, BaggageSupplier>; // trick TypeScript into thinking Baggage is part of ZodType
+  }
+
+  const zodIntrospection = "zodIntrospection" as const;
+  function introspectableZodTypeBaggage<
+    ZodType extends z.ZodTypeAny,
+    Introspection = {
+      readonly proxiedZodType: ZodType;
+      readonly coreZTA: () => CoreZTA<ZodType>;
+      readonly wrappedZTAs: () => z.ZodTypeAny[];
+      readonly cloned: () => ZodType;
+      readonly clonedCoreZTA: () => CoreZTA<ZodType>;
+    },
+    IntrospectionSupplier = {
+      readonly zodIntrospection: Introspection;
+    },
+  >(
+    origin: ZodType,
+    defaultValue?: Baggage | undefined,
+    options?: {
+      readonly forceCreate: boolean;
+    },
+  ) {
+    const ps: Introspection = {
+      proxiedZodType: origin,
+      wrappedZTAs: () => wrappedZTAs(origin),
+      coreZTA: () => coreZTA(origin),
+      cloned: () => clonedZodType(origin),
+      clonedCoreZTA: () => coreZTA(clonedZodType(origin)),
+    } as Introspection;
+    let store: Baggage | undefined = defaultValue;
+    return new Proxy<ZodType>(origin, {
+      set(target, property, value) {
+        if (typeof property === "string" && property == baggageProperty) {
+          if (store && !options?.forceCreate) return false;
+          store = value;
+          return true;
+        }
+        return Reflect.set(target, property, value);
+      },
+      get(target, property) {
+        switch (property) {
+          case baggageProperty:
+            return store;
+
+          case zodIntrospection:
+            return ps;
+        }
+        return Reflect.get(target, property);
+      },
+    }) as
+      & ZodTypedBaggage<ZodType, Baggage, BaggageSupplier>
+      & IntrospectionSupplier; // trick TypeScript into thinking Baggage is part of ZodType
+  }
+
+  return { isBaggageSupplier, zodTypeBaggage, introspectableZodTypeBaggage };
+}
+
 // this is just a "signature" type to make it easier to document purpose
 export type ZodEnrichment<
   ZTA extends z.ZodTypeAny,
