@@ -358,9 +358,7 @@ export function foreignKeyReferences<
   const foreignKeys = () => {
     const isInferencePlaceholder = safety.typeGuard<
       ForeignKeyPlaceholderSupplier
-    >(
-      "foreignKeySrcPlaceholder",
-    );
+    >("foreignKeySrcPlaceholder");
 
     type References = {
       [
@@ -389,7 +387,10 @@ export function foreignKeyReferences<
           foreignKeySource: domain.foreignKeySrcPlaceholder,
         };
         const zodType = shape[key];
-        const finalDomain = d.sqlDomain(zodType, { identity: key });
+        const finalDomain = d.sqlDomain(zodType, {
+          identity: key,
+          forceCreate: true,
+        });
         (sdSchema[key] as Any) = {
           ...finalDomain,
           ...reference,

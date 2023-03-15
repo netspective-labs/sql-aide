@@ -326,6 +326,30 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
   );
 
   await tc.step("type safety", () => {
+    ta.assertEquals(Array.from(Object.keys(table.columns)), [
+      "auto_inc_primary_key",
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.primaryKey)), [
+      "auto_inc_primary_key",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.foreignKeys)), [
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.infer)), [
+      "auto_inc_primary_key",
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+
     type SyntheticType = z.infer<typeof table.zSchema>;
     const synthetic: SyntheticType = {
       auto_inc_primary_key: 0,
@@ -340,7 +364,6 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       fk_int_primary_key_nullable?: number | undefined;
     }>(synthetic);
 
-    console.dir({ infer: table.infer, fkeys: table.foreignKeys });
     // TODO: fix this so we don't just use typeof to find the proper type
     expectType(table.foreignKeys);
     // expectType<
@@ -355,30 +378,34 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     // );
   });
 
-  // await tc.step("SQL DDL with no lint issues", () => {
-  //   const { ctx, ddlOptions, lintState } = sqlGen();
-  //   console.log(table.SQL(ctx));
-  //   ta.assertEquals(
-  //     tmpl.SQL(ddlOptions)`
-  //   ${lintState.sqlTextLintSummary}
+  await tc.step("SQL DDL with no lint issues", () => {
+    // const { ctx, ddlOptions, lintState } = sqlGen();
+    // Deno.writeTextFileSync(
+    //   "DELETE_ME_DEBUG.txt",
+    //   Deno.inspect(table, { depth: 10 }),
+    // );
+    // console.log(table.SQL(ctx));
+    // ta.assertEquals(
+    //   tmpl.SQL(ddlOptions)`
+    // ${lintState.sqlTextLintSummary}
 
-  //   ${table}`.SQL(ctx),
-  //     uws(`
-  //     -- no SQL lint issues (typicalSqlTextLintManager)
+    // ${table}`.SQL(ctx),
+    //   uws(`
+    //   -- no SQL lint issues (typicalSqlTextLintManager)
 
-  //     CREATE TABLE "synthetic_table_with_foreign_keys" (
-  //         "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
-  //         "fk_text_primary_key" TEXT NOT NULL,
-  //         "fk_text_primary_key_nullable" TEXT,
-  //         "fk_int_primary_key" INTEGER NOT NULL,
-  //         "fk_int_primary_key_nullable" INTEGER,
-  //         FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-  //         FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-  //         FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
-  //         FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
-  //     );`),
-  //   );
-  // });
+    //   CREATE TABLE "synthetic_table_with_foreign_keys" (
+    //       "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
+    //       "fk_text_primary_key" TEXT NOT NULL,
+    //       "fk_int_primary_key" INTEGER NOT NULL,
+    //       "fk_text_primary_key_nullable" TEXT,
+    //       "fk_int_primary_key_nullable" INTEGER,
+    //       FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+    //       FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
+    //       FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+    //       FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
+    //   );`),
+    // );
+  });
 
   await tc.step("TODO: tables graph", () => {
   });
