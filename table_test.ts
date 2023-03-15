@@ -2,7 +2,6 @@ import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
 import { unindentWhitespace as uws } from "./whitespace.ts";
 import * as tmpl from "./sql.ts";
-import * as d from "./domain.ts";
 import * as t from "./table.ts";
 import * as s from "./select.ts";
 
@@ -38,7 +37,6 @@ const sqlGen = () => {
 };
 
 const syntheticSchema = () => {
-  const tablesGraph = t.tablesGraph();
   const commonColumns = {
     text: z.string(),
     text_nullable: z.string().optional(),
@@ -49,19 +47,18 @@ const syntheticSchema = () => {
 
   const tableWithoutPK = t.tableDefinition("synthetic_table_without_pk", {
     ...commonColumns,
-  }, tablesGraph);
+  });
   const tableWithAutoIncPK = t.tableDefinition(
     "synthetic_table_with_auto_inc_pk",
     {
       auto_inc_primary_key: t.autoIncPrimaryKey(),
       ...commonColumns,
     },
-    tablesGraph,
   );
   const tableWithTextPK = t.tableDefinition("synthetic_table_with_text_pk", {
     text_primary_key: t.primaryKey(),
     ...commonColumns,
-  }, tablesGraph);
+  });
   const tableWithOnDemandPK = t.tableDefinition(
     "synthetic_table_with_uaod_pk",
     {
@@ -70,7 +67,6 @@ const syntheticSchema = () => {
       ),
       ...commonColumns,
     },
-    tablesGraph,
   );
 
   return {
@@ -79,7 +75,6 @@ const syntheticSchema = () => {
     tableWithAutoIncPK,
     tableWithTextPK,
     tableWithOnDemandPK,
-    tablesGraph,
   };
 };
 
@@ -100,18 +95,19 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     "[1] valid table and columns (without any PKs)",
     async (innerTC) => {
       const { tableWithoutPK: table } = syntheticSchema();
-      ta.assert(d.isSqlDomainsSupplier(table));
       ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
       ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
 
-      type TableColumnDefn<ColumnName, ColumnTsType extends z.ZodTypeAny> =
-        t.TableColumnDefn<
-          "synthetic_table_without_pk",
-          ColumnName,
-          ColumnTsType,
-          SyntheticContext
-        >;
+      type TableColumnDefn<
+        ColumnName extends string,
+        ColumnTsType extends z.ZodTypeAny,
+      > = t.TableColumnDefn<
+        "synthetic_table_without_pk",
+        ColumnName,
+        ColumnTsType,
+        SyntheticContext
+      >;
 
       await innerTC.step("type safety", () => {
         // the table has the zod shape, domains, and columns all typed so we can
@@ -125,15 +121,20 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
             z.ZodType<string | undefined, z.ZodOptionalDef<z.ZodString>>
           >
         >(table.columns.text_nullable);
-        expectType<d.SqlDomain<z.ZodType<number, z.ZodNumberDef>, Any>>(
-          table.sdSchema.int,
+        expectType<
+          TableColumnDefn<
+            "int",
+            z.ZodType<number, z.ZodNumberDef, number>
+          >
+        >(
+          table.columns.int,
         );
         expectType<
-          d.SqlDomain<
-            z.ZodType<number | undefined, z.ZodOptionalDef<z.ZodNumber>>,
-            Any
+          TableColumnDefn<
+            "int_nullable",
+            z.ZodType<number | undefined, z.ZodOptionalDef<z.ZodNumber>>
           >
-        >(table.sdSchema.int_nullable);
+        >(table.columns.int_nullable);
 
         type SyntheticSchema = z.infer<typeof table.zSchema>;
         const synthetic: SyntheticSchema = {
@@ -192,7 +193,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 
     await innerTC.step("primary key definition", () => {
       ta.assertEquals(
-        table.domains.filter((d) =>
+        Array.from(Object.values(table.columns)).filter((d) =>
           t.isTablePrimaryKeyColumnDefn(d) ? true : false
         ).map((d) => d.identity),
         ["auto_inc_primary_key"],
@@ -306,77 +307,81 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 });
 
 Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
-  await tc.step(
-    "[1] valid insert statement for a table without primary keys",
-    async (innerTC) => {
-      // const {
-      //   commonColumns,
-      //   tableWithOnDemandPK,
-      //   // tableWithAutoIncPK,
-      //   tablesGraph,
-      // } = syntheticSchema();
-      // const table = t.tableDefinition(
-      //   "synthetic_table_with_foreign_keys",
-      //   {
-      //     auto_inc_primary_key: t.autoIncPrimaryKey(),
-      //     fk_text_primary_key: tableWithOnDemandPK.references
-      //       .ua_on_demand_primary_key(),
-      //     // fk_int_primary_key: t.references(
-      //     //   tableWithAutoIncPK.columns.auto_inc_primary_key,
-      //     // ),
-      //     // fk_text_primary_key_nullable: t.references(
-      //     //   tableWithOnDemandPK.columns.ua_on_demand_primary_key,
-      //     // ),
-      //     ...commonColumns,
-      //     // fk_int_primary_key_nullable: t.references(
-      //     //   tableWithAutoIncPK.columns.auto_inc_primary_key,
-      //     // ),
-      //   },
-      //   tablesGraph,
-      // );
-
-      await innerTC.step("type safety", () => {
-        // expectType<
-        //   t.TableColumnDefn<
-        //     "synthetic_table_with_uaod_pk",
-        //     "ua_on_demand_primary_key",
-        //     z.ZodType<string, z.ZodDefaultDef<z.ZodString>, string>,
-        //     SyntheticContext
-        //   >
-        // >(
-        //   table.columns.fk_text_primary_key,
-        // );
-      });
-
-      await innerTC.step("SQL DDL with no lint issues", () => {
-        // const { ctx, ddlOptions, lintState } = sqlGen();
-        // console.log(table.SQL(ctx));
-        // ta.assertEquals(
-        //   tmpl.SQL(ddlOptions)`
-        // ${lintState.sqlTextLintSummary}
-
-        // ${table}`.SQL(ctx),
-        //   uws(`
-        //   -- no SQL lint issues (typicalSqlTextLintManager)
-
-        //   CREATE TABLE "synthetic_table_with_foreign_keys" (
-        //       "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
-        //       "fk_text_primary_key" TEXT NOT NULL,
-        //       "fk_text_primary_key_nullable" TEXT,
-        //       "fk_int_primary_key" INTEGER NOT NULL,
-        //       "fk_int_primary_key_nullable" INTEGER,
-        //       FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-        //       FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-        //       FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
-        //       FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
-        //   );`),
-        // );
-      });
-
-      await innerTC.step("TODO: tables graph", () => {
-      });
+  const {
+    tableWithOnDemandPK,
+    tableWithAutoIncPK,
+  } = syntheticSchema();
+  const table = t.tableDefinition(
+    "synthetic_table_with_foreign_keys",
+    {
+      auto_inc_primary_key: t.autoIncPrimaryKey(),
+      fk_text_primary_key: tableWithOnDemandPK.infer
+        .ua_on_demand_primary_key(),
+      fk_int_primary_key: tableWithAutoIncPK.infer.auto_inc_primary_key(),
+      fk_text_primary_key_nullable: tableWithOnDemandPK.infer
+        .ua_on_demand_primary_key().optional(),
+      fk_int_primary_key_nullable: tableWithAutoIncPK.infer
+        .auto_inc_primary_key().optional(),
     },
   );
+
+  await tc.step("type safety", () => {
+    type SyntheticType = z.infer<typeof table.zSchema>;
+    const synthetic: SyntheticType = {
+      auto_inc_primary_key: 0,
+      fk_text_primary_key: "required",
+      fk_int_primary_key: -12,
+    };
+    expectType<{
+      fk_text_primary_key: string;
+      fk_int_primary_key: number;
+      auto_inc_primary_key?: number | undefined;
+      fk_text_primary_key_nullable?: string | undefined;
+      fk_int_primary_key_nullable?: number | undefined;
+    }>(synthetic);
+
+    console.dir({ infer: table.infer, fkeys: table.foreignKeys });
+    // TODO: fix this so we don't just use typeof to find the proper type
+    expectType(table.foreignKeys);
+    // expectType<
+    //   t.TableColumnDefn<
+    //     "synthetic_table_with_uaod_pk",
+    //     "ua_on_demand_primary_key",
+    //     z.ZodType<string, z.ZodDefaultDef<z.ZodString>, string>,
+    //     SyntheticContext
+    //   >
+    // >(
+    //   table.columns.fk_text_primary_key,
+    // );
+  });
+
+  // await tc.step("SQL DDL with no lint issues", () => {
+  //   const { ctx, ddlOptions, lintState } = sqlGen();
+  //   console.log(table.SQL(ctx));
+  //   ta.assertEquals(
+  //     tmpl.SQL(ddlOptions)`
+  //   ${lintState.sqlTextLintSummary}
+
+  //   ${table}`.SQL(ctx),
+  //     uws(`
+  //     -- no SQL lint issues (typicalSqlTextLintManager)
+
+  //     CREATE TABLE "synthetic_table_with_foreign_keys" (
+  //         "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
+  //         "fk_text_primary_key" TEXT NOT NULL,
+  //         "fk_text_primary_key_nullable" TEXT,
+  //         "fk_int_primary_key" INTEGER NOT NULL,
+  //         "fk_int_primary_key_nullable" INTEGER,
+  //         FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+  //         FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+  //         FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
+  //         FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
+  //     );`),
+  //   );
+  // });
+
+  await tc.step("TODO: tables graph", () => {
+  });
 });
 
 Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
@@ -394,12 +399,11 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[1] valid insert statement for a table without primary keys",
     async (innerTC) => {
-      const { tableWithoutPK: table, tablesGraph } = syntheticSchema();
+      const { tableWithoutPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_without_pk",
         table.zSchema.shape,
-        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -433,12 +437,11 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[2] valid insert statement for a table with auto-inc primary key",
     async (innerTC) => {
-      const { tableWithAutoIncPK: table, tablesGraph } = syntheticSchema();
+      const { tableWithAutoIncPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_with_auto_inc_pk",
         table.zSchema.shape,
-        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -545,13 +548,12 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[3] valid insert statement for a table with text primary key",
     async (innerTC) => {
-      const { tableWithTextPK: table, tablesGraph } = syntheticSchema();
+      const { tableWithTextPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
 
       const tableRF = t.tableColumnsRowFactory(
         "synthetic_table_with_text_pk",
         table.zSchema.shape,
-        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -590,13 +592,12 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   await tc.step(
     "[4] valid insert statement for a table with UA-defaultable (on demand) text primary key",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table, tablesGraph } = syntheticSchema();
+      const { tableWithOnDemandPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
 
       const tableRF = t.tableColumnsRowFactory(
         table.tableName,
         table.zSchema.shape,
-        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {
@@ -632,12 +633,11 @@ Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
   await tc.step(
     "valid select statement for a table",
     async (innerTC) => {
-      const { tableWithOnDemandPK: table, tablesGraph } = syntheticSchema();
+      const { tableWithOnDemandPK: table } = syntheticSchema();
       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
       const tableSF = t.tableSelectFactory(
         table.tableName,
         table.zSchema.shape,
-        tablesGraph,
       );
 
       await innerTC.step("type safety", () => {

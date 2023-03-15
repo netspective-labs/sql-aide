@@ -3,29 +3,30 @@ import * as tmpl from "./sql.ts";
 import * as safety from "./safety.ts";
 import * as l from "./lint.ts";
 import * as d from "./domain.ts";
-import * as js from "./js.ts";
+// import * as js from "./js.ts";
 import * as ns from "./namespace.ts";
 import * as i from "./insert.ts";
 import * as r from "./record.ts";
 import * as cr from "./criteria.ts";
 import * as s from "./select.ts";
+import * as za from "./zod-aide.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
 export type TableColumnDefn<
-  TableName,
-  ColumnName,
+  TableName extends string,
+  ColumnName extends string,
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
+> = d.SqlDomain<ColumnTsType, Context, ColumnName> & {
   readonly tableName: TableName;
   readonly columnName: ColumnName;
 };
 
 export function isTableColumnDefn<
-  TableName,
-  ColumnName,
+  TableName extends string,
+  ColumnName extends string,
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
 >(
@@ -50,7 +51,7 @@ export function isTableColumnDefn<
 export type TablePrimaryKeyColumnDefn<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
+> = d.SqlDomain<ColumnTsType, Context, Any> & {
   readonly isPrimaryKey: true;
   readonly isAutoIncrement: boolean;
 };
@@ -70,7 +71,7 @@ export function isTablePrimaryKeyColumnDefn<
 export type TableColumnInsertDmlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
+> = d.SqlDomain<ColumnTsType, Context, Any> & {
   readonly isExcludedFromInsertDML: true;
 };
 
@@ -89,7 +90,7 @@ export function isTableColumnInsertDmlExclusionSupplier<
 export type TableColumnInsertableOptionalSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
+> = d.SqlDomain<ColumnTsType, Context, Any> & {
   readonly isOptionalInInsertableRecord: true;
 };
 
@@ -108,7 +109,7 @@ export function isTableColumnInsertableOptionalSupplier<
 export type TableColumnFilterCriteriaDqlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context> & {
+> = d.SqlDomain<ColumnTsType, Context, Any> & {
   readonly isExcludedFromFilterCriteriaDql: true;
 };
 
@@ -126,7 +127,7 @@ export function isTableColumnFilterCriteriaDqlExclusionSupplier<
 
 export function primaryKey<Context extends tmpl.SqlEmitContext>() {
   const zodSchema = z.string();
-  const sqlDomain = d.sqlDomain<z.ZodString, Context>(z.string());
+  const sqlDomain = d.sqlDomain<z.ZodString, Context, string>(z.string());
   const aipkSD: TablePrimaryKeyColumnDefn<z.ZodString, Context> = {
     ...sqlDomain,
     isPrimaryKey: true,
@@ -146,16 +147,15 @@ export function primaryKey<Context extends tmpl.SqlEmitContext>() {
   };
 
   // trick Typescript into thinking the Zod instance is also a SqlDomain
-  return d.zodTypeSqlDomain<z.ZodString, typeof aipkSD, Context, string>(
-    zodSchema,
-    aipkSD,
-  );
+  return d.sqlDomainZTE.withEnrichment(zodSchema, () => aipkSD);
 }
 
 export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
   // the zodSchema is optional() because the actual value is computed in the DB
   const zodSchema = z.number().optional();
-  const sqlDomain = d.sqlDomain<z.ZodOptional<z.ZodNumber>, Context>(zodSchema);
+  const sqlDomain = d.sqlDomain<z.ZodOptional<z.ZodNumber>, Context, string>(
+    zodSchema,
+  );
   const aipkSD:
     & TablePrimaryKeyColumnDefn<z.ZodOptional<z.ZodNumber>, Context>
     & TableColumnInsertDmlExclusionSupplier<
@@ -181,15 +181,7 @@ export function autoIncPrimaryKey<Context extends tmpl.SqlEmitContext>() {
     };
 
   // trick Typescript into thinking the Zod instance is also a SqlDomain
-  return d.zodTypeSqlDomain<
-    z.ZodOptional<z.ZodNumber>,
-    typeof aipkSD,
-    Context,
-    string
-  >(
-    zodSchema,
-    aipkSD,
-  );
+  return d.sqlDomainZTE.withEnrichment(zodSchema, () => aipkSD);
 }
 
 /**
@@ -205,7 +197,9 @@ export function uaDefaultableTextPrimaryKey<
 >(
   zodSchema: z.ZodDefault<z.ZodString>,
 ) {
-  const sqlDomain = d.sqlDomain<z.ZodDefault<z.ZodString>, Context>(zodSchema);
+  const sqlDomain = d.sqlDomain<z.ZodDefault<z.ZodString>, Context, string>(
+    zodSchema,
+  );
   const uadPK:
     & TablePrimaryKeyColumnDefn<z.ZodDefault<z.ZodString>, Context>
     & TableColumnInsertableOptionalSupplier<
@@ -231,143 +225,220 @@ export function uaDefaultableTextPrimaryKey<
     };
 
   // trick Typescript into thinking the Zod instance is also a SqlDomain
-  return d.zodTypeSqlDomain<
-    z.ZodDefault<z.ZodString>,
-    typeof uadPK,
-    Context,
-    string
-  >(
-    zodSchema,
-    uadPK,
-  );
+  return d.sqlDomainZTE.withEnrichment(zodSchema, () => uadPK);
 }
 
-export type ForeignKeyRefPlaceholderLifecycle = "init" | "final";
-export type ForeignKeyRefPlaceholder<
+export function foreignKeyReferences<
   TableName extends string,
-  ColumnName extends string,
-  ColumnTsType extends z.ZodTypeAny,
+  ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
-> = {
-  readonly foreignKeyRefPlaceholderLC: ForeignKeyRefPlaceholderLifecycle;
-  readonly finalizeForeignKeyRefPlaceholder: (
-    foreignKeyRefDest: TableReferenceDest<
-      TableName,
-      ColumnName,
-      ColumnTsType,
-      Context
-    >,
-  ) => void;
-};
-
-export function foreignKeyReferenceInit<
-  TableName extends string,
-  ColumnName extends string,
-  ColumnTsType extends z.ZodTypeAny,
-  Context extends tmpl.SqlEmitContext,
+  ColumnName extends string = Extract<keyof ColumnsShape, string>,
 >(
-  zodSchema: ColumnTsType,
-  foreignKeyRefSource: TableReferenceSource<Any, Any, ColumnTsType, Context>,
-  finalizeForeignKeyRefPlaceholder?: (
-    foreignKeyRefDest: TableReferenceDest<
-      TableName,
-      ColumnName,
-      ColumnTsType,
-      Context
-    >,
-  ) => void,
-  foreignKeyRelNature?: TableRefDestRelNature<Context>,
-  domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
+  tableName: TableName,
+  zSchema: z.ZodObject<ColumnsShape>,
+  sdSchema: d.SqlDomains<ColumnsShape, Context>,
 ) {
-  const domain = d.sqlDomain<typeof zodSchema, Context>(zodSchema);
-  const result:
-    & d.SqlDomain<typeof zodSchema, Context>
-    & {
-      readonly foreignKeyRefSource: TableReferenceSource<
-        Any,
-        Any,
-        Any,
-        Context
+  // type TableBelongsToRefDestNature<
+  //   Context extends tmpl.SqlEmitContext,
+  // > = {
+  //   readonly isBelongsToRel: true;
+  //   readonly collectionName?: js.JsTokenSupplier<Context>;
+  // };
+
+  // type TableSelfRefDestNature = {
+  //   readonly isSelfRef: true;
+  // };
+
+  // type TableRefDestRelNature<Context extends tmpl.SqlEmitContext> =
+  //   | TableBelongsToRefDestNature<Context>
+  //   | TableSelfRefDestNature
+  //   | { readonly isExtendsRel: true }
+  //   | { readonly isInheritsRel: true };
+
+  // function belongsToRelation<
+  //   Context extends tmpl.SqlEmitContext,
+  // >(
+  //   singularSnakeCaseCollName?: string,
+  //   pluralSnakeCaseCollName = singularSnakeCaseCollName
+  //     ? `${singularSnakeCaseCollName}s`
+  //     : undefined,
+  // ): TableBelongsToRefDestNature<Context> {
+  //   return {
+  //     isBelongsToRel: true,
+  //     collectionName: singularSnakeCaseCollName
+  //       ? js.jsSnakeCaseToken(
+  //         singularSnakeCaseCollName,
+  //         pluralSnakeCaseCollName,
+  //       )
+  //       : undefined,
+  //   };
+  // }
+
+  // function isTableBelongsToRefDestNature<
+  //   Context extends tmpl.SqlEmitContext,
+  // >(o: unknown): o is TableBelongsToRefDestNature<Context> {
+  //   const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature<Context>>(
+  //     "isBelongsToRel",
+  //     "collectionName",
+  //   );
+  //   return isTBFKRN(o);
+  // }
+
+  // const isTableSelfRefDestNature = safety.typeGuard<
+  //   TableSelfRefDestNature
+  // >("isSelfRef");
+
+  type ForeignKeySource = {
+    readonly tableName: TableName;
+    readonly columnName: ColumnName;
+    readonly incomingRefs: Set<ForeignKeyDestination>;
+    readonly register: (rd: ForeignKeyDestination) => ForeignKeyDestination;
+  };
+
+  type ForeignKeyDestination = {
+    readonly foreignKeySource: ForeignKeySource;
+  };
+
+  type ForeignKeyPlaceholderSupplier = {
+    readonly foreignKeySrcPlaceholder: ForeignKeySource;
+  };
+
+  const inferables = () => {
+    // the "inferred types" are the same as their original types except without
+    // optionals, defaults, or nulls (always required, considered the "CoreZTA");
+    type InferReferences = {
+      [Property in keyof ColumnsShape]: () => za.CoreZTA<
+        ColumnsShape[Property]
       >;
-      readonly foreignKeyRefDest: TableReferenceDest<
-        TableName,
-        ColumnName,
-        Any,
-        Context
-      >;
-      readonly foreignKeyRelNature?: TableRefDestRelNature<Context>;
-    }
-    & ForeignKeyRefPlaceholder<
-      TableName,
-      ColumnName,
-      ColumnTsType,
-      Context
-    > = {
-      foreignKeyRefPlaceholderLC: "init",
-      foreignKeyRefSource,
-      foreignKeyRefDest: undefined as Any, // this is not set until finalize() is called
-      foreignKeyRelNature,
-      ...domain,
-      ...domainOptions,
-      finalizeForeignKeyRefPlaceholder: (foreignKeyRefDest) => {
-        finalizeForeignKeyRefPlaceholder?.(foreignKeyRefDest);
-        (result.foreignKeyRefDest as Any) = foreignKeyRefDest;
-        ((result.foreignKeyRefPlaceholderLC) as "final") = "final";
-      },
-      sqlPartial: (dest) => {
-        if (!(result.foreignKeyRefPlaceholderLC === "final")) {
-          throw Error(
-            `foreignKeyReferenceInit.sqlPartial called without finalizing the placeholder`,
-          );
-        }
-        if (dest === "create table, after all column definitions") {
-          const aacd = domain?.sqlPartial?.(
-            "create table, after all column definitions",
-          );
-          const fkClause: tmpl.SqlTextSupplier<Context> = {
-            SQL: ((ctx) => {
-              const ns = ctx.sqlNamingStrategy(ctx, {
-                quoteIdentifiers: true,
-              });
-              const tn = ns.tableName;
-              const cn = ns.tableColumnName;
-              // don't use the foreignTableName passed in because it could be
-              // mutated for self-refs in table definition phase
-              const ftName = result.foreignKeyRefDest.tableColumnDefn.tableName;
-              return `FOREIGN KEY(${
-                cn({
-                  tableName: "TODO",
-                  columnName: result.identity,
-                })
-              }) REFERENCES ${tn(ftName)}(${
-                cn(result.foreignKeyRefSource.tableColumnDefn)
-              })`;
-            }),
-          };
-          return aacd ? [...aacd, fkClause] : [fkClause];
-        }
-        return domain.sqlPartial?.(dest);
-      },
     };
-  return result;
+
+    const inferredPlaceholder = (columnName: ColumnName) => {
+      const incomingRefs = new Set<ForeignKeyDestination>();
+      const refSource: ForeignKeySource = {
+        tableName,
+        columnName,
+        incomingRefs,
+        register: (rd) => {
+          incomingRefs.add(rd);
+          return rd;
+        },
+      };
+      return refSource;
+    };
+
+    const inferables: InferReferences = {} as Any;
+    const { shape, keys: shapeKeys } = zSchema._getCached();
+    for (const key of shapeKeys) {
+      const zodType = shape[key];
+      (inferables[key] as Any) = () => {
+        // because zodSchema may have been cloned/copied from another sqlDomain we
+        // want to forceCreate = true
+        const foreignKeySrcPlaceholder = inferredPlaceholder(key as ColumnName);
+        const placeholderDomain:
+          & d.SqlDomain<za.CoreZTA<typeof zodType>, Context, typeof key>
+          & ForeignKeyPlaceholderSupplier = {
+            foreignKeySrcPlaceholder, // <-- this is what allows isInferencePlaceholder() to pick up the placeholder
+            ...d.sqlDomain<
+              za.CoreZTA<typeof zodType>,
+              Context,
+              typeof key
+            >(za.coreZTA(d.sqlDomainZTE.deenriched(zodType))),
+          };
+
+        // trick Typescript into thinking the Zod instance is also a SqlDomain;
+        // this allows assignment of a reference to a Zod object or use as a
+        // regular Zod schema; the sqlDomain is carried in zodType._def
+        return d.sqlDomainZTE.withEnrichment(zodType, () => placeholderDomain);
+      };
+    }
+
+    return inferables;
+  };
+
+  const foreignKeys = () => {
+    const isInferencePlaceholder = safety.typeGuard<
+      ForeignKeyPlaceholderSupplier
+    >(
+      "foreignKeySrcPlaceholder",
+    );
+
+    type References = {
+      [
+        Property in keyof ColumnsShape as Extract<
+          Property,
+          ColumnsShape[Property] extends ForeignKeyPlaceholderSupplier
+            ? Property
+            : never
+        >
+      ]:
+        & d.SqlDomain<
+          ColumnsShape[Property],
+          Context,
+          Extract<Property, string>
+        >
+        & ForeignKeyDestination;
+    };
+
+    // see if any references were registered but need to be created
+    const foreignKeys: References = {} as Any;
+    const { shape, keys: shapeKeys } = zSchema._getCached();
+    for (const key of shapeKeys) {
+      const domain = sdSchema[key];
+      if (isInferencePlaceholder(domain)) {
+        const reference: ForeignKeyDestination = {
+          foreignKeySource: domain.foreignKeySrcPlaceholder,
+        };
+        const zodType = shape[key];
+        const finalDomain = d.sqlDomain(zodType, { identity: key });
+        (sdSchema[key] as Any) = {
+          ...finalDomain,
+          ...reference,
+          sqlPartial: (
+            dest:
+              | "create table, full column defn"
+              | "create table, column defn decorators"
+              | "create table, after all column definitions",
+          ) => {
+            if (dest === "create table, after all column definitions") {
+              const aacd = domain?.sqlPartial?.(
+                "create table, after all column definitions",
+              );
+              const fkClause: tmpl.SqlTextSupplier<Context> = {
+                SQL: ((ctx) => {
+                  const ns = ctx.sqlNamingStrategy(ctx, {
+                    quoteIdentifiers: true,
+                  });
+                  const tn = ns.tableName;
+                  const cn = ns.tableColumnName;
+                  // don't use the foreignTableName passed in because it could be
+                  // mutated for self-refs in table definition phase
+                  return `FOREIGN KEY(${
+                    cn({
+                      tableName: "TODO",
+                      columnName: key,
+                    })
+                  }) REFERENCES ${tn(reference.foreignKeySource.tableName)}(${
+                    cn(reference.foreignKeySource)
+                  })`;
+                }),
+              };
+              return aacd ? [...aacd, fkClause] : [fkClause];
+            }
+            return domain.sqlPartial?.(dest);
+          },
+        };
+        (foreignKeys as Any)[key] = finalDomain;
+      }
+    }
+
+    return foreignKeys;
+  };
+
+  return {
+    inferables,
+    foreignKeys,
+  };
 }
-
-// const selfRefTableNamePlaceholder = "SELFREF_TABLE_NAME_PLACEHOLDER" as const;
-
-// export function selfRefForeignKey<
-//   ColumnTsType extends z.ZodTypeAny,
-//   Context extends tmpl.SqlEmitContext,
-// >(
-//   domain: d.SqlDomain<ColumnTsType, Context>,
-//   domainOptions?: Partial<d.SqlDomain<ColumnTsType, Context>>,
-// ) {
-//   return foreignKey(
-//     selfRefTableNamePlaceholder,
-//     domain,
-//     { isSelfRef: true },
-//     domainOptions,
-//   );
-// }
 
 export function typicalTableColumnDefnSQL<
   TableName extends string,
@@ -504,156 +575,6 @@ export const isUniqueTableColumn = safety.typeGuard<UniqueTableColumn>(
   "isUnique",
 );
 
-export type TableBelongsToRefDestNature<
-  Context extends tmpl.SqlEmitContext,
-> = {
-  readonly isBelongsToRel: true;
-  readonly collectionName?: js.JsTokenSupplier<Context>;
-};
-
-export type TableSelfRefDestNature = {
-  readonly isSelfRef: true;
-};
-
-export type TableRefDestRelNature<Context extends tmpl.SqlEmitContext> =
-  | TableBelongsToRefDestNature<Context>
-  | TableSelfRefDestNature
-  | { readonly isExtendsRel: true }
-  | { readonly isInheritsRel: true };
-
-export function belongsToRelation<
-  Context extends tmpl.SqlEmitContext,
->(
-  singularSnakeCaseCollName?: string,
-  pluralSnakeCaseCollName = singularSnakeCaseCollName
-    ? `${singularSnakeCaseCollName}s`
-    : undefined,
-): TableBelongsToRefDestNature<Context> {
-  return {
-    isBelongsToRel: true,
-    collectionName: singularSnakeCaseCollName
-      ? js.jsSnakeCaseToken(
-        singularSnakeCaseCollName,
-        pluralSnakeCaseCollName,
-      )
-      : undefined,
-  };
-}
-
-export function isTableBelongsToRefDestNature<
-  Context extends tmpl.SqlEmitContext,
->(o: unknown): o is TableBelongsToRefDestNature<Context> {
-  const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature<Context>>(
-    "isBelongsToRel",
-    "collectionName",
-  );
-  return isTBFKRN(o);
-}
-
-export const isTableSelfRefDestNature = safety.typeGuard<
-  TableSelfRefDestNature
->("isSelfRef");
-
-export const TableRefSourceType = "foreignKeySource" as const;
-export const TableRefDestType = "foreignKeyDest" as const;
-
-export type TableReferenceDest<
-  TableName extends string,
-  ColumnName extends string,
-  ColumnTsType extends z.ZodTypeAny,
-  Context extends tmpl.SqlEmitContext,
-> =
-  & d.ReferenceDestination<typeof TableRefDestType, Context>
-  & {
-    readonly tableColumnDefn: TableColumnDefn<
-      TableName,
-      ColumnName,
-      ColumnTsType,
-      Context
-    >;
-  }
-  // TODO: make this required once we figure out how to specify it
-  & { readonly tableRefRelNature?: TableRefDestRelNature<Context> };
-
-export type TableReferenceSource<
-  TableName extends string,
-  ColumnName extends string,
-  ColumnTsType extends z.ZodTypeAny,
-  Context extends tmpl.SqlEmitContext,
-> =
-  & d.ReferenceSource<
-    typeof TableRefSourceType,
-    TableReferenceDest<TableName, Any, Any, Context>,
-    TableName,
-    TableDefinition<TableName, Context> & d.SqlDomains<Any, Context>,
-    Context
-  >
-  & {
-    readonly tableColumnDefn: TableColumnDefn<
-      TableName,
-      ColumnName,
-      ColumnTsType,
-      Context
-    >;
-  };
-
-export type TableReferencesFactory<
-  TableName extends string,
-  Context extends tmpl.SqlEmitContext,
-> = d.SqlDomainReferencesFactory<
-  TableReferenceSource<TableName, Any, Any, Context>,
-  TableReferenceDest<TableName, Any, Any, Context>,
-  TableColumnDefn<TableName, Any, Any, Context>,
-  Context
->;
-
-export function tableReferencesFactory<
-  TableName extends string,
-  Context extends tmpl.SqlEmitContext,
->(_tableName: TableName) {
-  const result: TableReferencesFactory<TableName, Context> = {
-    prepareSource: (o) =>
-      d.asReferenceSource<
-        typeof TableRefSourceType,
-        TableReferenceDest<TableName, Any, Any, Context>,
-        TableReferenceSource<TableName, Any, Any, Context>,
-        TableName,
-        TableDefinition<TableName, Context> & d.SqlDomains<Any, Context>,
-        Context
-      >(o, TableRefSourceType, (enhanced) => {
-        // o is usually the ZodType._def
-        if (isTableColumnDefn(o)) {
-          ((enhanced.tableColumnDefn) as Any) = o;
-          return enhanced;
-        }
-        console.dir(o);
-        throw Error(
-          `tableReferencesFactory.prepareSource.enhance requires a TableColumnDefn`,
-        );
-      }),
-    prepareDest: (o, tableColumnDefn) =>
-      d.asReferenceDestination<
-        TableReferenceDest<TableName, Any, Any, Context>,
-        typeof TableRefDestType
-      >(
-        o,
-        TableRefDestType,
-        (enhance) => {
-          const enhanced = enhance as TableReferenceDest<
-            TableName,
-            Any,
-            Any,
-            Context
-          >;
-          // TODO: ((enhanced.tableRefRelNature) as Any) = tableName;
-          ((enhanced.tableColumnDefn) as Any) = tableColumnDefn;
-          return enhanced;
-        },
-      ),
-  };
-  return result;
-}
-
 export interface TableDefnOptions<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
@@ -670,80 +591,6 @@ export interface TableDefnOptions<
     columnsShape: ColumnsShape,
     tableName: TableName,
   ) => TableColumnsConstraint<ColumnsShape, Context>[];
-  readonly refGraph?: <TableName extends string>(
-    tableName: TableName,
-  ) => TableReferencesFactory<TableName, Context>;
-}
-
-export type TablesGraph<
-  TableName extends string,
-  Context extends tmpl.SqlEmitContext,
-> = d.SqlDomainsGraph<
-  TableName,
-  TableReferenceSource<TableName, Any, Any, Context>,
-  TableReferenceDest<TableName, Any, Any, Context>,
-  d.SqlDomainReferencesFactory<
-    TableReferenceSource<TableName, Any, Any, Context>,
-    TableReferenceDest<TableName, Any, Any, Context>,
-    TableColumnDefn<TableName, Any, Any, Context>,
-    Context
-  >,
-  Context
->;
-
-export function tablesGraph<
-  Context extends tmpl.SqlEmitContext,
->() {
-  let anonymousTableIndex = 0;
-  const tablesRefsGraphs = new Map<
-    string,
-    d.SqlDomainReferencesFactory<Any, Any, Any, Context>
-  >();
-  const referenced = new Set<TableReferenceSource<Any, Any, Any, Context>>();
-  const references = new Set<TableReferenceDest<Any, Any, Any, Context>>();
-  const result: TablesGraph<Any, Context> = {
-    referenced,
-    references,
-    anonymousIdentity: (zSchema) => {
-      anonymousTableIndex++;
-      const { keys: shapeKeys } = zSchema._getCached();
-      return `anonymousTable${anonymousTableIndex}://${shapeKeys.join(",")}`;
-    },
-    domainRefsFactory: (identity) => {
-      let drg = tablesRefsGraphs.get(identity);
-      if (!drg) {
-        drg = tableReferencesFactory<Any, Context>(identity);
-        tablesRefsGraphs.set(identity, drg!);
-      }
-      return drg!;
-    },
-    prepareRef: (original, destDomain) => {
-      const sds = original._def;
-      if (isTableColumnDefn(destDomain)) {
-        const drefsGraph = result.domainRefsFactory(sds.tableName);
-        const cloned = d.clonedZodType(original);
-        const refDest = drefsGraph.prepareDest(cloned._def, destDomain);
-        const refSrc = drefsGraph.prepareSource(original._def);
-        result.register(refDest, refSrc);
-        return cloned as Any; // TODO: properly type this for better maintenance
-      } else {
-        console.dir(original);
-        throw Error(
-          `tablesGraph.prepareRef ${original} does not have a tableColumnDefn in ZodType._def`,
-        );
-      }
-    },
-    register: (rd, rs) => {
-      rs.register(rd);
-      referenced.add(rs);
-      references.add(rd);
-    },
-  };
-  return {
-    anonymousTableIndex,
-    tablesRefsGraphs,
-    ...result,
-  };
 }
 
 export function tableDefinition<
@@ -753,21 +600,22 @@ export function tableDefinition<
 >(
   tableName: TableName,
   props: ColumnsShape,
-  tablesGraph: TablesGraph<TableName, Context>,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
   const columnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: TableColumnsConstraint<ColumnsShape, Context>[] = [];
-  const sd = d.sqlDomains<
-    typeof props,
-    TablesGraph<TableName, Context>,
-    Context,
-    TableName
-  >(
-    props,
-    tablesGraph,
-  );
+  const sd = d.sqlDomains<ColumnsShape, Context, TableName>(props, {
+    identity: () => tableName,
+  });
+  const fkr = foreignKeyReferences(tableName, sd.zSchema, sd.sdSchema);
+  const foreignKeys = fkr.foreignKeys(); // warning: mutates sd.sdSchema
+  const inferables = fkr.inferables();
+
+  // important: don't cache the domains until foreignKeys are resolved because
+  // FKs have placeholders and then their values are replaced after resolution;
+  const domains = sd.domains();
+
   // TODO: handle self-ref foreign keys
   // for (const columnDefn of sd.domains) {
   //   if (
@@ -790,8 +638,50 @@ export function tableDefinition<
       : never;
   };
 
+  type PrimaryKeys = {
+    [
+      Property in keyof ColumnsShape as Extract<
+        Property,
+        ColumnsShape[Property] extends { isPrimaryKey: true } ? Property
+          : never
+      >
+    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ? 
+        & d.SqlDomain<z.ZodType<T, D, I>, Context, Extract<Property, string>>
+        & TablePrimaryKeyColumnDefn<z.ZodType<T, D, I>, Context>
+      : never;
+  };
+
+  type UniqueColumnDefns = {
+    [
+      Property in keyof ColumnsShape as Extract<
+        Property,
+        ColumnsShape[Property] extends { isUnique: true } ? Property
+          : never
+      >
+    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ? 
+        & d.SqlDomain<z.ZodType<T, D, I>, Context, Extract<Property, string>>
+        & UniqueTableColumn
+      : never;
+  };
+
+  const primaryKey: PrimaryKeys = {} as Any;
+  const unique: UniqueColumnDefns = {} as Any;
+  for (const column of domains) {
+    if (isTablePrimaryKeyColumnDefn(column)) {
+      primaryKey[column.identity as (keyof PrimaryKeys)] = column as Any;
+    }
+    if (isUniqueTableColumn(column)) {
+      unique[column.identity as (keyof UniqueColumnDefns)] = column as Any;
+      constraints.push(uniqueContraint(column.identity));
+    }
+  }
+
+  // see if any FK references were registered but need to be created
   const columns: ColumnDefns = {} as Any;
-  for (const columnDefn of sd.domains) {
+  for (const columnDefn of domains) {
+    (columnDefn as unknown as { tableName: TableName }).tableName = tableName;
+    (columnDefn as unknown as { columnName: string }).columnName =
+      columnDefn.identity;
     const typicalSQL = typicalTableColumnDefnSQL(tableName, columnDefn);
     if (columnDefn.sqlPartial) {
       const acdPartial = columnDefn.sqlPartial(
@@ -810,73 +700,7 @@ export function tableDefinition<
     } else {
       columnDefnsSS.push({ SQL: typicalSQL });
     }
-    // TODO: figure out why "Any" is required
-    (columnDefn as unknown as { tableName: TableName }).tableName = tableName;
-    (columnDefn as unknown as { columnName: string }).columnName =
-      columnDefn.identity;
     (columns[columnDefn.identity] as Any) = columnDefn;
-  }
-
-  type PrimaryKeys = {
-    [
-      Property in keyof ColumnsShape as Extract<
-        Property,
-        ColumnsShape[Property] extends { isPrimaryKey: true } ? Property
-          : never
-      >
-    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ? 
-        & d.SqlDomain<z.ZodType<T, D, I>, Context>
-        & TablePrimaryKeyColumnDefn<z.ZodType<T, D, I>, Context>
-      : never;
-  };
-
-  type UniqueColumnDefns = {
-    [
-      Property in keyof ColumnsShape as Extract<
-        Property,
-        ColumnsShape[Property] extends { isUnique: true } ? Property
-          : never
-      >
-    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I>
-      ? d.SqlDomain<z.ZodType<T, D, I>, Context> & UniqueTableColumn
-      : never;
-  };
-
-  const primaryKey: PrimaryKeys = {} as Any;
-  const unique: UniqueColumnDefns = {} as Any;
-  for (const column of sd.domains) {
-    if (isTablePrimaryKeyColumnDefn(column)) {
-      primaryKey[column.identity as (keyof PrimaryKeys)] = column as Any;
-    }
-    if (isUniqueTableColumn(column)) {
-      unique[column.identity as (keyof UniqueColumnDefns)] = column as Any;
-      constraints.push(uniqueContraint(column.identity));
-    }
-  }
-
-  type ForeignKeyRefs = {
-    [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
-      z.ZodType<infer T, infer D, infer I>
-      ? (nature?: TableRefDestRelNature<Context>) =>
-        & z.ZodType<T, D, I>
-        & ReturnType<typeof foreignKeyReferenceInit>
-      : never;
-  };
-
-  const drf = tablesGraph.domainRefsFactory(tableName);
-  const references: ForeignKeyRefs = {} as Any;
-  for (const column of sd.domains) {
-    (references[column.identity] as Any) = (
-      foreignRelNature?: TableRefDestRelNature<Context>,
-    ) => {
-      // TODO: figure out to make it type-safe without 'any'
-      return foreignKeyReferenceInit(
-        props[column.identity as Any] as Any,
-        drf.prepareSource(props[column.identity as Any]._def),
-        undefined,
-        foreignRelNature,
-      ) as Any;
-    };
   }
 
   afterColumnDefnsSS.push(...constraints);
@@ -891,7 +715,8 @@ export function tableDefinition<
       readonly columns: ColumnDefns;
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
-      readonly references: ForeignKeyRefs;
+      readonly infer: typeof inferables;
+      readonly foreignKeys: typeof foreignKeys;
       readonly sqlNS?: ns.SqlNamespaceSupplier;
     }
     & tmpl.SqlSymbolSupplier<Context>
@@ -904,7 +729,7 @@ export function tableDefinition<
           qnss: tdOptions?.sqlNS,
         }).tableName(tableName),
       populateSqlTextLintIssues: (lis) => {
-        for (const sdd of sd.domains) {
+        for (const sdd of domains) {
           if (l.isSqlLintIssuesSupplier(sdd)) {
             lis.registerLintIssue(...sdd.lintIssues);
           }
@@ -939,7 +764,8 @@ export function tableDefinition<
       columns,
       primaryKey,
       unique,
-      references,
+      infer: inferables,
+      foreignKeys,
       sqlNS: tdOptions?.sqlNS,
     };
 
@@ -959,7 +785,6 @@ export function tableColumnsRowFactory<
 >(
   tableName: TableName,
   props: ColumnsShape,
-  tablesGraph: TablesGraph<TableName, Context>,
   tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
     defaultIspOptions?: i.InsertStmtPreparerOptions<
       TableName,
@@ -971,7 +796,8 @@ export function tableColumnsRowFactory<
 ) {
   // we compute the tableDefn here instead of having it passed in because
   // Typescript cannot carry all the proper types if we don't generate it here
-  const td = tableDefinition(tableName, props, tablesGraph, tdrfOptions);
+  const td = tableDefinition(tableName, props, tdrfOptions);
+  const columns = Array.from(Object.values(td.columns));
 
   // deno-lint-ignore ban-types
   type requiredKeys<T extends object> = {
@@ -1050,11 +876,11 @@ export function tableColumnsRowFactory<
       tableName,
       (group) => {
         if (group === "primary-keys") {
-          return td.domains.filter((d) =>
+          return columns.filter((d) =>
             isTablePrimaryKeyColumnDefn(d) ? true : false
           );
         }
-        return td.domains.filter((d) =>
+        return columns.filter((d) =>
           isTableColumnInsertDmlExclusionSupplier(d) &&
             d.isExcludedFromInsertDML
             ? false
@@ -1073,11 +899,11 @@ export function tableColumnsRowFactory<
       tableName,
       (group) => {
         if (group === "primary-keys") {
-          return td.domains.filter((d) =>
+          return columns.filter((d) =>
             isTablePrimaryKeyColumnDefn(d) ? true : false
           );
         }
-        return td.domains.filter((d) =>
+        return columns.filter((d) =>
           isTableColumnInsertDmlExclusionSupplier(d) &&
             d.isExcludedFromInsertDML
             ? false
@@ -1098,7 +924,6 @@ export function tableSelectFactory<
 >(
   tableName: TableName,
   props: ColumnsShape,
-  tablesGraph: TablesGraph<TableName, Context>,
   tdrfOptions?: TableDefnOptions<ColumnsShape, Context> & {
     defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
     defaultSspOptions?: s.SelectStmtPreparerOptions<
@@ -1109,7 +934,8 @@ export function tableSelectFactory<
     >;
   },
 ) {
-  const td = tableDefinition(tableName, props, tablesGraph, tdrfOptions);
+  const td = tableDefinition(tableName, props, tdrfOptions);
+  const columns = Array.from(Object.values(td.columns));
 
   type OptionalInInsertableRecord = {
     [
@@ -1171,11 +997,11 @@ export function tableSelectFactory<
       tableName,
       cr.filterCriteriaPreparer((group) => {
         if (group === "primary-keys") {
-          return td.domains.filter((d) =>
+          return columns.filter((d) =>
             isTablePrimaryKeyColumnDefn(d) ? true : false
           ).map((d) => d.identity) as FilterableColumnName[];
         }
-        return td.domains.filter((d) =>
+        return columns.filter((d) =>
           isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
             d.isExcludedFromFilterCriteriaDql
             ? false
@@ -1266,7 +1092,7 @@ export const tableLacksPrimaryKeyLintRule = <
           isTablePrimaryKeyColumnDefn<Any, Context>(ap)
         ) as unknown as (
           | (
-            & d.SqlDomain<z.ZodTypeAny, Context>
+            & d.SqlDomain<z.ZodTypeAny, Context, Any>
             & TablePrimaryKeyColumnDefn<Any, Context>
           )
           | undefined
@@ -1425,7 +1251,7 @@ export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
     tableNameConsistency: tableNameConsistencyLintRule,
     columnLintIssues: tableColumnsLintIssuesRule,
     // fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
-    noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
+    // noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
     typical: (
       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
       ...additionalRules: l.SqlLintRule<Any>[]
@@ -1436,7 +1262,7 @@ export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
         & TableNamePrimaryKeyLintOptions
       >(
         rules.tableNameConsistency(tableDefn.tableName),
-        rules.noPrimaryKeyDefined(tableDefn),
+        // rules.noPrimaryKeyDefined(tableDefn),
         rules.columnLintIssues(tableDefn),
         // rules.fKeyColNameConsistency(tableDefn),
         ...additionalRules,

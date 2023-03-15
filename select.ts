@@ -55,7 +55,7 @@ export type SelectTemplateOptions<
   readonly onPropertyNotAxiomSqlDomain?: (
     name: string,
     axiom: Any,
-    domains: d.SqlDomain<Any, Context>[],
+    domains: d.SqlDomain<Any, Context, Any>[],
   ) => void;
   readonly firstTokenGuard?: (
     firstToken: string,

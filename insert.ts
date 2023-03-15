@@ -27,13 +27,21 @@ export interface InsertStmtPreparerOptions<
   readonly isColumnEmittable?: (
     columnName: keyof InsertableRecord,
     record: InsertableRecord,
-    columnDefn: d.SqlDomain<Any, Context>,
+    columnDefn: d.SqlDomain<
+      Any,
+      Context,
+      Extract<InsertableColumnName, string>
+    >,
     tableName: TableName,
   ) => boolean;
   readonly emitColumn?: (
     columnName: keyof InsertableRecord,
     record: InsertableRecord,
-    columnDefn: d.SqlDomain<Any, Context>,
+    columnDefn: d.SqlDomain<
+      Any,
+      Context,
+      Extract<InsertableColumnName, string>
+    >,
     tableName: TableName,
     ns: tmpl.SqlObjectNames,
     ctx: Context,
@@ -119,7 +127,7 @@ export function typicalInsertStmtSqlPreparerSync<
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context>[],
+  ) => d.SqlDomain<Any, Context, Extract<InsertableColumnName, string>>[],
   ispOptions?: InsertStmtPreparerOptions<
     TableName,
     InsertableRecord,
@@ -261,7 +269,7 @@ export function typicalInsertStmtPreparerSync<
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context>[],
+  ) => d.SqlDomain<Any, Context, Extract<keyof InsertableRecord, string>>[],
   mutateValues?: (ir: safety.Writeable<InsertableRecord>) => InsertableRecord,
   defaultIspOptions?: InsertStmtPreparerOptions<
     TableName,
@@ -300,7 +308,7 @@ export function typicalInsertStmtPreparer<
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context>[],
+  ) => d.SqlDomain<Any, Context, Extract<keyof InsertableRecord, string>>[],
   mutateValues?: (
     ir: safety.Writeable<InsertableRecord>,
   ) => Promise<InsertableRecord>,
