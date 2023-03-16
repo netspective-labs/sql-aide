@@ -1,6 +1,6 @@
 import { zod as z } from "./deps.ts";
 import { testingAsserts as ta } from "./deps-test.ts";
-import { unindentWhitespace as uws } from "./whitespace.ts";
+import { unindentWhitespace as uws } from "./lib/universal/whitespace.ts";
 import * as mod from "./select.ts";
 import * as tmpl from "./sql.ts";
 import * as cr from "./criteria.ts";

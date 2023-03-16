@@ -1,6 +1,6 @@
 import { events, fs } from "./deps.ts";
-import * as safety from "./safety.ts";
-import * as ws from "./whitespace.ts";
+import * as safety from "./lib/universal/safety.ts";
+import * as ws from "./lib/universal/whitespace.ts";
 import * as l from "./lint.ts";
 
 // deno-lint-ignore no-explicit-any

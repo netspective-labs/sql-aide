@@ -1,4 +1,4 @@
-import { zod as z } from "./deps.ts";
+import { zod as z } from "../../deps.ts";
 
 // DELETE_ME: more help available at:
 // - https://github.com/github.com/RobinTail/express-zod-api/blob/main/src/metadata.ts

@@ -1,5 +1,5 @@
 import { testingAsserts as ta } from "./deps-test.ts";
-import * as whs from "./whitespace.ts";
+import * as whs from "./lib/universal/whitespace.ts";
 import * as s from "./sql.ts";
 import * as mod from "./directive.ts";
 

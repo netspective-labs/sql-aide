@@ -1,6 +1,6 @@
 import { zod as z } from "../deps.ts";
 import * as tmpl from "../sql.ts";
-import * as safety from "../safety.ts";
+import * as safety from "../lib/universal/safety.ts";
 import * as l from "../lint.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -39,6 +39,29 @@ export type SqlDomain<
   ) => tmpl.SqlTextSupplier<Context>[] | undefined;
 };
 
+export type SqlDomainPreparer<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+> = <
+  ZodType extends z.ZodTypeAny,
+  Identity extends DomainsIdentity,
+>(
+  zodType: ZodType,
+  init?: { identity: Identity },
+) => SqlDomain<ZodType, Context, Identity>;
+
+export type SqlDomainSupplier<
+  ZodType extends z.ZodTypeAny,
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+> = { readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> };
+
+export type ZodTypeSqlDomainSupplier<
+  ZodType extends z.ZodTypeAny,
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+> = ZodType & SqlDomainSupplier<ZodType, DomainsIdentity, Context>;
+
 export function zodTypeAnySqlDomainFactory<
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
@@ -51,7 +74,7 @@ export function zodTypeAnySqlDomainFactory<
   >("isSqlDomain", "sqlDataType");
 
   const isSqlDomainSupplier = safety.typeGuard<
-    { readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> }
+    SqlDomainSupplier<ZodType, DomainsIdentity, Context>
   >("sqlDomain");
 
   const defaults = <Identity extends string>(

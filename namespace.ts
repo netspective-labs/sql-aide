@@ -1,4 +1,4 @@
-import * as safety from "./safety.ts";
+import * as safety from "./lib/universal/safety.ts";
 import * as tmpl from "./sql.ts";
 
 export type SqlNamespace = string;

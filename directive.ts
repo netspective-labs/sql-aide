@@ -1,4 +1,4 @@
-import * as safety from "./safety.ts";
+import * as safety from "./lib/universal/safety.ts";
 import * as s from "./sql.ts";
 
 // deno-lint-ignore no-explicit-any

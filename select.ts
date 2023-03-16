@@ -1,9 +1,9 @@
 import { zod as z } from "./deps.ts";
-import * as safety from "./safety.ts";
+import * as safety from "./lib/universal/safety.ts";
+import * as ws from "./lib/universal/whitespace.ts";
 import * as tmpl from "./sql.ts";
 import * as l from "./lint.ts";
 import * as d from "./domain.ts";
-import * as ws from "./whitespace.ts";
 import * as cr from "./criteria.ts";
 
 // deno-lint-ignore no-explicit-any

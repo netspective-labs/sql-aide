@@ -1,5 +1,5 @@
-import { zod as z } from "./deps.ts";
-import { testingAsserts as ta } from "./deps-test.ts";
+import { zod as z } from "../../deps.ts";
+import { testingAsserts as ta } from "../../deps-test.ts";
 import * as za from "./zod-aide.ts";
 
 const expectType = <T>(_value: T) => {

@@ -1,4 +1,4 @@
-import * as safety from "./safety.ts";
+import * as safety from "./lib/universal/safety.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
