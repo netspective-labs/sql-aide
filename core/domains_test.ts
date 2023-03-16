@@ -30,7 +30,7 @@ const sqlGen = () => {
   return { ctx, ddlOptions, lintState };
 };
 
-Deno.test("SQLa native Zod domains", async (tc) => {
+Deno.test("SQLa native Zod domains (without references)", async (tc) => {
   await tc.step("typical Zod scalars as SQL domains", async (innerTC) => {
     const domains = factory.sqlDomains({
       text: z.string(),
@@ -121,5 +121,119 @@ Deno.test("SQLa native Zod domains", async (tc) => {
         ],
       );
     });
+  });
+});
+
+Deno.test("SQLa native Zod domains (with references)", async (tc) => {
+  const srcDomains = factory.sqlReferencableDomains({
+    text1_src_required: z.string().describe("srcDomains.text1"),
+    text2_src_nullable: z.string().optional().describe(
+      "srcDomains.text2_src_nullable",
+    ),
+    int1_src_required: z.number().describe("srcDomains.int1"),
+    int2_src_nullable: z.number().optional().describe(
+      "srcDomains.int2_src_nullable",
+    ),
+    // TODO: add all the other scalars and types
+  });
+
+  await tc.step("refs source type safety", () => {
+    expectType<{
+      text1_src_required: () => z.ZodString;
+      text2_src_nullable: () => z.ZodString;
+      int1_src_required: () => z.ZodNumber;
+      int2_src_nullable: () => z.ZodNumber;
+    }>(srcDomains.infer);
+  });
+  const srcRefs = srcDomains.infer;
+  const refDomains = factory.sqlDomains({
+    non_ref_text: z.string(),
+    non_ref_int: z.number(),
+    ref_text1_required_in_src_and_dest: srcRefs.text1_src_required()
+      .describe(
+        "refDomains.ref_text1_required",
+      ),
+    ref_text1_nullable: srcRefs.text1_src_required().optional().describe(
+      "refDomains.ref_text1_nullable",
+    ),
+    ref_text2_dest_not_nullable: srcRefs.text2_src_nullable()
+      .describe("refDomains.ref_text2_dest_not_nullable"),
+    ref_text2_dest_nullable: srcRefs.text2_src_nullable()
+      .optional().describe("refDomains.ref_text2_dest_nullable"),
+    non_ref_text_nullable: z.string().optional(),
+    non_ref_int_nullable: z.number().optional(),
+  });
+
+  await tc.step("equivalence but not identical", () => {
+    // need to make sure references don't just return their original sources
+    // but instead create new copies
+    ta.assert(
+      (srcDomains.zSchema.shape.text1_src_required as Any) !==
+        (refDomains.zSchema.shape
+          .ref_text1_required_in_src_and_dest as Any),
+    );
+    ta.assert(
+      srcDomains.zSchema.shape.text1_src_required.description ==
+        "srcDomains.text1",
+    );
+    ta.assert(
+      refDomains.zSchema.shape.ref_text1_required_in_src_and_dest
+        .description ==
+        "refDomains.ref_text1_required",
+    );
+  });
+
+  await tc.step("type expectations", () => {
+    const { shape, keys: shapeKeys } = refDomains.zSchema._getCached();
+    ta.assertEquals(shapeKeys.length, 8);
+    expectType<{
+      non_ref_text: z.ZodString;
+      non_ref_int: z.ZodNumber;
+      ref_text1_required_in_src_and_dest: z.ZodString;
+      ref_text1_nullable: z.ZodOptional<z.ZodString>;
+      ref_text2_dest_not_nullable: z.ZodString;
+      ref_text2_dest_nullable: z.ZodOptional<z.ZodString>;
+      non_ref_text_nullable: z.ZodOptional<z.ZodString>;
+      non_ref_int_nullable: z.ZodOptional<z.ZodNumber>;
+    }>(shape);
+
+    expectType<{
+      ref_text1_required_in_src_and_dest: d.SqlDomain<
+        z.ZodString,
+        SyntheticContext,
+        "ref_text1_required_in_src_and_dest"
+      >;
+      // ref_text1_nullable: d.SqlDomain<
+      //   z.ZodOptional<z.ZodString>,
+      //   SyntheticContext,
+      //   "ref_text1_nullable"
+      // >;
+      // ref_text2_dest_not_nullable: d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any, Any>;
+      // ref_text2_dest_nullable: d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any, Any>;
+    }>(
+      refDomains.sdSchema,
+    );
+
+    type SyntheticSchema = z.infer<typeof refDomains.zSchema>;
+    const synthetic: SyntheticSchema = {
+      non_ref_text: "non-ref-text-value",
+      non_ref_int: 23567,
+      ref_text1_required_in_src_and_dest: "ref-text1",
+      ref_text2_dest_not_nullable:
+        "ref-text2 must be non-nullable in destination even though it's nullable in the source",
+      ref_text2_dest_nullable: undefined, // this one is OK to be undefined since it's marked as such in the destination
+    };
+    ta.assert(synthetic);
+    expectType<{
+      ref_text1_required_in_src_and_dest: string;
+      ref_text2_dest_not_nullable: string;
+      ref_text1_nullable?: string | undefined;
+      ref_text2_dest_nullable?: string | undefined;
+    }>(synthetic);
+  });
+
+  await tc.step("TODO: referenced/references graph", () => {
+    // TODO: add test cases to make sure all the refs are proper
+    // console.dir(d.globalDefaultDomainsGraph, { depth: 5 });
   });
 });

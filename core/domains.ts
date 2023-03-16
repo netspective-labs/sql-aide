@@ -40,17 +40,17 @@ export function sqlDomainsFactory<
         typeof zb.introspectableZodTypeBaggage<RawShape[Property]>
       >;
     },
-    SqlDomainSchema extends SqlDomains<RawShape, Context>,
+    SqlDomainsSchema extends SqlDomains<RawShape, Context>,
   >(zodRawShape: RawShape, init?: {
     readonly identity?: (init: {
       readonly zSchema: z.ZodObject<RawShape>;
       readonly zbSchema: BaggageSchema;
-      readonly sdSchema: SqlDomainSchema;
+      readonly sdSchema: SqlDomainsSchema;
     }) => EntityIdentity;
   }) => {
     const zSchema = z.object(zodRawShape).strict();
     const zbSchema: BaggageSchema = {} as Any;
-    const sdSchema: SqlDomainSchema = {} as Any;
+    const sdSchema: SqlDomainsSchema = {} as Any;
 
     const { shape, keys: shapeKeys } = zSchema._getCached();
     for (const key of shapeKeys) {
