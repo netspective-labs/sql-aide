@@ -1,15 +1,15 @@
-import { zod as z } from "./deps.ts";
-import * as tmpl from "./sql.ts";
-import * as safety from "./lib/universal/safety.ts";
-import * as l from "./lint.ts";
-import * as d from "./domain.ts";
-// import * as js from "./js.ts";
-import * as ns from "./namespace.ts";
-import * as i from "./insert.ts";
-import * as r from "./record.ts";
-import * as cr from "./criteria.ts";
-import * as s from "./select.ts";
-import * as za from "./lib/universal/zod-aide.ts";
+import { zod as z } from "../deps.ts";
+import * as tmpl from "../sql.ts";
+import * as safety from "../lib/universal/safety.ts";
+import * as r from "../lib/universal/record.ts";
+import * as l from "../lint.ts";
+import * as d from "../domain.ts";
+// import * as js from "../js.ts";
+import * as ns from "../namespace.ts";
+import * as i from "../dml/insert.ts";
+import * as cr from "../dql/criteria.ts";
+import * as s from "../dql/select.ts";
+import * as za from "../lib/universal/zod-aide.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter

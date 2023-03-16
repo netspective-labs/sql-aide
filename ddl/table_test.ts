@@ -1,9 +1,9 @@
-import { zod as z } from "./deps.ts";
-import { testingAsserts as ta } from "./deps-test.ts";
-import { unindentWhitespace as uws } from "./lib/universal/whitespace.ts";
-import * as tmpl from "./sql.ts";
+import { zod as z } from "../deps.ts";
+import { testingAsserts as ta } from "../deps-test.ts";
+import { unindentWhitespace as uws } from "../lib/universal/whitespace.ts";
+import * as tmpl from "../sql.ts";
 import * as t from "./table.ts";
-import * as s from "./select.ts";
+import * as s from "../dql/select.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter

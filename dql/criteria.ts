@@ -1,5 +1,5 @@
-import * as safety from "./lib/universal/safety.ts";
-import * as tmpl from "./sql.ts";
+import * as safety from "../lib/universal/safety.ts";
+import * as tmpl from "../sql.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;

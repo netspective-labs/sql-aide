@@ -1,6 +1,6 @@
-import { testingAsserts as ta } from "./deps-test.ts";
+import { testingAsserts as ta } from "../deps-test.ts";
 import * as mod from "./criteria.ts";
-import * as tmpl from "./sql.ts";
+import * as tmpl from "../sql.ts";
 
 Deno.test("SQL Aide (SQLa) where-like criteria SQL fragments", async (tc) => {
   const ctx = tmpl.typicalSqlEmitContext();
