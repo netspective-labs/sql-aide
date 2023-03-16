@@ -203,13 +203,21 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
         SyntheticContext,
         "ref_text1_required_in_src_and_dest"
       >;
-      // ref_text1_nullable: d.SqlDomain<
-      //   z.ZodOptional<z.ZodString>,
-      //   SyntheticContext,
-      //   "ref_text1_nullable"
-      // >;
-      // ref_text2_dest_not_nullable: d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any, Any>;
-      // ref_text2_dest_nullable: d.SqlDomain<z.ZodType<string, z.ZodStringDef>, Any, Any>;
+      ref_text1_nullable: d.SqlDomain<
+        z.ZodOptional<z.ZodString>,
+        SyntheticContext,
+        "ref_text1_nullable"
+      >;
+      ref_text2_dest_not_nullable: d.SqlDomain<
+        z.ZodString,
+        SyntheticContext,
+        "ref_text2_dest_not_nullable"
+      >;
+      ref_text2_dest_nullable: d.SqlDomain<
+        z.ZodOptional<z.ZodString>,
+        SyntheticContext,
+        "ref_text2_dest_nullable"
+      >;
     }>(
       refDomains.sdSchema,
     );
