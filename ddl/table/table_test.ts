@@ -330,23 +330,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     },
   );
 
-  await tc.step("inference type safety", () => {
-    ta.assertEquals(Array.from(Object.keys(tableWithAutoIncPK.references)), [
-      "auto_inc_primary_key",
-      "text",
-      "text_nullable",
-      "int",
-      "int_nullable",
-    ]);
-
-    ta.assertEquals(Array.from(Object.keys(tableWithOnDemandPK.references)), [
-      "ua_on_demand_primary_key",
-      "text",
-      "text_nullable",
-      "int",
-      "int_nullable",
-    ]);
-
+  await tc.step("inference compile-time type safety", () => {
     expectType<{
       ua_on_demand_primary_key: () => z.ZodString;
       // TODO:        & d.SqlDomainSupplier<z.ZodString, Any, SyntheticContext>;
@@ -371,31 +355,25 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     );
   });
 
-  await tc.step("reference type safety", () => {
-    ta.assertEquals(Array.from(Object.keys(table.columns)), [
+  await tc.step("inference run-time assurance", () => {
+    ta.assertEquals(Array.from(Object.keys(tableWithAutoIncPK.references)), [
       "auto_inc_primary_key",
-      "fk_text_primary_key",
-      "fk_int_primary_key",
-      "fk_text_primary_key_nullable",
-      "fk_int_primary_key_nullable",
-    ]);
-    ta.assertEquals(Array.from(Object.keys(table.primaryKey)), [
-      "auto_inc_primary_key",
-    ]);
-    ta.assertEquals(Array.from(Object.keys(table.references)), [
-      "auto_inc_primary_key",
-      "fk_text_primary_key",
-      "fk_int_primary_key",
-      "fk_text_primary_key_nullable",
-      "fk_int_primary_key_nullable",
-    ]);
-    ta.assertEquals(Array.from(Object.keys(table.foreignKeys)), [
-      "fk_text_primary_key",
-      "fk_int_primary_key",
-      "fk_text_primary_key_nullable",
-      "fk_int_primary_key_nullable",
+      "text",
+      "text_nullable",
+      "int",
+      "int_nullable",
     ]);
 
+    ta.assertEquals(Array.from(Object.keys(tableWithOnDemandPK.references)), [
+      "ua_on_demand_primary_key",
+      "text",
+      "text_nullable",
+      "int",
+      "int_nullable",
+    ]);
+  });
+
+  await tc.step("reference compile-time type safety", () => {
     type SyntheticType = z.infer<typeof table.zoSchema>;
     const synthetic: SyntheticType = {
       auto_inc_primary_key: 0,
@@ -428,33 +406,54 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     // );
   });
 
+  await tc.step("reference run-time assurance", () => {
+    ta.assertEquals(Array.from(Object.keys(table.columns)), [
+      "auto_inc_primary_key",
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.primaryKey)), [
+      "auto_inc_primary_key",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.references)), [
+      "auto_inc_primary_key",
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+    ta.assertEquals(Array.from(Object.keys(table.foreignKeys)), [
+      "fk_text_primary_key",
+      "fk_int_primary_key",
+      "fk_text_primary_key_nullable",
+      "fk_int_primary_key_nullable",
+    ]);
+  });
+
   await tc.step("SQL DDL with no lint issues", () => {
-    // const { ctx, ddlOptions, lintState } = sqlGen();
-    // Deno.writeTextFileSync(
-    //   "DELETE_ME_DEBUG.txt",
-    //   Deno.inspect(table, { depth: 10 }),
-    // );
-    // console.log(table.SQL(ctx));
-    // ta.assertEquals(
-    //   tmpl.SQL(ddlOptions)`
-    // ${lintState.sqlTextLintSummary}
+    const { ctx, ddlOptions, lintState } = sqlGen();
+    ta.assertEquals(
+      tmpl.SQL(ddlOptions)`
+    ${lintState.sqlTextLintSummary}
 
-    // ${table}`.SQL(ctx),
-    //   uws(`
-    //   -- no SQL lint issues (typicalSqlTextLintManager)
+    ${table}`.SQL(ctx),
+      uws(`
+      -- no SQL lint issues (typicalSqlTextLintManager)
 
-    //   CREATE TABLE "synthetic_table_with_foreign_keys" (
-    //       "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
-    //       "fk_text_primary_key" TEXT NOT NULL,
-    //       "fk_int_primary_key" INTEGER NOT NULL,
-    //       "fk_text_primary_key_nullable" TEXT,
-    //       "fk_int_primary_key_nullable" INTEGER,
-    //       FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-    //       FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
-    //       FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-    //       FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
-    //   );`),
-    // );
+      CREATE TABLE "synthetic_table_with_foreign_keys" (
+          "auto_inc_primary_key" INTEGER PRIMARY KEY AUTOINCREMENT,
+          "fk_text_primary_key" TEXT NOT NULL,
+          "fk_int_primary_key" INTEGER NOT NULL,
+          "fk_text_primary_key_nullable" TEXT,
+          "fk_int_primary_key_nullable" INTEGER,
+          FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+          FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
+          FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
+          FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
+      );`),
+    );
   });
 
   await tc.step("TODO: tables graph", () => {
@@ -706,37 +705,42 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   );
 });
 
-// Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
-//   await tc.step(
-//     "valid select statement for a table",
-//     async (innerTC) => {
-//       const { tableWithOnDemandPK: table } = syntheticSchema();
-//       ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
-//       const tableSF = t.tableSelectFactory(
-//         table.tableName,
-//         table.zSchema.shape,
-//       );
+Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
+  await tc.step(
+    "valid select statement for a table",
+    async (innerTC) => {
+      const { tableWithOnDemandPK: table } = syntheticSchema();
+      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
+      const tableSF = t.tableSelectFactory(
+        table.tableName,
+        table.zoSchema.shape,
+      );
 
-//       await innerTC.step("type safety", () => {
-//         const insertable = tableSF.prepareFilterable({
-//           text: "text",
-//           int: 423,
-//         });
-//         expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
-//           insertable.text,
-//         );
-//         expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
-//           insertable.int,
-//         );
-//       });
+      await innerTC.step("type safety", () => {
+        const insertable = tableSF.prepareFilterable({
+          text: "text",
+          int: 423,
+          uaOnDemandPrimaryKey: "test",
+        });
+        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.text,
+        );
+        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+          insertable.int,
+        );
+      });
 
-//       await innerTC.step("SQL DQL", () => {
-//         const { ctx } = sqlGen();
-//         ta.assertEquals(
-//           tableSF.select({ text: "text", int: 423 }).SQL(ctx),
-//           `SELECT "ua_on_demand_primary_key" FROM "synthetic_table_with_uaod_pk" WHERE "text" = 'text' AND "int" = 423`,
-//         );
-//       });
-//     },
-//   );
-// });
+      await innerTC.step("SQL DQL", () => {
+        const { ctx } = sqlGen();
+        ta.assertEquals(
+          tableSF.select({
+            text: "text",
+            int: 423,
+            ua_on_demand_primary_key: "test",
+          }).SQL(ctx),
+          `SELECT "ua_on_demand_primary_key" FROM "synthetic_table_with_uaod_pk" WHERE "ua_on_demand_primary_key" = 'test' AND "text" = 'text' AND "int" = 423`,
+        );
+      });
+    },
+  );
+});
