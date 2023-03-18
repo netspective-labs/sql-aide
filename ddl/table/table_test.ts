@@ -322,7 +322,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
       fk_text_primary_key: tableWithOnDemandPK.references
         .ua_on_demand_primary_key(),
-      fk_int_primary_key: tableWithAutoIncPK.references.auto_inc_primary_key(),
+      fk_int_primary_key: tableWithAutoIncPK.belongsTo.auto_inc_primary_key(),
       fk_text_primary_key_nullable: tableWithOnDemandPK.references
         .ua_on_demand_primary_key().optional(),
       fk_int_primary_key_nullable: tableWithAutoIncPK.references
@@ -410,10 +410,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       fk_int_primary_key_nullable?: number | undefined;
     }>(synthetic);
 
-    // Deno.writeTextFileSync(
-    //   `DELETE_ME_DEBUG_table_defn.txt`,
-    //   za.filteredInspect(Deno.inspect(table, { depth: 10 })),
-    // );
+    // za.writeDebugFile(`DELETE_ME_DEBUG_table_test.txt`, table);
 
     // TODO: fix this so we don't just use typeof to find the proper type
     // expectType<{

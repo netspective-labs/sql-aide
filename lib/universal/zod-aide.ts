@@ -240,6 +240,17 @@ export function filteredInspect(text: string) {
   ).replaceAll(/\n\n/gm, "");
 }
 
+export function writeDebugFile(name: string, ...inspect: unknown[]) {
+  Deno.writeTextFileSync(
+    name,
+    filteredInspect(
+      inspect.map((i) =>
+        typeof i === "string" ? i : Deno.inspect(inspect, { depth: 10 })
+      ).join("\n"),
+    ),
+  );
+}
+
 /**
  * Transform a Zod schema with "methods", basically functions attached to the
  * parsed result that make it convenient to enhanced the parsed object. The idea

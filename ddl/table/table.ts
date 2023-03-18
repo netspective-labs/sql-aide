@@ -3,7 +3,6 @@ import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
 import * as za from "../../lib/universal/zod-aide.ts";
 import * as d from "../../domain/mod.ts";
-// import * as js from "../../js.ts";
 import * as c from "./column.ts";
 import * as con from "./constraint.ts";
 
@@ -57,9 +56,10 @@ export function tableDefinition<
   zodRawShape: ColumnsShape,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
-  // const beforeDefnDebugText = za.filteredInspect(Deno.inspect({
-  //   beforeDefnDebug: { zodRawShape },
-  // }, { depth: 10 }));
+  // const beforeDefnDebugText = Deno.inspect(
+  //   { beforeDefnDebug: { zodRawShape } },
+  //   { depth: 10 },
+  // );
   const sdf = d.sqlDomainsFactory<TableName, Context>();
 
   type BaggageSchema = {
@@ -76,14 +76,19 @@ export function tableDefinition<
   };
 
   type ForeignKeyDestination = {
+    readonly foreignKeyRelNature?: ForeignKeyRelNature;
     readonly foreignKeySource: ForeignKeySource;
   };
   const isForeignKeyDestination = safety.typeGuard<ForeignKeyDestination>(
     "foreignKeySource",
   );
 
+  type ForeignKeyPlaceholder = {
+    readonly source: ForeignKeySource;
+    readonly nature?: ForeignKeyRelNature;
+  };
   type ForeignKeyPlaceholderSupplier = {
-    readonly foreignKeySrcPlaceholder: ForeignKeySource;
+    readonly foreignKeySrcPlaceholder: ForeignKeyPlaceholder;
   };
 
   const foreignKeyColumn = <ColumName extends string>(
@@ -134,7 +139,7 @@ export function tableDefinition<
   };
 
   const foreignKeySrcZB = za.zodBaggage<
-    ForeignKeySource,
+    ForeignKeyPlaceholder,
     ForeignKeyPlaceholderSupplier
   >("foreignKeySrcPlaceholder");
 
@@ -144,9 +149,12 @@ export function tableDefinition<
   const { shape: tableShape, keys: tableShapeKeys } = zoSchema._getCached();
   for (const key of tableShapeKeys) {
     const member = tableShape[key];
-    const foreignKeySource = foreignKeySrcZB.unwrappedBaggage(member);
-    const sqlDomain = foreignKeySource
-      ? foreignKeyColumn(key as Any, member, { foreignKeySource })
+    const placeholder = foreignKeySrcZB.unwrappedBaggage(member);
+    const sqlDomain = placeholder
+      ? foreignKeyColumn(key as Any, member, {
+        foreignKeyRelNature: placeholder.nature,
+        foreignKeySource: placeholder.source,
+      })
       : sdf.cacheableFrom(member, { identity: key as Any });
     (zbSchema[key] as Any) = sdf.zodTypeBaggageProxy<typeof member>(
       member,
@@ -215,60 +223,60 @@ export function tableDefinition<
       : never;
   };
 
-  // type TableBelongsToRefDestNature<
-  //   Context extends tmpl.SqlEmitContext,
-  // > = {
-  //   readonly isBelongsToRel: true;
-  //   readonly collectionName?: js.JsTokenSupplier<Context>;
-  // };
+  type TableBelongsToRefDestNature = {
+    readonly isBelongsToRel: true;
+    readonly collectionName?: tmpl.JsTokenSupplier<Context>;
+  };
 
-  // type TableSelfRefDestNature = {
-  //   readonly isSelfRef: true;
-  // };
+  type TableSelfRefDestNature = {
+    readonly isSelfRef: true;
+  };
 
-  // type TableRefDestRelNature<Context extends tmpl.SqlEmitContext> =
-  //   | TableBelongsToRefDestNature<Context>
-  //   | TableSelfRefDestNature
-  //   | { readonly isExtendsRel: true }
-  //   | { readonly isInheritsRel: true };
+  type ForeignKeyRelNature =
+    | TableBelongsToRefDestNature
+    | TableSelfRefDestNature
+    | { readonly isExtendsRel: true }
+    | { readonly isInheritsRel: true };
 
-  // function belongsToRelation<
-  //   Context extends tmpl.SqlEmitContext,
-  // >(
-  //   singularSnakeCaseCollName?: string,
-  //   pluralSnakeCaseCollName = singularSnakeCaseCollName
-  //     ? `${singularSnakeCaseCollName}s`
-  //     : undefined,
-  // ): TableBelongsToRefDestNature<Context> {
-  //   return {
-  //     isBelongsToRel: true,
-  //     collectionName: singularSnakeCaseCollName
-  //       ? js.jsSnakeCaseToken(
-  //         singularSnakeCaseCollName,
-  //         pluralSnakeCaseCollName,
-  //       )
-  //       : undefined,
-  //   };
-  // }
+  function belongsToRelation(
+    singularSnakeCaseCollName?: string,
+    pluralSnakeCaseCollName = singularSnakeCaseCollName
+      ? `${singularSnakeCaseCollName}s`
+      : undefined,
+  ): TableBelongsToRefDestNature {
+    return {
+      isBelongsToRel: true,
+      collectionName: singularSnakeCaseCollName
+        ? tmpl.jsSnakeCaseToken(
+          singularSnakeCaseCollName,
+          pluralSnakeCaseCollName,
+        )
+        : undefined,
+    };
+  }
 
-  // function isTableBelongsToRefDestNature<
-  //   Context extends tmpl.SqlEmitContext,
-  // >(o: unknown): o is TableBelongsToRefDestNature<Context> {
-  //   const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature<Context>>(
-  //     "isBelongsToRel",
-  //     "collectionName",
-  //   );
-  //   return isTBFKRN(o);
-  // }
-
-  // const isTableSelfRefDestNature = safety.typeGuard<
-  //   TableSelfRefDestNature
-  // >("isSelfRef");
+  function isBelongsToForeignKeyNature(
+    o: unknown,
+  ): o is TableBelongsToRefDestNature {
+    const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature>(
+      "isBelongsToRel",
+      "collectionName",
+    );
+    return isTBFKRN(o);
+  }
 
   // the "inferred types" are the same as their original types except without
   // optionals, defaults, or nulls (always required, considered the "CoreZTA");
   type InferReferences = {
-    [Property in keyof ColumnsShape]: () =>
+    [Property in keyof ColumnsShape]: (nature?: ForeignKeyRelNature) =>
+      & za.CoreZTA<ColumnsShape[Property]>
+      & ForeignKeyPlaceholderSupplier;
+  };
+  type BelongsToReferences = {
+    [Property in keyof ColumnsShape]: (
+      singularSnakeCaseCollName?: string,
+      pluralSnakeCaseCollName?: string,
+    ) =>
       & za.CoreZTA<ColumnsShape[Property]>
       & ForeignKeyPlaceholderSupplier;
   };
@@ -288,26 +296,50 @@ export function tableDefinition<
   };
 
   const references: InferReferences = {} as Any;
+  const belongsTo: BelongsToReferences = {} as Any;
   for (const key of tableShapeKeys) {
     const zodType = tableShape[key];
-    (references[key] as Any) = () => {
+    (references[key] as Any) = (nature?: ForeignKeyRelNature) => {
       // trick Typescript into thinking Zod instance is also FK placeholder;
       // this allows assignment of a reference to a Zod object or use as a
       // regular Zod schema; the placeholder is carried in zodType._def
       const cloned = sdf.clearWrappedBaggage(za.clonedZodType(zodType));
       return foreignKeySrcZB.zodTypeBaggageProxy(
         cloned,
-        inferredPlaceholder(key as ColumnName),
+        { source: inferredPlaceholder(key as ColumnName), nature },
+      );
+    };
+    (belongsTo[key] as Any) = (
+      singularSnakeCaseCollName?: string,
+      pluralSnakeCaseCollName = singularSnakeCaseCollName
+        ? `${singularSnakeCaseCollName}s`
+        : undefined,
+    ) => {
+      // trick Typescript into thinking Zod instance is also FK placeholder;
+      // this allows assignment of a reference to a Zod object or use as a
+      // regular Zod schema; the placeholder is carried in zodType._def
+      const cloned = sdf.clearWrappedBaggage(za.clonedZodType(zodType));
+      return foreignKeySrcZB.zodTypeBaggageProxy(
+        cloned,
+        {
+          source: inferredPlaceholder(key as ColumnName),
+          nature: belongsToRelation(
+            singularSnakeCaseCollName,
+            pluralSnakeCaseCollName,
+          ),
+        },
       );
     };
   }
 
+  // TODO: the type-safe part of ForeignKeys doesn't work but the runtime
+  // version does. There's some problem with the types carrying through from
+  // one table to another so it needs more work.
   type ForeignKeys = {
     [
-      Property in keyof BaggageSchema as Extract<
+      Property in keyof ColumnsShape as Extract<
         Property,
-        BaggageSchema[Property] extends { sqlDomain: ForeignKeyDestination }
-          ? Property
+        ColumnsShape[Property] extends ForeignKeyPlaceholderSupplier ? Property
           : never
       >
     ]:
@@ -393,6 +425,7 @@ export function tableDefinition<
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
       readonly references: InferReferences;
+      readonly belongsTo: BelongsToReferences;
       readonly foreignKeys: ForeignKeys;
       readonly sqlNS?: tmpl.SqlNamespaceSupplier;
     }
@@ -442,19 +475,16 @@ export function tableDefinition<
       primaryKey,
       unique,
       references,
-      foreignKeys: foreignKeys,
+      belongsTo,
+      foreignKeys,
       sqlNS: tdOptions?.sqlNS,
     };
 
-  // Deno.writeTextFileSync(
-  //   `DELETE_ME_DEBUG_table_${tableName}_defn.txt`,
-  //   beforeDefnDebugText + "\n" +
-  //     za.filteredInspect(Deno.inspect({
-  //       zoSchema,
-  //       zbSchema,
-  //       ...tableDefnResult,
-  //     }, { depth: 10 })),
-  // );
+  // za.writeDebugFile(`DELETE_ME_DEBUG_${tableName}.txt`, beforeDefnDebugText, {
+  //   zoSchema,
+  //   zbSchema,
+  //   ...tableDefnResult,
+  // });
 
   // we let Typescript infer function return to allow generics in sqlDomains to
   // be more effective but we want other parts of the `result` to be as strongly
@@ -463,5 +493,6 @@ export function tableDefinition<
     zoSchema,
     zbSchema,
     ...tableDefnResult,
+    isBelongsToForeignKeyNature,
   };
 }
