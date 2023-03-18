@@ -1,9 +1,8 @@
 import { zod as z } from "../deps.ts";
 import * as safety from "../lib/universal/safety.ts";
 import * as ws from "../lib/universal/whitespace.ts";
-import * as tmpl from "../sql.ts";
-import * as l from "../lint.ts";
-import * as d from "../core/mod.ts";
+import * as tmpl from "../emit/mod.ts";
+import * as d from "../domain/mod.ts";
 import * as cr from "./criteria.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -59,8 +58,8 @@ export type SelectTemplateOptions<
   ) => void;
   readonly firstTokenGuard?: (
     firstToken: string,
-  ) => true | l.SqlLintIssueSupplier;
-  readonly onFirstTokenGuardFail?: (issue: l.SqlLintIssueSupplier) =>
+  ) => true | tmpl.SqlLintIssueSupplier;
+  readonly onFirstTokenGuardFail?: (issue: tmpl.SqlLintIssueSupplier) =>
     & Select<SelectStmtName, Context>
     & tmpl.SqlTextLintIssuesPopulator<Context>;
 };
@@ -74,14 +73,14 @@ export function selectTemplateResult<
   ssOptions?: SelectTemplateOptions<SelectStmtName, Context>,
   ...expressions: tmpl.SqlPartialExpression<Context>[]
 ) {
-  let invalid: l.TemplateStringSqlLintIssue | undefined;
+  let invalid: tmpl.TemplateStringSqlLintIssue | undefined;
   const candidateSQL = literals[0];
   if (ssOptions?.firstTokenGuard) {
     const firstToken = firstWord(candidateSQL);
     if (firstToken) {
       const guard = ssOptions.firstTokenGuard(firstToken);
       if (typeof guard !== "boolean") {
-        invalid = l.templateStringLintIssue(
+        invalid = tmpl.templateStringLintIssue(
           "SQL statement does not start with SELECT",
           literals,
           expressions,

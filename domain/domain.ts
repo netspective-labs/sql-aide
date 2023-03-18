@@ -1,7 +1,6 @@
 import { zod as z } from "../deps.ts";
-import * as tmpl from "../sql.ts";
+import * as tmpl from "../emit/mod.ts";
 import * as safety from "../lib/universal/safety.ts";
-import * as l from "../lint.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -94,13 +93,13 @@ export function zodTypeAnySqlDomainFactory<
       readonly parents?: z.ZodTypeAny[];
     },
   ) => {
-    const lintIssues: l.SqlLintIssueSupplier[] = [];
+    const lintIssues: tmpl.SqlLintIssueSupplier[] = [];
     const defaults:
       & Pick<
         SqlDomain<Any, Context, Identity>,
         "identity" | "isSqlDomain" | "sqlSymbol" | "isNullable"
       >
-      & l.SqlLintIssuesSupplier = {
+      & tmpl.SqlLintIssuesSupplier = {
         isSqlDomain: true as true, // must not be a boolean but `true`
         identity: (init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION) as Identity,
         isNullable: () =>
@@ -110,7 +109,7 @@ export function zodTypeAnySqlDomainFactory<
             init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
           ),
         lintIssues,
-        registerLintIssue: (...slis: l.SqlLintIssueSupplier[]) => {
+        registerLintIssue: (...slis: tmpl.SqlLintIssueSupplier[]) => {
           lintIssues.push(...slis);
         },
       };

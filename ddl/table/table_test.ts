@@ -1,7 +1,7 @@
 import { zod as z } from "../../deps.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
-import * as tmpl from "../../sql.ts";
+import * as tmpl from "../../emit/mod.ts";
 import * as t from "./mod.ts";
 import * as s from "../../dql/select.ts";
 

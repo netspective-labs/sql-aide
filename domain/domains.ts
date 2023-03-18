@@ -1,7 +1,7 @@
 import { zod as z } from "../deps.ts";
 import * as safety from "../lib/universal/safety.ts";
 import * as za from "../lib/universal/zod-aide.ts";
-import * as tmpl from "../sql.ts";
+import * as tmpl from "../emit/mod.ts";
 import * as d from "./domain.ts";
 
 // deno-lint-ignore no-explicit-any

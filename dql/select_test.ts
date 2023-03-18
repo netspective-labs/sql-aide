@@ -2,7 +2,7 @@ import { zod as z } from "../deps.ts";
 import { testingAsserts as ta } from "../deps-test.ts";
 import { unindentWhitespace as uws } from "../lib/universal/whitespace.ts";
 import * as mod from "./select.ts";
-import * as tmpl from "../sql.ts";
+import * as tmpl from "../emit/mod.ts";
 import * as cr from "./criteria.ts";
 
 Deno.test("SQL Aide (SQLa) custom SELECT statement", async (tc) => {

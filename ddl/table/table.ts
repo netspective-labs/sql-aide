@@ -1,11 +1,9 @@
 import { zod as z } from "../../deps.ts";
-import * as tmpl from "../../sql.ts";
+import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
 import * as za from "../../lib/universal/zod-aide.ts";
-import * as d from "../../core/mod.ts";
-import * as l from "../../lint.ts";
+import * as d from "../../domain/mod.ts";
 // import * as js from "../../js.ts";
-import * as ns from "../../namespace.ts";
 import * as c from "./column.ts";
 import * as con from "./constraint.ts";
 
@@ -41,7 +39,7 @@ export interface TableDefnOptions<
   readonly sqlPartial?: (
     destination: "after all column definitions",
   ) => tmpl.SqlTextSupplier<Context>[] | undefined;
-  readonly sqlNS?: ns.SqlNamespaceSupplier;
+  readonly sqlNS?: tmpl.SqlNamespaceSupplier;
   readonly constraints?: <
     TableName extends string,
   >(
@@ -406,10 +404,10 @@ export function tableDefinition<
       readonly unique: UniqueColumnDefns;
       readonly infer: ReturnType<typeof inferables>;
       readonly foreignKeys: typeof foreignKeys;
-      readonly sqlNS?: ns.SqlNamespaceSupplier;
+      readonly sqlNS?: tmpl.SqlNamespaceSupplier;
     }
     & tmpl.SqlSymbolSupplier<Context>
-    & l.SqlLintIssuesSupplier
+    & tmpl.SqlLintIssuesSupplier
     & tmpl.SqlTextLintIssuesPopulator<Context> = {
       tableName,
       sqlSymbol: (ctx) =>
@@ -419,7 +417,7 @@ export function tableDefinition<
         }).tableName(tableName),
       populateSqlTextLintIssues: (lis) => {
         for (const sdd of domains) {
-          if (l.isSqlLintIssuesSupplier(sdd)) {
+          if (tmpl.isSqlLintIssuesSupplier(sdd)) {
             lis.registerLintIssue(...sdd.lintIssues);
           }
         }

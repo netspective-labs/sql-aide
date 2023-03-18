@@ -1,6 +1,6 @@
 import { zod as z } from "../../deps.ts";
 import * as r from "../../lib/universal/record.ts";
-import * as tmpl from "../../sql.ts";
+import * as tmpl from "../../emit/mod.ts";
 import * as cr from "../../dql/criteria.ts";
 import * as s from "../../dql/select.ts";
 import * as c from "./column.ts";

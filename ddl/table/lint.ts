@@ -1,7 +1,6 @@
 import { zod as z } from "../../deps.ts";
-import * as tmpl from "../../sql.ts";
-import * as l from "../../lint.ts";
-import * as d from "../../core/mod.ts";
+import * as tmpl from "../../emit/mod.ts";
+import * as d from "../../domain/mod.ts";
 import * as c from "./column.ts";
 import * as t from "./table.ts";
 
@@ -25,7 +24,7 @@ export const tableLacksPrimaryKeyLintRule = <
 >(
   tableDefn: t.TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
 ) => {
-  const rule: l.SqlLintRule<TableNamePrimaryKeyLintOptions> = {
+  const rule: tmpl.SqlLintRule<TableNamePrimaryKeyLintOptions> = {
     lint: (lis, lOptions) => {
       const { ignoreTableLacksPrimaryKey: iptn } = lOptions ?? {};
       const ignoreRule = iptn
@@ -45,7 +44,7 @@ export const tableLacksPrimaryKeyLintRule = <
           lis.registerLintIssue({
             lintIssue:
               `table '${tableDefn.tableName}' has no primary key column(s)`,
-            consequence: l.SqlLintIssueConsequence.WARNING_DDL,
+            consequence: tmpl.SqlLintIssueConsequence.WARNING_DDL,
           });
         }
       }
@@ -66,7 +65,7 @@ export type TableNameConsistencyLintOptions = {
  *          a lintIssue to a given LintIssuesSupplier
  */
 export const tableNameConsistencyLintRule = (tableName: string) => {
-  const rule: l.SqlLintRule<TableNameConsistencyLintOptions> = {
+  const rule: tmpl.SqlLintRule<TableNameConsistencyLintOptions> = {
     lint: (lis, lOptions) => {
       const { ignorePluralTableName: iptn } = lOptions ?? {};
       const ignoreRule = iptn
@@ -76,7 +75,7 @@ export const tableNameConsistencyLintRule = (tableName: string) => {
         lis.registerLintIssue({
           lintIssue:
             `table name '${tableName}' ends with an 's' (should be singular, not plural)`,
-          consequence: l.SqlLintIssueConsequence.CONVENTION_DDL,
+          consequence: tmpl.SqlLintIssueConsequence.CONVENTION_DDL,
         });
       }
     },
@@ -94,10 +93,10 @@ export const tableNameConsistencyLintRule = (tableName: string) => {
 export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
   tableDefn: t.TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
 ) {
-  const rule: l.SqlLintRule = {
+  const rule: tmpl.SqlLintRule = {
     lint: (lis) => {
       for (const col of tableDefn.domains()) {
-        if (l.isSqlLintIssuesSupplier(col)) {
+        if (tmpl.isSqlLintIssuesSupplier(col)) {
           lis.registerLintIssue(
             ...col.lintIssues.map((li) => ({
               ...li,
@@ -200,9 +199,9 @@ export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
       tableDefn:
         & t.TableDefinition<Any, Context>
         & d.SqlDomainsSupplier<Context>,
-      ...additionalRules: l.SqlLintRule<Any>[]
+      ...additionalRules: tmpl.SqlLintRule<Any>[]
     ) => {
-      return l.aggregatedSqlLintRules<
+      return tmpl.aggregatedSqlLintRules<
         & TableNameConsistencyLintOptions
         // & FKeyColNameConsistencyLintOptions<Context>
         & TableNamePrimaryKeyLintOptions

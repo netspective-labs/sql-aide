@@ -1,5 +1,5 @@
 import { zod as z } from "../../deps.ts";
-import * as tmpl from "../../sql.ts";
+import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
 
 export type TableConstraint<Context extends tmpl.SqlEmitContext> =
