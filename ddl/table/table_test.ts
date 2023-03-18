@@ -1,6 +1,7 @@
 import { zod as z } from "../../deps.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
+// import * as za from "../../lib/universal/zod-aide.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as t from "./mod.ts";
 import * as s from "../../dql/select.ts";
@@ -319,18 +320,18 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     "synthetic_table_with_foreign_keys",
     {
       auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
-      fk_text_primary_key: tableWithOnDemandPK.infer
+      fk_text_primary_key: tableWithOnDemandPK.references
         .ua_on_demand_primary_key(),
-      fk_int_primary_key: tableWithAutoIncPK.infer.auto_inc_primary_key(),
-      fk_text_primary_key_nullable: tableWithOnDemandPK.infer
+      fk_int_primary_key: tableWithAutoIncPK.references.auto_inc_primary_key(),
+      fk_text_primary_key_nullable: tableWithOnDemandPK.references
         .ua_on_demand_primary_key().optional(),
-      fk_int_primary_key_nullable: tableWithAutoIncPK.infer
+      fk_int_primary_key_nullable: tableWithAutoIncPK.references
         .auto_inc_primary_key().optional(),
     },
   );
 
   await tc.step("inference type safety", () => {
-    ta.assertEquals(Array.from(Object.keys(tableWithAutoIncPK.infer)), [
+    ta.assertEquals(Array.from(Object.keys(tableWithAutoIncPK.references)), [
       "auto_inc_primary_key",
       "text",
       "text_nullable",
@@ -338,7 +339,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       "int_nullable",
     ]);
 
-    ta.assertEquals(Array.from(Object.keys(tableWithOnDemandPK.infer)), [
+    ta.assertEquals(Array.from(Object.keys(tableWithOnDemandPK.references)), [
       "ua_on_demand_primary_key",
       "text",
       "text_nullable",
@@ -349,24 +350,24 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     expectType<{
       ua_on_demand_primary_key: () => z.ZodString;
       // TODO:        & d.SqlDomainSupplier<z.ZodString, Any, SyntheticContext>;
-    }>(tableWithOnDemandPK.infer);
+    }>(tableWithOnDemandPK.references);
 
     expectType<{
       auto_inc_primary_key: () => z.ZodNumber;
       // TODO:      & d.SqlDomainSupplier<z.ZodNumber, Any, SyntheticContext>;
-    }>(tableWithAutoIncPK.infer);
+    }>(tableWithAutoIncPK.references);
 
     expectType<z.ZodString>(
-      tableWithOnDemandPK.infer.ua_on_demand_primary_key(),
+      tableWithOnDemandPK.references.ua_on_demand_primary_key(),
     );
     expectType<z.ZodNumber>(
-      tableWithAutoIncPK.infer.auto_inc_primary_key(),
+      tableWithAutoIncPK.references.auto_inc_primary_key(),
     );
     expectType<z.ZodOptional<z.ZodString>>(
-      tableWithOnDemandPK.infer.ua_on_demand_primary_key().optional(),
+      tableWithOnDemandPK.references.ua_on_demand_primary_key().optional(),
     );
     expectType<z.ZodOptional<z.ZodNumber>>(
-      tableWithAutoIncPK.infer.auto_inc_primary_key().optional(),
+      tableWithAutoIncPK.references.auto_inc_primary_key().optional(),
     );
   });
 
@@ -381,7 +382,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     ta.assertEquals(Array.from(Object.keys(table.primaryKey)), [
       "auto_inc_primary_key",
     ]);
-    ta.assertEquals(Array.from(Object.keys(table.infer)), [
+    ta.assertEquals(Array.from(Object.keys(table.references)), [
       "auto_inc_primary_key",
       "fk_text_primary_key",
       "fk_int_primary_key",
@@ -408,6 +409,11 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       fk_text_primary_key_nullable?: string | undefined;
       fk_int_primary_key_nullable?: number | undefined;
     }>(synthetic);
+
+    // Deno.writeTextFileSync(
+    //   `DELETE_ME_DEBUG_table_defn.txt`,
+    //   za.filteredInspect(Deno.inspect(table, { depth: 10 })),
+    // );
 
     // TODO: fix this so we don't just use typeof to find the proper type
     // expectType<{

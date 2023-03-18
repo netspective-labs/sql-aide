@@ -129,6 +129,7 @@ export function tableDefinition<
         return domain.sqlPartial?.(dest);
       },
     };
+    reference.foreignKeySource.register(result);
     return result;
   };
 
@@ -264,79 +265,68 @@ export function tableDefinition<
   //   TableSelfRefDestNature
   // >("isSelfRef");
 
-  const inferables = () => {
-    // the "inferred types" are the same as their original types except without
-    // optionals, defaults, or nulls (always required, considered the "CoreZTA");
-    type InferReferences = {
-      [Property in keyof ColumnsShape]: () =>
-        & za.CoreZTA<ColumnsShape[Property]>
-        & ForeignKeyPlaceholderSupplier;
-    };
-
-    const inferredPlaceholder = (columnName: ColumnName) => {
-      const incomingRefs = new Set<ForeignKeyDestination>();
-      const refSource: ForeignKeySource = {
-        tableName,
-        columnName,
-        incomingRefs,
-        register: (rd) => {
-          incomingRefs.add(rd);
-          return rd;
-        },
-      };
-      return refSource;
-    };
-
-    const inferables: InferReferences = {} as Any;
-    for (const key of tableShapeKeys) {
-      const zodType = tableShape[key];
-      (inferables[key] as Any) = () => {
-        // trick Typescript into thinking Zod instance is also FK placeholder;
-        // this allows assignment of a reference to a Zod object or use as a
-        // regular Zod schema; the placeholder is carried in zodType._def
-        const cloned = sdf.clearWrappedBaggage(za.clonedZodType(zodType));
-        return foreignKeySrcZB.zodTypeBaggageProxy(
-          cloned,
-          inferredPlaceholder(key as ColumnName),
-        );
-      };
-    }
-
-    return inferables;
+  // the "inferred types" are the same as their original types except without
+  // optionals, defaults, or nulls (always required, considered the "CoreZTA");
+  type InferReferences = {
+    [Property in keyof ColumnsShape]: () =>
+      & za.CoreZTA<ColumnsShape[Property]>
+      & ForeignKeyPlaceholderSupplier;
   };
 
-  const foreignKeyColumns = () => {
-    type References = {
-      [
-        Property in keyof ColumnsShape as Extract<
-          Property,
-          ColumnsShape[Property] extends { sqlDomain: ForeignKeyDestination }
-            ? Property
-            : never
-        >
-      ]:
-        & d.SqlDomain<
-          ColumnsShape[Property],
-          Context,
-          Extract<Property, string>
-        >
-        & ForeignKeyDestination;
+  const inferredPlaceholder = (columnName: ColumnName) => {
+    const incomingRefs = new Set<ForeignKeyDestination>();
+    const refSource: ForeignKeySource = {
+      tableName,
+      columnName,
+      incomingRefs,
+      register: (rd) => {
+        incomingRefs.add(rd);
+        return rd;
+      },
     };
-
-    // see if any references were registered but need to be created
-    const foreignKeys: References = {} as Any;
-    for (const key of tableShapeKeys) {
-      const zodTypeSD = zbSchema[key];
-      if (isForeignKeyDestination(zodTypeSD.sqlDomain)) {
-        (foreignKeys as Any)[key] = zodTypeSD.sqlDomain;
-      }
-    }
-
-    return foreignKeys;
+    return refSource;
   };
 
-  // compute this first, it mutates the sdSchema, replacing placeholders
-  const foreignKeys = foreignKeyColumns();
+  const references: InferReferences = {} as Any;
+  for (const key of tableShapeKeys) {
+    const zodType = tableShape[key];
+    (references[key] as Any) = () => {
+      // trick Typescript into thinking Zod instance is also FK placeholder;
+      // this allows assignment of a reference to a Zod object or use as a
+      // regular Zod schema; the placeholder is carried in zodType._def
+      const cloned = sdf.clearWrappedBaggage(za.clonedZodType(zodType));
+      return foreignKeySrcZB.zodTypeBaggageProxy(
+        cloned,
+        inferredPlaceholder(key as ColumnName),
+      );
+    };
+  }
+
+  type ForeignKeys = {
+    [
+      Property in keyof BaggageSchema as Extract<
+        Property,
+        BaggageSchema[Property] extends { sqlDomain: ForeignKeyDestination }
+          ? Property
+          : never
+      >
+    ]:
+      & d.SqlDomain<
+        BaggageSchema[Property],
+        Context,
+        Extract<Property, string>
+      >
+      & ForeignKeyDestination;
+  };
+
+  // see if any references were registered but need to be created
+  const foreignKeys: ForeignKeys = {} as Any;
+  for (const key of tableShapeKeys) {
+    const zodTypeSD = zbSchema[key];
+    if (isForeignKeyDestination(zodTypeSD.sqlDomain)) {
+      (foreignKeys as Any)[key] = zodTypeSD.sqlDomain;
+    }
+  }
 
   const domains = tableShapeKeys.map((key) =>
     zbSchema[key].sqlDomain as c.TableColumnDefn<
@@ -402,8 +392,8 @@ export function tableDefinition<
       readonly columns: ColumnDefns;
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
-      readonly infer: ReturnType<typeof inferables>;
-      readonly foreignKeys: typeof foreignKeys;
+      readonly references: InferReferences;
+      readonly foreignKeys: ForeignKeys;
       readonly sqlNS?: tmpl.SqlNamespaceSupplier;
     }
     & tmpl.SqlSymbolSupplier<Context>
@@ -451,7 +441,7 @@ export function tableDefinition<
       columns,
       primaryKey,
       unique,
-      infer: inferables(),
+      references,
       foreignKeys: foreignKeys,
       sqlNS: tdOptions?.sqlNS,
     };
