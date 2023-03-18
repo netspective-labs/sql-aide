@@ -1,5 +1,6 @@
 import { zod as z } from "../deps.ts";
 import { testingAsserts as ta } from "../deps-test.ts";
+import * as za from "../lib/universal/zod-aide.ts";
 import * as tmpl from "../sql.ts";
 import * as d from "./domain.ts";
 
@@ -35,24 +36,26 @@ Deno.test("SQLa domain factories", async (tc) => {
     ta.assert(ztsdFactory.anySDF);
     ta.assert(ztsdFactory.stringSDF);
     ta.assert(ztsdFactory.numberSDF);
-    ta.assert(ztsdFactory.coreSqlDomain);
+    ta.assert(ztsdFactory.detachFrom);
+    ta.assert(ztsdFactory.from);
+    ta.assert(ztsdFactory.cacheableFrom);
   });
 });
 
 Deno.test("SQLa domain from Zod Types", async (tc) => {
-  const textSD = ztsdFactory.coreSqlDomain(z.string(), {
+  const textSD = ztsdFactory.cacheableFrom(z.string(), {
     identity: "syntheticText",
   });
-  const textOptionalSD = ztsdFactory.coreSqlDomain(z.string().optional(), {
+  const textOptionalSD = ztsdFactory.cacheableFrom(z.string().optional(), {
     identity: "syntheticTextOptional",
   });
-  const textOptionalDefaultSD = ztsdFactory.coreSqlDomain(
+  const textOptionalDefaultSD = ztsdFactory.cacheableFrom(
     z.string().optional().default("syntheticTextOptionalDefault-defaultValue"),
     {
       identity: "syntheticTextOptionalDefault",
     },
   );
-  const numberSD = ztsdFactory.coreSqlDomain(z.number(), {
+  const numberSD = ztsdFactory.cacheableFrom(z.number(), {
     identity: "syntheticNumber",
   });
 
@@ -107,6 +110,84 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(numberSD), {
       nullable: false,
       sqlDataType: "INTEGER",
+    });
+  });
+});
+
+Deno.test("SQLa custom domain based on native Zod type", async (tc) => {
+  const syntheticZB = za.zodBaggage<
+    d.SqlDomain<Any, SyntheticContext, Any>,
+    d.SqlDomainSupplier<Any, Any, SyntheticContext>
+  >("sqlDomain");
+
+  await tc.step("native zod domains plus a custom domain", async (innerTC) => {
+    type MyCustomColumnDefn = {
+      readonly isCustomProperty1: true;
+      readonly customPropertyValue: number;
+    };
+    const isMyCustomColumnDefn = (o: unknown): o is MyCustomColumnDefn => {
+      return (o && typeof o === "object" && "isCustomProperty1" in o &&
+          "customPropertyValue" in o &&
+          typeof o.customPropertyValue === "number")
+        ? true
+        : false;
+    };
+
+    function customDomainNumeric() {
+      const zodSchema = z.number();
+      const customSD:
+        & d.SqlDomain<z.ZodNumber, SyntheticContext, Any>
+        & MyCustomColumnDefn = {
+          ...ztsdFactory.cacheableFrom<Any, z.ZodNumber>(zodSchema),
+          isCustomProperty1: true,
+          customPropertyValue: 2459,
+        };
+
+      // we're "wrapping" a Zod type in a JS Proxy so we mutate the zod schema
+      // to hold our custom properties in a single object and then return zod
+      // schema so it can be used as-is in other libraries; we need to "trick"
+      // TypeScript into thinking that the mutated zod object is a
+      // MyCustomColumnDefn SqlDomainSupplier in case any further strongly
+      // typed actions need to take place (like downstream type-building)
+      return syntheticZB.zodTypeBaggageProxy<typeof zodSchema>(
+        zodSchema,
+        customSD,
+      ) as unknown as
+        & typeof zodSchema
+        & d.SqlCustomDomainSupplier<
+          MyCustomColumnDefn,
+          z.ZodNumber,
+          Any,
+          SyntheticContext
+        >;
+    }
+
+    await innerTC.step("type safety", () => {
+      const customNumeric = customDomainNumeric();
+      expectType<
+        & z.ZodNumber
+        & {
+          sqlDomain:
+            & d.SqlDomain<z.ZodNumber, SyntheticContext, Any>
+            & MyCustomColumnDefn;
+        }
+      >(customNumeric);
+      const domain: z.infer<typeof customNumeric> = 1;
+      expectType<z.infer<typeof customNumeric>>(domain);
+      ta.assert(isMyCustomColumnDefn(customNumeric.sqlDomain));
+    });
+
+    await innerTC.step("SQL types", () => {
+      const { ctx } = sqlGen();
+      const customNumeric = customDomainNumeric();
+      ta.assertEquals(
+        customNumeric.sqlDomain.identity,
+        "SQL_DOMAIN_NOT_IN_COLLECTION",
+      );
+      ta.assertEquals(
+        customNumeric.sqlDomain.sqlDataType("create table column").SQL(ctx),
+        "INTEGER",
+      );
     });
   });
 });

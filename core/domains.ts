@@ -37,40 +37,34 @@ export function sqlDomainsFactory<
     RawShape extends z.ZodRawShape,
     BaggageSchema extends {
       [Property in keyof RawShape]: ReturnType<
-        typeof zb.introspectableZodTypeBaggage<RawShape[Property]>
+        typeof zb.zodTypeBaggageProxy<RawShape[Property]>
       >;
     },
-    SqlDomainsSchema extends SqlDomains<RawShape, Context>,
   >(zodRawShape: RawShape, init?: {
     readonly identity?: (init: {
-      readonly zSchema: z.ZodObject<RawShape>;
+      readonly zoSchema: z.ZodObject<RawShape>;
       readonly zbSchema: BaggageSchema;
-      readonly sdSchema: SqlDomainsSchema;
     }) => EntityIdentity;
   }) => {
-    const zSchema = z.object(zodRawShape).strict();
+    const zoSchema = z.object(zodRawShape).strict();
     const zbSchema: BaggageSchema = {} as Any;
-    const sdSchema: SqlDomainsSchema = {} as Any;
 
-    const { shape, keys: shapeKeys } = zSchema._getCached();
+    const { shape, keys: shapeKeys } = zoSchema._getCached();
     for (const key of shapeKeys) {
       const member = shape[key];
-      const sqlDomain = sdf.coreSqlDomain(member, { identity: key as Any });
-      const iztb = zb.introspectableZodTypeBaggage<typeof member>(
+      const sqlDomain = sdf.cacheableFrom(member, { identity: key as Any });
+      (zbSchema[key] as Any) = zb.zodTypeBaggageProxy<typeof member>(
         member,
         sqlDomain,
       );
-      (zbSchema[key] as Any) = iztb;
-      (sdSchema[key] as Any) = iztb.sqlDomain;
     }
 
-    const identity = init?.identity?.({ zSchema, zbSchema, sdSchema }) ??
+    const identity = init?.identity?.({ zoSchema, zbSchema }) ??
       (`anonymous${++sqlDomainsIterationIndex}` as EntityIdentity);
     return {
       identity,
-      zSchema,
+      zoSchema,
       zbSchema,
-      sdSchema,
     };
   };
 
@@ -81,7 +75,7 @@ export function sqlDomainsFactory<
     zodRawShape: RawShape,
     init?: {
       readonly identity?: (
-        init: { readonly zSchema: z.ZodObject<RawShape> },
+        init: { readonly zoSchema: z.ZodObject<RawShape> },
       ) => EntityIdentity;
     },
   ) {
@@ -122,13 +116,13 @@ export function sqlDomainsFactory<
       };
 
       const inferables: InferReferences = {} as Any;
-      const { shape, keys: shapeKeys } = common.zSchema._getCached();
+      const { shape, keys: shapeKeys } = common.zoSchema._getCached();
       for (const key of shapeKeys) {
         const zodType = shape[key];
         (inferables[key] as Any) = () => {
           // because zodSchema may have been cloned/copied from another sqlDomain we
           // want to forceCreate = true
-          const placeholder = sdf.coreSqlDomain(zodType, {
+          const placeholder = sdf.cacheableFrom(zodType, {
             identity: key as DomainsIdentity,
           });
           const nativeRefSrcPlaceholder = inferredPlaceholder();
@@ -142,7 +136,7 @@ export function sqlDomainsFactory<
           // trick Typescript into thinking the Zod instance is also a SqlDomainSupplier;
           // this allows assignment of a reference to a Zod object or use as a
           // regular Zod schema; the sqlDomain is carried in zodType._def
-          return zb.introspectableZodTypeBaggage<typeof zodType>(
+          return zb.zodTypeBaggageProxy<typeof zodType>(
             zodType,
             nri,
           );
@@ -175,22 +169,23 @@ export function sqlDomainsFactory<
 
       // see if any references were registered but need to be created
       const references: References = {} as Any;
-      const { shape, keys: shapeKeys } = common.zSchema._getCached();
+      const { zoSchema, zbSchema } = common;
+      const { shape, keys: shapeKeys } = zoSchema._getCached();
       for (const key of shapeKeys) {
-        const domain = common.sdSchema[key];
+        const domain = zbSchema[key].sqlDomain;
         if (isInferencePlaceholder(domain)) {
           const reference: ReferenceDestination = {
             refSource: domain.nativeRefSrcPlaceholder,
           };
           const zodType = shape[key];
-          const finalDomain = sdf.coreSqlDomain(zodType, {
+          const finalDomain = sdf.cacheableFrom(zodType, {
             identity: key as DomainsIdentity,
           });
-          (common.sdSchema[key] as Any) = {
+          (zbSchema[key].sqlDomain as Any) = {
             ...finalDomain,
             ...reference,
           };
-          (references as Any)[key] = finalDomain;
+          (references as Any)[key] = zbSchema[key].sqlDomain;
         }
       }
 

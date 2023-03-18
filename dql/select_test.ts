@@ -43,7 +43,9 @@ Deno.test("SQL Aide (SQLa) custom SELECT statement", async (tc) => {
     ta.assert(select.isValid);
     ta.assertEquals(select.selectStmtName, "ss_name");
     ta.assertEquals(
-      Array.from(Object.values(select.sdSchema)).map((d) => d.identity),
+      Array.from(Object.values(select.zbSchema)).map((d) =>
+        d.sqlDomain.identity
+      ),
       [
         "customer_name",
         "order_count",

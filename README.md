@@ -200,6 +200,9 @@ When two or more domains need to be coordinated, they are called multi-domains.
 
 #### Information Model Evolution (migrations, etc.)
 
+See [Atlas open\-source schema migration tool](https://atlasgo.io/) and create a
+SQLa to Atlas schema / DDL file.
+
 See [EdgeDB Migrations](https://www.edgedb.com/showcase/migrations) for some
 interesting ideas.
 

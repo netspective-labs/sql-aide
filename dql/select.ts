@@ -3,7 +3,7 @@ import * as safety from "../lib/universal/safety.ts";
 import * as ws from "../lib/universal/whitespace.ts";
 import * as tmpl from "../sql.ts";
 import * as l from "../lint.ts";
-import * as d from "../domain.ts";
+import * as d from "../core/mod.ts";
 import * as cr from "./criteria.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -149,12 +149,13 @@ export function typedSelect<
   ess: tmpl.EmbeddedSqlSupplier,
   ssOptions?: SelectTemplateOptions<SelectStmtName, Context>,
 ) {
+  const sdf = d.sqlDomainsFactory<SelectStmtName, Context>();
   return (
     literals: TemplateStringsArray,
     ...expressions: tmpl.SqlPartialExpression<Context>[]
   ) => {
     return {
-      ...d.sqlDomains(props),
+      ...sdf.sqlDomains(props),
       ...selectTemplateResult(literals, ess, ssOptions, ...expressions),
     };
   };

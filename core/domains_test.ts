@@ -48,43 +48,60 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
     });
 
     await innerTC.step("objects and shapes", () => {
-      ta.assert(domains.zSchema); // zSchema is the Zod schema (untouched)
+      ta.assert(domains.zoSchema); // zSchema is the Zod schema (untouched)
       ta.assert(domains.zbSchema); // zbSchema is the Zod schema with each property wrapped in Zod baggage proxy
-      ta.assert(domains.sdSchema); // zbSchema is the Zod schema with each property's SqlDomain instance
     });
 
     await innerTC.step("object type safety", () => {
       expectType<{
-        text: d.SqlDomain<z.ZodString, SyntheticContext, "text">;
-        text_nullable: d.SqlDomain<
-          z.ZodOptional<z.ZodString>,
-          SyntheticContext,
-          "text_nullable"
-        >;
-        text_defaultable: d.SqlDomain<
-          z.ZodDefault<z.ZodString>,
-          SyntheticContext,
-          "text_defaultable"
-        >;
-        text_optional_defaultable: d.SqlDomain<
-          z.ZodDefault<z.ZodOptional<z.ZodString>>,
-          SyntheticContext,
-          "text_optional_defaultable"
-        >;
-        text_defaultable_optional: d.SqlDomain<
-          z.ZodOptional<z.ZodDefault<z.ZodString>>,
-          SyntheticContext,
-          "text_defaultable_optional"
-        >;
-        int: d.SqlDomain<z.ZodNumber, SyntheticContext, "int">;
-        int_nullable: d.SqlDomain<
-          z.ZodOptional<z.ZodNumber>,
-          SyntheticContext,
-          "int_nullable"
-        >;
-      }>(domains.sdSchema);
+        text:
+          & z.ZodString
+          & d.SqlDomainSupplier<z.ZodString, "text", SyntheticContext>;
+        text_nullable:
+          & z.ZodOptional<z.ZodString>
+          & d.SqlDomainSupplier<
+            z.ZodOptional<z.ZodString>,
+            "text_nullable",
+            SyntheticContext
+          >;
+        text_defaultable:
+          & z.ZodDefault<z.ZodString>
+          & d.SqlDomainSupplier<
+            z.ZodDefault<z.ZodString>,
+            "text_defaultable",
+            SyntheticContext
+          >;
+        text_optional_defaultable:
+          & z.ZodDefault<z.ZodOptional<z.ZodString>>
+          & d.SqlDomainSupplier<
+            z.ZodDefault<z.ZodOptional<z.ZodString>>,
+            "text_optional_defaultable",
+            SyntheticContext
+          >;
+        text_defaultable_optional:
+          & z.ZodOptional<z.ZodDefault<z.ZodString>>
+          & d.SqlDomainSupplier<
+            z.ZodOptional<z.ZodDefault<z.ZodString>>,
+            "text_defaultable_optional",
+            SyntheticContext
+          >;
+        int:
+          & z.ZodNumber
+          & d.SqlDomainSupplier<
+            z.ZodNumber,
+            "int",
+            SyntheticContext
+          >;
+        int_nullable:
+          & z.ZodOptional<z.ZodNumber>
+          & d.SqlDomainSupplier<
+            z.ZodOptional<z.ZodNumber>,
+            "int",
+            SyntheticContext
+          >;
+      }>(domains.zbSchema);
 
-      type SyntheticSchema = z.infer<typeof domains.zSchema>;
+      type SyntheticSchema = z.infer<typeof domains.zoSchema>;
       const synthetic: SyntheticSchema = {
         text: "text-required",
         int: 0,
@@ -100,15 +117,15 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
         text_defaultable_optional?: string | undefined;
         int_nullable?: number | undefined;
       }>(synthetic);
-      ta.assert(domains.zSchema.parse(synthetic));
+      ta.assert(domains.zoSchema.parse(synthetic));
     });
 
     await innerTC.step("SQL types", () => {
       const { ctx } = sqlGen();
       ta.assertEquals(
-        Array.from(Object.values(domains.sdSchema)).map((d) => ({
-          identifier: d?.identity,
-          sqlDataType: d?.sqlDataType("create table column").SQL(ctx),
+        Array.from(Object.values(domains.zbSchema)).map((d) => ({
+          identifier: d?.sqlDomain.identity,
+          sqlDataType: d?.sqlDomain.sqlDataType("create table column").SQL(ctx),
         })),
         [
           { identifier: "text", sqlDataType: "TEXT" },
@@ -168,23 +185,29 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
     // need to make sure references don't just return their original sources
     // but instead create new copies
     ta.assert(
-      (srcDomains.zSchema.shape.text1_src_required as Any) !==
-        (refDomains.zSchema.shape
+      (srcDomains.zoSchema.shape.text1_src_required as Any) !==
+        (refDomains.zoSchema.shape
           .ref_text1_required_in_src_and_dest as Any),
     );
-    ta.assert(
-      srcDomains.zSchema.shape.text1_src_required.description ==
-        "srcDomains.text1",
+  });
+
+  await tc.step("properties transferred", () => {
+    ta.assertEquals(
+      srcDomains.zoSchema.shape.text1_src_required.description,
+      "srcDomains.text1",
     );
-    ta.assert(
-      refDomains.zSchema.shape.ref_text1_required_in_src_and_dest
-        .description ==
-        "refDomains.ref_text1_required",
+    ta.assertEquals(
+      refDomains.zoSchema.shape.ref_text1_required_in_src_and_dest.description,
+      "refDomains.ref_text1_required",
+    );
+    ta.assertEquals(
+      refDomains.zoSchema.shape.ref_text1_nullable.description,
+      "refDomains.ref_text1_nullable",
     );
   });
 
   await tc.step("type expectations", () => {
-    const { shape, keys: shapeKeys } = refDomains.zSchema._getCached();
+    const { shape, keys: shapeKeys } = refDomains.zoSchema._getCached();
     ta.assertEquals(shapeKeys.length, 8);
     expectType<{
       non_ref_text: z.ZodString;
@@ -198,31 +221,39 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
     }>(shape);
 
     expectType<{
-      ref_text1_required_in_src_and_dest: d.SqlDomain<
-        z.ZodString,
-        SyntheticContext,
-        "ref_text1_required_in_src_and_dest"
-      >;
-      ref_text1_nullable: d.SqlDomain<
-        z.ZodOptional<z.ZodString>,
-        SyntheticContext,
-        "ref_text1_nullable"
-      >;
-      ref_text2_dest_not_nullable: d.SqlDomain<
-        z.ZodString,
-        SyntheticContext,
-        "ref_text2_dest_not_nullable"
-      >;
-      ref_text2_dest_nullable: d.SqlDomain<
-        z.ZodOptional<z.ZodString>,
-        SyntheticContext,
-        "ref_text2_dest_nullable"
-      >;
+      ref_text1_required_in_src_and_dest:
+        & z.ZodString
+        & d.SqlDomainSupplier<
+          z.ZodString,
+          "ref_text1_required_in_src_and_dest",
+          SyntheticContext
+        >;
+      ref_text1_nullable:
+        & z.ZodOptional<z.ZodString>
+        & d.SqlDomainSupplier<
+          z.ZodOptional<z.ZodString>,
+          "ref_text1_nullable",
+          SyntheticContext
+        >;
+      ref_text2_dest_not_nullable:
+        & z.ZodString
+        & d.SqlDomainSupplier<
+          z.ZodString,
+          "ref_text2_dest_not_nullable",
+          SyntheticContext
+        >;
+      ref_text2_dest_nullable:
+        & z.ZodOptional<z.ZodString>
+        & d.SqlDomainSupplier<
+          z.ZodOptional<z.ZodString>,
+          "ref_text2_dest_nullable",
+          SyntheticContext
+        >;
     }>(
-      refDomains.sdSchema,
+      refDomains.zbSchema,
     );
 
-    type SyntheticSchema = z.infer<typeof refDomains.zSchema>;
+    type SyntheticSchema = z.infer<typeof refDomains.zoSchema>;
     const synthetic: SyntheticSchema = {
       non_ref_text: "non-ref-text-value",
       non_ref_int: 23567,

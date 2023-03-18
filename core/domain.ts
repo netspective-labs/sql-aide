@@ -56,6 +56,15 @@ export type SqlDomainSupplier<
   Context extends tmpl.SqlEmitContext,
 > = { readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> };
 
+export type SqlCustomDomainSupplier<
+  Enrich extends Record<string, unknown>,
+  ZodType extends z.ZodTypeAny,
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> & Enrich;
+};
+
 export type ZodTypeSqlDomainSupplier<
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
@@ -139,6 +148,7 @@ export function zodStringSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        parents: init?.parents,
       };
     },
   };
@@ -176,18 +186,42 @@ export function zodTypeSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
 >() {
+  const SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE =
+    "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE";
+
   const anySDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+
   const stringSDF = zodStringSqlDomainFactory<
     z.ZodType<string, z.ZodStringDef, string>,
     DomainsIdentity,
     Context
   >();
+
   const numberSDF = zodNumberSqlDomainFactory<
     z.ZodType<number, z.ZodStringDef, number>,
     DomainsIdentity,
     Context
   >();
-  const coreSqlDomain = <Identity extends string, ZodType extends z.ZodTypeAny>(
+
+  const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
+    delete (zodType as Any)["sqlDomain"];
+
+    const zodDef = zodType._def;
+    switch (zodDef.typeName) {
+      case z.ZodFirstPartyTypeKind.ZodOptional: {
+        return detachFrom(zodType._def.innerType);
+      }
+
+      case z.ZodFirstPartyTypeKind.ZodDefault: {
+        return detachFrom(zodType._def.innerType);
+      }
+    }
+  };
+
+  const from = <
+    Identity extends string,
+    ZodType extends z.ZodTypeAny,
+  >(
     zodType: ZodType,
     init?: {
       readonly identity?: Identity;
@@ -198,7 +232,7 @@ export function zodTypeSqlDomainFactory<
     const zodDef = zodType._def;
     switch (zodDef.typeName) {
       case z.ZodFirstPartyTypeKind.ZodOptional: {
-        return coreSqlDomain(zodType._def.innerType, {
+        return from(zodType._def.innerType, {
           ...init,
           isOptional: true,
           parents: init?.parents ? [...init.parents, zodType] : [zodType],
@@ -206,12 +240,14 @@ export function zodTypeSqlDomainFactory<
       }
 
       case z.ZodFirstPartyTypeKind.ZodDefault: {
-        return coreSqlDomain(zodType._def.innerType, {
+        return from(zodType._def.innerType, {
           ...init,
           parents: init?.parents ? [...init.parents, zodType] : [zodType],
         });
       }
+    }
 
+    switch (zodDef.typeName) {
       case z.ZodFirstPartyTypeKind.ZodString: {
         return stringSDF.string(zodType, init);
       }
@@ -227,10 +263,46 @@ export function zodTypeSqlDomainFactory<
     }
   };
 
+  const cacheableFrom = <
+    Identity extends string,
+    ZodType extends z.ZodTypeAny,
+  >(
+    zodType: ZodType,
+    init?: {
+      readonly identity?: Identity;
+      readonly isOptional?: boolean;
+      readonly parents?: z.ZodTypeAny[];
+      readonly forceCreate?: boolean;
+    },
+  ): SqlDomain<ZodType, Context, Identity> => {
+    // if a sqlDomain is already attached to a ZodType use it as-is;
+    if (anySDF.isSqlDomainSupplier(zodType)) {
+      if (!init?.forceCreate) {
+        const proxied = (zodType as Any).sqlDomain as SqlDomain<
+          ZodType,
+          Context,
+          Identity
+        >;
+        if (proxied.identity == anySDF.SQL_DOMAIN_NOT_IN_COLLECTION) {
+          (proxied.identity as string) = init?.identity ??
+            SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE;
+        }
+        return proxied;
+      } else {
+        detachFrom(zodType);
+      }
+    }
+
+    return from(zodType, init);
+  };
+
   return {
+    SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE,
     anySDF,
     stringSDF,
     numberSDF,
-    coreSqlDomain,
+    detachFrom,
+    from,
+    cacheableFrom,
   };
 }

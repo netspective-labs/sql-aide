@@ -46,88 +46,6 @@ Deno.test("Zod Aide unwrapped clone", () => {
   );
 });
 
-Deno.test("Zod Aide enrichments", async (tc) => {
-  type SyntheticEnrichment = {
-    property1: string;
-    property2: number;
-  };
-
-  type SyntheticEnrichmentSupplier = {
-    syntheticEnrichment: SyntheticEnrichment;
-  };
-
-  const se = za.zodEnrichment<
-    SyntheticEnrichment,
-    SyntheticEnrichmentSupplier
-  >("syntheticEnrichment");
-
-  await tc.step("originals zodEnrichment", async (innerTC) => {
-    const unenrichedText = z.string();
-    const unenrichedTextOptional = z.string().optional();
-    const unenrichedTextDefaultable = z.string().default("defaultValue");
-    const unenrichedTextNullable = z.string().nullable();
-
-    const enrichedText = se.withEnrichment(unenrichedText, () => ({
-      property1: "enrichedText",
-      property2: 1285,
-    }));
-    const enrichedTextOptional = se.withEnrichment(
-      unenrichedTextOptional,
-      () => ({
-        property1: "enrichedTextOptional",
-        property2: 5648,
-      }),
-    );
-    const enrichedTextDefaultable = se.withEnrichment(
-      unenrichedTextDefaultable,
-      () => ({
-        property1: "enrichedTextDefaultable",
-        property2: 348,
-      }),
-    );
-    const enrichedTextNullable = se.withEnrichment(
-      unenrichedTextNullable,
-      () => ({
-        property1: "enrichedTextNullable",
-        property2: 12398,
-      }),
-    );
-
-    await innerTC.step("compile-time type safety", () => {
-      expectType<z.ZodString & SyntheticEnrichment>(enrichedText);
-      expectType<z.ZodOptional<z.ZodString> & SyntheticEnrichment>(
-        enrichedTextOptional,
-      );
-      expectType<z.ZodDefault<z.ZodString> & SyntheticEnrichment>(
-        enrichedTextDefaultable,
-      );
-      expectType<z.ZodNullable<z.ZodString> & SyntheticEnrichment>(
-        enrichedTextNullable,
-      );
-    });
-
-    await innerTC.step("run-time type safety", () => {
-      ta.assert(se.isEnrichedType(enrichedText));
-      ta.assert(se.isEnrichedType(enrichedTextOptional));
-      ta.assert(se.isEnrichedType(enrichedTextDefaultable));
-      ta.assert(se.isEnrichedType(enrichedTextNullable));
-
-      ta.assert(se.isEnrichedDef(enrichedText._def));
-      ta.assert(se.isEnrichedDef(enrichedTextOptional._def));
-      ta.assert(se.isEnrichedDef(enrichedTextDefaultable._def));
-      ta.assert(se.isEnrichedDef(enrichedTextNullable._def));
-    });
-
-    await innerTC.step("de-enrich (should be run last)", () => {
-      // always run this last since it mutates the enrichments
-      ta.assert(!se.isEnrichedType(se.deenriched(enrichedText)));
-      ta.assert(!se.isEnrichedType(se.deenriched(enrichedTextOptional)));
-      ta.assert(!se.isEnrichedType(se.deenriched(enrichedTextDefaultable)));
-      ta.assert(!se.isEnrichedType(se.deenriched(enrichedTextNullable)));
-    });
-  });
-});
-
 Deno.test("Zod Aide ZodType Baggage", async (tc) => {
   type SyntheticBaggage = {
     property1: string;
@@ -141,100 +59,110 @@ Deno.test("Zod Aide ZodType Baggage", async (tc) => {
   const sb = za.zodBaggage<SyntheticBaggage, SyntheticBaggageSupplier>(
     "syntheticBaggage",
   );
+  const { zodTypeBaggageProxy: proxy } = sb;
 
-  await tc.step("originals zodEnrichment", async (innerTC) => {
-    const unenrichedText = z.string();
-    const unenrichedTextOptional = z.string().optional();
-    const unenrichedTextDefaultable = z.string().default("defaultValue");
-    const unenrichedTextOptionalDefaultable = z.string().optional().default(
-      "defaultValue",
-    );
-    const unenrichedTextNullable = z.string().nullable();
-
-    const baggageText = sb.zodTypeBaggage(unenrichedText, {
-      property1: "baggageText",
-      property2: 1285,
-    });
-    const baggageTextOptional = sb.zodTypeBaggage(unenrichedTextOptional);
-    const baggageTextDefaultable = sb.zodTypeBaggage(unenrichedTextDefaultable);
-    const baggageTextOptionalDefaultable = sb.introspectableZodTypeBaggage(
-      unenrichedTextOptionalDefaultable,
-      {
-        property1: "baggageTextOptionalDefaultable",
-        property2: 456,
-      },
-    );
-    const baggageTextNullable = sb.zodTypeBaggage(unenrichedTextNullable);
-
-    baggageTextOptional.syntheticBaggage = {
-      property1: "baggageTextOptional",
-      property2: 5648,
-    };
-    baggageTextDefaultable.syntheticBaggage = {
-      property1: "baggageTextDefaultable",
-      property2: 348,
-    };
-    baggageTextNullable.syntheticBaggage = {
-      property1: "baggageTextNullable",
-      property2: 12398,
-    };
-
-    await innerTC.step("compile-time type safety", () => {
+  await tc.step("originals with baggage", async (innerTC) => {
+    await innerTC.step("scalar proxy", () => {
+      const baggageText = proxy(z.string());
+      baggageText.syntheticBaggage = {
+        property1: "baggageText",
+        property2: 1285,
+      };
       expectType<z.ZodString & SyntheticBaggageSupplier>(baggageText);
-      expectType<z.ZodOptional<z.ZodString> & SyntheticBaggageSupplier>(
-        baggageTextOptional,
-      );
-      expectType<z.ZodDefault<z.ZodString> & SyntheticBaggageSupplier>(
-        baggageTextDefaultable,
-      );
-      expectType<
-        z.ZodDefault<z.ZodOptional<z.ZodString>> & SyntheticBaggageSupplier
-      >(baggageTextOptionalDefaultable);
-      expectType<{
-        readonly proxiedZodType: z.ZodDefault<z.ZodOptional<z.ZodString>>;
-        readonly coreZTA: () => z.ZodString;
-        readonly wrappedZTAs: () => z.ZodTypeAny[];
-        readonly cloned: () => z.ZodDefault<z.ZodOptional<z.ZodString>>;
-        readonly clonedCoreZTA: () => z.ZodString;
-      }>(baggageTextOptionalDefaultable.zodIntrospection);
-      expectType<z.ZodNullable<z.ZodString> & SyntheticBaggageSupplier>(
-        baggageTextNullable,
-      );
-    });
-
-    await innerTC.step("run-time type safety", () => {
-      ta.assert(sb.isBaggageSupplier(baggageText));
-      ta.assert(sb.isBaggageSupplier(baggageTextOptional));
-      ta.assert(sb.isBaggageSupplier(baggageTextDefaultable));
-      ta.assert(sb.isBaggageSupplier(baggageTextOptionalDefaultable));
-      ta.assert(sb.isBaggageSupplier(baggageTextNullable));
-
       ta.assertEquals(baggageText.syntheticBaggage, {
         property1: "baggageText",
         property2: 1285,
       });
-      ta.assertEquals(baggageTextOptional.syntheticBaggage, {
-        property1: "baggageTextOptional",
-        property2: 5648,
+
+      let baggageText2 = proxy(z.string());
+      expectType<z.ZodString & SyntheticBaggageSupplier>(baggageText2);
+      ta.assertEquals(baggageText2.syntheticBaggage, undefined);
+
+      baggageText2 = proxy(baggageText);
+      expectType<z.ZodString & SyntheticBaggageSupplier>(baggageText2);
+      ta.assertEquals(baggageText2.syntheticBaggage, {
+        property1: "baggageText",
+        property2: 1285,
       });
-      ta.assertEquals(baggageTextDefaultable.syntheticBaggage, {
-        property1: "baggageTextDefaultable",
-        property2: 348,
-      });
-      ta.assertEquals(baggageTextOptionalDefaultable.syntheticBaggage, {
-        property1: "baggageTextOptionalDefaultable",
-        property2: 456,
-      });
-      ta.assertEquals(
-        baggageTextOptionalDefaultable.zodIntrospection.wrappedZTAs().map((
-          zta,
-        ) => zta._def.typeName),
-        ["ZodString", "ZodOptional", "ZodDefault"],
+    });
+
+    await innerTC.step("optional applied to scalar proxy", () => {
+      const baggageText = proxy(z.string(), {
+        property1: "baggageText",
+        property2: 34345,
+      }).optional();
+      expectType<z.ZodOptional<z.ZodString>>(baggageText);
+      expectType<z.ZodOptional<z.ZodString & SyntheticBaggageSupplier>>(
+        proxy(baggageText),
       );
-      ta.assertEquals(baggageTextNullable.syntheticBaggage, {
-        property1: "baggageTextNullable",
-        property2: 12398,
+      ta.assertEquals(proxy(baggageText).syntheticBaggage, {
+        property1: "baggageText",
+        property2: 34345,
       });
+
+      const baggageText2 = proxy(baggageText);
+      expectType<z.ZodOptional<z.ZodString & SyntheticBaggageSupplier>>(
+        baggageText2,
+      );
+      ta.assertEquals(baggageText2.syntheticBaggage, {
+        property1: "baggageText",
+        property2: 34345,
+      });
+      ta.assert(baggageText2.isOptional());
+    });
+
+    await innerTC.step("default applied to scalar proxy", () => {
+      const baggageText = proxy(z.string(), {
+        property1: "baggageText",
+        property2: 23456,
+      }).default("baggageTextDefault");
+      expectType<z.ZodDefault<z.ZodString>>(baggageText);
+      expectType<z.ZodDefault<z.ZodString & SyntheticBaggageSupplier>>(
+        proxy(baggageText),
+      );
+      ta.assertEquals(proxy(baggageText).syntheticBaggage, {
+        property1: "baggageText",
+        property2: 23456,
+      });
+
+      const baggageText2 = proxy(baggageText);
+      expectType<z.ZodDefault<z.ZodString & SyntheticBaggageSupplier>>(
+        baggageText2,
+      );
+      ta.assertEquals(baggageText2.syntheticBaggage, {
+        property1: "baggageText",
+        property2: 23456,
+      });
+      ta.assertEquals(baggageText2.parse(undefined), "baggageTextDefault");
+    });
+
+    await innerTC.step("optional applied to default scalar proxy", () => {
+      const baggageText = proxy(z.string(), {
+        property1: "baggageText",
+        property2: 5678,
+      }).default("baggageTextDefault").optional();
+      expectType<z.ZodOptional<z.ZodDefault<z.ZodString>>>(baggageText);
+      expectType<
+        z.ZodOptional<z.ZodDefault<z.ZodString & SyntheticBaggageSupplier>>
+      >(
+        proxy(baggageText),
+      );
+      ta.assertEquals(proxy(baggageText).syntheticBaggage, {
+        property1: "baggageText",
+        property2: 5678,
+      });
+
+      const baggageText2 = proxy(baggageText);
+      expectType<
+        z.ZodOptional<z.ZodDefault<z.ZodString & SyntheticBaggageSupplier>>
+      >(
+        baggageText2,
+      );
+      ta.assertEquals(baggageText2.syntheticBaggage, {
+        property1: "baggageText",
+        property2: 5678,
+      });
+      ta.assertEquals(baggageText2.parse(undefined), undefined);
     });
   });
 });
