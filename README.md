@@ -3,7 +3,8 @@
 [![codecov](https://codecov.io/gh/netspective-labs/sql-aide/branch/main/graph/badge.svg?token=DPJICL8F4O)](https://codecov.io/gh/netspective-labs/sql-aide)
 
 For any modules that leverage SQL for functionality, assembling and loading SQL
-in a deterministically reproducible manner is crucial.
+in a deterministically reproducible manner is crucial. `SQLa` is like a static
+site generator for SQL files that need to be loaded into a database.
 
 `SQLa` is an _aide_ which helps prepare, organize, assemble, load, and revision
 manage type-safe, _deterministically reproducible_, SQL code. SQL Aide (`SQLa`)
@@ -29,12 +30,44 @@ please do the following:
 deno task init
 ```
 
+## Zod
+
+`SQLa` uses
+[Zod's TypeScript\-first schema validation with static type inference](https://zod.dev/)
+capabilities to define data structures and introspects Zod's type-safe schema to
+generates SQL. You can define tables, views, and other SQL DDL, DML and DQL
+statements using Zod then use `SQLa` to emit database-agnostic SQL. This way
+your data structures can be used with compile-type type checking but also be
+useful at runtime on the server or user agents like browsers and mobile apps.
+
+The bridge between Zod and SQLa is a mapping layer called `Zod Baggage`, defined
+in `lib/universal/zod-aide.ts`. It's marked `universal` since it can be used for
+other purposes but resides in this repo for convenience. The purpose of
+`ZodTypedBaggage` and `zodBaggage` is to allow arbitrary meta data called
+_baggage_ to be stored with Zod types (usually scalars). Using this bridge
+library we can create SQL-specific data and store it alongside (literally inside
+the `ZodType._def` object).
+
+This library and documentation was initially written with a custom Zod-like
+library called `Axiom`. In March 2023 Axiom was removed as our underlying data
+infrastructure in favor of Zod (which has a
+[vibrant ecosystem](https://zod.dev/?id=ecosystem)). Over time, more and more
+Axiom legacy should be removed in favor of heavy Zod focus. For example:
+
+- if we need a JSON Schema generated from a SQL DDL definition, we can just use
+  a [Zod-to-JSON Schema](https://github.com/StefanTerdell/zod-to-json-schema)
+  library without inventing anything ourselves.
+- if we need utility functions to manage our Zod-based models try
+  [Zod Utilz Framework agnostic utilities](https://github.com/JacobWeisenburger/zod_utilz).
+- before writing any new modeling infrastructure code, check the Zod ecosystem;
+  if we do end up inventing something, build it on top of Zod whenever possible.
+
 ## Terminology
 
 - `domain` refers to the same concept as described in the SQL standard.
-  - A domain should be considered an atomic data type with optional constraints
-    or restrictions that should be placed on what kind of data can go into an
-    attribute or column.
+  - A domain should be considered an atomic data type, created using Zod as an
+    infrastructure library, with optional constraints or restrictions that
+    should be placed on what kind of data can go into an attribute or column.
   - `text`, `integer`, etc. are generic domains but a domain may also be
     `person_id`, `daily_purchase_amount`, or any custom business data.
 - `attribute` or `property` refers to a named instance of a specific domain. For
@@ -82,13 +115,14 @@ following types of SQL language constructs.
 
 ### Domains
 
+- [x] Zod scalars (`string`, `number`, etc.) transparently map to SQL domains
 - [x] Text
 - [ ] VARCHAR(x)
-- [x] Integer
-- [x] Date
-- [x] DateTime
-- [x] BigInt
-- [x] JSON
+- [x] Number
+- [ ] Date
+- [ ] DateTime
+- [ ] BigInt
+- [ ] JSON
 - [ ] JSONB
 - [ ] full-text search
   - [ ] PostgreSQL `tsvector` with `GIN` index
@@ -102,10 +136,11 @@ following types of SQL language constructs.
 
 #### Domain Capabilities
 
-- [x] identity
+- [x] identity from Zod object declaration
 - [ ] W3C [Decentralized Identifiers](https://www.w3.org/TR/did-core/) (DIDs)
-- [x] Typescript type
-- [x] Typescript default values
+- [x] Zod Typescript type
+- [x] Zod Typescript default values
+- [x] Zod descriptions
 - [x] SQL type
 - [x] SQL default values
 - [ ] SQL size
@@ -113,7 +148,7 @@ following types of SQL language constructs.
       definition at domain level with enforcement in SQL
 - [ ] domain documentation for goverance ([DataHub](https://datahubproject.io/)
       style ERD documentation)
-- [x] type-safe domain labels/tags for governance
+- [ ] type-safe domain labels/tags for governance
       ([DataHub](https://datahubproject.io/) style meta data)
   - [ ] scoped labels for additional governance (e.g. subject areas, PII, PHI,
         etc. grouping)
@@ -126,10 +161,10 @@ following types of SQL language constructs.
 - [x] SQL reference (for foreign key type mirroring where one columns knows
       another column's type automatically)
 - [x] Data storage computed values using SQL (e.g. for defaults)
-- [x] Env Var and other AxiomSerDe-style dynamic server-side default values
+- [ ] Env Var and other dynamic server-side default values
 - [ ] `lintIgnore(domain)` wrapper functions to skip certain lint warnings (like
       naming conventions for fkey columns ending in `_id`)
-- [x] User agent computed values for _business logic_ (similar to NEFS Axiom)
+- [ ] User agent computed values for _business logic_ (similar to NEFS Axiom)
 - [ ] User agent computed values for _presentation_ (similar to NEFS Axiom)
 - [ ] synthetic data generation patterns (e.g. reg ex, functions, etc. that can
       auto-generate synthetic data)
@@ -153,10 +188,10 @@ When two or more domains need to be coordinated, they are called multi-domains.
 
 - [x] Table
 - [ ] Immutable Table (see _Data-Oriented Programming_ patterns)
-- [!] Enum Table (type-safe text key, text values, automatic seeds)
-- [!] Enum Table (text key, numeric values, automatic seeds)
+- [ ] Enum Table (type-safe text key, text values, automatic seeds)
+- [ ] Enum Table (text key, numeric values, automatic seeds)
 - [ ] Association Table (`M:M` relationship between two entities)
-- [!] Data Vault 2.0 Tables (build on _Immutable Table_ patterns)
+- [ ] Data Vault 2.0 Tables (build on _Immutable Table_ patterns)
 - [ ] Unified Star Schema (USS) "presentation layer" measures, bridges, etc.
 
 #### Entities (Table) Capabilities
@@ -173,7 +208,7 @@ When two or more domains need to be coordinated, they are called multi-domains.
   - [ ] rollup sensitive-labeled columns and auto-label tables as sensitive
   - [ ] rollup identity-labeled (PII, PHI) columns and auto-label tables as
         PII/PHI
-- [ ] JSON Schema
+- [x] JSON Schema (from Zod)
 - [ ] [Invisible XML](https://invisiblexml.org/) schema
 - [ ] [CSV Schema](http://digital-preservation.github.io/csv-schema/csv-schema-1.1.html),
       [examples](https://github.com/digital-preservation/csv-schema/tree/master/example-schemas)
@@ -390,7 +425,7 @@ References:
 
 ### Dialect Engines
 
-- [x] Universal `SqlEngine` and `SqlEngineInstance` interfaces and
+- [ ] Universal `SqlEngine` and `SqlEngineInstance` interfaces and
       engine-specific implementations to prepare SQL, send into a specific
       database driver and return typed rows (array) or object lists as query
       execution results. All SQL engines support the same query execution
@@ -441,9 +476,6 @@ The system generates lint messages:
       (SodaCL) style validation rules
 
 ## Code
-
-This module is a Deno Typescript module designed to help generate SQL DDL and
-other SQL text in a type-safe, well-formatted, and composable manner.
 
 These are the core interfaces:
 
@@ -611,6 +643,9 @@ is type-safe because it's defined using a Zod schema.
 
 ## TODO
 
+- [ ] Add [`dax` shell tools](https://github.com/dsherret/dax) `SqlTextSupplier`
+      wrapper to run external commands, create files, and incorporate their
+      output or file references in SQL scripts.
 - [ ] integrate [sqlean](https://github.com/nalgeon/sqlean) for advanced SQLite
       functions
 - [ ] see if we can get types from SQL select strings using
