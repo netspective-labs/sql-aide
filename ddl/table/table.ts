@@ -59,9 +59,9 @@ export function tableDefinition<
   zodRawShape: ColumnsShape,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
-  const beforeDefnDebugText = za.filteredInspect(Deno.inspect({
-    beforeDefnDebug: { zodRawShape },
-  }, { depth: 10 }));
+  // const beforeDefnDebugText = za.filteredInspect(Deno.inspect({
+  //   beforeDefnDebug: { zodRawShape },
+  // }, { depth: 10 }));
   const sdf = d.sqlDomainsFactory<TableName, Context>();
 
   type BaggageSchema = {
@@ -458,15 +458,15 @@ export function tableDefinition<
       sqlNS: tdOptions?.sqlNS,
     };
 
-  Deno.writeTextFileSync(
-    `DELETE_ME_DEBUG_table_${tableName}_defn.txt`,
-    beforeDefnDebugText + "\n" +
-      za.filteredInspect(Deno.inspect({
-        zoSchema,
-        zbSchema,
-        ...tableDefnResult,
-      }, { depth: 10 })),
-  );
+  // Deno.writeTextFileSync(
+  //   `DELETE_ME_DEBUG_table_${tableName}_defn.txt`,
+  //   beforeDefnDebugText + "\n" +
+  //     za.filteredInspect(Deno.inspect({
+  //       zoSchema,
+  //       zbSchema,
+  //       ...tableDefnResult,
+  //     }, { depth: 10 })),
+  // );
 
   // we let Typescript infer function return to allow generics in sqlDomains to
   // be more effective but we want other parts of the `result` to be as strongly
