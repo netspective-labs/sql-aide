@@ -1,8 +1,8 @@
 import { zod as z } from "../../deps.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as d from "../../domain/mod.ts";
-import * as c from "./column.ts";
 import * as t from "./table.ts";
+import * as pk from "./primary-key.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -32,11 +32,11 @@ export const tableLacksPrimaryKeyLintRule = <
         : false;
       if (!ignoreRule) {
         const pkColumn = tableDefn.domains().find((ap) =>
-          c.isTablePrimaryKeyColumnDefn<Any, Context>(ap)
+          pk.isTablePrimaryKeyColumnDefn<Any, Context>(ap)
         ) as unknown as (
           | (
             & d.SqlDomain<z.ZodTypeAny, Context, Any>
-            & c.TablePrimaryKeyColumnDefn<Any, Context>
+            & pk.TablePrimaryKeyColumnDefn<Any, Context>
           )
           | undefined
         );

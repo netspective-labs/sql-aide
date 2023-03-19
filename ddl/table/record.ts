@@ -3,6 +3,7 @@ import * as r from "../../lib/universal/record.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as i from "../../dml/insert.ts";
 import * as c from "./column.ts";
+import * as pk from "./primary-key.ts";
 import * as t from "./table.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -107,7 +108,7 @@ export function tableColumnsRowFactory<
       (group) => {
         if (group === "primary-keys") {
           return columns.filter((d) =>
-            c.isTablePrimaryKeyColumnDefn(d) ? true : false
+            pk.isTablePrimaryKeyColumnDefn(d) ? true : false
           );
         }
         return columns.filter((d) =>
@@ -130,7 +131,7 @@ export function tableColumnsRowFactory<
       (group) => {
         if (group === "primary-keys") {
           return columns.filter((d) =>
-            c.isTablePrimaryKeyColumnDefn(d) ? true : false
+            pk.isTablePrimaryKeyColumnDefn(d) ? true : false
           );
         }
         return columns.filter((d) =>

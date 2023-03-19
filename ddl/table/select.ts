@@ -4,6 +4,7 @@ import * as tmpl from "../../emit/mod.ts";
 import * as cr from "../../dql/criteria.ts";
 import * as s from "../../dql/select.ts";
 import * as c from "./column.ts";
+import * as pk from "./primary-key.ts";
 import * as t from "./table.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -95,7 +96,7 @@ export function tableSelectFactory<
       cr.filterCriteriaPreparer((group) => {
         if (group === "primary-keys") {
           return columns.filter((tc) =>
-            c.isTablePrimaryKeyColumnDefn(tc) ? true : false
+            pk.isTablePrimaryKeyColumnDefn(tc) ? true : false
           ).map((d) => d.identity) as FilterableColumnName[];
         }
         return columns.filter((tc) =>
