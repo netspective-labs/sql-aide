@@ -28,9 +28,7 @@ export function isTablePrimaryKeyColumnDefn<
   return isTPKCD(o);
 }
 
-export function primaryKeyColumnFactory<
-  Context extends tmpl.SqlEmitContext,
->() {
+export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
   const sdf = d.zodTypeSqlDomainFactory<Any, Context>();
   const zb = za.zodBaggage<
     d.SqlDomain<Any, Context, Any>,

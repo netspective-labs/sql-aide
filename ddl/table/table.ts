@@ -34,6 +34,7 @@ export interface TableDefnOptions<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
 > {
+  readonly zodObject?: (zodRawShape: ColumnsShape) => z.ZodObject<ColumnsShape>;
   readonly isIdempotent?: boolean;
   readonly isTemp?: boolean;
   readonly sqlPartial?: (
@@ -69,7 +70,8 @@ export function tableDefinition<
     >;
   };
 
-  const zoSchema = z.object(zodRawShape).strict();
+  const zoSchema = tdOptions?.zodObject?.(zodRawShape) ??
+    z.object(zodRawShape).strict();
   const zbSchema: BaggageSchema = {} as Any;
   const fkf = fk.foreignKeysFactory<TableName, ColumnsShape, Context>(
     tableName,
