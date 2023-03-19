@@ -1,7 +1,7 @@
-import { path } from "./deps.ts";
-import { testingAsserts as ta } from "./deps-test.ts";
-import * as ws from "./lib/universal/whitespace.ts";
-import * as safety from "./lib/universal/safety.ts";
+import { path } from "../deps.ts";
+import { testingAsserts as ta } from "../deps-test.ts";
+import * as ws from "../lib/universal/whitespace.ts";
+import * as safety from "../lib/universal/safety.ts";
 import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
