@@ -15,6 +15,7 @@ export type TableDefinition<
   Context extends tmpl.SqlEmitContext,
 > = tmpl.SqlTextSupplier<Context> & {
   readonly tableName: TableName;
+  readonly domains: c.TableColumnDefn<TableName, Any, Any, Context>[];
 };
 
 export function isTableDefinition<
@@ -106,7 +107,6 @@ export function tableDefinition<
   //   }
   // }
 
-  type ColumnName = Extract<keyof ColumnsShape, string>;
   type ColumnDefns = {
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
       z.ZodType<infer T, infer D, infer I> ? c.TableColumnDefn<
@@ -217,6 +217,7 @@ export function tableDefinition<
   const tableDefnResult:
     & TableDefinition<TableName, Context>
     & {
+      readonly domains: typeof domains;
       readonly columns: ColumnDefns;
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
@@ -267,6 +268,7 @@ export function tableDefinition<
         "\n)";
         return result;
       },
+      domains,
       columns,
       primaryKey,
       unique,

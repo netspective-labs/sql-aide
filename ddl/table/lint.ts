@@ -1,6 +1,7 @@
 import { zod as z } from "../../deps.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as d from "../../domain/mod.ts";
+import * as c from "./column.ts";
 import * as t from "./table.ts";
 import * as pk from "./primary-key.ts";
 
@@ -91,11 +92,11 @@ export const tableNameConsistencyLintRule = (tableName: string) => {
  *          add each column defnintion lintIssue to a given LintIssuesSupplier
  */
 export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
-  tableDefn: t.TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+  tableDefn: t.TableDefinition<Any, Context>,
 ) {
   const rule: tmpl.SqlLintRule = {
     lint: (lis) => {
-      for (const col of tableDefn.domains()) {
+      for (const col of tableDefn.domains) {
         if (tmpl.isSqlLintIssuesSupplier(col)) {
           lis.registerLintIssue(
             ...col.lintIssues.map((li) => ({
@@ -110,22 +111,26 @@ export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
   return rule;
 }
 
-// export type FKeyColNameConsistencyLintOptions<
-//   Context extends tmpl.SqlEmitContext,
-// > = {
-//   readonly ignoreFKeyColNameMissing_id?:
-//     | boolean
-//     | ((
-//       col: TableForeignKeyColumnDefn<Any, Any, Context>,
-//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-//     ) => boolean);
-//   readonly ignoreColName_idNotFKey?:
-//     | boolean
-//     | ((
-//       col: d.SqlDomain<Any, Context>,
-//       tableDefn: TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
-//     ) => boolean);
-// };
+export type FKeyColNameConsistencyLintOptions<
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly ignoreFKeyColNameMissing_id?:
+    | boolean
+    | ((
+      col: c.TableColumnDefn<Any, Any, Any, Context>,
+      tableDefn:
+        & t.TableDefinition<Any, Context>
+        & d.SqlDomainsSupplier<Context>,
+    ) => boolean);
+  readonly ignoreColName_idNotFKey?:
+    | boolean
+    | ((
+      col: d.SqlDomain<Any, Context, Any>,
+      tableDefn:
+        & t.TableDefinition<Any, Context>
+        & d.SqlDomainsSupplier<Context>,
+    ) => boolean);
+};
 
 // /**
 //  * A lint rule which looks at each domain (column) and, if it has any lint
@@ -196,9 +201,7 @@ export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
     // fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
     // noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
     typical: (
-      tableDefn:
-        & t.TableDefinition<Any, Context>
-        & d.SqlDomainsSupplier<Context>,
+      tableDefn: t.TableDefinition<Any, Context>,
       ...additionalRules: tmpl.SqlLintRule<Any>[]
     ) => {
       return tmpl.aggregatedSqlLintRules<

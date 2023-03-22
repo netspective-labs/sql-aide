@@ -1,5 +1,4 @@
 import { zod as z } from "../deps.ts";
-import { Sha1 } from "https://deno.land/std@0.160.0/hash/sha1.ts"; // depracated after 0.160.0
 import * as za from "../lib/universal/zod-aide.ts";
 import * as SQLa from "../mod.ts";
 // for convenience so that deno-lint is not required for use of `any`
@@ -60,56 +59,32 @@ export function dataVaultDomains<Context extends SQLa.SqlEmitContext>() {
   return {
     govnZB,
     text: z.string,
-    textNullable: z.string().optional,
+    textNullable: () => z.string().optional(),
 
     integer: z.number,
-    integerNullable: z.number().optional(),
+    integerNullable: () => z.number().optional(),
 
     jsonText: jsonSchema,
-    jsonTextNullable: jsonSchema.optional(),
+    jsonTextNullable: () => jsonSchema.optional(),
 
     boolean: z.boolean,
-    booleanNullable: z.boolean().optional,
+    booleanNullable: () => z.boolean().optional(),
 
     date: z.date,
-    dateNullable: z.date().optional,
+    dateNullable: () => z.date().optional(),
 
     dateTime: z.date,
-    dateTimeNullable: z.date().optional,
+    dateTimeNullable: () => z.date().optional(),
 
-    createdAt: () => z.date().default(new Date()),
+    createdAt: () => z.date().default(new Date()).optional(),
 
-    // SHA-1 is cryptographically vulnerable but we're using it for basic hash
-    // and it's fast to compute; TODO: in latest Deno should use crypto.subtle.digest()
-    // but that function is async
-    sha1Digest: () =>
-      z.preprocess(
-        (text) => new Sha1().update(String(text)).hex(),
-        z.string(),
-      ),
-    ulid: z.string().ulid,
-    ulidNullable: z.string().ulid().optional,
+    ulid: () => z.string().ulid(),
+    ulidNullable: () => z.string().ulid().optional(),
 
-    uuid: z.string().uuid,
-    uuidNullable: z.string().uuid().optional,
+    uuid: () => z.string().uuid(),
+    uuidNullable: () => z.string().uuid().optional(),
     // TODO [NL Aide Migration]:
     // unique: SQLa.uniqueContraint,
-
-    // TODO [NL Aide Migration]:
-    // uniqueMultiMember: <TsValueType>(
-    //   domain: SQLa.AxiomSqlDomain<TsValueType, Context>,
-    //   ...groupNames: string[]
-    // ) => {
-    //   return SQLa.mutateGovernedASD<TsValueType, DataVaultDomainGovn, Context>(
-    //     domain,
-    //     (existing) => ({
-    //       ...existing,
-    //       isUniqueConstraintMember: existing?.isUniqueConstraintMember
-    //         ? [...existing?.isUniqueConstraintMember, ...groupNames]
-    //         : groupNames,
-    //     }),
-    //   );
-    // },
   };
 }
 
@@ -121,123 +96,81 @@ export function dataVaultKeys<Context extends SQLa.SqlEmitContext>() {
   // we create our aliases in a function and use the function instead of passing
   // in dvDomains as an argument because deep-generics type-safe objects will be
   // available.
-  //   const { sha1Digest, ulid } = dataVaultDomains<Context>();
+  const pkcf = SQLa.primaryKeyColumnFactory<Context>();
+  const { ulid } = dataVaultDomains<Context>();
 
-  //   const digestPrimaryKey = () =>
-  //     SQLa.uaDefaultablePrimaryKey<string, Context>(shah1Digest<Context>());
-
-  //   const ulidPrimaryKey = () =>
-  //     SQLa.uaDefaultablePrimaryKey<string, Context>(ulid<Context>());
-
-  //   const autoIncPrimaryKey = () =>
-  //     SQLa.autoIncPrimaryKey<number, Context>(SQLa.integer());
-
-  //   const digestPkMember = <TsValueType>(
-  //     domain: SQLa.AxiomSqlDomain<TsValueType, Context>,
-  //   ) => {
-  //     return mutateGoverned<TsValueType>(
-  //       domain,
-  //       (existing) => ({ ...existing, isDigestPrimaryKeyMember: true }),
-  //     );
-  //   };
-
-  //   const surrogateKey = <TsValueType>(
-  //     domain: SQLa.AxiomSqlDomain<TsValueType, Context>,
-  //   ) => {
-  //     return mutateGoverned<TsValueType>(
-  //       domain,
-  //       (existing) => ({ ...existing, isSurrogateKey: true }),
-  //     );
-  //   };
+  const textPrimaryKey = () => pkcf.primaryKey();
+  const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
+  const autoIncPrimaryKey = () => pkcf.autoIncPrimaryKey();
 
   return {
-    //     digestPrimaryKey,
-    //     digestPkMember,
-    //     digestPkLintRule: <TableName, ColumnName>(
-    //       tableName: TableName,
-    //       pkColumn?: SQLa.IdentifiableSqlDomain<Any, Context>,
-    //       pkDigestColumns?: ColumnName[],
-    //     ) => {
-    //       const rule: SQLa.SqlLintRule = {
-    //         lint: (lis) => {
-    //           if (
-    //             pkColumn && axsdc.isDigestAxiomSD(pkColumn) &&
-    //             (!pkDigestColumns || pkDigestColumns.length == 0)
-    //           ) {
-    //             lis.registerLintIssue({
-    //               lintIssue:
-    //                 `table name '${tableName}' requires pkDigestColumns for primary key column ${pkColumn.identity}`,
-    //               consequence: SQLa.SqlLintIssueConsequence.FATAL_DDL,
-    //             });
-    //           }
-    //         },
-    //       };
-    //       return rule;
-    //     },
-    //     autoIncPrimaryKey,
-    //     ulidPrimaryKey,
-    //     surrogateKey,
+    textPrimaryKey,
+    ulidPrimaryKey,
+    autoIncPrimaryKey,
   };
 }
-
-export type DataVaultTypicalHousekeepingColumns<
-  Context extends SQLa.SqlEmitContext,
-> = {
-  readonly created_at: SQLa.SqlDomain<
-    z.ZodOptional<z.ZodDate>,
-    Context,
-    "created_at"
-  >;
-};
 
 /**
- * dataVaultHousekeeping is a "data vault housekeeping columns governer" builder
- * object.
- * @returns a builder object with helper functions as properties which can be used to build DV housekeeping columns
+ * dataVaultNames is a "data vault naming strategy governer" builder object.
+ * @returns a builder object with helper functions as properties which can be used to name DV objects
  */
-export function dataVaultHousekeeping<Context extends SQLa.SqlEmitContext>() {
-  const { createdAt } = dataVaultDomains();
+export function dataVaultNames<Context extends SQLa.SqlEmitContext>() {
+  /**
+   * All our table names should be strongly typed and consistent. Generics are
+   * used so that they are passed into Axiom, SQLa domain, etc. properly typed.
+   * @param name the name of the table
+   * @returns the transformed table name (e.g. in case prefixes should be added)
+   */
+  const tableName = <Name extends string, Qualified extends string = Name>(
+    name: Name,
+  ): Qualified => {
+    // for now we're not doing anything special but that could change in future
+    return name as unknown as Qualified;
+  };
 
-  // TODO: add loadedAt, loadedBy, provenance (lineage), etc. columns from PgDCP DV
+  const hubTableName = <
+    HubName extends string,
+    TableName extends `hub_${HubName}` = `hub_${HubName}`,
+    Qualified extends string = TableName,
+  >(name: HubName) =>
+    tableName<TableName, Qualified>(`hub_${name}` as TableName);
+
+  const hubSatelliteTableName = <
+    HubName extends string,
+    SatelliteName extends string,
+    TableName extends `sat_${HubName}_${SatelliteName}` =
+      `sat_${HubName}_${SatelliteName}`,
+    Qualified extends string = TableName,
+  >(hubName: HubName, satelliteName: SatelliteName) =>
+    tableName<TableName, Qualified>(
+      `sat_${hubName}_${satelliteName}` as TableName,
+    );
+
+  const linkTableName = <
+    LinkName extends string,
+    TableName extends `link_${LinkName}` = `link_${LinkName}`,
+  >(linkName: LinkName) =>
+    tableName<TableName>(`link_${linkName}` as TableName);
+
+  const linkSatelliteTableName = <
+    LinkName extends string,
+    SatelliteName extends string,
+    TableName extends `sat_${LinkName}_${SatelliteName}` =
+      `sat_${LinkName}_${SatelliteName}`,
+    Qualified extends string = TableName,
+  >(linkName: LinkName, satelliteName: SatelliteName) =>
+    tableName<TableName, Qualified>(
+      `sat_${linkName}_${satelliteName}` as TableName,
+    );
 
   return {
-    typical: {
-      columns: {
-        created_at: createdAt(),
-      },
-      insertStmtPrepOptions: <TableName extends string>() => {
-        const result: SQLa.InsertStmtPreparerOptions<
-          TableName,
-          { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-          { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-          Context
-        > = {
-          // created_at should be filled in by the database so we don't want
-          // to emit it as part of the an insert DML SQL statement
-          isColumnEmittable: (name) => name == "created_at" ? false : true,
-        };
-        return result as SQLa.InsertStmtPreparerOptions<Any, Any, Any, Context>;
-      },
-    },
+    tableName,
+    hubTableName,
+    hubSatelliteTableName,
+    linkTableName,
+    linkSatelliteTableName,
   };
 }
-
-export type DataVaultHubTableDefn<
-  HubName extends string,
-  HubTableName extends string,
-  Context extends SQLa.SqlEmitContext,
-> = SQLa.TableDefinition<HubTableName, Context> & {
-  readonly pkColumnDefn: SQLa.TablePrimaryKeyColumnDefn<Any, Context>;
-  readonly hubName: HubName;
-};
-
-export type DataVaultLinkTableDefn<
-  LinkName extends string,
-  LinkTableName extends string,
-  Context extends SQLa.SqlEmitContext,
-> = SQLa.TableDefinition<LinkTableName, Context> & {
-  readonly linkName: LinkName;
-};
 
 /**
  * dataVaultGovn is a "data vault governer" builders object for data vault models.
@@ -245,19 +178,166 @@ export type DataVaultLinkTableDefn<
  * @returns a single object with helper functions as properties (for building models)
  */
 export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
-  _ddlOptions: SQLa.SqlTextSupplierOptions<Context> & {
+  ddlOptions: SQLa.SqlTextSupplierOptions<Context> & {
     readonly sqlNS?: SQLa.SqlNamespaceSupplier;
   },
 ) {
+  const names = dataVaultNames<Context>();
   const domains = dataVaultDomains<Context>();
   const keys = dataVaultKeys<Context>();
-  const housekeeping = dataVaultHousekeeping<Context>();
   const tableLintRules = SQLa.tableLintRules<Context>();
 
+  const housekeeping = {
+    columns: {
+      created_at: domains.createdAt(),
+    },
+    insertStmtPrepOptions: <TableName extends string>() => {
+      const result: SQLa.InsertStmtPreparerOptions<
+        TableName,
+        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        Context
+      > = {
+        // created_at should be filled in by the database so we don't want
+        // to emit it as part of the an insert DML SQL statement
+        isColumnEmittable: (name) => name == "created_at" ? false : true,
+      };
+      return result as SQLa.InsertStmtPreparerOptions<
+        Any,
+        Any,
+        Any,
+        Context
+      >;
+    },
+  };
+
+  /**
+   * All of our "content" or "transaction" tables will follow a specific format,
+   * namely that they will have a single primary key with the same name as the
+   * table with _id appended and common "houskeeping" columns like created_at.
+   * TODO: figure out how to automatically add ...housekeeping() to the end of
+   * each table (it's easy to add at the start of each table, but we want them
+   * at the end after all the "content" columns).
+   * @param tableName
+   * @param columnsShape
+   * @returns
+   */
+  const table = <
+    TableName extends string,
+    ColumnsShape extends
+      & z.ZodRawShape
+      & Record<`${TableName}_id`, ReturnType<typeof keys.ulidPrimaryKey>>
+      & typeof housekeeping.columns,
+  >(
+    tableName: TableName,
+    columnsShape: ColumnsShape,
+    options?: {
+      readonly constraints?: <
+        TableName extends string,
+      >(
+        columnsAxioms: ColumnsShape,
+        tableName: TableName,
+      ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
+      readonly lint?:
+        & SQLa.TableNameConsistencyLintOptions
+        & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+    },
+  ) => {
+    const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
+      tableName,
+      columnsShape,
+      {
+        isIdempotent: true,
+        sqlNS: ddlOptions?.sqlNS,
+        constraints: options?.constraints,
+      },
+    );
+    const defaultIspOptions = housekeeping.insertStmtPrepOptions<
+      TableName
+    >();
+    const result = {
+      ...tableDefn,
+      ...SQLa.tableColumnsRowFactory<TableName, ColumnsShape, Context>(
+        tableName,
+        columnsShape,
+        { defaultIspOptions },
+      ),
+      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context>(
+        tableName,
+        columnsShape,
+      ),
+      defaultIspOptions, // in case others need to wrap the call
+    };
+
+    const rules = tableLintRules.typical(result);
+    rules.lint(result, options?.lint);
+
+    return result;
+  };
+
+  const hubTable = <
+    HubName extends string,
+    ColumnsShape extends
+      & z.ZodRawShape
+      & Record<
+        `hub_${HubName}_id`,
+        ReturnType<typeof keys.ulidPrimaryKey>
+      >
+      & typeof housekeeping.columns,
+  >(hubName: HubName, props: ColumnsShape) => {
+    const hubTableName = names.hubTableName(hubName);
+    const hubTableDefn = table(hubTableName, {
+      ...props,
+      ...housekeeping.columns,
+    });
+
+    const satelliteTable = <
+      SatelliteName extends string,
+      ColumnsShape extends
+        & z.ZodRawShape
+        & Record<
+          `sat_${HubName}_${SatelliteName}_id`,
+          ReturnType<typeof keys.ulidPrimaryKey>
+        >
+        & typeof hubTableDefn.primaryKey,
+    >(
+      satelliteName: SatelliteName,
+      columnsShape: ColumnsShape,
+    ) => {
+      const satTableName = names.hubSatelliteTableName(hubName, satelliteName);
+      // TODO: add lint rule for checking if key or group of keys is unique
+      return {
+        satelliteName,
+        ...table(
+          satTableName,
+          {
+            ...columnsShape,
+            ...housekeeping.columns,
+          },
+        ),
+        hubTable: hubTableDefn,
+      };
+    };
+
+    if (!hubTableDefn.primaryKey) {
+      throw Error(`no primary key column defined for hubTable ${hubName}`);
+    }
+    // TODO: add lint rule for checking if hub business key or group of keys is unique
+    const result = {
+      hubName,
+      ...hubTableDefn,
+      satelliteTable,
+    };
+    return result;
+  };
+
   return {
+    names,
     domains,
     keys,
     housekeeping,
+    table,
     tableLintRules,
+    hubTable,
   };
 }
