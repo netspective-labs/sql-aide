@@ -295,11 +295,11 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       SatelliteName extends string,
       ColumnsShape extends
         & z.ZodRawShape
+        & Record<`hub_${HubName}_id`, ReturnType<typeof keys.ulidPrimaryKey>>
         & Record<
           `sat_${HubName}_${SatelliteName}_id`,
           ReturnType<typeof keys.ulidPrimaryKey>
-        >
-        & typeof hubTableDefn.primaryKey,
+        >,
     >(
       satelliteName: SatelliteName,
       columnsShape: ColumnsShape,
