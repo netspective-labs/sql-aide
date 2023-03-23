@@ -177,7 +177,7 @@ export function tableDefinition<
     }
     if (con.isUniqueTableColumn(column)) {
       unique[column.identity as (keyof UniqueColumnDefns)] = column as Any;
-      constraints.push(con.uniqueContraint(column.identity));
+      constraints.push(con.uniqueConstraint(column.identity));
     }
   }
 

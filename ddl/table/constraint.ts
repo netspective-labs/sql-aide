@@ -22,7 +22,7 @@ export type TableColumnsConstraint<
     readonly constrainedColumnNames: ColumnName[];
   };
 
-export function uniqueContraint<
+export function uniqueConstraint<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
   ColumnName extends keyof ColumnsShape = keyof ColumnsShape,
@@ -61,7 +61,7 @@ export function tableConstraints<
         & IdentifiableTableConstraint<string, Context>
         & TableColumnsConstraint<ColumnsShape, Context> = {
           constraintIdentity,
-          ...uniqueContraint(...constrainedColumnNames),
+          ...uniqueConstraint(...constrainedColumnNames),
         };
       constraints.push(constraint);
       return constraint;

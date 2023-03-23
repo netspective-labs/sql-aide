@@ -50,10 +50,45 @@ export function tableColumnFactory<
     return false;
   };
 
+  const unique = <ColumnName extends string, ColumnTsType extends z.ZodTypeAny>(
+    zodType: ColumnTsType,
+  ) => {
+    const sqlDomain = sdf.cacheableFrom<ColumnName, ColumnTsType>(zodType);
+    const uniqueSD:
+      & d.SqlDomain<ColumnTsType, Context, ColumnName>
+      & { isUnique: true } = {
+        ...sqlDomain,
+        isUnique: true,
+        sqlPartial: (dest) => {
+          if (dest === "create table, column defn decorators") {
+            const ctcdd = sqlDomain?.sqlPartial?.(
+              "create table, column defn decorators",
+            );
+            const decorators: tmpl.SqlTextSupplier<Context> = {
+              SQL: () => `/* UNIQUE COLUMN */`,
+            };
+            return ctcdd ? [decorators, ...ctcdd] : [decorators];
+          }
+          return sqlDomain.sqlPartial?.(dest);
+        },
+      };
+
+    // trick Typescript into thinking the Zod instance is also a SqlDomainSupplier;
+    // this allows assignment of a reference to a Zod object or use as a
+    // regular Zod schema; the sqlDomain is carried in zodType._def
+    // we do special typing of sqlDomain because isPrimaryKey, isExcludedFromInsertDML,
+    // etc. are needed by tableDefinition()
+    return zb.zodTypeBaggageProxy<typeof zodType>(
+      zodType,
+      uniqueSD,
+    ) as unknown as typeof zodType & { sqlDomain: typeof uniqueSD };
+  };
+
   return {
     ...sdf,
     ...zb,
     isTableColumnDefn,
+    unique,
   };
 }
 

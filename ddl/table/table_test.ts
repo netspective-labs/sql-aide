@@ -3,7 +3,8 @@ import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
 // import * as za from "../../lib/universal/zod-aide.ts";
 import * as tmpl from "../../emit/mod.ts";
-import * as t from "./mod.ts";
+import * as mod from "./mod.ts";
+import * as dml from "../../dml/mod.ts";
 import * as s from "../../dql/select.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -14,19 +15,6 @@ const expectType = <T>(_value: T) => {
 };
 
 type SyntheticContext = tmpl.SqlEmitContext;
-// const ctx: SyntheticContext = tmpl.typicalSqlEmitContext();
-
-// type HousekeepingColumnsDefns<Context extends tmpl.SqlEmitContext> = {
-//   readonly created_at: d.AxiomSqlDomain<Date | undefined, Context>;
-// };
-
-// function housekeeping<
-//   Context extends tmpl.SqlEmitContext,
-// >(): HousekeepingColumnsDefns<Context> {
-//   return {
-//     created_at: d.createdAt(),
-//   };
-// }
 
 const sqlGen = () => {
   const ctx: SyntheticContext = tmpl.typicalSqlEmitContext();
@@ -38,7 +26,8 @@ const sqlGen = () => {
 };
 
 const syntheticSchema = () => {
-  const pkcFactory = t.primaryKeyColumnFactory<SyntheticContext>();
+  const tcf = mod.tableColumnFactory<Any, SyntheticContext>();
+  const pkcFactory = mod.primaryKeyColumnFactory<SyntheticContext>();
   const commonColumns = {
     text: z.string(),
     text_nullable: z.string().optional(),
@@ -46,22 +35,46 @@ const syntheticSchema = () => {
     int_nullable: z.number().optional(),
     // TODO: add all the other scalars and types
   };
+  const housekeeping = {
+    columns: {
+      created_at: z.date().default(new Date()).optional(),
+    },
+    // IMPORTANT: pass this into tableColumnsRowFactory(..., { defaultIspOptions: housekeeping.insertStmtPrepOptions })
+    insertStmtPrepOptions: <TableName extends string>() => {
+      const result: dml.InsertStmtPreparerOptions<
+        TableName,
+        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        SyntheticContext
+      > = {
+        // created_at should be filled in by the database so we don't want
+        // to emit it as part of the an insert DML SQL statement
+        isColumnEmittable: (name) => name == "created_at" ? false : true,
+      };
+      return result as dml.InsertStmtPreparerOptions<
+        Any,
+        Any,
+        Any,
+        SyntheticContext
+      >;
+    },
+  };
 
-  const tableWithoutPK = t.tableDefinition("synthetic_table_without_pk", {
+  const tableWithoutPK = mod.tableDefinition("synthetic_table_without_pk", {
     ...commonColumns,
   });
-  const tableWithAutoIncPK = t.tableDefinition(
+  const tableWithAutoIncPK = mod.tableDefinition(
     "synthetic_table_with_auto_inc_pk",
     {
       auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
       ...commonColumns,
     },
   );
-  const tableWithTextPK = t.tableDefinition("synthetic_table_with_text_pk", {
+  const tableWithTextPK = mod.tableDefinition("synthetic_table_with_text_pk", {
     text_primary_key: pkcFactory.primaryKey(),
     ...commonColumns,
   });
-  const tableWithOnDemandPK = t.tableDefinition(
+  const tableWithOnDemandPK = mod.tableDefinition(
     "synthetic_table_with_uaod_pk",
     {
       ua_on_demand_primary_key: pkcFactory.uaDefaultableTextPrimaryKey(
@@ -70,14 +83,45 @@ const syntheticSchema = () => {
       ...commonColumns,
     },
   );
+  const tableWithConstraints = mod.tableDefinition(
+    "synthetic_table_with_constraints",
+    {
+      text_primary_key: pkcFactory.primaryKey(),
+      column_unique: tcf.unique(z.string()),
+      ...housekeeping.columns,
+    },
+    {
+      // test "manual" creation of constraints
+      sqlPartial: (destination) => {
+        if (destination == "after all column definitions") {
+          return [
+            {
+              SQL: () =>
+                `UNIQUE(column_one_text, column_three_text_digest) /* CUSTOM CONSTRAINT */`,
+            },
+          ];
+        }
+      },
+      // test "automatic" creation of unique constraints
+      constraints: (props, tableName) => {
+        const c = mod.tableConstraints(tableName, props);
+        return [
+          c.unique("column_unique", "created_at"),
+          c.uniqueNamed("uniq_constr_name", "text_primary_key", "created_at"),
+        ];
+      },
+    },
+  );
 
   return {
     pkcFactory,
     commonColumns,
+    housekeeping,
     tableWithoutPK,
     tableWithAutoIncPK,
     tableWithTextPK,
     tableWithOnDemandPK,
+    tableWithConstraints,
   };
 };
 
@@ -98,14 +142,17 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     "[1] valid table and columns (without any PKs)",
     async (innerTC) => {
       const { tableWithoutPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
-      ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
-      ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
+      ta.assert(mod.isTableDefinition(table)); // if you don't care which table it is
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_without_pk")); // if you want Typescript to type-check specific table
+      ta.assertEquals(
+        mod.isTableDefinition(table, "invalid_table_name"),
+        false,
+      );
 
       type TableColumnDefn<
         ColumnName extends string,
         ColumnTsType extends z.ZodTypeAny,
-      > = t.TableColumnDefn<
+      > = mod.TableColumnDefn<
         "synthetic_table_without_pk",
         ColumnName,
         ColumnTsType,
@@ -182,7 +229,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 
   await tc.step("[2] valid auto-inc PK table and columns", async (innerTC) => {
     const { tableWithAutoIncPK: table } = syntheticSchema();
-    ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
+    ta.assert(mod.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
 
     await innerTC.step("type safety", () => {
       // tableDefinition() properly "types" table.primaryKey to be the collection
@@ -197,7 +244,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     await innerTC.step("primary key definition", () => {
       ta.assertEquals(
         Array.from(Object.values(table.columns)).filter((d) =>
-          t.isTablePrimaryKeyColumnDefn(d) ? true : false
+          mod.isTablePrimaryKeyColumnDefn(d) ? true : false
         ).map((d) => d.identity),
         ["auto_inc_primary_key"],
       );
@@ -226,9 +273,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 
   await tc.step("[3] valid text PK table and columns", async (innerTC) => {
     const { tableWithTextPK: table } = syntheticSchema();
-    ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
-    ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
-    ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
+    ta.assert(mod.isTableDefinition(table)); // if you don't care which table it is
+    ta.assert(mod.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
+    ta.assertEquals(mod.isTableDefinition(table, "invalid_table_name"), false);
 
     await innerTC.step("type safety", () => {
       // tableDefinition() properly "types" table.primaryKey to be the collection
@@ -265,9 +312,12 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     "[4] valid defaultable text PK table and columns",
     async (innerTC) => {
       const { tableWithOnDemandPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table)); // if you don't care which table it is
-      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk")); // if you want Typescript to type-check specific table
-      ta.assertEquals(t.isTableDefinition(table, "invalid_table_name"), false);
+      ta.assert(mod.isTableDefinition(table)); // if you don't care which table it is
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_with_uaod_pk")); // if you want Typescript to type-check specific table
+      ta.assertEquals(
+        mod.isTableDefinition(table, "invalid_table_name"),
+        false,
+      );
 
       await innerTC.step("type safety", () => {
         // tableDefinition() properly "types" table.primaryKey to be the collection
@@ -316,7 +366,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     tableWithAutoIncPK,
   } = syntheticSchema();
 
-  const table = t.tableDefinition(
+  const table = mod.tableDefinition(
     "synthetic_table_with_foreign_keys",
     {
       auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
@@ -330,7 +380,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     },
   );
 
-  await tc.step("inference compile-time type safety", () => {
+  await tc.step("references compile-time type safety", () => {
     expectType<{
       ua_on_demand_primary_key: () => z.ZodString;
       // TODO:        & d.SqlDomainSupplier<z.ZodString, Any, SyntheticContext>;
@@ -355,7 +405,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     );
   });
 
-  await tc.step("inference run-time assurance", () => {
+  await tc.step("references run-time assurance", () => {
     ta.assertEquals(Array.from(Object.keys(tableWithAutoIncPK.references)), [
       "auto_inc_primary_key",
       "text",
@@ -406,7 +456,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     // );
   });
 
-  await tc.step("reference run-time assurance", () => {
+  await tc.step("table components run-time assurance", () => {
     ta.assertEquals(Array.from(Object.keys(table.columns)), [
       "auto_inc_primary_key",
       "fk_text_primary_key",
@@ -460,6 +510,32 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
   });
 });
 
+Deno.test("SQL Aide (SQLa) Table DDL Constraints", async (tc) => {
+  const { tableWithConstraints: table } = syntheticSchema();
+
+  await tc.step("SQL DDL with no lint issues", () => {
+    const { ctx, ddlOptions, lintState } = sqlGen();
+    ta.assertEquals(
+      tmpl.SQL(ddlOptions)`
+    ${lintState.sqlTextLintSummary}
+
+    ${table}`.SQL(ctx),
+      uws(`
+      -- no SQL lint issues (typicalSqlTextLintManager)
+
+      CREATE TABLE "synthetic_table_with_constraints" (
+          "text_primary_key" TEXT PRIMARY KEY,
+          "column_unique" TEXT /* UNIQUE COLUMN */,
+          "created_at" DATE,
+          UNIQUE("column_unique"),
+          UNIQUE("column_unique", "created_at"),
+          UNIQUE("text_primary_key", "created_at"),
+          UNIQUE(column_one_text, column_three_text_digest) /* CUSTOM CONSTRAINT */
+      );`),
+    );
+  });
+});
+
 Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
   /**
    * Test strategy:
@@ -476,8 +552,8 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
     "[1] valid insert statement for a table without primary keys",
     async (innerTC) => {
       const { tableWithoutPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table, "synthetic_table_without_pk"));
-      const tableRF = t.tableColumnsRowFactory(
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_without_pk"));
+      const tableRF = mod.tableColumnsRowFactory(
         "synthetic_table_without_pk",
         table.zoSchema.shape,
       );
@@ -514,8 +590,10 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
     "[2] valid insert statement for a table with auto-inc primary key",
     async (innerTC) => {
       const { tableWithAutoIncPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"));
-      const tableRF = t.tableColumnsRowFactory(
+      ta.assert(
+        mod.isTableDefinition(table, "synthetic_table_with_auto_inc_pk"),
+      );
+      const tableRF = mod.tableColumnsRowFactory(
         "synthetic_table_with_auto_inc_pk",
         table.zoSchema.shape,
       );
@@ -625,9 +703,9 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
     "[3] valid insert statement for a table with text primary key",
     async (innerTC) => {
       const { tableWithTextPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_with_text_pk")); // if you want Typescript to type-check specific table
 
-      const tableRF = t.tableColumnsRowFactory(
+      const tableRF = mod.tableColumnsRowFactory(
         "synthetic_table_with_text_pk",
         table.zoSchema.shape,
       );
@@ -669,9 +747,9 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
     "[4] valid insert statement for a table with UA-defaultable (on demand) text primary key",
     async (innerTC) => {
       const { tableWithOnDemandPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
 
-      const tableRF = t.tableColumnsRowFactory(
+      const tableRF = mod.tableColumnsRowFactory(
         table.tableName,
         table.zoSchema.shape,
       );
@@ -710,8 +788,8 @@ Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
     "valid select statement for a table",
     async (innerTC) => {
       const { tableWithOnDemandPK: table } = syntheticSchema();
-      ta.assert(t.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
-      const tableSF = t.tableSelectFactory(
+      ta.assert(mod.isTableDefinition(table, "synthetic_table_with_uaod_pk"));
+      const tableSF = mod.tableSelectFactory(
         table.tableName,
         table.zoSchema.shape,
       );
