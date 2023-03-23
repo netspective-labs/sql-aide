@@ -355,7 +355,6 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   );
 
   await tc.step("TODO: indexes", () => {});
-  await tc.step("TODO: constraints", () => {});
   await tc.step("TODO: lint messages", () => {});
 });
 
