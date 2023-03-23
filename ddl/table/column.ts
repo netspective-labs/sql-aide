@@ -3,6 +3,7 @@ import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
 import * as za from "../../lib/universal/zod-aide.ts";
 import * as d from "../../domain/mod.ts";
+import * as con from "./constraint.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -56,7 +57,7 @@ export function tableColumnFactory<
     const sqlDomain = sdf.cacheableFrom<ColumnName, ColumnTsType>(zodType);
     const uniqueSD:
       & d.SqlDomain<ColumnTsType, Context, ColumnName>
-      & { isUnique: true } = {
+      & con.UniqueTableColumn = {
         ...sqlDomain,
         isUnique: true,
         sqlPartial: (dest) => {

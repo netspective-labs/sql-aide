@@ -141,7 +141,7 @@ export function tableDefinition<
     [
       Property in keyof ColumnsShape as Extract<
         Property,
-        ColumnsShape[Property] extends { sqlDomain: { isUnique: true } }
+        ColumnsShape[Property] extends { sqlDomain: con.UniqueTableColumn }
           ? Property
           : never
       >
