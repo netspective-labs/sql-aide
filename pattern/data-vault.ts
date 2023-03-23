@@ -304,7 +304,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       satelliteName: SatelliteName,
       columnsShape: ColumnsShape,
     ) => {
-      const satTableName = names.hubSatelliteTableName(hubName, satelliteName);
+      const satTableName = names.linkSatelliteTableName(hubName, satelliteName);
       // TODO: add lint rule for checking if key or group of keys is unique
       return {
         satelliteName,
@@ -319,16 +319,67 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       };
     };
 
-    if (!hubTableDefn.primaryKey) {
-      throw Error(`no primary key column defined for hubTable ${hubName}`);
-    }
     // TODO: add lint rule for checking if hub business key or group of keys is unique
-    const result = {
+    return {
       hubName,
       ...hubTableDefn,
       satelliteTable,
     };
-    return result;
+  };
+
+  const linkTable = <
+    LinkName extends string,
+    ColumnsShape extends
+      & z.ZodRawShape
+      & Record<
+        `link_${LinkName}_id`,
+        ReturnType<typeof keys.ulidPrimaryKey>
+      >
+      & typeof housekeeping.columns,
+  >(linkName: LinkName, props: ColumnsShape) => {
+    const linkTableName = names.linkTableName(linkName);
+    const linkTableDefn = table(linkTableName, {
+      ...props,
+      ...housekeeping.columns,
+    });
+
+    const satelliteTable = <
+      SatelliteName extends string,
+      ColumnsShape extends
+        & z.ZodRawShape
+        & Record<`link_${LinkName}_id`, ReturnType<typeof keys.ulidPrimaryKey>>
+        & Record<
+          `sat_${LinkName}_${SatelliteName}_id`,
+          ReturnType<typeof keys.ulidPrimaryKey>
+        >,
+    >(
+      satelliteName: SatelliteName,
+      columnsShape: ColumnsShape,
+    ) => {
+      const satTableName = names.linkSatelliteTableName(
+        linkName,
+        satelliteName,
+      );
+      // TODO: add lint rule for checking if key or group of keys is unique
+      return {
+        satelliteName,
+        ...table(
+          satTableName,
+          {
+            ...columnsShape,
+            ...housekeeping.columns,
+          },
+        ),
+        linkTable: linkTableDefn,
+      };
+    };
+
+    // TODO: add lint rule for checking if hub business key or group of keys is unique
+    return {
+      linkName,
+      ...linkTableDefn,
+      satelliteTable,
+    };
   };
 
   return {
@@ -339,5 +390,6 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     table,
     tableLintRules,
     hubTable,
+    linkTable,
   };
 }
