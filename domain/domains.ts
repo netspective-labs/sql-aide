@@ -40,14 +40,23 @@ export function sqlDomainsFactory<
         typeof zb.zodTypeBaggageProxy<RawShape[Property]>
       >;
     },
+    SqlDomainSchema extends {
+      [Property in keyof RawShape]: d.SqlDomain<
+        RawShape[Property],
+        Context,
+        Extract<Property, string>
+      >;
+    },
   >(zodRawShape: RawShape, init?: {
     readonly identity?: (init: {
       readonly zoSchema: z.ZodObject<RawShape>;
       readonly zbSchema: BaggageSchema;
+      readonly sdSchema: SqlDomainSchema;
     }) => EntityIdentity;
   }) => {
     const zoSchema = z.object(zodRawShape).strict();
     const zbSchema: BaggageSchema = {} as Any;
+    const sdSchema: SqlDomainSchema = {} as Any;
 
     const { shape, keys: shapeKeys } = zoSchema._getCached();
     for (const key of shapeKeys) {
@@ -57,14 +66,16 @@ export function sqlDomainsFactory<
         member,
         sqlDomain,
       );
+      (sdSchema[key] as Any) = zbSchema[key].sqlDomain;
     }
 
-    const identity = init?.identity?.({ zoSchema, zbSchema }) ??
+    const identity = init?.identity?.({ zoSchema, zbSchema, sdSchema }) ??
       (`anonymous${++sqlDomainsIterationIndex}` as EntityIdentity);
     return {
       identity,
       zoSchema,
       zbSchema,
+      sdSchema,
     };
   };
 

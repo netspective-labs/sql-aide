@@ -139,12 +139,7 @@ export function safeViewDefinitionCustom<
     & Partial<emit.EmbeddedSqlSupplier>,
 ) {
   const sdf = d.sqlDomainsFactory<ViewName, Context>();
-
-  type BaggageSchema = {
-    [Property in keyof ColumnsShape]: ReturnType<
-      typeof sdf.zodTypeBaggageProxy<ColumnsShape[Property]>
-    >;
-  };
+  const sd = sdf.sqlDomains(zodRawShape);
 
   type ColumnDefns = {
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
@@ -157,29 +152,22 @@ export function safeViewDefinitionCustom<
       : never;
   };
 
-  const zoSchema = vdOptions?.zodObject?.(zodRawShape) ??
-    z.object(zodRawShape).strict();
-  const zbSchema: BaggageSchema = {} as Any;
+  const { zoSchema, zbSchema } = sd;
   const columns: ColumnDefns = {} as Any;
   const columnsList: ViewColumnDefn<ViewName, Any, z.ZodTypeAny, Context>[] =
     [];
-  const { shape: viewShape, keys: viewShapeKeys } = zoSchema._getCached();
+  const { keys: viewShapeKeys } = zoSchema._getCached();
 
   for (const key of viewShapeKeys) {
-    const member = viewShape[key];
-    const sqlDomain = sdf.cacheableFrom(member, { identity: key as Any });
-    (zbSchema[key] as Any) = sdf.zodTypeBaggageProxy<typeof member>(
-      member,
-      sqlDomain,
-    );
-    const columnDefn = zbSchema[key] as unknown as ViewColumnDefn<
+    const { sqlDomain } = zbSchema[key];
+    const columnDefn = sqlDomain as unknown as ViewColumnDefn<
       ViewName,
       Any,
       z.ZodTypeAny,
       Context
     >;
     (columnDefn as unknown as { viewName: ViewName }).viewName = viewName;
-    (columnDefn as unknown as { columnName: string }).columnName =
+    (columnDefn as unknown as { columnName: ColumnName }).columnName =
       sqlDomain.identity;
     (columns[columnDefn.identity] as Any) = columnDefn;
     columnsList.push(columnDefn);
@@ -251,7 +239,7 @@ export function safeViewDefinition<
   ColumnName extends keyof ColumnsShape & string = keyof ColumnsShape & string,
 >(
   viewName: ViewName,
-  props: ColumnsShape,
+  columnsShape: ColumnsShape,
   vdOptions?:
     & ViewDefnOptions<ViewName, ColumnName, ColumnsShape, Context>
     & Partial<emit.EmbeddedSqlSupplier>,
@@ -260,13 +248,20 @@ export function safeViewDefinition<
     literals: TemplateStringsArray,
     ...expressions: emit.SqlPartialExpression<Context>[]
   ) => {
-    const { embeddedSQL = emit.SQL } = vdOptions ?? {};
-    const selectStmt = ss.typedSelect<Any, ColumnsShape, Context>(props, {
-      embeddedSQL,
-    });
+    // use "symbolsFirst" so that sqlDomains can be passed in for naming
+    const {
+      embeddedSQL = (stsOptions: emit.SqlTextSupplierOptions<Any>) =>
+        emit.SQL({ ...stsOptions, symbolsFirst: true }),
+    } = vdOptions ?? {};
+    const selectStmt = ss.typedSelect<Any, ColumnsShape, Context>(
+      columnsShape,
+      {
+        embeddedSQL,
+      },
+    );
     return safeViewDefinitionCustom(
       viewName,
-      props,
+      columnsShape,
       selectStmt(literals, ...expressions),
       vdOptions,
     );
