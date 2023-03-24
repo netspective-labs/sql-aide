@@ -57,16 +57,18 @@ export function sqlDomainsFactory<
     const zoSchema = z.object(zodRawShape).strict();
     const zbSchema: BaggageSchema = {} as Any;
     const sdSchema: SqlDomainSchema = {} as Any;
+    const domains: d.SqlDomain<Any, Context, Any>[] = [];
 
     const { shape, keys: shapeKeys } = zoSchema._getCached();
     for (const key of shapeKeys) {
       const member = shape[key];
-      const sqlDomain = sdf.cacheableFrom(member, { identity: key as Any });
       (zbSchema[key] as Any) = zb.zodTypeBaggageProxy<typeof member>(
         member,
-        sqlDomain,
+        sdf.cacheableFrom(member, { identity: key as Any }),
       );
-      (sdSchema[key] as Any) = zbSchema[key].sqlDomain;
+      const { sqlDomain } = zbSchema[key];
+      (sdSchema[key] as Any) = sqlDomain;
+      domains.push(sqlDomain);
     }
 
     const identity = init?.identity?.({ zoSchema, zbSchema, sdSchema }) ??
@@ -76,6 +78,7 @@ export function sqlDomainsFactory<
       zoSchema,
       zbSchema,
       sdSchema,
+      domains,
     };
   };
 
