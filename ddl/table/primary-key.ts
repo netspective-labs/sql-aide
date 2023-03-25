@@ -35,9 +35,11 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
     d.SqlDomainSupplier<Any, Any, Context>
   >("sqlDomain");
 
-  const primaryKey = <ColumnName extends string>(zodType = z.string()) => {
-    const sqlDomain = sdf.cacheableFrom<ColumnName, z.ZodString>(zodType);
-    const pkSD: TablePrimaryKeyColumnDefn<z.ZodString, Context> = {
+  const primaryKey = <ColumnName extends string, ZodType extends z.ZodTypeAny>(
+    zodType: ZodType,
+  ) => {
+    const sqlDomain = sdf.cacheableFrom<ColumnName, typeof zodType>(zodType);
+    const pkSD: TablePrimaryKeyColumnDefn<typeof zodType, Context> = {
       ...sqlDomain,
       isPrimaryKey: true,
       isAutoIncrement: false,
@@ -157,6 +159,8 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
   };
 
   return {
+    sdFactory: sdf,
+    zodBaggage: zb,
     primaryKey,
     autoIncPrimaryKey,
     uaDefaultableTextPrimaryKey,

@@ -206,6 +206,21 @@ export function zodDateSqlDomainFactory<
         sqlDataType: () => ({ SQL: () => `DATE` }),
       };
     },
+    createdAt: <Identity extends string>(
+      init?: {
+        readonly identity?: Identity;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(
+          z.date().default(new Date()).optional() as Any,
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `DATETIME` }),
+        sqlDefaultValue: () => ({ SQL: () => `CURRENT_TIMESTAMP` }),
+      };
+    },
   };
 }
 
@@ -338,6 +353,7 @@ export function zodTypeSqlDomainFactory<
     anySDF,
     stringSDF,
     numberSDF,
+    dateSDF,
     detachFrom,
     from,
     cacheableFrom,

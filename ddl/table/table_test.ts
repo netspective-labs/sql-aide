@@ -71,7 +71,7 @@ const syntheticSchema = () => {
     },
   );
   const tableWithTextPK = mod.tableDefinition("synthetic_table_with_text_pk", {
-    text_primary_key: pkcFactory.primaryKey(),
+    text_primary_key: pkcFactory.primaryKey(z.string()),
     ...commonColumns,
   });
   const tableWithOnDemandPK = mod.tableDefinition(
@@ -86,7 +86,7 @@ const syntheticSchema = () => {
   const tableWithConstraints = mod.tableDefinition(
     "synthetic_table_with_constraints",
     {
-      text_primary_key: pkcFactory.primaryKey(),
+      text_primary_key: pkcFactory.primaryKey(z.string()),
       column_unique: tcf.unique(z.string()),
       ...housekeeping.columns,
     },

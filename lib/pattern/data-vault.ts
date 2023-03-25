@@ -99,7 +99,7 @@ export function dataVaultKeys<Context extends SQLa.SqlEmitContext>() {
   const pkcf = SQLa.primaryKeyColumnFactory<Context>();
   const { ulid } = dataVaultDomains<Context>();
 
-  const textPrimaryKey = () => pkcf.primaryKey();
+  const textPrimaryKey = () => pkcf.primaryKey(z.string());
   const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
   const autoIncPrimaryKey = () => pkcf.autoIncPrimaryKey();
 
