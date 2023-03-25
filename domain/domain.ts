@@ -162,6 +162,22 @@ export function zodNumberSqlDomainFactory<
   >();
   return {
     ...ztaSDF,
+    bigint: <
+      ZodType extends z.ZodType<bigint, z.ZodBigIntDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({ SQL: () => `BIGINT` }),
+      };
+    },
     integer: <
       ZodType extends z.ZodType<number, z.ZodNumberDef>,
       Identity extends string,
@@ -319,6 +335,10 @@ export function zodTypeSqlDomainFactory<
 
       case z.ZodFirstPartyTypeKind.ZodNumber: {
         return numberSDF.integer(zodType, init);
+      }
+
+      case z.ZodFirstPartyTypeKind.ZodBigInt: {
+        return numberSDF.bigint(zodType, init);
       }
 
       case z.ZodFirstPartyTypeKind.ZodDate: {
