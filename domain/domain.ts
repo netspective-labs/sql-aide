@@ -125,18 +125,16 @@ export function zodTypeAnySqlDomainFactory<
 }
 
 export function zodStringSqlDomainFactory<
-  ZodType extends z.ZodType<string, z.ZodStringDef>,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
 >() {
-  const ztaSDF = zodTypeAnySqlDomainFactory<
-    ZodType,
-    DomainsIdentity,
-    Context
-  >();
+  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
   return {
     ...ztaSDF,
-    string: <Identity extends string>(
+    string: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
       zodType: ZodType,
       init?: {
         readonly identity?: Identity;
@@ -154,18 +152,20 @@ export function zodStringSqlDomainFactory<
 }
 
 export function zodNumberSqlDomainFactory<
-  ZodType extends z.ZodType<number, z.ZodNumberDef>,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
 >() {
   const ztaSDF = zodTypeAnySqlDomainFactory<
-    ZodType,
+    z.ZodTypeAny,
     DomainsIdentity,
     Context
   >();
   return {
     ...ztaSDF,
-    number: <Identity extends string>(
+    integer: <
+      ZodType extends z.ZodType<number, z.ZodNumberDef>,
+      Identity extends string,
+    >(
       zodType: ZodType,
       init?: {
         readonly identity?: Identity;
@@ -178,22 +178,35 @@ export function zodNumberSqlDomainFactory<
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
       };
     },
+    integerNullable: <
+      ZodType extends z.ZodOptional<z.ZodType<number, z.ZodNumberDef>>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
+        sqlDataType: () => ({ SQL: () => `INTEGER` }),
+      };
+    },
   };
 }
 
 export function zodDateSqlDomainFactory<
-  ZodType extends z.ZodType<Date, z.ZodDateDef>,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
 >() {
-  const ztaSDF = zodTypeAnySqlDomainFactory<
-    ZodType,
-    DomainsIdentity,
-    Context
-  >();
+  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
   return {
     ...ztaSDF,
-    date: <Identity extends string>(
+    date: <
+      ZodType extends z.ZodType<Date, z.ZodDateDef>,
+      Identity extends string,
+    >(
       zodType: ZodType,
       init?: {
         readonly identity?: Identity;
@@ -206,7 +219,26 @@ export function zodDateSqlDomainFactory<
         sqlDataType: () => ({ SQL: () => `DATE` }),
       };
     },
-    createdAt: <Identity extends string>(
+    dateTime: <
+      ZodType extends z.ZodType<Date, z.ZodDateDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({ SQL: () => `DATETIME` }),
+      };
+    },
+    createdAt: <
+      ZodType extends z.ZodOptional<z.ZodDefault<z.ZodDate>>,
+      Identity extends string,
+    >(
       init?: {
         readonly identity?: Identity;
         readonly parents?: z.ZodTypeAny[];
@@ -214,7 +246,7 @@ export function zodDateSqlDomainFactory<
     ) => {
       return {
         ...ztaSDF.defaults<Identity>(
-          z.date().default(new Date()).optional() as Any,
+          z.date().default(new Date()).optional() as ZodType,
           { isOptional: true, ...init },
         ),
         sqlDataType: () => ({ SQL: () => `DATETIME` }),
@@ -232,24 +264,9 @@ export function zodTypeSqlDomainFactory<
     "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE";
 
   const anySDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
-
-  const stringSDF = zodStringSqlDomainFactory<
-    z.ZodType<string, z.ZodStringDef, string>,
-    DomainsIdentity,
-    Context
-  >();
-
-  const numberSDF = zodNumberSqlDomainFactory<
-    z.ZodType<number, z.ZodNumberDef, number>,
-    DomainsIdentity,
-    Context
-  >();
-
-  const dateSDF = zodDateSqlDomainFactory<
-    z.ZodType<Date, z.ZodDateDef, Date>,
-    DomainsIdentity,
-    Context
-  >();
+  const stringSDF = zodStringSqlDomainFactory<DomainsIdentity, Context>();
+  const numberSDF = zodNumberSqlDomainFactory<DomainsIdentity, Context>();
+  const dateSDF = zodDateSqlDomainFactory<DomainsIdentity, Context>();
 
   const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
     delete (zodType as Any)["sqlDomain"];
@@ -301,7 +318,7 @@ export function zodTypeSqlDomainFactory<
       }
 
       case z.ZodFirstPartyTypeKind.ZodNumber: {
-        return numberSDF.number(zodType, init);
+        return numberSDF.integer(zodType, init);
       }
 
       case z.ZodFirstPartyTypeKind.ZodDate: {

@@ -178,7 +178,7 @@ export function textEnumTable<
   const tcf = c.tableColumnFactory<TableName, Context>();
   const pkf = pk.primaryKeyColumnFactory<Context>();
   const codeSD: d.SqlDomain<z.ZodString, Context, "code"> = {
-    ...tcf.stringSDF.string<"code">(z.string()),
+    ...tcf.stringSDF.string<z.ZodString, "code">(z.string()),
     identity: "code",
   };
   const codeZodDomain = tcf.zodTypeBaggageProxy<z.ZodString>(
@@ -187,7 +187,7 @@ export function textEnumTable<
   ) as unknown as z.ZodString & { sqlDomain: typeof codeSD };
 
   const valueSD: d.SqlDomain<z.ZodString, Context, "value"> = {
-    ...tcf.stringSDF.string<"value">(z.string()),
+    ...tcf.stringSDF.string<z.ZodString, "value">(z.string()),
   };
   const valueZodDomain = tcf.zodTypeBaggageProxy<z.ZodString>(
     z.string(),
