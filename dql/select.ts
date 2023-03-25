@@ -51,11 +51,6 @@ export type SelectTemplateOptions<
 > = tmpl.SqlTextSupplierOptions<Context> & {
   readonly symbolsFirst?: boolean;
   readonly selectStmtName?: SelectStmtName;
-  readonly onPropertyNotAxiomSqlDomain?: (
-    name: string,
-    axiom: Any,
-    domains: d.SqlDomain<Any, Context, Any>[],
-  ) => void;
   readonly firstTokenGuard?: (
     firstToken: string,
   ) => true | tmpl.SqlLintIssueSupplier;

@@ -117,7 +117,7 @@ export function dataVaultKeys<Context extends SQLa.SqlEmitContext>() {
 export function dataVaultNames<Context extends SQLa.SqlEmitContext>() {
   /**
    * All our table names should be strongly typed and consistent. Generics are
-   * used so that they are passed into Axiom, SQLa domain, etc. properly typed.
+   * used so that they are passed into Zod, SQLa domain, etc. properly typed.
    * @param name the name of the table
    * @returns the transformed table name (e.g. in case prefixes should be added)
    */
@@ -235,7 +235,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       readonly constraints?: <
         TableName extends string,
       >(
-        columnsAxioms: ColumnsShape,
+        columnsShape: ColumnsShape,
         tableName: TableName,
       ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
       readonly lint?:
