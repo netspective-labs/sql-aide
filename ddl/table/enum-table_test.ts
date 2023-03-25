@@ -12,11 +12,11 @@ const expectType = <T>(_value: T) => {
 Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   // code is text, value is a number
   enum syntheticEnum1 {
+    code0,
     code1,
-    code2,
   }
 
-  const numericEnumModel = mod.enumTable(
+  const numericEnumModel = mod.ordinalEnumTable(
     "synthetic_enum_numeric",
     syntheticEnum1,
   );
@@ -49,8 +49,8 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
 
   await tc.step("DML type-safety", () => {
     const row = numericEnumModel.prepareInsertable({
-      code: syntheticEnum1.code1,
-      value: "code1",
+      code: syntheticEnum1.code0,
+      value: syntheticEnum1[syntheticEnum1.code0],
     });
     expectType<number | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
     expectType<string | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.value); // should see compile error if this doesn't work
@@ -59,8 +59,8 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   await tc.step("typed Typescript objects", () => {
     type Synthetic = z.infer<typeof numericEnumModel.zoSchema>;
     const synthetic: Synthetic = {
-      code: 1,
-      value: "code1",
+      code: syntheticEnum1.code1,
+      value: syntheticEnum1[syntheticEnum1.code1],
     };
     expectType<Synthetic>(synthetic);
   });
@@ -70,8 +70,8 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
     const { seedDML } = numericEnumModel;
     ta.assert(Array.isArray(seedDML));
     ta.assertEquals(2, seedDML.length);
-    ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (0, 'code1')`, seedDML[0].SQL(ctx));
-    ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (1, 'code2')`, seedDML[1].SQL(ctx));
+    ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (0, 'code0')`, seedDML[0].SQL(ctx));
+    ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (1, 'code1')`, seedDML[1].SQL(ctx));
   });
 });
 
@@ -83,7 +83,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
     code3 = "value3",
   }
 
-  const textEnumModel = mod.enumTextTable(
+  const textEnumModel = mod.textEnumTable(
     "synthetic_enum_text",
     syntheticEnum2,
   );
@@ -149,7 +149,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
   enum EmptyEnum {
   }
 
-  const emptyEnumModel = mod.enumTextTable(
+  const emptyEnumModel = mod.textEnumTable(
     "empty_enum",
     EmptyEnum,
   );

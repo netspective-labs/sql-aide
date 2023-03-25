@@ -29,7 +29,7 @@ export const isEnumTableDefn = safety.typeGuard<EnumTableDefn>(
  * @param seedEnum is enum whose list of values become the seed values of the lookup table
  * @returns a SQLa table with seed rows as insertDML and original typed enum for reference
  */
-export function enumTable<
+export function ordinalEnumTable<
   EnumCode extends string,
   EnumValue extends number,
   TableName extends string,
@@ -138,7 +138,7 @@ export function enumTable<
  * @param seedEnum is enum whose list of values become the seed values of the lookup table
  * @returns a SQLa table with seed rows as insertDML and original typed enum for reference
  */
-export function enumTextTable<
+export function textEnumTable<
   EnumCode extends string,
   EnumValue extends string,
   TableName extends string,
