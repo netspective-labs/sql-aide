@@ -407,7 +407,7 @@ These engines / dialects are supported:
       [libSQL](https://github.com/libsql/libsql) with
       [pgwire](https://github.com/sunng87/pgwire)
 - [ ] read-only shell commands
-  - [ ] [PostgreSQL wire interface](https://github.com/kagis/pgwire)
+  - [ ] [pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator)
         infrastructure for CLI SQL commands
   - [ ] `mergestat` Git SQL
   - [ ] `fselect` File System SQL
@@ -435,10 +435,11 @@ References:
 
 ### Dialect Engines
 
-- [ ] Universal [PostgreSQL wire interface](https://github.com/kagis/pgwire) to
-      as many different engines as possible. When an engine (like DuckDB or
+- [ ] Universal
+      [PostgreSQL wire interface pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator)
+      to as many different engines as possible. When an engine (like DuckDB or
       osQuery, etc.) do not have native TS/JS support consider wrapping in
-      `pgwire`.
+      `pg-server`.
 - [ ] Universal `SqlEngine` and `SqlEngineInstance` interfaces and
       engine-specific implementations to prepare SQL, send into a specific
       database driver and return typed rows (array) or object lists as query
@@ -657,9 +658,11 @@ is type-safe because it's defined using a Zod schema.
 
 ## TODO
 
-- [ ] Evaluate [PostgreSQL wire interface](https://github.com/kagis/pgwire) to
-      see if it makes sense to unify all access to SQLite and other databases
-      via `pgwire`.
+- [ ] Evaluate
+      [pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator)
+      and [PostgreSQL wire interface](https://github.com/kagis/pgwire) to see if
+      it makes sense to unify all access to SQLite and other databases via
+      `pg-server`.
 - [ ] Add [`dax` shell tools](https://github.com/dsherret/dax) `SqlTextSupplier`
       wrapper to run external commands, create files, and incorporate their
       output or file references in SQL scripts.
