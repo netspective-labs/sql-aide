@@ -659,10 +659,14 @@ is type-safe because it's defined using a Zod schema.
 ## TODO
 
 - [ ] Evaluate
-      [pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator)
+      [pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator),
+      [pg\-protocol](https://github.com/brianc/node-postgres/tree/master/packages/pg-protocol)
       and [PostgreSQL wire interface](https://github.com/kagis/pgwire) to see if
       it makes sense to unify all access to SQLite and other databases via
-      `pg-server`.
+      `pg-server`. You can use ChatGPT to create an example by giving it this
+      prompt: "Write Typescript code which uses pg-server library to create a
+      simple server that can serve custom data using the PostgreSQL wire
+      protocol.".
 - [ ] Add [`dax` shell tools](https://github.com/dsherret/dax) `SqlTextSupplier`
       wrapper to run external commands, create files, and incorporate their
       output or file references in SQL scripts.
