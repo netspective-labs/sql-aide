@@ -391,17 +391,19 @@ These engines / dialects are supported:
         [rqlite](https://github.com/rqlite/rqlite) or
         [mvSQLite](https://github.com/losfair/mvsqlite) to allow access to
         SQLite remotely
-- [ ] [SurrealDB](https://surrealdb.com/)
-- [ ] [DuckDB](https://duckdb.org/) in-process SQL OLAP database management
-      system
 - [x] PostgreSQL
   - [ ] Create public [bit.io](https://bit.io/) PostgreSQL database to run unit
         tests
-- [ ] [dbt](https://www.getdbt.com/) artifacts for transformations
-- [x] read-only shell commands
-  - [x] `mergestat` Git SQL
-  - [x] `fselect` File System SQL
-  - [x] `osqueri` infrastructure SQL
+- [ ] [DuckDB](https://duckdb.org/) in-process SQL OLAP database management
+      system
+- [ ] [SurrealDB](https://surrealdb.com/)
+- [ ] [dbt](https://www.getdbt.com/) artifacts for transformations = [ ]
+      [libSQL](https://github.com/libsql/libsql) with
+      [pgwire](https://github.com/sunng87/pgwire)
+- [ ] read-only shell commands
+  - [ ] `mergestat` Git SQL
+  - [ ] `fselect` File System SQL
+  - [ ] `osqueri` infrastructure SQL
   - [ ] `steampipe` infrastructure SQL
   - [ ] `cloudquery` infrastructure SQL
   - [ ] `iasql` infrastructure SQL
