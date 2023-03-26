@@ -48,11 +48,8 @@ _baggage_ to be stored with Zod types (usually scalars). Using this bridge
 library we can create SQL-specific data and store it alongside (literally inside
 the `ZodType._def` object).
 
-This library and documentation was initially written with a custom Zod-like
-library called `Axiom`. In March 2023 Axiom was removed as our underlying data
-infrastructure in favor of Zod (which has a
-[vibrant ecosystem](https://zod.dev/?id=ecosystem)). Over time, more and more
-Axiom legacy should be removed in favor of heavy Zod focus. For example:
+Zod should be seen as the primary developer experience (DX) layer because it has
+some great extensions. For example:
 
 - if we need a JSON Schema generated from a SQL DDL definition, we can just use
   a [Zod-to-JSON Schema](https://github.com/StefanTerdell/zod-to-json-schema)
@@ -115,19 +112,25 @@ following types of SQL language constructs.
 
 ### Domains
 
+The mapping of Zod types to SQL Domain instances is handled by
+`zodTypeSqlDomainFactory` in `domain/domain.ts`. If you want to add SQL
+generation of Zod types, add a new handler in `zodTypeSqlDomainFactory`.
+
+This is the current status of what's handled (and unit tested):
+
 - [x] Zod scalars (`string`, `number`, etc.) transparently map to SQL domains
 - [x] Text
-- [ ] VARCHAR(x)
 - [x] Number
-- [ ] Date
-- [ ] DateTime
-- [ ] BigInt
+- [x] Date
+- [x] DateTime
+- [x] BigInt
+- [x] Constrained values using ZodEnum
+- [ ] VARCHAR(x)
 - [ ] JSON
 - [ ] JSONB
 - [ ] full-text search
   - [ ] PostgreSQL `tsvector` with `GIN` index
   - [ ] PostgreSQL `tsquery`
-- [ ] Constrained values using ZodEnum
 - [ ] Symmetric encrypted text (for transactional data) with automatic
       `sensitive` labeling. See https://github.com/FiloSottile/age et. al but
       use built-in database capabilities through SQL whenever possible
@@ -186,12 +189,15 @@ When two or more domains need to be coordinated, they are called multi-domains.
 
 ### Entities
 
-- [x] Table
-- [x] Enum Table (type-safe text key, text values, automatic seeds)
-- [x] Enum Table (text key, numeric values, automatic seeds)
+- [x] [Table](ddl/table/mod.ts)
+- [x] [Enum Table](ddl/table/enum-table.ts) (text key, numeric values, automatic
+      seeds)
+- [x] [Enum Table](ddl/table/enum-table.ts) (type-safe text key, text values,
+      automatic seeds)
+- [@] [Data Vault 2.0 Tables](lib/pattern/data-vault.ts) (build on _Immutable
+  Table_ patterns)
 - [ ] Immutable Table (see _Data-Oriented Programming_ patterns)
 - [ ] Association Table (`M:M` relationship between two entities)
-- [ ] Data Vault 2.0 Tables (build on _Immutable Table_ patterns)
 - [ ] Unified Star Schema (USS) "presentation layer" measures, bridges, etc.
 
 #### Entities (Table) Capabilities
@@ -200,15 +206,15 @@ When two or more domains need to be coordinated, they are called multi-domains.
 - [x] columns ("attributes") declared as domains
 - [x] primary key(s)
 - [x] foreign key references (outbound)
-- [ ] Zanzibar ([Permify](https://github.com/Permify/permify) style) ACLs
-      definition in entities and enforcement in SQL
 - [ ] columns referenced as foreign keys (inbound, aggregations, to define 1:M,
       1:1, M:1 "links")
+- [ ] Zanzibar ([Permify](https://github.com/Permify/permify) style) ACLs
+      definition in entities and enforcement in SQL
 - [ ] table labels/tags for grouping of tables like domain labels group columns
   - [ ] rollup sensitive-labeled columns and auto-label tables as sensitive
   - [ ] rollup identity-labeled (PII, PHI) columns and auto-label tables as
         PII/PHI
-- [x] JSON Schema (from Zod)
+- [ ] JSON Schema (from Zod)
 - [ ] [Invisible XML](https://invisiblexml.org/) schema
 - [ ] [CSV Schema](http://digital-preservation.github.io/csv-schema/csv-schema-1.1.html),
       [examples](https://github.com/digital-preservation/csv-schema/tree/master/example-schemas)
