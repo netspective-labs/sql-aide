@@ -407,6 +407,8 @@ These engines / dialects are supported:
       [libSQL](https://github.com/libsql/libsql) with
       [pgwire](https://github.com/sunng87/pgwire)
 - [ ] read-only shell commands
+  - [ ] [PostgreSQL wire interface](https://github.com/kagis/pgwire)
+        infrastructure for CLI SQL commands
   - [ ] `mergestat` Git SQL
   - [ ] `fselect` File System SQL
   - [ ] `osqueri` infrastructure SQL
@@ -433,6 +435,10 @@ References:
 
 ### Dialect Engines
 
+- [ ] Universal [PostgreSQL wire interface](https://github.com/kagis/pgwire) to
+      as many different engines as possible. When an engine (like DuckDB or
+      osQuery, etc.) do not have native TS/JS support consider wrapping in
+      `pgwire`.
 - [ ] Universal `SqlEngine` and `SqlEngineInstance` interfaces and
       engine-specific implementations to prepare SQL, send into a specific
       database driver and return typed rows (array) or object lists as query
@@ -651,6 +657,9 @@ is type-safe because it's defined using a Zod schema.
 
 ## TODO
 
+- [ ] Evaluate [PostgreSQL wire interface](https://github.com/kagis/pgwire) to
+      see if it makes sense to unify all access to SQLite and other databases
+      via `pgwire`.
 - [ ] Add [`dax` shell tools](https://github.com/dsherret/dax) `SqlTextSupplier`
       wrapper to run external commands, create files, and incorporate their
       output or file references in SQL scripts.
@@ -726,8 +735,8 @@ is type-safe because it's defined using a Zod schema.
       query Excel (.xlsx, .xls, .ods) files as virtual tables
 - [ ] Integrate [litetree](https://github.com/aergoio/litetree), SQLite with
       Branches (`git`-style)
-- [x] Dependency graphs (relationships from FKs, links, etc.)
-- [x] Generate PlantUML Information Engineering diagrams
+- [ ] Dependency graphs (relationships from FKs, links, etc.)
+- [ ] Generate PlantUML Information Engineering diagrams
 - [ ] Consider whether SQLa could join the [UnifiedJs](https://unifiedjs.com/)
       community as another ecosystem (like `remark`, `rehype`, `redot`, etc.)
       with a custom SQL syntax tree (`sst`?) or `unist`.
