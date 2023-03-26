@@ -272,6 +272,68 @@ export function zodDateSqlDomainFactory<
   };
 }
 
+export function zodEnumSqlDomainFactory<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+>() {
+  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  return {
+    ...ztaSDF,
+    nativeNumeric: <
+      ZodType extends z.ZodType<z.EnumLike, z.ZodNativeEnumDef<z.EnumLike>>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({ SQL: () => `INTEGER` }),
+        parents: init?.parents,
+      };
+    },
+    nativeText: <
+      ZodType extends z.ZodType<z.EnumLike, z.ZodNativeEnumDef<z.EnumLike>>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+        parents: init?.parents,
+      };
+    },
+    zodText: <
+      U extends string,
+      T extends Readonly<[U, ...U[]]> | [U, ...U[]],
+      Identity extends string,
+    >(
+      values: T,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(z.enum(values), init),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+        parents: init?.parents,
+      };
+    },
+  };
+}
+
 export function zodTypeSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
@@ -283,6 +345,7 @@ export function zodTypeSqlDomainFactory<
   const stringSDF = zodStringSqlDomainFactory<DomainsIdentity, Context>();
   const numberSDF = zodNumberSqlDomainFactory<DomainsIdentity, Context>();
   const dateSDF = zodDateSqlDomainFactory<DomainsIdentity, Context>();
+  const enumSDF = zodEnumSqlDomainFactory<DomainsIdentity, Context>();
 
   const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
     delete (zodType as Any)["sqlDomain"];
@@ -345,6 +408,10 @@ export function zodTypeSqlDomainFactory<
         return dateSDF.date(zodType, init);
       }
 
+      case z.ZodFirstPartyTypeKind.ZodNativeEnum: {
+        return enumSDF.nativeNumeric(zodType, init);
+      }
+
       default:
         throw new Error(
           `Unable to map Zod type ${zodDef.typeName} to SQL domain`,
@@ -391,6 +458,7 @@ export function zodTypeSqlDomainFactory<
     stringSDF,
     numberSDF,
     dateSDF,
+    enumSDF,
     detachFrom,
     from,
     cacheableFrom,

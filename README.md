@@ -127,7 +127,7 @@ following types of SQL language constructs.
 - [ ] full-text search
   - [ ] PostgreSQL `tsvector` with `GIN` index
   - [ ] PostgreSQL `tsquery`
-- [ ] Constrained values using Axiom $.enum
+- [ ] Constrained values using ZodEnum
 - [ ] Symmetric encrypted text (for transactional data) with automatic
       `sensitive` labeling. See https://github.com/FiloSottile/age et. al but
       use built-in database capabilities through SQL whenever possible
@@ -187,9 +187,9 @@ When two or more domains need to be coordinated, they are called multi-domains.
 ### Entities
 
 - [x] Table
+- [x] Enum Table (type-safe text key, text values, automatic seeds)
+- [x] Enum Table (text key, numeric values, automatic seeds)
 - [ ] Immutable Table (see _Data-Oriented Programming_ patterns)
-- [ ] Enum Table (type-safe text key, text values, automatic seeds)
-- [ ] Enum Table (text key, numeric values, automatic seeds)
 - [ ] Association Table (`M:M` relationship between two entities)
 - [ ] Data Vault 2.0 Tables (build on _Immutable Table_ patterns)
 - [ ] Unified Star Schema (USS) "presentation layer" measures, bridges, etc.

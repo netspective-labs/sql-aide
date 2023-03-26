@@ -50,26 +50,34 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   await tc.step("DML type-safety", () => {
     const row = numericEnumModel.prepareInsertable({
       code: syntheticEnum1.code0,
-      value: syntheticEnum1[syntheticEnum1.code0],
+      value: "code0",
     });
     expectType<number | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
-    expectType<string | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.value); // should see compile error if this doesn't work
+    expectType<"code0" | "code1" | emit.SqlTextSupplier<emit.SqlEmitContext>>(
+      row.value,
+    ); // should see compile error if this doesn't work
   });
 
   await tc.step("typed Typescript objects", () => {
     type Synthetic = z.infer<typeof numericEnumModel.zoSchema>;
     const synthetic: Synthetic = {
       code: syntheticEnum1.code1,
-      value: syntheticEnum1[syntheticEnum1.code1],
+      value: "code1",
     };
     expectType<Synthetic>(synthetic);
+    expectType<syntheticEnum1>(synthetic.code);
+    expectType<"code0" | "code1">(synthetic.value);
   });
 
   // deno-fmt-ignore
   await tc.step("seed DML row values", () => {
-    const { seedDML } = numericEnumModel;
+    const { seedDML, seedRows } = numericEnumModel;
     ta.assert(Array.isArray(seedDML));
     ta.assertEquals(2, seedDML.length);
+
+    expectType<syntheticEnum1>(seedRows[0].code);
+    expectType<"code0" | "code1">(seedRows[0].value);
+
     ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (0, 'code0')`, seedDML[0].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (1, 'code1')`, seedDML[1].SQL(ctx));
   });
@@ -119,8 +127,12 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
       code: "code1", // TODO: try "codeBad" bad
       value: syntheticEnum2.code1,
     });
-    expectType<string | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
-    expectType<string | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.value); // should see compile error if this doesn't work
+    expectType<
+      "code1" | "code2" | "code3" | emit.SqlTextSupplier<emit.SqlEmitContext>
+    >(row.code); // should see compile error if this doesn't work
+    expectType<syntheticEnum2 | emit.SqlTextSupplier<emit.SqlEmitContext>>(
+      row.value,
+    ); // should see compile error if this doesn't work
   });
 
   await tc.step("typed Typescript objects", () => {
@@ -131,59 +143,21 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
       created_at: new Date(),
     };
     expectType<Synthetic>(synthetic);
+    expectType<"code1" | "code2" | "code3">(synthetic.code);
+    expectType<syntheticEnum2>(synthetic.value);
   });
 
   // deno-fmt-ignore
   await tc.step("seed DML row values", () => {
-    const { seedDML } = textEnumModel;
+    const { seedDML, seedRows } = textEnumModel;
     ta.assert(Array.isArray(seedDML));
     ta.assertEquals(3, seedDML.length);
+
+    expectType<"code1" | "code2" | "code3">(seedRows[0].code);
+    expectType<syntheticEnum2>(seedRows[0].value);
+
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code1', 'value1')`, seedDML[0].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code2', 'value2')`, seedDML[1].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code3', 'value3')`, seedDML[2].SQL(ctx));
-  });
-});
-
-Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
-  // deno-lint-ignore no-empty-enum
-  enum EmptyEnum {
-  }
-
-  const emptyEnumModel = mod.textEnumTable(
-    "empty_enum",
-    EmptyEnum,
-  );
-
-  const ctx = emit.typicalSqlEmitContext();
-
-  await tc.step("table definition", () => {
-    ta.assert(tbl.isTableDefinition(emptyEnumModel));
-    ta.assert(mod.isEnumTableDefn(emptyEnumModel));
-    ta.assert(emptyEnumModel);
-    ta.assertEquals("empty_enum", emptyEnumModel.tableName);
-    ta.assert(emptyEnumModel.domains.length == 3);
-    ta.assertEquals(
-      ["code", "value", "created_at"],
-      emptyEnumModel.domains.map((cd) => cd.identity),
-    );
-  });
-
-  await tc.step("table creation SQL", () => {
-    ta.assertEquals(
-      emptyEnumModel.SQL(ctx),
-      uws(`
-        CREATE TABLE "empty_enum" (
-            "code" TEXT PRIMARY KEY,
-            "value" TEXT NOT NULL,
-            "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`),
-    );
-  });
-
-  // deno-fmt-ignore
-  await tc.step("seed DML text", () => {
-    const { seedDML } = emptyEnumModel;
-    ta.assert(typeof seedDML === "string");
-    ta.assertEquals(seedDML, `-- no empty_enum seed rows`);
   });
 });

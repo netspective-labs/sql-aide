@@ -39,8 +39,13 @@ export function ordinalEnumTable<
       & z.ZodNumber
       & d.SqlDomainSupplier<z.ZodNumber, "code", Context>;
     readonly value:
-      & z.ZodString
-      & d.SqlDomainSupplier<z.ZodString, "value", Context>;
+      // "value" is the actual text, but in an enum the "code" contains the value
+      & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
+      & d.SqlDomainSupplier<
+        z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
+        "value",
+        Context
+      >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
       & d.SqlDomainSupplier<
@@ -54,24 +59,43 @@ export function ordinalEnumTable<
   seedEnum: { [key in EnumCode]: EnumValue },
   tdOptions?: tbl.TableDefnOptions<ColumnsShape, Context>,
 ) {
+  type ValueZodEnum = [EnumCode, ...(readonly EnumCode[])];
+  const enumValues = Object.keys(seedEnum) as unknown as ValueZodEnum;
+
   const seedRows: {
-    readonly code: number;
-    readonly value: string;
+    readonly code: Array<typeof seedEnum[keyof typeof seedEnum]>[number];
+    readonly value: ValueZodEnum[number];
   }[] = [];
-  type EnumRecord = typeof seedRows;
-  type FilterableColumnName = keyof (EnumRecord);
+  type EnumRecord = typeof seedRows[number];
+  type FilterableColumnName = keyof EnumRecord;
   for (const e of Object.entries(seedEnum)) {
     const [key, value] = e;
     if (typeof value === "number") {
       // enums have numeric ids and reverse-mapped values as their keys
       // and we care only about the text keys ids, they point to codes
       const value = e[1] as EnumValue;
-      seedRows.push({ code: value, value: key });
+      const er: EnumRecord = {
+        code: value as unknown as Array<
+          typeof seedEnum[keyof typeof seedEnum]
+        >[number],
+        value: key as unknown as ValueZodEnum[number],
+      };
+      seedRows.push(er);
     }
   }
 
+  // "value" is the actual text, but in an enum the "code" contains the value
   const tcf = c.tableColumnFactory<TableName, Context>();
   const pkf = pk.primaryKeyColumnFactory<Context>();
+
+  const valueSD: d.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+    ...tcf.enumSDF.zodText<EnumCode, ValueZodEnum, "value">(enumValues),
+    identity: "value",
+  };
+  const valueZodDomain = tcf.zodTypeBaggageProxy<z.ZodEnum<ValueZodEnum>>(
+    z.enum(enumValues),
+    valueSD,
+  ) as unknown as z.ZodString & { sqlDomain: typeof valueSD };
 
   const createdAtSD = tcf.dateSDF.createdAt();
   const createdAtZodDomain = tcf.zodTypeBaggageProxy(
@@ -80,8 +104,9 @@ export function ordinalEnumTable<
   ) as unknown as z.ZodString & { sqlDomain: typeof createdAtSD };
 
   const columnsShape: ColumnsShape = {
-    code: pkf.primaryKey(z.number()),
-    value: z.string(),
+    // our seedEnum type is a subset of z.EnumLike so it's safe
+    code: pkf.primaryKey(z.nativeEnum(seedEnum as unknown as z.EnumLike)),
+    value: valueZodDomain,
     created_at: createdAtZodDomain,
   } as unknown as ColumnsShape;
   const tdrf = r.tableColumnsRowFactory(tableName, columnsShape, {
@@ -97,6 +122,7 @@ export function ordinalEnumTable<
     ...etn,
     ...td,
     ...tdrf,
+    seedRows,
     // seed will be used in SQL interpolation template literal, which accepts
     // either a string, SqlTextSupplier, or array of SqlTextSuppliers; in our
     // case, if seed data is provided we'll prepare the insert DMLs as an
@@ -145,11 +171,19 @@ export function textEnumTable<
   Context extends emit.SqlEmitContext,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
-      & z.ZodString
-      & d.SqlDomainSupplier<z.ZodString, "code", Context>;
+      & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
+      & d.SqlDomainSupplier<
+        z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
+        "code",
+        Context
+      >;
     readonly value:
-      & z.ZodString
-      & d.SqlDomainSupplier<z.ZodString, "value", Context>;
+      & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
+      & d.SqlDomainSupplier<
+        z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
+        "value",
+        Context
+      >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
       & d.SqlDomainSupplier<
@@ -164,33 +198,38 @@ export function textEnumTable<
   tdOptions?: tbl.TableDefnOptions<ColumnsShape, Context>,
 ) {
   const seedRows: {
-    readonly code: string;
-    readonly value: string;
+    readonly code: [EnumCode, ...(readonly EnumCode[])][number];
+    readonly value: [EnumValue, ...(readonly EnumValue[])][number];
   }[] = [];
-  type EnumRecord = typeof seedRows;
+  type EnumRecord = typeof seedRows[number];
   type FilterableColumnName = keyof (EnumRecord);
   for (const e of Object.entries(seedEnum)) {
     const code = e[0] as EnumCode;
     const value = e[1] as EnumValue;
-    seedRows.push({ code, value });
+    seedRows.push({ code, value } as Any);
   }
 
+  type CodeZodEnum = [EnumCode, ...(readonly EnumCode[])];
+  type ValueZodEnum = [EnumValue, ...(readonly EnumValue[])];
+  const enumCodes = Object.keys(seedEnum) as unknown as CodeZodEnum;
+  const enumValues = Object.values(seedEnum) as unknown as ValueZodEnum;
   const tcf = c.tableColumnFactory<TableName, Context>();
   const pkf = pk.primaryKeyColumnFactory<Context>();
-  const codeSD: d.SqlDomain<z.ZodString, Context, "code"> = {
-    ...tcf.stringSDF.string<z.ZodString, "code">(z.string()),
+  const codeSD: d.SqlDomain<z.ZodEnum<CodeZodEnum>, Context, "code"> = {
+    ...tcf.enumSDF.zodText<EnumCode, CodeZodEnum, "code">(enumCodes),
     identity: "code",
   };
-  const codeZodDomain = tcf.zodTypeBaggageProxy<z.ZodString>(
-    z.string(),
+  const codeZodDomain = tcf.zodTypeBaggageProxy<z.ZodEnum<CodeZodEnum>>(
+    z.enum(enumCodes),
     codeSD,
   ) as unknown as z.ZodString & { sqlDomain: typeof codeSD };
 
-  const valueSD: d.SqlDomain<z.ZodString, Context, "value"> = {
-    ...tcf.stringSDF.string<z.ZodString, "value">(z.string()),
+  const valueSD: d.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+    ...tcf.enumSDF.zodText<EnumValue, ValueZodEnum, "value">(enumValues),
+    identity: "value",
   };
-  const valueZodDomain = tcf.zodTypeBaggageProxy<z.ZodString>(
-    z.string(),
+  const valueZodDomain = tcf.zodTypeBaggageProxy<z.ZodEnum<ValueZodEnum>>(
+    z.enum(enumValues),
     valueSD,
   ) as unknown as z.ZodString & { sqlDomain: typeof valueSD };
 
@@ -218,6 +257,7 @@ export function textEnumTable<
     ...etn,
     ...td,
     ...tdrf,
+    seedRows,
     // seed will be used in SQL interpolation template literal, which accepts
     // either a string, SqlTextSupplier, or array of SqlTextSuppliers; in our
     // case, if seed data is provided we'll prepare the insert DMLs as an
