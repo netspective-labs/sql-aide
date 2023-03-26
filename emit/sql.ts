@@ -17,6 +17,12 @@ export function isSqlSymbolSupplier<Context extends SqlEmitContext>(
   return isSSS(o);
 }
 
+export function isOnlySqlSymbolSupplier<Context extends SqlEmitContext>(
+  o: unknown,
+): o is SqlSymbolSupplier<Context> {
+  return isSqlSymbolSupplier(o) && !isSqlTextSupplier(o);
+}
+
 export type SafeTemplateStringReturnType<
   T extends (...args: Any) => Any,
 > = T extends (...args: Any) => infer R ? R
@@ -749,7 +755,10 @@ export function SQL<
         if (sqlTextLintState && isSqlTextLintIssuesSupplier<Context>(expr)) {
           expr.populateSqlTextLintIssues(sqlTextLintState.lintedSqlText, ctx);
         }
-        if (symbolsFirst && isSqlSymbolSupplier(expr)) {
+        if (
+          isOnlySqlSymbolSupplier(expr) ||
+          (symbolsFirst && isSqlSymbolSupplier(expr))
+        ) {
           // if we are being asked to emit symbols first then we want to check
           // early and exit otherwise we'll drop into SqlTextSupplier branches
           speEE?.emitSync("symbolEncountered", ctx, expr);
@@ -784,7 +793,10 @@ export function SQL<
         inArray?: boolean,
         isLastArrayEntry?: boolean,
       ) => {
-        if (symbolsFirst && isSqlSymbolSupplier(expr)) {
+        if (
+          isOnlySqlSymbolSupplier(expr) ||
+          (symbolsFirst && isSqlSymbolSupplier(expr))
+        ) {
           interpolated += expr.sqlSymbol(ctx);
           speEE?.emitSync("symbolEmitted", ctx, expr);
           return;

@@ -156,6 +156,13 @@ export function tableDefinition<
       : never;
   };
 
+  type SqlSymbolSuppliersSchema = {
+    [Property in keyof ColumnsShape]: tmpl.SqlSymbolSupplier<Context>;
+  };
+  type SqlSymbolsSchema = {
+    [Property in keyof ColumnsShape]: (ctx: Context) => string;
+  };
+
   const domains = tableShapeKeys.map((key) =>
     zbSchema[key].sqlDomain as c.TableColumnDefn<
       TableName,
@@ -168,6 +175,8 @@ export function tableDefinition<
   const columnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: con.TableColumnsConstraint<ColumnsShape, Context>[] = [];
+  const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
+  const symbols: SqlSymbolsSchema = {} as Any;
 
   const primaryKey: PrimaryKeys = {} as Any;
   const unique: UniqueColumnDefns = {} as Any;
@@ -179,6 +188,8 @@ export function tableDefinition<
       unique[column.identity as (keyof UniqueColumnDefns)] = column as Any;
       constraints.push(con.uniqueConstraint(column.identity));
     }
+    (symbolSuppliers[column.identity] as Any) = { sqlSymbol: column.sqlSymbol };
+    (symbols[column.identity] as Any) = column.sqlSymbol;
   }
 
   // see if any FK references were registered but need to be created
@@ -219,6 +230,8 @@ export function tableDefinition<
     & {
       readonly domains: typeof domains;
       readonly columns: ColumnDefns;
+      readonly symbolSuppliers: SqlSymbolSuppliersSchema;
+      readonly symbols: SqlSymbolsSchema;
       readonly primaryKey: PrimaryKeys;
       readonly unique: UniqueColumnDefns;
       readonly references: typeof fkf.references;
@@ -269,6 +282,8 @@ export function tableDefinition<
         return result;
       },
       domains,
+      symbolSuppliers,
+      symbols,
       columns,
       primaryKey,
       unique,

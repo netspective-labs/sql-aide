@@ -1,5 +1,6 @@
 import { zod as z } from "../deps.ts";
 import { testingAsserts as ta } from "../deps-test.ts";
+import { unindentWhitespace as uws } from "../lib/universal/whitespace.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as d from "./domain.ts";
 import * as ds from "./domains.ts";
@@ -23,8 +24,8 @@ const sqlGen = () => {
     customContextProp1: "customContextProp1Value",
     executedAt: new Date(),
   };
-  const ddlOptions = tmpl.typicalSqlTextSupplierOptions();
-  const lintState = tmpl.typicalSqlLintSummaries(
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<SyntheticContext>();
+  const lintState = tmpl.typicalSqlLintSummaries<SyntheticContext>(
     ddlOptions.sqlTextLintState,
   );
   return { ctx, ddlOptions, lintState };
@@ -136,6 +137,20 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
           { identifier: "int", sqlDataType: "INTEGER" },
           { identifier: "int_nullable", sqlDataType: "INTEGER" },
         ],
+      );
+    });
+
+    await innerTC.step("type-safe symbols", () => {
+      const { ctx, ddlOptions } = sqlGen();
+      const { symbolSuppliers: ss, symbols: s } = domains;
+      const symsFixture = tmpl.SQL(ddlOptions)`
+        select ${ss.text_nullable}, ${s.text_optional_defaultable}
+          from Y`;
+      ta.assertEquals(
+        symsFixture.SQL(ctx),
+        uws(`
+          select "text_nullable", "text_optional_defaultable"
+            from Y`),
       );
     });
   });

@@ -47,6 +47,12 @@ export function sqlDomainsFactory<
         Extract<Property, string>
       >;
     },
+    SqlSymbolSuppliersSchema extends {
+      [Property in keyof RawShape]: tmpl.SqlSymbolSupplier<Context>;
+    },
+    SqlSymbolsSchema extends {
+      [Property in keyof RawShape]: (ctx: Context) => string;
+    },
   >(zodRawShape: RawShape, init?: {
     readonly identity?: (init: {
       readonly zoSchema: z.ZodObject<RawShape>;
@@ -58,6 +64,8 @@ export function sqlDomainsFactory<
     const zbSchema: BaggageSchema = {} as Any;
     const sdSchema: SqlDomainSchema = {} as Any;
     const domains: d.SqlDomain<Any, Context, Any>[] = [];
+    const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
+    const symbols: SqlSymbolsSchema = {} as Any;
 
     const { shape, keys: shapeKeys } = zoSchema._getCached();
     for (const key of shapeKeys) {
@@ -68,6 +76,8 @@ export function sqlDomainsFactory<
       );
       const { sqlDomain } = zbSchema[key];
       (sdSchema[key] as Any) = sqlDomain;
+      (symbolSuppliers[key] as Any) = { sqlSymbol: sqlDomain.sqlSymbol };
+      (symbols[key] as Any) = sqlDomain.sqlSymbol;
       domains.push(sqlDomain);
     }
 
@@ -79,6 +89,8 @@ export function sqlDomainsFactory<
       zbSchema,
       sdSchema,
       domains,
+      symbolSuppliers,
+      symbols,
     };
   };
 

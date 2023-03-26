@@ -628,10 +628,10 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
             // we use .insertRawDML() because Zod parse will fail on SQL expression
             tableRF.insertRawDML({
               // { symbolsFirst: true } means that ${XYZ} in dql.select()`${XYZ}`
-              // will try to find name of object first
+              // will try to find name of object first, you can use symbols too
               text: s.untypedSelect(ctx, {
                 symbolsFirst: true,
-              })`select ${table.zbSchema.text.sqlDomain} from ${table}`, // the value will be a SQL expression
+              })`select ${table.symbols.text} from ${table}`, // the value will be a SQL expression
               int: 477,
             }).SQL(ctx),
             `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ((select "text" from "synthetic_table_with_auto_inc_pk"), NULL, 477, NULL)`,
