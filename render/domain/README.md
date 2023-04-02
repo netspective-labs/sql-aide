@@ -29,6 +29,39 @@ Domains are abstract types valuable for these use cases:
   - za.clonedZodType(zodType)
   - sqlDomain(zodType)
 
+## Cross-platform DB Types to add
+
+These should be setup as pre-defined so each governed schema does not need to
+recreate (in `sqlType` use the dialect to generate DB-specific variations):
+
+- [ ] array
+- [ ] bigint
+- [ ] bigserial
+- [ ] blob
+- [ ] boolean
+- [ ] char
+- [ ] cidr
+- [ ] date
+- [ ] double-precision
+- [ ] enum
+- [ ] inet
+- [ ] integer
+- [ ] interval
+- [ ] jsonb
+- [ ] json
+- [ ] macaddr8
+- [ ] macaddr
+- [ ] numeric
+- [ ] real
+- [ ] serial
+- [ ] smallint
+- [ ] smallserial
+- [ ] text
+- [ ] timestamp
+- [ ] time
+- [ ] uuid
+- [ ] varchar
+
 ## TODO:
 
 - consider creating new, native, Zod instances instead of wrapping Zod
