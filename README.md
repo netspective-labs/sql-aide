@@ -110,6 +110,14 @@ following types of SQL language constructs.
 - [~] Not planned but could be convinced to add
 - [!] Implemented in NL Aide (resFactory/lib/sql) but not yet migrated to `SQLa`
 
+### Architecture
+
+- [ ] Review
+      [Higher\-Order TypeScript \(HOTScript\)](https://github.com/gvergnaud/hotscript)
+      to "transform types in any way you want using functions you already know."
+      This can allow us to have Drizzle ORM-like capabilities in the core SQLa
+      renderers as well as enhance type-safety of existing Zod schemas.
+
 ### Domains
 
 The mapping of Zod types to SQL Domain instances is handled by
