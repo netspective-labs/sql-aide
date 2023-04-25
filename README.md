@@ -772,3 +772,7 @@ is type-safe because it's defined using a Zod schema.
 ## Test Coverage
 
 ![Test Code Coverage](https://codecov.io/gh/netspective-labs/sql-aide/branch/main/graphs/sunburst.svg?token=DPJICL8F4O)
+
+## References
+
+- [Nine ways to shoot yourself in the foot with PostgreSQL](https://philbooth.me/blog/nine-ways-to-shoot-yourself-in-the-foot-with-postgresql)
