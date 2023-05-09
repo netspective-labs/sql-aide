@@ -282,4 +282,98 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
       );
     },
   );
+
+  await tc.step(
+    "PL/SQL stored procedure for upsert values into the table (idempotent, auto begin/end)",
+    () => {
+      const sp = mod.storedProcedure("synthetic_sp_upsert", {
+        synthetic_id: z.string(),
+        synthetic_text: z.string(),
+        synthetic_json_converted: z.string(),
+        synthetic_hash: z.string(),
+        synthetic_type: z.string(),
+        created_time: z.date(),
+        updated_time: z.date(),
+        provenance: z.string(),
+      }, (name, args) => mod.typedPlSqlBody(name, args, ctx))`
+      insert into stateful_service.synthetic_table
+      (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+      values ($1, $2, $3, $4, $5, $6, $7, $8)
+      on conflict do nothing`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp_upsert"("synthetic_id" TEXT, "synthetic_text" TEXT, "synthetic_json_converted" TEXT, "synthetic_hash" TEXT, "synthetic_type" TEXT, "created_time" DATE, "updated_time" DATE, "provenance" TEXT) AS $$
+          insert into stateful_service.synthetic_table
+          (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+          values ($1, $2, $3, $4, $5, $6, $7, $8)
+          on conflict do nothing
+        $$ LANGUAGE SQL;`),
+      );
+    },
+  );
+
+  //
+  await tc.step(
+    "PL/pgSQL namespaced stored function for upsert values into the table that returns inserted_row RECORD (non-idempotent, manual begin/end)",
+    () => {
+      const sf = mod.storedFunction(
+        "synthetic_sf_upserted",
+        {
+          synthetic_id: z.string(),
+          synthetic_text: z.string(),
+          synthetic_json_converted: z.string(),
+          synthetic_hash: z.string(),
+          synthetic_type: z.string(),
+          created_time: z.date(),
+          updated_time: z.date(),
+          provenance: z.string(),
+        },
+        "inserted_row",
+        (name, args, _, bo) => mod.typedPlPgSqlBody(name, args, ctx, bo),
+        {
+          embeddedStsOptions: tmpl.typicalSqlTextSupplierOptions(),
+          autoBeginEnd: false,
+          isIdempotent: false,
+          sqlNS: ddl.sqlSchemaDefn("stateful_service"),
+        },
+      )`
+      DECLARE
+         inserted_row stateful_service.synthetic_table;
+      BEGIN
+          select * into inserted_row
+            from stateful_service.synthetic_id synthetic_table
+          where synthetic_table.synthetic_text = $2 AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
+            and synthetic_table.provenance = $8;
+          if inserted_row is null then
+            insert into stateful_service.synthetic_table
+              (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+              values ($1, $2, $3, $4, $5, $6, $7, $8)
+              returning * into inserted_row;
+          end if;
+          return inserted_row;
+      END;`;
+      ta.assertEquals(
+        sf.SQL(ctx),
+        uws(`
+        CREATE FUNCTION "stateful_service"."synthetic_sf_upserted"("synthetic_id" TEXT, "synthetic_text" TEXT, "synthetic_json_converted" TEXT, "synthetic_hash" TEXT, "synthetic_type" TEXT, "created_time" DATE, "updated_time" DATE, "provenance" TEXT) RETURNS inserted_row AS $$
+        DECLARE
+           inserted_row stateful_service.synthetic_table;
+        BEGIN
+            select * into inserted_row
+              from stateful_service.synthetic_id synthetic_table
+            where synthetic_table.synthetic_text = $2 AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
+              and synthetic_table.provenance = $8;
+            if inserted_row is null then
+              insert into stateful_service.synthetic_table
+                (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+                values ($1, $2, $3, $4, $5, $6, $7, $8)
+                returning * into inserted_row;
+            end if;
+            return inserted_row;
+        END;
+        $$ LANGUAGE PLPGSQL;`),
+      );
+    },
+  );
 });
