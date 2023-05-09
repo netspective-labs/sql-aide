@@ -190,17 +190,20 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
   const housekeeping = {
     columns: {
       created_at: domains.createdAt(),
+      created_by: domains.text(),
+      provenance: domains.text(),
     },
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: SQLa.InsertStmtPreparerOptions<
         TableName,
-        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        { created_at?: Date; created_by?: string; provenance: string }, // this must match typical.columns so that isColumnEmittable is type-safe
         { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
         Context
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
-        isColumnEmittable: (name) => name == "created_at" ? false : true,
+        isColumnEmittable: (name) =>
+          name == "created_at" || name == "created_by" || name == "provenance",
       };
       return result as SQLa.InsertStmtPreparerOptions<
         Any,
