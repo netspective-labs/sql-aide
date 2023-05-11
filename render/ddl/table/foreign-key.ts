@@ -7,6 +7,54 @@ import * as d from "../../domain/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+/*
+  Moved this type outside 'foreignKeysFactory' because I was having this error:
+  error TS4060: Return type of exported function has or is using private name 'ForeignKeySource'.
+*/
+export type ForeignKeySource<
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly tableName: TableName;
+  readonly columnName: ColumnName<ColumnsShape>;
+  readonly incomingRefs: Set<
+    ForeignKeyDestination<TableName, ColumnsShape, Context>
+  >;
+  readonly register: (
+    rd: ForeignKeyDestination<TableName, ColumnsShape, Context>,
+  ) => ForeignKeyDestination<TableName, ColumnsShape, Context>;
+};
+
+type ColumnName<ColumnsShape extends z.ZodRawShape> = Extract<
+  keyof ColumnsShape,
+  string
+>;
+
+type ForeignKeyDestination<
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+> = {
+  readonly foreignKeyRelNature?: ForeignKeyRelNature<Context>;
+  readonly foreignKeySource: ForeignKeySource<TableName, ColumnsShape, Context>;
+};
+
+type ForeignKeyRelNature<Context extends tmpl.SqlEmitContext> =
+  | TableBelongsToRefDestNature<Context>
+  | TableSelfRefDestNature
+  | { readonly isExtendsRel: true }
+  | { readonly isInheritsRel: true };
+
+type TableBelongsToRefDestNature<Context extends tmpl.SqlEmitContext> = {
+  readonly isBelongsToRel: true;
+  readonly collectionName?: tmpl.JsTokenSupplier<Context>;
+};
+
+type TableSelfRefDestNature = {
+  readonly isSelfRef: true;
+};
+
 export function foreignKeysFactory<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
@@ -16,31 +64,21 @@ export function foreignKeysFactory<
   zodRawShape: ColumnsShape,
   sdf: ReturnType<typeof d.sqlDomainsFactory<TableName, Context>>,
 ) {
-  type ColumnName = Extract<keyof ColumnsShape, string>;
   type BaggageSchema = {
     [Property in keyof ColumnsShape]: ReturnType<
       typeof sdf.zodTypeBaggageProxy<ColumnsShape[Property]>
     >;
   };
 
-  type ForeignKeySource = {
-    readonly tableName: TableName;
-    readonly columnName: ColumnName;
-    readonly incomingRefs: Set<ForeignKeyDestination>;
-    readonly register: (rd: ForeignKeyDestination) => ForeignKeyDestination;
-  };
-
-  type ForeignKeyDestination = {
-    readonly foreignKeyRelNature?: ForeignKeyRelNature;
-    readonly foreignKeySource: ForeignKeySource;
-  };
-  const isForeignKeyDestination = safety.typeGuard<ForeignKeyDestination>(
+  const isForeignKeyDestination = safety.typeGuard<
+    ForeignKeyDestination<TableName, ColumnsShape, Context>
+  >(
     "foreignKeySource",
   );
 
   type ForeignKeyPlaceholder = {
-    readonly source: ForeignKeySource;
-    readonly nature?: ForeignKeyRelNature;
+    readonly source: ForeignKeySource<TableName, ColumnsShape, Context>;
+    readonly nature?: ForeignKeyRelNature<Context>;
   };
   type ForeignKeyPlaceholderSupplier = {
     readonly foreignKeySrcPlaceholder: ForeignKeyPlaceholder;
@@ -49,46 +87,52 @@ export function foreignKeysFactory<
   const foreignKeyColumn = <ColumName extends string>(
     columnName: ColumName,
     zodType: z.ZodTypeAny,
-    reference: ForeignKeyDestination,
+    reference: ForeignKeyDestination<TableName, ColumnsShape, Context>,
   ) => {
     const domain = sdf.from(zodType, { identity: columnName });
-    const result: typeof domain & ForeignKeyDestination = {
-      ...domain,
-      ...reference,
-      sqlPartial: (
-        dest:
-          | "create table, full column defn"
-          | "create table, column defn decorators"
-          | "create table, after all column definitions",
-      ) => {
-        if (dest === "create table, after all column definitions") {
-          const aacd = domain?.sqlPartial?.(
-            "create table, after all column definitions",
-          );
-          const fkClause: tmpl.SqlTextSupplier<Context> = {
-            SQL: ((ctx) => {
-              const ns = ctx.sqlNamingStrategy(ctx, {
-                quoteIdentifiers: true,
-              });
-              const tn = ns.tableName;
-              const cn = ns.tableColumnName;
-              // don't use the foreignTableName passed in because it could be
-              // mutated for self-refs in table definition phase
-              return `FOREIGN KEY(${
-                cn({
-                  tableName: "TODO",
-                  columnName,
-                })
-              }) REFERENCES ${tn(reference.foreignKeySource.tableName)}(${
-                cn(reference.foreignKeySource)
-              })`;
-            }),
-          };
-          return aacd ? [...aacd, fkClause] : [fkClause];
-        }
-        return domain.sqlPartial?.(dest);
-      },
-    };
+    const result:
+      & typeof domain
+      & ForeignKeyDestination<
+        TableName,
+        ColumnsShape,
+        Context
+      > = {
+        ...domain,
+        ...reference,
+        sqlPartial: (
+          dest:
+            | "create table, full column defn"
+            | "create table, column defn decorators"
+            | "create table, after all column definitions",
+        ) => {
+          if (dest === "create table, after all column definitions") {
+            const aacd = domain?.sqlPartial?.(
+              "create table, after all column definitions",
+            );
+            const fkClause: tmpl.SqlTextSupplier<Context> = {
+              SQL: ((ctx) => {
+                const ns = ctx.sqlNamingStrategy(ctx, {
+                  quoteIdentifiers: true,
+                });
+                const tn = ns.tableName;
+                const cn = ns.tableColumnName;
+                // don't use the foreignTableName passed in because it could be
+                // mutated for self-refs in table definition phase
+                return `FOREIGN KEY(${
+                  cn({
+                    tableName: "TODO",
+                    columnName,
+                  })
+                }) REFERENCES ${tn(reference.foreignKeySource.tableName)}(${
+                  cn(reference.foreignKeySource)
+                })`;
+              }),
+            };
+            return aacd ? [...aacd, fkClause] : [fkClause];
+          }
+          return domain.sqlPartial?.(dest);
+        },
+      };
     reference.foreignKeySource.register(result);
     return result;
   };
@@ -117,27 +161,12 @@ export function foreignKeysFactory<
     );
   }
 
-  type TableBelongsToRefDestNature = {
-    readonly isBelongsToRel: true;
-    readonly collectionName?: tmpl.JsTokenSupplier<Context>;
-  };
-
-  type TableSelfRefDestNature = {
-    readonly isSelfRef: true;
-  };
-
-  type ForeignKeyRelNature =
-    | TableBelongsToRefDestNature
-    | TableSelfRefDestNature
-    | { readonly isExtendsRel: true }
-    | { readonly isInheritsRel: true };
-
   function belongsToRelation(
     singularSnakeCaseCollName?: string,
     pluralSnakeCaseCollName = singularSnakeCaseCollName
       ? `${singularSnakeCaseCollName}s`
       : undefined,
-  ): TableBelongsToRefDestNature {
+  ): TableBelongsToRefDestNature<Context> {
     return {
       isBelongsToRel: true,
       collectionName: singularSnakeCaseCollName
@@ -151,8 +180,8 @@ export function foreignKeysFactory<
 
   function isBelongsToForeignKeyNature(
     o: unknown,
-  ): o is TableBelongsToRefDestNature {
-    const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature>(
+  ): o is TableBelongsToRefDestNature<Context> {
+    const isTBFKRN = safety.typeGuard<TableBelongsToRefDestNature<Context>>(
       "isBelongsToRel",
       "collectionName",
     );
@@ -162,7 +191,7 @@ export function foreignKeysFactory<
   // the "inferred types" are the same as their original types except without
   // optionals, defaults, or nulls (always required, considered the "CoreZTA");
   type InferReferences = {
-    [Property in keyof ColumnsShape]: (nature?: ForeignKeyRelNature) =>
+    [Property in keyof ColumnsShape]: (nature?: ForeignKeyRelNature<Context>) =>
       & za.CoreZTA<ColumnsShape[Property]>
       & ForeignKeyPlaceholderSupplier;
   };
@@ -175,9 +204,19 @@ export function foreignKeysFactory<
       & ForeignKeyPlaceholderSupplier;
   };
 
-  const inferredPlaceholder = (columnName: ColumnName) => {
-    const incomingRefs = new Set<ForeignKeyDestination>();
-    const refSource: ForeignKeySource = {
+  const inferredPlaceholder = (columnName: ColumnName<ColumnsShape>) => {
+    const incomingRefs = new Set<
+      ForeignKeyDestination<
+        TableName,
+        ColumnsShape,
+        Context
+      >
+    >();
+    const refSource: ForeignKeySource<
+      TableName,
+      ColumnsShape,
+      Context
+    > = {
       tableName,
       columnName,
       incomingRefs,
@@ -193,14 +232,17 @@ export function foreignKeysFactory<
   const belongsTo: BelongsToReferences = {} as Any;
   for (const key of tableShapeKeys) {
     const zodType = tableShape[key];
-    (references[key] as Any) = (nature?: ForeignKeyRelNature) => {
+    (references[key] as Any) = (nature?: ForeignKeyRelNature<Context>) => {
       // trick Typescript into thinking Zod instance is also FK placeholder;
       // this allows assignment of a reference to a Zod object or use as a
       // regular Zod schema; the placeholder is carried in zodType._def
       const cloned = sdf.clearWrappedBaggage(za.clonedZodType(zodType));
       return foreignKeySrcZB.zodTypeBaggageProxy(
         cloned,
-        { source: inferredPlaceholder(key as ColumnName), nature },
+        {
+          source: inferredPlaceholder(key as ColumnName<ColumnsShape>),
+          nature,
+        },
       );
     };
     (belongsTo[key] as Any) = (
@@ -216,7 +258,7 @@ export function foreignKeysFactory<
       return foreignKeySrcZB.zodTypeBaggageProxy(
         cloned,
         {
-          source: inferredPlaceholder(key as ColumnName),
+          source: inferredPlaceholder(key as ColumnName<ColumnsShape>),
           nature: belongsToRelation(
             singularSnakeCaseCollName,
             pluralSnakeCaseCollName,
@@ -242,7 +284,11 @@ export function foreignKeysFactory<
         Context,
         Extract<Property, string>
       >
-      & ForeignKeyDestination;
+      & ForeignKeyDestination<
+        TableName,
+        ColumnsShape,
+        Context
+      >;
   };
 
   // see if any references were registered but need to be created
