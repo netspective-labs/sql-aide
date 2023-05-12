@@ -5,6 +5,8 @@
     "update-deno-deps": "udd deps.ts deps-test.ts",
     "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts') && deno fmt --check && deno lint && deno test",
     "git-hook-pre-push": "deno test",
-    "prepare-publish": "git semtag final"
+    "prepare-publish": "git semtag final",
+    "prepare-npm": "deno run -A build-npm.ts",
+    "publish-npm": "cd npm && npm publish"
   }
 }
