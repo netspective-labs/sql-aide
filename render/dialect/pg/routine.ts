@@ -443,6 +443,35 @@ export function routineArgsSQL<
   ).join(", ");
 }
 
+export function storedRoutineBuilder<
+  RoutineName extends string,
+  ArgsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+>(
+  routineName: RoutineName,
+  argsDefn: ArgsShape,
+) {
+  const sdf = d.sqlDomainsFactory<RoutineName, Context>();
+  const argsSD = sdf.sqlDomains(argsDefn, { identity: () => routineName });
+
+  type ArgsShapeIndex = {
+    [Property in keyof ArgsShape]: string;
+  };
+  const argsIndex: ArgsShapeIndex = {} as Any;
+  let argIndex = 0;
+  for (const key of Object.keys(argsDefn)) {
+    argIndex++;
+    (argsIndex[key] as (keyof ArgsShape)) = `$${argIndex}`;
+  }
+  return {
+    routineName,
+    argsDefn,
+    sdFactory: sdf,
+    argsSD,
+    argsIndex,
+  };
+}
+
 export function storedProcedure<
   RoutineName extends string,
   ArgsShape extends z.ZodRawShape,
@@ -464,7 +493,11 @@ export function storedProcedure<
   bodyTemplate: BodyTemplateSupplier,
   spOptions?: StoredProcedureDefnOptions<RoutineName, Context>,
 ) {
-  const sdf = d.sqlDomainsFactory<RoutineName, Context>();
+  const srBuilder = storedRoutineBuilder<RoutineName, ArgsShape, Context>(
+    routineName,
+    argsDefn,
+  );
+  const { argsSD } = srBuilder;
   return (
     literals: TemplateStringsArray,
     ...expressions: tmpl.SqlPartialExpression<Context>[]
@@ -475,7 +508,6 @@ export function storedProcedure<
     );
     const { isIdempotent = true, headerBodySeparator: hbSep = "$$" } =
       spOptions ?? {};
-    const argsSD = sdf.sqlDomains(argsDefn, { identity: () => routineName });
     const result:
       & r.NamedRoutineDefn<RoutineName, ArgsShape, Context>
       & tmpl.SqlTextLintIssuesPopulator<Context>
@@ -516,7 +548,7 @@ export function storedProcedure<
         sqlNS: spOptions?.sqlNS,
       };
     return {
-      sdFactory: sdf,
+      ...srBuilder,
       ...result,
       drop: (options?: { ifExists?: boolean }) =>
         dropStoredProcedure(routineName, options),
@@ -583,7 +615,11 @@ export function storedFunction<
   bodyTemplate: BodyTemplateSupplier,
   sfOptions?: StoredFunctionDefnOptions<RoutineName, Context>,
 ) {
-  const sdf = d.sqlDomainsFactory<RoutineName, Context>();
+  const srBuilder = storedRoutineBuilder<RoutineName, ArgsShape, Context>(
+    routineName,
+    argsDefn,
+  );
+  const { sdFactory: sdf } = srBuilder;
   return (
     literals: TemplateStringsArray,
     ...expressions: tmpl.SqlPartialExpression<Context>[]
@@ -653,7 +689,7 @@ export function storedFunction<
         sqlNS: sfOptions?.sqlNS,
       };
     return {
-      sdFactory: sdf,
+      ...srBuilder,
       ...result,
       drop: (options?: { ifExists?: boolean }) =>
         dropStoredFunction(routineName, options),
