@@ -114,7 +114,7 @@ Deno.test("Data Vault tables", async (tc) => {
       table.SQL(ctx),
       uws(`
         CREATE TABLE IF NOT EXISTS "hub_synthethic0" (
-            "hub_synthethic0_id" TEXT PRIMARY KEY,
+            "hub_synthethic0_id" TEXT PRIMARY KEY NOT NULL,
             "business_key_text" TEXT NOT NULL,
             "business_key_int" INTEGER NOT NULL,
             "business_key_text_nullable" TEXT,
@@ -141,7 +141,7 @@ Deno.test("Data Vault tables", async (tc) => {
         satTable.SQL(ctx),
         uws(`
           CREATE TABLE IF NOT EXISTS "sat_synthethic0_attrs1" (
-              "sat_synthethic0_attrs1_id" TEXT PRIMARY KEY,
+              "sat_synthethic0_attrs1_id" TEXT PRIMARY KEY NOT NULL,
               "hub_synthethic0_id" TEXT NOT NULL,
               "attr_text" TEXT NOT NULL,
               "attr_int" INTEGER NOT NULL,
@@ -168,7 +168,7 @@ Deno.test("Data Vault tables", async (tc) => {
         satTable.SQL(ctx),
         uws(`
           CREATE TABLE IF NOT EXISTS "sat_synthethic0_attrs2" (
-              "sat_synthethic0_attrs2_id" TEXT PRIMARY KEY,
+              "sat_synthethic0_attrs2_id" TEXT PRIMARY KEY NOT NULL,
               "hub_synthethic0_id" TEXT NOT NULL,
               "attr_text" TEXT,
               "attr_int" INTEGER,
@@ -196,7 +196,7 @@ Deno.test("Data Vault tables", async (tc) => {
       table.SQL(ctx),
       uws(`
         CREATE TABLE IF NOT EXISTS "hub_synthethic1" (
-            "hub_synthethic1_id" TEXT PRIMARY KEY,
+            "hub_synthethic1_id" TEXT PRIMARY KEY NOT NULL,
             "h1_bkey_int" INTEGER NOT NULL,
             "h1_bkey_text" TEXT NOT NULL,
             "h1_bkey_date" DATE NOT NULL,
@@ -226,7 +226,7 @@ Deno.test("Data Vault tables", async (tc) => {
       table.SQL(ctx),
       uws(`
         CREATE TABLE IF NOT EXISTS "link_hub0_hub1" (
-            "link_hub0_hub1_id" TEXT PRIMARY KEY,
+            "link_hub0_hub1_id" TEXT PRIMARY KEY NOT NULL,
             "hub_synthethic0_id" TEXT NOT NULL,
             "hub_synthethic1_id" TEXT NOT NULL,
             "created_at" DATE,
@@ -251,7 +251,7 @@ Deno.test("Data Vault tables", async (tc) => {
         satTable.SQL(ctx),
         uws(`
           CREATE TABLE IF NOT EXISTS "sat_hub0_hub1_link_attrs3" (
-              "sat_hub0_hub1_link_attrs3_id" TEXT PRIMARY KEY,
+              "sat_hub0_hub1_link_attrs3_id" TEXT PRIMARY KEY NOT NULL,
               "link_hub0_hub1_id" TEXT NOT NULL,
               "attr_text" TEXT NOT NULL,
               "attr_int" INTEGER NOT NULL,
