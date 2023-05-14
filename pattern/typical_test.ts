@@ -121,7 +121,7 @@ Deno.test("SQL Aide (SQLa) type-safe string template", () => {
     mod.GovernedDomain,
     SyntheticTmplContext
   >();
-  const schema = syntheticSchema<SyntheticTmplContext>(gts.ddlOptions);
+  const ss = syntheticSchema<SyntheticTmplContext>(gts.ddlOptions);
 
   // deno-fmt-ignore
   const DDL = SQLa.SQL<SyntheticTmplContext>(gts.ddlOptions)`
@@ -138,38 +138,36 @@ Deno.test("SQL Aide (SQLa) type-safe string template", () => {
 
     ${gts.lintState.sqlTextLintSummary}
 
-    ${schema.hostType}
+    ${ss.hostType}
 
-    ${schema.publHost}
-    ${gts.persist(schema.publHost, "publ-host.sql")}
+    ${ss.publHost}
+    ${gts.persist(ss.publHost, "publ-host.sql")}
 
-    ${schema.publHostView}
+    ${ss.publHostView}
 
-    ${schema.buildEventType}
+    ${ss.buildEventType}
 
-    ${schema.publBuildEvent}
+    ${ss.publBuildEvent}
 
-    ${schema.publServerService}
+    ${ss.publServerService}
 
-    ${schema.publServerStaticAccessLog}
+    ${ss.publServerStaticAccessLog}
 
-    ${schema.publServerErrorLog}
+    ${ss.publServerErrorLog}
 
-    { /* TODO */ schema.publHost.insertDML({ host: "test", host_identity: "testHI", mutation_count: 0, host_type_code: schema.hostType.seedEnum.linux })}
+    ${ss.publHost.insertDML({ publ_host_id: "test", host: "test", host_identity: "testHI", mutation_count: 0, host_type_code: ss.hostType.seedEnum.linux })}
 
-    ${schema.publHost.select({ host_identity: "testHI"})}
+    ${ss.publHost.select({ host_identity: "testHI"})}
 
     -- TypeScript numeric enum object entries as RDBMS rows
-    ${schema.hostType.seedDML}
+    ${ss.hostType.seedDML}
 
     -- TypeScript text enum object entries as RDBMS rows
-    ${schema.buildEventType.seedDML}
+    ${ss.buildEventType.seedDML}
 
     ${gts.lintState.sqlTmplEngineLintSummary}`;
 
   const syntheticSQL = DDL.SQL(stContext());
-  //Deno.writeTextFileSync("DELETE_ME_DEBUG_TYPICAL_TEST.SQL", syntheticSQL);
-
   if (DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length) {
     console.dir(DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues);
   }
@@ -210,7 +208,7 @@ const fixturePrime = ws.unindentWhitespace(`
       "host_type_code" INTEGER NOT NULL,
       "mutation_count" INTEGER NOT NULL,
       "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
-      "created_by" TEXT NOT NULL,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("host_type_code") REFERENCES "host_type"("code"),
       UNIQUE("host")
   );
@@ -237,7 +235,7 @@ const fixturePrime = ws.unindentWhitespace(`
       "resources_persisted_count" INTEGER NOT NULL,
       "resources_memoized_count" INTEGER NOT NULL,
       "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
-      "created_by" TEXT NOT NULL,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_host_id") REFERENCES "publ_host"("publ_host_id"),
       FOREIGN KEY("build_event_type") REFERENCES "build_event_type"("code")
   );
@@ -250,7 +248,7 @@ const fixturePrime = ws.unindentWhitespace(`
       "publish_url" TEXT NOT NULL,
       "publ_build_event_id" INTEGER NOT NULL,
       "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
-      "created_by" TEXT NOT NULL,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_build_event_id") REFERENCES "publ_build_event"("publ_build_event_id")
   );
 
@@ -263,7 +261,7 @@ const fixturePrime = ws.unindentWhitespace(`
       "filesys_target_symlink" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
-      "created_by" TEXT NOT NULL,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
@@ -274,11 +272,11 @@ const fixturePrime = ws.unindentWhitespace(`
       "host_identity" JSON,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
-      "created_by" TEXT NOT NULL,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
-  { /* TODO */ schema.publHost.insertDML({ host: "test", host_identity: "testHI", mutation_count: 0, host_type_code: schema.hostType.seedEnum.linux })}
+  INSERT INTO "publ_host" ("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_by") VALUES ('test', 'test', 'testHI', 0, 0, NULL);
 
   SELECT "publ_host_id" FROM "publ_host" WHERE "host_identity" = 'testHI';
 

@@ -34,6 +34,7 @@ export function governedDomains<
   Domain extends GovernedDomain,
   Context extends SQLa.SqlEmitContext,
 >() {
+  const sdf = SQLa.sqlDomainsFactory<Any, Context>();
   // govnZB can be used to add arbitrary governance rules, descriptions and meta
   // data to any domain (Zod Type).
   const govnZB = za.zodBaggage<
@@ -48,6 +49,7 @@ export function governedDomains<
   // these can be direct SqlDomain object or Zod with meta data passed through
   // either ZodBaggage or SQLa.zodSqlDomainRawCreateParams().
   return {
+    sdf,
     govnZB,
     text: z.string,
     textNullable: () => z.string().optional(),
@@ -160,11 +162,25 @@ export function governedModel<
   const keys = governedKeys<Domain, Context>();
   const tableLintRules = SQLa.tableLintRules<Context>();
   const tcFactory = SQLa.tableColumnFactory<Any, Context>();
+  const createdBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "created_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+        sqlDefaultValue: () => ({ SQL: () => `'UNKNOWN'` }),
+      };
+    },
+  );
 
   const housekeeping = {
     columns: {
       created_at: domains.createdAt(),
-      created_by: domains.text(),
+      created_by: z.string(SQLa.zodSqlDomainRawCreateParams(createdBySDF))
+        .optional(),
     },
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: SQLa.InsertStmtPreparerOptions<
@@ -173,10 +189,9 @@ export function governedModel<
         { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
         Context
       > = {
-        // created_at/created_by should be filled in by the database so we don't want
+        // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
-        isColumnEmittable: (name) =>
-          name == "created_at" || name == "created_by",
+        isColumnEmittable: (name) => name == "created_at" ? false : true,
       };
       return result as SQLa.InsertStmtPreparerOptions<
         Any,

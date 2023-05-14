@@ -61,12 +61,14 @@ export function ordinalEnumTable<
   }[] = [];
   type EnumRecord = typeof seedRows[number];
   type FilterableColumnName = keyof EnumRecord;
+  const allowedCodes: number[] = [];
   for (const e of Object.entries(seedEnum)) {
     const [key, value] = e;
     if (typeof value === "number") {
       // enums have numeric ids and reverse-mapped values as their keys
       // and we care only about the text keys ids, they point to codes
       const value = e[1] as EnumValue;
+      allowedCodes.push(value);
       const er: EnumRecord = {
         code: value as unknown as Array<
           typeof seedEnum[keyof typeof seedEnum]
@@ -97,8 +99,9 @@ export function ordinalEnumTable<
   ) as unknown as z.ZodString & { sqlDomain: typeof createdAtSD };
 
   const columnsShape: ColumnsShape = {
-    // our seedEnum type is a subset of z.EnumLike so it's safe
-    code: pkf.primaryKey(z.nativeEnum(seedEnum as unknown as z.EnumLike)),
+    // our seedEnum type is a subset of z.EnumLike so it's safe;
+    // TODO: add refine() validation to ensure only valid entries are coded
+    code: pkf.primaryKey(z.number()),
     value: valueZodDomain,
     created_at: createdAtZodDomain,
   } as unknown as ColumnsShape;
