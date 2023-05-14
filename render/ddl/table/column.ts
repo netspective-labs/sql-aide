@@ -173,9 +173,7 @@ export function typicalTableColumnDefnSQL<
     const decoratorsSQL = decorations
       ? ` ${decorations.map((d) => d.SQL(ctx)).join(" ")}`
       : "";
-    const notNull = decoratorsSQL.length == 0
-      ? isd.isNullable() ? "" : " NOT NULL"
-      : "";
+    const notNull = isd.isNullable() ? "" : " NOT NULL";
     const defaultValue = isd.sqlDefaultValue
       ? ` DEFAULT ${isd.sqlDefaultValue("create table column").SQL(ctx)}`
       : "";
