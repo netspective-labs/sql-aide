@@ -1,13 +1,6 @@
-import { zod as z } from "../../deps.ts";
-import * as safety from "../../../lib/universal/safety.ts";
-import * as emit from "../../emit/mod.ts";
-import * as d from "../../domain/mod.ts";
-import * as c from "./column.ts";
-import * as tbl from "./table.ts";
-import * as r from "./record.ts";
-import * as ss from "../../dql/select.ts";
-import * as cr from "../../dql/criteria.ts";
-import * as pk from "./primary-key.ts";
+import { zod as z } from "../deps.ts";
+import * as safety from "../lib/universal/safety.ts";
+import * as SQLa from "../render/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easier on Deno linting
@@ -33,22 +26,22 @@ export function ordinalEnumTable<
   EnumCode extends string,
   EnumValue extends number,
   TableName extends string,
-  Context extends emit.SqlEmitContext,
+  Context extends SQLa.SqlEmitContext,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodNumber
-      & d.SqlDomainSupplier<z.ZodNumber, "code", Context>;
+      & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context>;
     readonly value:
       // "value" is the actual text, but in an enum the "code" contains the value
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
-      & d.SqlDomainSupplier<
+      & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
         "value",
         Context
       >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
-      & d.SqlDomainSupplier<
+      & SQLa.SqlDomainSupplier<
         z.ZodOptional<z.ZodDefault<z.ZodDate>>,
         "created_at",
         Context
@@ -57,7 +50,7 @@ export function ordinalEnumTable<
 >(
   tableName: TableName,
   seedEnum: { [key in EnumCode]: EnumValue },
-  tdOptions?: tbl.TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
 ) {
   type ValueZodEnum = [EnumCode, ...(readonly EnumCode[])];
   const enumValues = Object.keys(seedEnum) as unknown as ValueZodEnum;
@@ -85,10 +78,10 @@ export function ordinalEnumTable<
   }
 
   // "value" is the actual text, but in an enum the "code" contains the value
-  const tcf = c.tableColumnFactory<TableName, Context>();
-  const pkf = pk.primaryKeyColumnFactory<Context>();
+  const tcf = SQLa.tableColumnFactory<TableName, Context>();
+  const pkf = SQLa.primaryKeyColumnFactory<Context>();
 
-  const valueSD: d.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+  const valueSD: SQLa.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
     ...tcf.enumSDF.zodText<EnumCode, ValueZodEnum, "value">(enumValues),
     identity: "value",
   };
@@ -109,7 +102,7 @@ export function ordinalEnumTable<
     value: valueZodDomain,
     created_at: createdAtZodDomain,
   } as unknown as ColumnsShape;
-  const tdrf = r.tableColumnsRowFactory(tableName, columnsShape, {
+  const tdrf = SQLa.tableColumnsRowFactory(tableName, columnsShape, {
     // "created_at" is considered "housekeeping" with a default so don't
     // emit it as part of the insert DML statement
     defaultIspOptions: {
@@ -117,7 +110,7 @@ export function ordinalEnumTable<
     },
   });
   const etn: EnumTableDefn = { enumTableNature: "numeric" };
-  const td = tbl.tableDefinition(tableName, columnsShape, tdOptions);
+  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
   return {
     ...etn,
     ...td,
@@ -131,21 +124,21 @@ export function ordinalEnumTable<
       ? seedRows.map((s) => tdrf.insertDML(s as Any))
       : `-- no ${tableName} seed rows`,
     seedEnum,
-    select: ss.entitySelectStmtPreparer<
+    select: SQLa.entitySelectStmtPreparer<
       TableName,
       EnumRecord,
       EnumRecord,
       Context
     >(
       tableName,
-      cr.filterCriteriaPreparer((group) => {
+      SQLa.filterCriteriaPreparer((group) => {
         if (group === "primary-keys") {
           return td.domains.filter((d) =>
-            pk.isTablePrimaryKeyColumnDefn(d) ? true : false
+            SQLa.isTablePrimaryKeyColumnDefn(d) ? true : false
           ).map((d) => d.identity) as FilterableColumnName[];
         }
         return td.domains.filter((d) =>
-          c.isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
+          SQLa.isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
             d.isExcludedFromFilterCriteriaDql
             ? false
             : true
@@ -168,25 +161,25 @@ export function textEnumTable<
   EnumCode extends string,
   EnumValue extends string,
   TableName extends string,
-  Context extends emit.SqlEmitContext,
+  Context extends SQLa.SqlEmitContext,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
-      & d.SqlDomainSupplier<
+      & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
         "code",
         Context
       >;
     readonly value:
       & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
-      & d.SqlDomainSupplier<
+      & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
         "value",
         Context
       >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
-      & d.SqlDomainSupplier<
+      & SQLa.SqlDomainSupplier<
         z.ZodOptional<z.ZodDefault<z.ZodDate>>,
         "created_at",
         Context
@@ -195,7 +188,7 @@ export function textEnumTable<
 >(
   tableName: TableName,
   seedEnum: { [key in EnumCode]: EnumValue },
-  tdOptions?: tbl.TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
 ) {
   const seedRows: {
     readonly code: [EnumCode, ...(readonly EnumCode[])][number];
@@ -213,9 +206,9 @@ export function textEnumTable<
   type ValueZodEnum = [EnumValue, ...(readonly EnumValue[])];
   const enumCodes = Object.keys(seedEnum) as unknown as CodeZodEnum;
   const enumValues = Object.values(seedEnum) as unknown as ValueZodEnum;
-  const tcf = c.tableColumnFactory<TableName, Context>();
-  const pkf = pk.primaryKeyColumnFactory<Context>();
-  const codeSD: d.SqlDomain<z.ZodEnum<CodeZodEnum>, Context, "code"> = {
+  const tcf = SQLa.tableColumnFactory<TableName, Context>();
+  const pkf = SQLa.primaryKeyColumnFactory<Context>();
+  const codeSD: SQLa.SqlDomain<z.ZodEnum<CodeZodEnum>, Context, "code"> = {
     ...tcf.enumSDF.zodText<EnumCode, CodeZodEnum, "code">(enumCodes),
     identity: "code",
   };
@@ -224,7 +217,7 @@ export function textEnumTable<
     codeSD,
   ) as unknown as z.ZodString & { sqlDomain: typeof codeSD };
 
-  const valueSD: d.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+  const valueSD: SQLa.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
     ...tcf.enumSDF.zodText<EnumValue, ValueZodEnum, "value">(enumValues),
     identity: "value",
   };
@@ -244,7 +237,7 @@ export function textEnumTable<
     value: valueZodDomain,
     created_at: createdAtZodDomain,
   } as unknown as ColumnsShape;
-  const tdrf = r.tableColumnsRowFactory(tableName, columnsShape, {
+  const tdrf = SQLa.tableColumnsRowFactory(tableName, columnsShape, {
     // "created_at" is considered "housekeeping" with a default so don't
     // emit it as part of the insert DML statement
     defaultIspOptions: {
@@ -252,7 +245,7 @@ export function textEnumTable<
     },
   });
   const etn: EnumTableDefn = { enumTableNature: "text" };
-  const td = tbl.tableDefinition(tableName, columnsShape, tdOptions);
+  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
   return {
     ...etn,
     ...td,
@@ -266,26 +259,118 @@ export function textEnumTable<
       ? seedRows.map((s) => tdrf.insertDML(s as Any))
       : `-- no ${tableName} seed rows`,
     seedEnum,
-    select: ss.entitySelectStmtPreparer<
+    select: SQLa.entitySelectStmtPreparer<
       TableName,
       EnumRecord,
       EnumRecord,
       Context
     >(
       tableName,
-      cr.filterCriteriaPreparer((group) => {
+      SQLa.filterCriteriaPreparer((group) => {
         if (group === "primary-keys") {
           return td.domains.filter((d) =>
-            pk.isTablePrimaryKeyColumnDefn(d) ? true : false
+            SQLa.isTablePrimaryKeyColumnDefn(d) ? true : false
           ).map((d) => d.identity) as FilterableColumnName[];
         }
         return td.domains.filter((d) =>
-          c.isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
+          SQLa.isTableColumnFilterCriteriaDqlExclusionSupplier(d) &&
             d.isExcludedFromFilterCriteriaDql
             ? false
             : true
         ).map((d) => d.identity) as FilterableColumnName[];
       }),
     ),
+  };
+}
+
+/**
+ * enumTablesFactory is a "typical enums" builders object for database models.
+ * @returns a single object with helper functions as properties (for building models)
+ */
+export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
+  defaultTdOptions?: SQLa.TableDefnOptions<Any, Context>,
+) {
+  function ordinalTable<
+    EnumCode extends string,
+    EnumValue extends number,
+    TableName extends string,
+    ColumnsShape extends z.ZodRawShape = {
+      readonly code:
+        & z.ZodNumber
+        & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context>;
+      readonly value:
+        // "value" is the actual text, but in an enum the "code" contains the value
+        & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
+        & SQLa.SqlDomainSupplier<
+          z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
+          "value",
+          Context
+        >;
+      readonly created_at:
+        & z.ZodOptional<z.ZodDefault<z.ZodDate>>
+        & SQLa.SqlDomainSupplier<
+          z.ZodOptional<z.ZodDefault<z.ZodDate>>,
+          "created_at",
+          Context
+        >;
+    },
+  >(
+    tableName: TableName,
+    seedEnum: { [key in EnumCode]: EnumValue },
+    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  ) {
+    return ordinalEnumTable<
+      EnumCode,
+      EnumValue,
+      TableName,
+      Context,
+      ColumnsShape
+    >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
+  }
+
+  function textTable<
+    EnumCode extends string,
+    EnumValue extends string,
+    TableName extends string,
+    ColumnsShape extends z.ZodRawShape = {
+      readonly code:
+        & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
+        & SQLa.SqlDomainSupplier<
+          z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
+          "code",
+          Context
+        >;
+      readonly value:
+        & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
+        & SQLa.SqlDomainSupplier<
+          z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
+          "value",
+          Context
+        >;
+      readonly created_at:
+        & z.ZodOptional<z.ZodDefault<z.ZodDate>>
+        & SQLa.SqlDomainSupplier<
+          z.ZodOptional<z.ZodDefault<z.ZodDate>>,
+          "created_at",
+          Context
+        >;
+    },
+  >(
+    tableName: TableName,
+    seedEnum: { [key in EnumCode]: EnumValue },
+    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  ) {
+    return textEnumTable<
+      EnumCode,
+      EnumValue,
+      TableName,
+      Context,
+      ColumnsShape
+    >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
+  }
+
+  return {
+    ordinalTable,
+    textTable,
   };
 }
