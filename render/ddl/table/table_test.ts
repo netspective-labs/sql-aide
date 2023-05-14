@@ -43,12 +43,12 @@ const syntheticSchema = () => {
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: dml.InsertStmtPreparerOptions<
         TableName,
-        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
         SyntheticContext
       > = {
         // created_at should be filled in by the database so we don't want
-        // to emit it as part of the an insert DML SQL statement
+        // to emit it as part of the insert DML SQL statement
         isColumnEmittable: (name) => name == "created_at" ? false : true,
       };
       return result as dml.InsertStmtPreparerOptions<
