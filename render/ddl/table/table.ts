@@ -126,7 +126,7 @@ export function tableDefinition<
           ? Property
           : never
       >
-    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ? 
+    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ?
         & c.TableColumnDefn<
           TableName,
           Extract<Property, string>,
@@ -145,7 +145,7 @@ export function tableDefinition<
           ? Property
           : never
       >
-    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ? 
+    ]: ColumnsShape[Property] extends z.ZodType<infer T, infer D, infer I> ?
         & c.TableColumnDefn<
           TableName,
           Extract<Property, string>,
