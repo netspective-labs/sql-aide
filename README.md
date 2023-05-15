@@ -21,6 +21,28 @@ an RDBMS. Instead, `SQLa` is merely a convenient SQL _generator_ and assembler.
 It makes the preparation of SQL DDL, DML, and DQL easier for developers but it
 does not rewrite SQL or attempt to remove SQL knowledge.
 
+## NPM Packaging
+
+Build the NPM package
+
+```bash
+deno task prepare-npm
+```
+
+Publish the NPM package
+
+```bash
+deno task publish-npm
+```
+
+To publish this package, you will need the necessary permissions. Please contact
+the `netspective-labs` organization to obtain the required permissions if you
+don't have them yet.
+
+## Unit Testing
+
+// TODO:
+
 ## Init after clone
 
 This repo uses git hooks for maintenance, after cloning the repo in your sandbox
