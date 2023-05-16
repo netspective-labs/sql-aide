@@ -3,6 +3,7 @@ import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../../lib/universal/safety.ts";
 import * as za from "../../../lib/universal/zod-aide.ts";
 import * as d from "../../domain/mod.ts";
+import * as g from "../../graph.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -254,6 +255,45 @@ export function foreignKeysFactory<
     }
   }
 
+  const outboundReferences: g.EntityGraphOutboundReferencesSupplier<
+    Context,
+    TableName
+  > = function* (
+    { entity, entityByName, reportIssue },
+  ): Generator<g.EntityGraphOutboundReference<Context>> {
+    for (const key of tableShapeKeys) {
+      const zodTypeSD = zbSchema[key];
+      if (isForeignKeyDestination(zodTypeSD.sqlDomain)) {
+        const fks = zodTypeSD.sqlDomain.foreignKeySource;
+        const target = entityByName(fks.tableName);
+        if (target) {
+          const attr = target.attributes.find((sd) =>
+            sd.identity == fks.columnName
+          );
+          if (attr) {
+            yield {
+              from: { entity, attr: zodTypeSD.sqlDomain },
+              to: { entity: target, attr },
+              nature: isBelongsToForeignKeyNature(fks)
+                ? { isBelongsTo: true, collectionName: fks.collectionName }
+                : "reference",
+            };
+          } else {
+            reportIssue({
+              // deno-fmt-ignore
+              lintIssue: `table column '${fks.columnName}' referenced in foreignKey ${JSON.stringify(fks)} not found in graph`,
+            });
+          }
+        } else {
+          reportIssue({
+            // deno-fmt-ignore
+            lintIssue: `table '${fks.tableName}' referenced in foreignKey ${JSON.stringify(fks)} not found in graph`,
+          });
+        }
+      }
+    }
+  };
+
   // we let Typescript infer function return to allow generics in sqlDomains to
   // be more effective but we want other parts of the `result` to be as strongly
   // typed as possible
@@ -265,5 +305,6 @@ export function foreignKeysFactory<
     foreignKeys,
     isForeignKeyDestination,
     isBelongsToForeignKeyNature,
+    outboundReferences,
   };
 }
