@@ -327,5 +327,9 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
 export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>() {
-  return typ.governedTemplateState<DataVaultDomainGovn, Context>();
+  const gts = typ.governedTemplateState<DataVaultDomainGovn, Context>();
+  return {
+    ...gts,
+    ...dataVaultGovn<Context>(gts.ddlOptions),
+  };
 }
