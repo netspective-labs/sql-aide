@@ -64,7 +64,7 @@ export function tableSelectFactory<
 
   type EntireRecord = addQuestionMarks<
     {
-      [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
+      [Property in keyof ColumnsShape]?: ColumnsShape[Property] extends
         z.ZodType<infer T, infer D, infer I>
         ? z.infer<z.ZodType<T, D, I>> | tmpl.SqlTextSupplier<Context>
         : never;

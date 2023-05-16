@@ -43,12 +43,12 @@ const syntheticSchema = () => {
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: dml.InsertStmtPreparerOptions<
         TableName,
-        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-        { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
+        { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
         SyntheticContext
       > = {
         // created_at should be filled in by the database so we don't want
-        // to emit it as part of the an insert DML SQL statement
+        // to emit it as part of the insert DML SQL statement
         isColumnEmittable: (name) => name == "created_at" ? false : true,
       };
       return result as dml.InsertStmtPreparerOptions<
@@ -298,7 +298,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         -- no SQL lint issues (typicalSqlTextLintManager)
 
         CREATE TABLE "synthetic_table_with_text_pk" (
-            "text_primary_key" TEXT PRIMARY KEY,
+            "text_primary_key" TEXT PRIMARY KEY NOT NULL,
             "text" TEXT NOT NULL,
             "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
@@ -343,7 +343,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         -- no SQL lint issues (typicalSqlTextLintManager)
 
         CREATE TABLE "synthetic_table_with_uaod_pk" (
-            "ua_on_demand_primary_key" TEXT PRIMARY KEY,
+            "ua_on_demand_primary_key" TEXT PRIMARY KEY NOT NULL,
             "text" TEXT NOT NULL,
             "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
@@ -523,8 +523,8 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints", async (tc) => {
       -- no SQL lint issues (typicalSqlTextLintManager)
 
       CREATE TABLE "synthetic_table_with_constraints" (
-          "text_primary_key" TEXT PRIMARY KEY,
-          "column_unique" TEXT /* UNIQUE COLUMN */,
+          "text_primary_key" TEXT PRIMARY KEY NOT NULL,
+          "column_unique" TEXT /* UNIQUE COLUMN */ NOT NULL,
           "created_at" DATE,
           UNIQUE("column_unique"),
           UNIQUE("column_unique", "created_at"),
@@ -799,10 +799,14 @@ Deno.test("SQL Aide (SQLa) Table DQL Select Statement", async (tc) => {
           int: 423,
           uaOnDemandPrimaryKey: "test",
         });
-        expectType<string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+        expectType<
+          string | tmpl.SqlTextSupplier<tmpl.SqlEmitContext> | undefined
+        >(
           insertable.text,
         );
-        expectType<number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext>>(
+        expectType<
+          number | tmpl.SqlTextSupplier<tmpl.SqlEmitContext> | undefined
+        >(
           insertable.int,
         );
       });

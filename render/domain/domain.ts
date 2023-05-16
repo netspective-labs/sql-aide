@@ -5,6 +5,17 @@ import * as safety from "../../lib/universal/safety.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+export type SqlDomainZodDescrMeta = {
+  readonly isSqlDomainZodDescrMeta: true;
+};
+
+export function isSqlDomainZodDescr<SDZD extends SqlDomainZodDescrMeta>(
+  o: unknown,
+): o is SDZD {
+  const isSDZD = safety.typeGuard<SDZD>("isSqlDomainZodDescrMeta");
+  return isSDZD(o);
+}
+
 export type SqlDomain<
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
@@ -151,6 +162,80 @@ export function zodStringSqlDomainFactory<
   };
 }
 
+export const zodSqlDomainRawCreateParams = (
+  descrMeta: SqlDomainZodDescrMeta,
+) => {
+  return {
+    description: JSON.stringify(descrMeta),
+  };
+};
+
+// see https://github.com/colinhacks/zod#json-type
+const literalSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
+type Literal = z.infer<typeof literalSchema>;
+type Json = Literal | { [key: string]: Json } | Json[];
+
+export const zodJsonSchema: z.ZodType<Json> = z.lazy(
+  () =>
+    z.union([literalSchema, z.array(zodJsonSchema), z.record(zodJsonSchema)]),
+  zodSqlDomainRawCreateParams(sqlDomainZodJsonDescrMeta()),
+);
+
+export type SqlDomainZodJsonDescr = SqlDomainZodDescrMeta & {
+  readonly isJsonSqlDomain: true;
+};
+
+export function isSqlDomainZodJsonDescr<SDZJD extends SqlDomainZodJsonDescr>(
+  o: unknown,
+): o is SDZJD {
+  const isSDZJD = safety.typeGuard<SDZJD>(
+    "isSqlDomainZodDescrMeta",
+    "isJsonSqlDomain",
+  );
+  return isSDZJD(o);
+}
+
+export function sqlDomainZodJsonDescrMeta(): SqlDomainZodJsonDescr {
+  return {
+    isSqlDomainZodDescrMeta: true,
+    isJsonSqlDomain: true,
+  };
+}
+
+export function zodJsonSqlDomainFactory<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+>() {
+  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  return {
+    ...ztaSDF,
+    isSqlDomainZodJsonDescr,
+    sqlDomainZodJsonDescrMeta,
+    json: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({ SQL: () => `JSON` }),
+        parents: init?.parents,
+      };
+    },
+  };
+}
+
 export function zodNumberSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
@@ -210,6 +295,32 @@ export function zodNumberSqlDomainFactory<
       };
     },
   };
+}
+
+export type SqlDomainZodDateDescr = SqlDomainZodDescrMeta & {
+  readonly isDateSqlDomain: true;
+  readonly isDateTime?: boolean;
+  readonly isCreatedAt?: boolean;
+};
+
+export function sqlDomainZodDateDescr(
+  options: Pick<SqlDomainZodDateDescr, "isDateTime" | "isCreatedAt">,
+): SqlDomainZodDateDescr {
+  return {
+    isSqlDomainZodDescrMeta: true,
+    isDateSqlDomain: true,
+    ...options,
+  };
+}
+
+export function isSqlDomainZodDateDescr<SDZJD extends SqlDomainZodDateDescr>(
+  o: unknown,
+): o is SDZJD {
+  const isSDZJD = safety.typeGuard<SDZJD>(
+    "isSqlDomainZodDescrMeta",
+    "isDateSqlDomain",
+  );
+  return isSDZJD(o);
 }
 
 export function zodDateSqlDomainFactory<
@@ -334,6 +445,53 @@ export function zodEnumSqlDomainFactory<
   };
 }
 
+export type ZodTypeSqlDomainFactoryFromHook<
+  Identity extends string,
+  ZodType extends z.ZodTypeAny,
+  Context extends tmpl.SqlEmitContext,
+> = (
+  zodType: ZodType,
+  init?: {
+    readonly identity?: Identity;
+    readonly isOptional?: boolean;
+    readonly parents?: z.ZodTypeAny[];
+  },
+) => SqlDomain<ZodType, Context, Identity>;
+
+export const zodTypeSqlDomainFactoryFromHooks = new Map<
+  string,
+  ZodTypeSqlDomainFactoryFromHook<Any, Any, Any>
+>();
+
+export function declareZodTypeSqlDomainFactoryFromHook(
+  name: string,
+  hook: ZodTypeSqlDomainFactoryFromHook<Any, Any, Any>,
+) {
+  zodTypeSqlDomainFactoryFromHooks.set(name, hook);
+  const result:
+    & SqlDomainZodDescrMeta
+    & ZodTypeSqlDomainFactoryFromHookSupplier = {
+      isSqlDomainZodDescrMeta: true,
+      zodTypeSqlDomainFrom: name,
+    };
+  return result;
+}
+
+export type ZodTypeSqlDomainFactoryFromHookSupplier = {
+  readonly zodTypeSqlDomainFrom: string;
+};
+
+export function isZodTypeSqlDomainFactoryFromHookSupplier<
+  ZTSDFHS extends ZodTypeSqlDomainFactoryFromHookSupplier,
+>(
+  o: unknown,
+): o is ZTSDFHS {
+  const isZTSDFHS = safety.typeGuard<ZTSDFHS>(
+    "zodTypeSqlDomainFrom",
+  );
+  return isZTSDFHS(o);
+}
+
 export function zodTypeSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
@@ -346,6 +504,7 @@ export function zodTypeSqlDomainFactory<
   const numberSDF = zodNumberSqlDomainFactory<DomainsIdentity, Context>();
   const dateSDF = zodDateSqlDomainFactory<DomainsIdentity, Context>();
   const enumSDF = zodEnumSqlDomainFactory<DomainsIdentity, Context>();
+  const jsonSDF = zodJsonSqlDomainFactory<DomainsIdentity, Context>();
 
   const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
     delete (zodType as Any)["sqlDomain"];
@@ -362,6 +521,40 @@ export function zodTypeSqlDomainFactory<
     }
   };
 
+  const descriptionHook = <
+    Identity extends string,
+    ZodType extends z.ZodTypeAny,
+  >(zodType: ZodType, init?: {
+    readonly identity?: Identity;
+    readonly isOptional?: boolean;
+    readonly parents?: z.ZodTypeAny[];
+  }) => {
+    if (zodType._def.description) {
+      const metaText = zodType._def.description;
+      try {
+        const descrMeta = JSON.parse(zodType._def.description);
+        if (isSqlDomainZodDescr(descrMeta)) {
+          return {
+            zodType,
+            init,
+            metaText,
+            descrMeta,
+            descrMetaError: undefined,
+          };
+        }
+      } catch (err) {
+        return {
+          zodType,
+          init,
+          metaText,
+          descrMeta: undefined,
+          descrMetaError: err,
+        };
+      }
+    }
+    return undefined;
+  };
+
   const from = <
     Identity extends string,
     ZodType extends z.ZodTypeAny,
@@ -374,6 +567,25 @@ export function zodTypeSqlDomainFactory<
     },
   ): SqlDomain<ZodType, Context, Identity> => {
     const zodDef = zodType._def;
+
+    // we allow SqlDomain "hooks" to be defined in meta data
+    const zodDefHook = descriptionHook(zodType, init);
+    if (
+      zodDefHook?.descrMeta &&
+      isZodTypeSqlDomainFactoryFromHookSupplier(zodDefHook.descrMeta)
+    ) {
+      const hookName = zodDefHook.descrMeta.zodTypeSqlDomainFrom;
+      const hook = zodTypeSqlDomainFactoryFromHooks.get(hookName);
+      if (hook) {
+        return hook(zodType, init);
+      }
+      throw new Error(
+        `Unable to map Zod type ${zodDef.typeName} to SQL domain, invalid from hook name '${hookName}' (${
+          JSON.stringify(zodDef)
+        } init: ${JSON.stringify(init)})`,
+      );
+    }
+
     switch (zodDef.typeName) {
       case z.ZodFirstPartyTypeKind.ZodOptional: {
         return from(zodType._def.innerType, {
@@ -405,16 +617,61 @@ export function zodTypeSqlDomainFactory<
       }
 
       case z.ZodFirstPartyTypeKind.ZodDate: {
-        return dateSDF.date(zodType, init);
+        if (zodDefHook?.descrMeta) {
+          if (isSqlDomainZodDateDescr(zodDefHook.descrMeta)) {
+            return zodDefHook.descrMeta.isCreatedAt
+              ? dateSDF.createdAt(init)
+              : (zodDefHook.descrMeta.isDateTime
+                ? dateSDF.dateTime(zodType, init)
+                : dateSDF.date(zodType, init));
+          } else {
+            throw new Error(
+              `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodDate ${
+                JSON.stringify(zodDefHook.descrMeta)
+              }`,
+            );
+          }
+        } else {
+          return dateSDF.date(zodType, init);
+        }
       }
 
       case z.ZodFirstPartyTypeKind.ZodNativeEnum: {
         return enumSDF.nativeNumeric(zodType, init);
       }
 
+      case z.ZodFirstPartyTypeKind.ZodEnum: {
+        return enumSDF.zodText(
+          (zodType as Any as z.ZodEnum<Any>)._def.values.values,
+          init,
+        );
+      }
+
+      case z.ZodFirstPartyTypeKind.ZodLazy: {
+        if (zodDefHook?.descrMeta) {
+          if (isSqlDomainZodJsonDescr(zodDefHook.descrMeta)) {
+            return jsonSDF.json(zodType, init);
+          } else {
+            throw new Error(
+              `Unable to map Zod type ${zodDef.typeName} to SQL domain, descr hook is not for JSON ${
+                JSON.stringify(zodDefHook.descrMeta)
+              }`,
+            );
+          }
+        } else {
+          throw new Error(
+            `Unable to map Zod type ${zodDef.typeName} to SQL domain, no description meta found (${
+              JSON.stringify(zodDef)
+            } init: ${JSON.stringify(init)})`,
+          );
+        }
+      }
+
       default:
         throw new Error(
-          `Unable to map Zod type ${zodDef.typeName} to SQL domain`,
+          `Unable to map Zod type ${zodDef.typeName} to SQL domain (${
+            JSON.stringify(zodDef)
+          } init: ${JSON.stringify(init)})`,
         );
     }
   };
@@ -460,6 +717,7 @@ export function zodTypeSqlDomainFactory<
     dateSDF,
     enumSDF,
     detachFrom,
+    descriptionHook,
     from,
     cacheableFrom,
   };

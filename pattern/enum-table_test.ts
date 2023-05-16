@@ -1,9 +1,8 @@
-import { zod as z } from "../../deps.ts";
-import { testingAsserts as ta } from "../../deps-test.ts";
-import { unindentWhitespace as uws } from "../../../lib/universal/whitespace.ts";
+import { zod as z } from "../deps.ts";
+import { testingAsserts as ta } from "../deps-test.ts";
+import { unindentWhitespace as uws } from "../lib/universal/whitespace.ts";
+import * as SQLa from "../render/mod.ts";
 import * as mod from "./enum-table.ts";
-import * as tbl from "./table.ts";
-import * as emit from "../../emit/mod.ts";
 
 const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
@@ -21,10 +20,10 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
     syntheticEnum1,
   );
 
-  const ctx = emit.typicalSqlEmitContext();
+  const ctx = SQLa.typicalSqlEmitContext();
 
   await tc.step("table definition", () => {
-    ta.assert(tbl.isTableDefinition(numericEnumModel));
+    ta.assert(SQLa.isTableDefinition(numericEnumModel));
     ta.assert(mod.isEnumTableDefn(numericEnumModel));
     ta.assert(numericEnumModel);
     ta.assertEquals("synthetic_enum_numeric", numericEnumModel.tableName);
@@ -40,7 +39,7 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
       numericEnumModel.SQL(ctx),
       uws(`
         CREATE TABLE "synthetic_enum_numeric" (
-            "code" INTEGER PRIMARY KEY,
+            "code" INTEGER PRIMARY KEY NOT NULL,
             "value" TEXT NOT NULL,
             "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
         )`),
@@ -52,8 +51,8 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
       code: syntheticEnum1.code0,
       value: "code0",
     });
-    expectType<number | emit.SqlTextSupplier<emit.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
-    expectType<"code0" | "code1" | emit.SqlTextSupplier<emit.SqlEmitContext>>(
+    expectType<number | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
+    expectType<"code0" | "code1" | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(
       row.value,
     ); // should see compile error if this doesn't work
   });
@@ -96,10 +95,10 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
     syntheticEnum2,
   );
 
-  const ctx = emit.typicalSqlEmitContext();
+  const ctx = SQLa.typicalSqlEmitContext();
 
   await tc.step("table definition", () => {
-    ta.assert(tbl.isTableDefinition(textEnumModel));
+    ta.assert(SQLa.isTableDefinition(textEnumModel));
     ta.assert(mod.isEnumTableDefn(textEnumModel));
     ta.assert(textEnumModel);
     ta.assertEquals("synthetic_enum_text", textEnumModel.tableName);
@@ -115,7 +114,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
       textEnumModel.SQL(ctx),
       uws(`
         CREATE TABLE "synthetic_enum_text" (
-            "code" TEXT PRIMARY KEY,
+            "code" TEXT PRIMARY KEY NOT NULL,
             "value" TEXT NOT NULL,
             "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
         )`),
@@ -128,9 +127,9 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
       value: syntheticEnum2.code1,
     });
     expectType<
-      "code1" | "code2" | "code3" | emit.SqlTextSupplier<emit.SqlEmitContext>
+      "code1" | "code2" | "code3" | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>
     >(row.code); // should see compile error if this doesn't work
-    expectType<syntheticEnum2 | emit.SqlTextSupplier<emit.SqlEmitContext>>(
+    expectType<syntheticEnum2 | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(
       row.value,
     ); // should see compile error if this doesn't work
   });

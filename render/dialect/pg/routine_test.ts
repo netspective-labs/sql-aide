@@ -313,23 +313,67 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
     },
   );
 
-  //
+  await tc.step(
+    "PL/SQL stored procedure for upsert values into the table (idempotent, auto begin/end, type-safe names)",
+    () => {
+      // this test step is just like the one above but shows how to strongly-type
+      // the names of the arguments and properly quote them automatically
+      const srb = mod.storedRoutineBuilder("synthetic_sp_upsert", {
+        synthetic_id: z.string(),
+        synthetic_text: z.string(),
+        synthetic_json_converted: z.string(),
+        synthetic_hash: z.string(),
+        synthetic_type: z.string(),
+        created_time: z.date(),
+        updated_time: z.date(),
+        provenance: z.string(),
+      });
+      const { argsSD: { sdSchema: spa }, argsIndex: spi } = srb;
+      const sp = mod.storedProcedure(
+        srb.routineName,
+        srb.argsDefn,
+        (name, args) => mod.typedPlSqlBody(name, args, ctx),
+      )`
+      insert into stateful_service.synthetic_table
+      (${spa.synthetic_id}, ${spa.synthetic_text}, ${spa.synthetic_json_converted}, ${spa.synthetic_hash}, ${spa.synthetic_type}, ${spa.created_time}, ${spa.updated_time}, ${spa.provenance})
+      values (${spi.synthetic_id}, ${spi.synthetic_text}, ${spi.synthetic_json_converted}, ${spi.synthetic_hash}, ${spi.synthetic_type}, ${spi.created_time}, ${spi.updated_time}, ${spi.provenance})
+      on conflict do nothing`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp_upsert"("synthetic_id" TEXT, "synthetic_text" TEXT, "synthetic_json_converted" TEXT, "synthetic_hash" TEXT, "synthetic_type" TEXT, "created_time" DATE, "updated_time" DATE, "provenance" TEXT) AS $$
+          insert into stateful_service.synthetic_table
+          ("synthetic_id", "synthetic_text", "synthetic_json_converted", "synthetic_hash", "synthetic_type", "created_time", "updated_time", "provenance")
+          values ($1, $2, $3, $4, $5, $6, $7, $8)
+          on conflict do nothing
+        $$ LANGUAGE SQL;`),
+      );
+    },
+  );
+
   await tc.step(
     "PL/pgSQL namespaced stored function for upsert values into the table that returns inserted_row RECORD (non-idempotent, manual begin/end)",
     () => {
+      // note mixed use of hard-coded arguments names and properly typed
+      // argument names (`spa`) and indexes (`spi`). always use properly
+      // typed names and indexes so that when argument names change the
+      // SP can be generated properly.
+      const srb = mod.storedRoutineBuilder("synthetic_sf_upserted", {
+        synthetic_id: z.string(),
+        synthetic_text: z.string(),
+        synthetic_json_converted: z.string(),
+        synthetic_hash: z.string(),
+        synthetic_type: z.string(),
+        created_time: z.date(),
+        updated_time: z.date(),
+        provenance: z.string(),
+      });
+      const { argsSD: { sdSchema: spa }, argsIndex: spi } = srb;
+      const returns = "inserted_row";
       const sf = mod.storedFunction(
         "synthetic_sf_upserted",
-        {
-          synthetic_id: z.string(),
-          synthetic_text: z.string(),
-          synthetic_json_converted: z.string(),
-          synthetic_hash: z.string(),
-          synthetic_type: z.string(),
-          created_time: z.date(),
-          updated_time: z.date(),
-          provenance: z.string(),
-        },
-        "inserted_row",
+        srb.argsDefn,
+        returns,
         (name, args, _, bo) => mod.typedPlPgSqlBody(name, args, ctx, bo),
         {
           embeddedStsOptions: tmpl.typicalSqlTextSupplierOptions(),
@@ -339,19 +383,19 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
         },
       )`
       DECLARE
-         inserted_row stateful_service.synthetic_table;
+         ${returns} stateful_service.synthetic_table;
       BEGIN
-          select * into inserted_row
+          select * into ${returns}
             from stateful_service.synthetic_id synthetic_table
-          where synthetic_table.synthetic_text = $2 AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
+          where synthetic_table.${spa.synthetic_text} = ${spi.synthetic_text} AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
             and synthetic_table.provenance = $8;
-          if inserted_row is null then
+          if ${returns} is null then
             insert into stateful_service.synthetic_table
-              (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
-              values ($1, $2, $3, $4, $5, $6, $7, $8)
-              returning * into inserted_row;
+              (synthetic_id, ${spa.synthetic_text}, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+              values ($1, ${spi.synthetic_text}, $3, $4, $5, $6, $7, $8)
+              returning * into ${returns};
           end if;
-          return inserted_row;
+          return ${returns};
       END;`;
       ta.assertEquals(
         sf.SQL(ctx),
@@ -362,11 +406,11 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
         BEGIN
             select * into inserted_row
               from stateful_service.synthetic_id synthetic_table
-            where synthetic_table.synthetic_text = $2 AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
+            where synthetic_table."synthetic_text" = $2 AND synthetic_table.synthetic_json_converted = $3 AND synthetic_table.synthetic_hash = $4 AND synthetic_table.synthetic_type = $5 AND synthetic_table.created_time = $6 AND synthetic_table.updated_time = $7
               and synthetic_table.provenance = $8;
             if inserted_row is null then
               insert into stateful_service.synthetic_table
-                (synthetic_id, synthetic_text, synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
+                (synthetic_id, "synthetic_text", synthetic_json_converted, synthetic_hash, synthetic_type, created_time, updated_time, provenance)
                 values ($1, $2, $3, $4, $5, $6, $7, $8)
                 returning * into inserted_row;
             end if;

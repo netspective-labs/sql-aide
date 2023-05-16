@@ -221,9 +221,19 @@ export const clonedZodType = <Original extends z.ZodTypeAny, Cloned = Original>(
       return z.number({ ...original._def }) as unknown as Cloned;
     }
 
+    case z.ZodFirstPartyTypeKind.ZodNativeEnum: {
+      return z.nativeEnum({ ...original._def }) as unknown as Cloned;
+    }
+
+    case z.ZodFirstPartyTypeKind.ZodEnum: {
+      return z.enum({ ...original._def }) as unknown as Cloned;
+    }
+
     default:
       throw new Error(
-        `Unable to map Zod type ${zodTypeName} in referenceSource(src).duplicate(zta)`,
+        `Unable to map Zod type ${zodTypeName} in clonedZodType(original) ${
+          JSON.stringify(original)
+        }`,
       );
   }
 };
