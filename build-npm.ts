@@ -5,7 +5,6 @@ const { version: pgVersion } = JSON.parse(
   Deno.readTextFileSync("./npm/package.json"),
 );
 
-
 await emptyDir("./npm");
 
 await build({
