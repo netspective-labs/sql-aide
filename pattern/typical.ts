@@ -20,8 +20,8 @@ export type GovernedDomain = {
   readonly isUniqueConstraintMember?: string[];
 };
 
-export type GovernedDomainSupplier = {
-  readonly govnDomain: GovernedDomain;
+export type GovernedDomainSupplier<GD extends GovernedDomain> = {
+  readonly govnDomain: GD;
 };
 
 /**
