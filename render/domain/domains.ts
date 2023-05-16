@@ -18,6 +18,18 @@ export type SqlDomains<
   >;
 };
 
+export type ReferenceSource<EntityIdentity extends string> = {
+  readonly identity: EntityIdentity;
+  readonly incomingRefs: Set<ReferenceDestination<EntityIdentity>>;
+  readonly register: (
+    rd: ReferenceDestination<EntityIdentity>,
+  ) => ReferenceDestination<EntityIdentity>;
+};
+
+type ReferenceDestination<EntityIdentity extends string> = {
+  readonly refSource: ReferenceSource<EntityIdentity>;
+};
+
 export type SqlDomainsSupplier<Context extends tmpl.SqlEmitContext> = {
   readonly domains: () => d.SqlDomain<Any, Context, Any>[];
 };
@@ -107,18 +119,8 @@ export function sqlDomainsFactory<
   ) {
     const common = sqlDomains(zodRawShape, init);
 
-    type ReferenceSource = {
-      readonly identity: EntityIdentity;
-      readonly incomingRefs: Set<ReferenceDestination>;
-      readonly register: (rd: ReferenceDestination) => ReferenceDestination;
-    };
-
-    type ReferenceDestination = {
-      readonly refSource: ReferenceSource;
-    };
-
     type RefSrcPlaceholderSupplier = {
-      readonly nativeRefSrcPlaceholder: ReferenceSource;
+      readonly nativeRefSrcPlaceholder: ReferenceSource<EntityIdentity>;
     };
 
     const inferables = () => {
@@ -129,8 +131,8 @@ export function sqlDomainsFactory<
       };
 
       const inferredPlaceholder = () => {
-        const incomingRefs = new Set<ReferenceDestination>();
-        const refSource: ReferenceSource = {
+        const incomingRefs = new Set<ReferenceDestination<EntityIdentity>>();
+        const refSource: ReferenceSource<EntityIdentity> = {
           identity: common.identity,
           incomingRefs,
           register: (rd) => {
@@ -190,7 +192,7 @@ export function sqlDomainsFactory<
             Context,
             Extract<Property, string>
           >
-          & ReferenceDestination;
+          & ReferenceDestination<EntityIdentity>;
       };
 
       // see if any references were registered but need to be created
@@ -200,7 +202,7 @@ export function sqlDomainsFactory<
       for (const key of shapeKeys) {
         const domain = zbSchema[key].sqlDomain;
         if (isInferencePlaceholder(domain)) {
-          const reference: ReferenceDestination = {
+          const reference: ReferenceDestination<EntityIdentity> = {
             refSource: domain.nativeRefSrcPlaceholder,
           };
           const zodType = shape[key];
