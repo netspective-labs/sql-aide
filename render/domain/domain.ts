@@ -159,6 +159,33 @@ export function zodStringSqlDomainFactory<
         parents: init?.parents,
       };
     },
+    // this is a sample string domain which shows how to use the "dialect"
+    // property of SqlEmitContext to differentiate the SQL output for a
+    // domain based on the SQL engine.
+    stringDialect: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            // dialectState returns all dialect checkers in one object but
+            // you can check each individually like isSqliteDialect(ctx.sqlDialect)
+            // deno-fmt-ignore
+            return `TEXT /* ${JSON.stringify(tmpl.dialectState(ctx.sqlDialect))} */`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
   };
 }
 

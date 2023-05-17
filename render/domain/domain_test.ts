@@ -92,6 +92,22 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(numberSD.identity, "syntheticNumber");
   });
 
+  await tc.step("SqlDomain can access Dialect", () => {
+    const { ctx } = sqlGen();
+
+    const csd = ctx.sqlDialect;
+    ta.assert(tmpl.isAnsiSqlDialect(csd));
+    ta.assertEquals(tmpl.isSqliteDialect(csd), false);
+    ta.assertEquals(tmpl.isPostgreSqlDialect(csd), false);
+    ta.assertEquals(tmpl.isMsSqlServerDialect(csd), false);
+
+    const sd = ztsdFactory.stringSDF.stringDialect(z.string());
+    ta.assertEquals(
+      sd.sqlDataType().SQL(ctx),
+      `TEXT /* {"identity":"ANSI","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":false,"isMsSqlServerDialect":false} */`,
+    );
+  });
+
   await tc.step("SqlDomain SQL types", () => {
     const { ctx } = sqlGen();
     const types = (domain: d.SqlDomain<Any, SyntheticContext, Any>) => ({
