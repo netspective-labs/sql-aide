@@ -376,14 +376,16 @@ export function governedModel<
 }
 
 /**
- * governedTemplateState is a "typical schema" emitter object for database models.
+ * governedTemplateState is a "typical schema" emitter object for database
+ * models. It provides a convenient consolidation of SQL output, persistence,
+ * catalogging, and ERD generation.
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
 export function governedTemplateState<
   Domain extends GovernedDomain,
   Context extends SQLa.SqlEmitContext,
 >() {
-  const persist = (
+  const persistSQL = (
     sts: SQLa.SqlTextSupplier<Context>,
     basename: string,
   ) => {
@@ -434,7 +436,7 @@ export function governedTemplateState<
     }, diaPUML.typicalPlantUmlIeOptions());
 
   return {
-    persist,
+    persistSQL,
     tablesDeclared,
     viewsDeclared,
     catalog,

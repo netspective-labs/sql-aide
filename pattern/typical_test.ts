@@ -140,7 +140,7 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     ${ss.hostType}
 
     ${ss.publHost}
-    ${gts.persist(ss.publHost, "publ-host.sql")}
+    ${gts.persistSQL(ss.publHost, "publ-host.sql")}
 
     ${ss.publHostView}
 
