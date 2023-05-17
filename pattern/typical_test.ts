@@ -2,7 +2,6 @@ import { testingAsserts as ta } from "../deps-test.ts";
 import * as ws from "../lib/universal/whitespace.ts";
 import * as SQLa from "../render/mod.ts";
 import * as mod from "./typical.ts";
-import * as erd from "../render/diagram/plantuml-ie-notation.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -179,15 +178,7 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
   );
   ta.assertEquals(gts.tablesDeclared.size, 7);
   ta.assertEquals(gts.viewsDeclared.size, 1);
-
-  const pumlERD = erd.plantUmlIE(ctx, function* () {
-    for (const table of gts.tablesDeclared) {
-      if (SQLa.isGraphEntityDefinitionSupplier(table)) {
-        yield table.graphEntityDefn();
-      }
-    }
-  }, erd.typicalPlantUmlIeOptions());
-  ta.assertEquals(fixturePUML, pumlERD.content);
+  ta.assertEquals(fixturePUML, gts.pumlERD(ctx).content);
 });
 
 // deno-fmt-ignore

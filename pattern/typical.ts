@@ -2,6 +2,7 @@ import { zod as z } from "../deps.ts";
 import * as za from "../lib/universal/zod-aide.ts";
 import * as SQLa from "../render/mod.ts";
 import * as et from "./enum-table.ts";
+import * as diaPUML from "../render/diagram/plantuml-ie-notation.ts";
 
 // for convenience so that deno-lint is not required for use of `any`
 // deno-lint-ignore no-explicit-any
@@ -423,6 +424,15 @@ export function governedTemplateState<
 
   const lintState = SQLa.typicalSqlLintSummaries(ddlOptions.sqlTextLintState);
 
+  const pumlERD = (ctx: Context) =>
+    diaPUML.plantUmlIE(ctx, function* () {
+      for (const table of tablesDeclared) {
+        if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+          yield table.graphEntityDefn();
+        }
+      }
+    }, diaPUML.typicalPlantUmlIeOptions());
+
   return {
     persist,
     tablesDeclared,
@@ -430,5 +440,6 @@ export function governedTemplateState<
     catalog,
     lintState,
     ddlOptions,
+    pumlERD,
   };
 }
