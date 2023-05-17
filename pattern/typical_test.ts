@@ -132,9 +132,9 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     -- * when denormalizing is required, use views (don't denormalize tables)
     -- * each table name MUST be singular (not plural) noun
     -- * each table MUST have a \`table_name\`_id primary key (typicalTableDefn will do this automatically)
-    -- * each table MUST have \`created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL\` column (typicalTableDefn will do this automatically)
-    -- * if table's rows are mutable, it MUST have a \`updated_at DATETIME\` column (not having an updated_at means it's immutable)
-    -- * if table's rows are deleteable, it MUST have a \`deleted_at DATETIME\` column for soft deletes (not having an deleted_at means it's immutable)
+    -- * each table MUST have \`created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\` column (typicalTableDefn will do this automatically)
+    -- * if table's rows are mutable, it MUST have a \`updated_at TIMESTAMP\` column (not having an updated_at means it's immutable)
+    -- * if table's rows are deleteable, it MUST have a \`deleted_at TIMESTAMP\` column for soft deletes (not having an deleted_at means it's immutable)
 
     ${gts.lintState.sqlTextLintSummary}
 
@@ -199,16 +199,16 @@ const fixtureSQL = ws.unindentWhitespace(`
   -- * when denormalizing is required, use views (don't denormalize tables)
   -- * each table name MUST be singular (not plural) noun
   -- * each table MUST have a \`table_name\`_id primary key (typicalTableDefn will do this automatically)
-  -- * each table MUST have \`created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL\` column (typicalTableDefn will do this automatically)
-  -- * if table's rows are mutable, it MUST have a \`updated_at DATETIME\` column (not having an updated_at means it's immutable)
-  -- * if table's rows are deleteable, it MUST have a \`deleted_at DATETIME\` column for soft deletes (not having an deleted_at means it's immutable)
+  -- * each table MUST have \`created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\` column (typicalTableDefn will do this automatically)
+  -- * if table's rows are mutable, it MUST have a \`updated_at TIMESTAMP\` column (not having an updated_at means it's immutable)
+  -- * if table's rows are deleteable, it MUST have a \`deleted_at TIMESTAMP\` column for soft deletes (not having an deleted_at means it's immutable)
 
   -- no SQL lint issues (typicalSqlTextLintManager)
 
   CREATE TABLE IF NOT EXISTS "host_type" (
       "code" INTEGER PRIMARY KEY NOT NULL,
       "value" TEXT NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS "publ_host" (
@@ -217,7 +217,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "host_identity" JSON,
       "host_type_code" INTEGER NOT NULL,
       "mutation_count" INTEGER NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("host_type_code") REFERENCES "host_type"("code"),
       UNIQUE("host")
@@ -230,7 +230,7 @@ const fixtureSQL = ws.unindentWhitespace(`
   CREATE TABLE IF NOT EXISTS "build_event_type" (
       "code" TEXT PRIMARY KEY NOT NULL,
       "value" TEXT NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS "publ_build_event" (
@@ -238,13 +238,13 @@ const fixtureSQL = ws.unindentWhitespace(`
       "publ_host_id" TEXT NOT NULL,
       "build_event_type" TEXT NOT NULL,
       "iteration_index" INTEGER NOT NULL,
-      "build_initiated_at" DATETIME NOT NULL,
-      "build_completed_at" DATETIME NOT NULL,
+      "build_initiated_at" TIMESTAMP NOT NULL,
+      "build_completed_at" TIMESTAMP NOT NULL,
       "build_duration_ms" INTEGER NOT NULL,
       "resources_originated_count" INTEGER NOT NULL,
       "resources_persisted_count" INTEGER NOT NULL,
       "resources_memoized_count" INTEGER NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_host_id") REFERENCES "publ_host"("publ_host_id"),
       FOREIGN KEY("build_event_type") REFERENCES "build_event_type"("code")
@@ -252,12 +252,12 @@ const fixtureSQL = ws.unindentWhitespace(`
 
   CREATE TABLE IF NOT EXISTS "publ_server_service" (
       "publ_server_service_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-      "service_started_at" DATETIME NOT NULL,
+      "service_started_at" TIMESTAMP NOT NULL,
       "listen_host" TEXT NOT NULL,
       "listen_port" INTEGER NOT NULL,
       "publish_url" TEXT NOT NULL,
       "publ_build_event_id" INTEGER NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_build_event_id") REFERENCES "publ_build_event"("publ_build_event_id")
   );
@@ -270,7 +270,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "filesys_target_path" TEXT NOT NULL,
       "filesys_target_symlink" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
@@ -281,7 +281,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "error_summary" TEXT NOT NULL,
       "host_identity" JSON,
       "publ_server_service_id" INTEGER NOT NULL,
-      "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
@@ -316,7 +316,7 @@ const fixturePUML = `@startuml IE
     * **code**: INTEGER
     --
     * value: TEXT
-      created_at: DATETIME
+      created_at: TIMESTAMP
   }
 
   entity "publ_host" as publ_host {
@@ -326,7 +326,7 @@ const fixturePUML = `@startuml IE
       host_identity: JSON
     * host_type_code: INTEGER
     * mutation_count: INTEGER
-      created_at: DATETIME
+      created_at: TIMESTAMP
       created_by: TEXT
   }
 
@@ -334,7 +334,7 @@ const fixturePUML = `@startuml IE
     * **code**: TEXT
     --
     * value: TEXT
-      created_at: DATETIME
+      created_at: TIMESTAMP
   }
 
   entity "publ_build_event" as publ_build_event {
@@ -343,25 +343,25 @@ const fixturePUML = `@startuml IE
     * publ_host_id: TEXT
     * build_event_type: TEXT
     * iteration_index: INTEGER
-    * build_initiated_at: DATETIME
-    * build_completed_at: DATETIME
+    * build_initiated_at: TIMESTAMP
+    * build_completed_at: TIMESTAMP
     * build_duration_ms: INTEGER
     * resources_originated_count: INTEGER
     * resources_persisted_count: INTEGER
     * resources_memoized_count: INTEGER
-      created_at: DATETIME
+      created_at: TIMESTAMP
       created_by: TEXT
   }
 
   entity "publ_server_service" as publ_server_service {
       **publ_server_service_id**: INTEGER
     --
-    * service_started_at: DATETIME
+    * service_started_at: TIMESTAMP
     * listen_host: TEXT
     * listen_port: INTEGER
     * publish_url: TEXT
     * publ_build_event_id: INTEGER
-      created_at: DATETIME
+      created_at: TIMESTAMP
       created_by: TEXT
   }
 
@@ -374,7 +374,7 @@ const fixturePUML = `@startuml IE
     * filesys_target_path: TEXT
       filesys_target_symlink: TEXT
     * publ_server_service_id: INTEGER
-      created_at: DATETIME
+      created_at: TIMESTAMP
       created_by: TEXT
   }
 
@@ -385,7 +385,7 @@ const fixturePUML = `@startuml IE
     * error_summary: TEXT
       host_identity: JSON
     * publ_server_service_id: INTEGER
-      created_at: DATETIME
+      created_at: TIMESTAMP
       created_by: TEXT
   }
 

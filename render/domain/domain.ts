@@ -359,7 +359,7 @@ export function zodDateSqlDomainFactory<
     ) => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
-        sqlDataType: () => ({ SQL: () => `DATETIME` }),
+        sqlDataType: () => ({ SQL: () => `TIMESTAMP` }),
       };
     },
     createdAt: <
@@ -376,7 +376,7 @@ export function zodDateSqlDomainFactory<
           z.date().default(new Date()).optional() as ZodType,
           { isOptional: true, ...init },
         ),
-        sqlDataType: () => ({ SQL: () => `DATETIME` }),
+        sqlDataType: () => ({ SQL: () => `TIMESTAMP` }),
         sqlDefaultValue: () => ({ SQL: () => `CURRENT_TIMESTAMP` }),
       };
     },

@@ -41,7 +41,7 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
         CREATE TABLE "synthetic_enum_numeric" (
             "code" INTEGER PRIMARY KEY NOT NULL,
             "value" TEXT NOT NULL,
-            "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
+            "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`),
     );
   });
@@ -116,7 +116,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
         CREATE TABLE "synthetic_enum_text" (
             "code" TEXT PRIMARY KEY NOT NULL,
             "value" TEXT NOT NULL,
-            "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
+            "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`),
     );
   });
