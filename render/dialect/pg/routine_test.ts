@@ -187,7 +187,7 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
       ta.assertEquals(
         sf.SQL(ctx),
         uws(`
-        CREATE OR REPLACE FUNCTION "Repeat"("fromDate" DATE, "toDate" DATETIME = CURRENT_TIMESTAMP) RETURNS TABLE("label" TEXT, "cnt" BIGINT) AS $$
+        CREATE OR REPLACE FUNCTION "Repeat"("fromDate" DATE, "toDate" TIMESTAMP = CURRENT_TIMESTAMP) RETURNS TABLE("label" TEXT, "cnt" BIGINT) AS $$
           SELECT label, count(*) AS Cnt
             FROM test
            WHERE date between fromDate and toDate
