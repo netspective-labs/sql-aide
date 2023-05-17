@@ -92,20 +92,44 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(numberSD.identity, "syntheticNumber");
   });
 
-  await tc.step("SqlDomain can access Dialect", () => {
+  await tc.step("SqlDomain can access Dialect", async (tc) => {
     const { ctx } = sqlGen();
 
-    const csd = ctx.sqlDialect;
-    ta.assert(tmpl.isAnsiSqlDialect(csd));
-    ta.assertEquals(tmpl.isSqliteDialect(csd), false);
-    ta.assertEquals(tmpl.isPostgreSqlDialect(csd), false);
-    ta.assertEquals(tmpl.isMsSqlServerDialect(csd), false);
+    await tc.step("primary context", () => {
+      const csd = ctx.sqlDialect;
+      ta.assert(tmpl.isAnsiSqlDialect(csd));
+      ta.assertEquals(csd.identity("presentation"), "ANSI");
+      ta.assertEquals(tmpl.isSqliteDialect(csd), false);
+      ta.assertEquals(tmpl.isPostgreSqlDialect(csd), false);
+      ta.assertEquals(tmpl.isMsSqlServerDialect(csd), false);
 
-    const sd = ztsdFactory.stringSDF.stringDialect(z.string());
-    ta.assertEquals(
-      sd.sqlDataType().SQL(ctx),
-      `TEXT /* {"identity":"ANSI","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":false,"isMsSqlServerDialect":false} */`,
-    );
+      const sd = ztsdFactory.stringSDF.stringDialect(z.string());
+      ta.assertEquals(
+        sd.sqlDataType().SQL(ctx),
+        `TEXT /* {"identity":"ANSI","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":false,"isMsSqlServerDialect":false} */`,
+      );
+    });
+
+    await tc.step("secondary context", () => {
+      const pgCtx: SyntheticContext = {
+        ...tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.postgreSqlDialect() }),
+        customContextProp1: "customContextProp1Value",
+        executedAt: new Date(),
+      };
+
+      const csd = pgCtx.sqlDialect;
+      ta.assert(tmpl.isAnsiSqlDialect(csd));
+      ta.assertEquals(csd.identity("presentation"), "PostgreSQL");
+      ta.assertEquals(tmpl.isSqliteDialect(csd), false);
+      ta.assertEquals(tmpl.isPostgreSqlDialect(csd), true);
+      ta.assertEquals(tmpl.isMsSqlServerDialect(csd), false);
+
+      const sd = ztsdFactory.stringSDF.stringDialect(z.string());
+      ta.assertEquals(
+        sd.sqlDataType().SQL(pgCtx),
+        `TEXT /* {"identity":"PostgreSQL","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":true,"isMsSqlServerDialect":false} */`,
+      );
+    });
   });
 
   await tc.step("SqlDomain SQL types", () => {
