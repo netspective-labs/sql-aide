@@ -119,7 +119,7 @@ Deno.test("Data Vault tables", async (tc) => {
             "business_key_int" INTEGER NOT NULL,
             "business_key_text_nullable" TEXT,
             "business_key_int_nullable" INTEGER,
-            "created_at" DATE,
+            "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             "created_by" TEXT NOT NULL,
             "provenance" TEXT NOT NULL
         )`),
@@ -145,7 +145,7 @@ Deno.test("Data Vault tables", async (tc) => {
               "hub_synthethic0_id" TEXT NOT NULL,
               "attr_text" TEXT NOT NULL,
               "attr_int" INTEGER NOT NULL,
-              "created_at" DATE,
+              "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               "created_by" TEXT NOT NULL,
               "provenance" TEXT NOT NULL,
               FOREIGN KEY("hub_synthethic0_id") REFERENCES "hub_synthethic0"("hub_synthethic0_id")
@@ -172,7 +172,7 @@ Deno.test("Data Vault tables", async (tc) => {
               "hub_synthethic0_id" TEXT NOT NULL,
               "attr_text" TEXT,
               "attr_int" INTEGER,
-              "created_at" DATE,
+              "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               "created_by" TEXT NOT NULL,
               "provenance" TEXT NOT NULL,
               FOREIGN KEY("hub_synthethic0_id") REFERENCES "hub_synthethic0"("hub_synthethic0_id")
@@ -202,7 +202,7 @@ Deno.test("Data Vault tables", async (tc) => {
             "h1_bkey_date" DATE NOT NULL,
             "h1_bkey_int_nullable" INTEGER,
             "h1_bkey_text_nullable" TEXT,
-            "created_at" DATE,
+            "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             "created_by" TEXT NOT NULL,
             "provenance" TEXT NOT NULL
         )`),
@@ -229,7 +229,7 @@ Deno.test("Data Vault tables", async (tc) => {
             "link_hub0_hub1_id" TEXT PRIMARY KEY NOT NULL,
             "hub_synthethic0_id" TEXT NOT NULL,
             "hub_synthethic1_id" TEXT NOT NULL,
-            "created_at" DATE,
+            "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             "created_by" TEXT NOT NULL,
             "provenance" TEXT NOT NULL,
             FOREIGN KEY("hub_synthethic0_id") REFERENCES "hub_synthethic0"("hub_synthethic0_id"),
@@ -255,7 +255,7 @@ Deno.test("Data Vault tables", async (tc) => {
               "link_hub0_hub1_id" TEXT NOT NULL,
               "attr_text" TEXT NOT NULL,
               "attr_int" INTEGER NOT NULL,
-              "created_at" DATE,
+              "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               "created_by" TEXT NOT NULL,
               "provenance" TEXT NOT NULL,
               FOREIGN KEY("link_hub0_hub1_id") REFERENCES "link_hub0_hub1"("link_hub0_hub1_id")

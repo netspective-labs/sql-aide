@@ -6,6 +6,7 @@ import * as c from "./column.ts";
 import * as con from "./constraint.ts";
 import * as pk from "./primary-key.ts";
 import * as fk from "./foreign-key.ts";
+import * as g from "../../graph.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -225,8 +226,18 @@ export function tableDefinition<
     afterColumnDefnsSS.push(...custom);
   }
 
+  const graphEntityDefn = () => {
+    const result: g.GraphEntityDefinition<TableName, Context, Any> = {
+      identity: () => tableName,
+      attributes: domains,
+      outboundReferences: (options) => fkf.outboundReferences(options),
+    };
+    return result;
+  };
+
   const tableDefnResult:
     & TableDefinition<TableName, Context>
+    & g.GraphEntityDefinitionSupplier<TableName, Context>
     & {
       readonly domains: typeof domains;
       readonly columns: ColumnDefns;
@@ -281,6 +292,7 @@ export function tableDefinition<
         "\n)";
         return result;
       },
+      graphEntityDefn,
       domains,
       symbolSuppliers,
       symbols,
@@ -293,6 +305,7 @@ export function tableDefinition<
       sqlNS: tdOptions?.sqlNS,
     };
 
+  // TODO: remove debugging after more sophisticated output is available
   // za.writeDebugFile(`DELETE_ME_DEBUG_${tableName}.txt`, beforeDefnDebugText, {
   //   zoSchema,
   //   zbSchema,

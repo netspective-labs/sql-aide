@@ -41,7 +41,9 @@ don't have them yet.
 
 ## Unit Testing
 
-// TODO:
+```bash
+deno test
+```
 
 ## Init after clone
 
@@ -50,6 +52,17 @@ please do the following:
 
 ```bash
 deno task init
+```
+
+## Tagging and pushing commits
+
+When you're ready to push code:
+
+```bash
+deno task git-hook-pre-commit   # run all tests/validation that will be run by Git commit hook so there are no surprises
+git commit -m ...               # commit your if the above shows no errors
+deno task prepare-publish       # bump the version tag and prepare for push
+git push                        # push the code with the bumped version
 ```
 
 ## Zod

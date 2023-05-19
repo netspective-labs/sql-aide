@@ -2,6 +2,7 @@ import { zod as z } from "../deps.ts";
 import * as za from "../lib/universal/zod-aide.ts";
 import * as SQLa from "../render/mod.ts";
 import * as et from "./enum-table.ts";
+import * as diaPUML from "../render/diagram/plantuml-ie-notation.ts";
 
 // for convenience so that deno-lint is not required for use of `any`
 // deno-lint-ignore no-explicit-any
@@ -20,8 +21,8 @@ export type GovernedDomain = {
   readonly isUniqueConstraintMember?: string[];
 };
 
-export type GovernedDomainSupplier = {
-  readonly govnDomain: GovernedDomain;
+export type GovernedDomainSupplier<GD extends GovernedDomain> = {
+  readonly govnDomain: GD;
 };
 
 /**
@@ -375,14 +376,16 @@ export function governedModel<
 }
 
 /**
- * governedTemplateState is a "typical schema" emitter object for database models.
+ * governedTemplateState is a "typical schema" emitter object for database
+ * models. It provides a convenient consolidation of SQL output, persistence,
+ * catalogging, and ERD generation.
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
 export function governedTemplateState<
   Domain extends GovernedDomain,
   Context extends SQLa.SqlEmitContext,
 >() {
-  const persist = (
+  const persistSQL = (
     sts: SQLa.SqlTextSupplier<Context>,
     basename: string,
   ) => {
@@ -423,12 +426,22 @@ export function governedTemplateState<
 
   const lintState = SQLa.typicalSqlLintSummaries(ddlOptions.sqlTextLintState);
 
+  const pumlERD = (ctx: Context) =>
+    diaPUML.plantUmlIE(ctx, function* () {
+      for (const table of tablesDeclared) {
+        if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+          yield table.graphEntityDefn();
+        }
+      }
+    }, diaPUML.typicalPlantUmlIeOptions());
+
   return {
-    persist,
+    persistSQL,
     tablesDeclared,
     viewsDeclared,
     catalog,
     lintState,
     ddlOptions,
+    pumlERD,
   };
 }

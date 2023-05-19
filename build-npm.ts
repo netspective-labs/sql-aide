@@ -7,7 +7,6 @@ const { version: pgVersion } = readJSONFileWithFallback(pgPath, {
   version: "0.1.0",
 });
 
-
 await emptyDir("./npm");
 
 await build({

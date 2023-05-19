@@ -1,6 +1,7 @@
 import { events, fs } from "../deps.ts";
 import * as safety from "../../lib/universal/safety.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
+import * as dialect from "./dialect.ts";
 import * as l from "./lint.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -141,6 +142,7 @@ export interface EmbeddedSqlSupplier {
 export interface SqlEmitContext
   extends EmbeddedSqlSupplier, SqlNamingStrategySupplier {
   readonly sqlTextEmitOptions: SqlTextEmitOptions;
+  readonly sqlDialect: dialect.SqlDialect;
 }
 
 export function typicalSqlEmitContext(
@@ -150,6 +152,7 @@ export function typicalSqlEmitContext(
     embeddedSQL: SQL,
     sqlNamingStrategy: typicalSqlNamingStrategy(),
     sqlTextEmitOptions: typicalSqlTextEmitOptions(),
+    sqlDialect: dialect.ansiSqlDialect(),
     ...inherit,
   };
   return result;

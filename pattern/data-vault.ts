@@ -1,6 +1,7 @@
 import { zod as z } from "../deps.ts";
-import * as za from "../lib/universal/zod-aide.ts";
 import * as SQLa from "../render/mod.ts";
+import * as typ from "./typical.ts";
+
 // for convenience so that deno-lint is not required for use of `any`
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -14,16 +15,7 @@ type Any = any;
 //      `dbt` artifacts for transformations as a potential augment to PostgreSQL stored
 //      procedures and `pgSQL`.
 
-export type DataVaultDomainGovn = {
-  readonly isDigestPrimaryKeyMember?: boolean;
-  readonly isSurrogateKey?: boolean;
-  readonly isDenormalized?: boolean;
-  readonly isUniqueConstraintMember?: string[];
-};
-
-export type DataVaultDomainGovnSupplier = {
-  readonly dvDomainGovn: DataVaultDomainGovn;
-};
+export type DataVaultDomainGovn = typ.GovernedDomain;
 
 /**
  * dataVaultDomains is a convenience object which defines aliases of all the
@@ -32,60 +24,7 @@ export type DataVaultDomainGovnSupplier = {
  * @returns the typical domains used by Data Vault models
  */
 export function dataVaultDomains<Context extends SQLa.SqlEmitContext>() {
-  // govnZB can be used to add arbitrary governance rules, descriptions and meta
-  // data to any domain (Zod Type).
-  const govnZB = za.zodBaggage<
-    DataVaultDomainGovn,
-    DataVaultDomainGovnSupplier
-  >("dvDomainGovn");
-  // usage:
-  //    const govn = govnZB.unwrappedBaggage(zodType);   // prepare the type-safe proxy
-  //    govn.dvDomainGovn = {...}                        // use the proxy safely
-
-  // see https://github.com/colinhacks/zod#json-type
-  const literalSchema = z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-  ]);
-  type Literal = z.infer<typeof literalSchema>;
-  type Json = Literal | { [key: string]: Json } | Json[];
-  const jsonSchema: z.ZodType<Json> = z.lazy(() =>
-    z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)])
-  );
-
-  // all domains should be functions that can be used directly in Zod objects
-  return {
-    govnZB,
-    text: z.string,
-    textNullable: () => z.string().optional(),
-
-    integer: z.number,
-    integerNullable: () => z.number().optional(),
-
-    jsonText: jsonSchema,
-    jsonTextNullable: () => jsonSchema.optional(),
-
-    boolean: z.boolean,
-    booleanNullable: () => z.boolean().optional(),
-
-    date: z.date,
-    dateNullable: () => z.date().optional(),
-
-    dateTime: z.date,
-    dateTimeNullable: () => z.date().optional(),
-
-    createdAt: () => z.date().default(new Date()).optional(),
-
-    ulid: () => z.string().ulid(),
-    ulidNullable: () => z.string().ulid().optional(),
-
-    uuid: () => z.string().uuid(),
-    uuidNullable: () => z.string().uuid().optional(),
-    // TODO [NL Aide Migration]:
-    // unique: SQLa.uniqueContraint,
-  };
+  return typ.governedDomains<DataVaultDomainGovn, Context>();
 }
 
 /**
@@ -93,21 +32,7 @@ export function dataVaultDomains<Context extends SQLa.SqlEmitContext>() {
  * @returns a builder object with helper functions as properties which can be used to build DV keys
  */
 export function dataVaultKeys<Context extends SQLa.SqlEmitContext>() {
-  // we create our aliases in a function and use the function instead of passing
-  // in dvDomains as an argument because deep-generics type-safe objects will be
-  // available.
-  const pkcf = SQLa.primaryKeyColumnFactory<Context>();
-  const { ulid } = dataVaultDomains<Context>();
-
-  const textPrimaryKey = () => pkcf.primaryKey(z.string());
-  const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
-  const autoIncPrimaryKey = () => pkcf.autoIncPrimaryKey();
-
-  return {
-    textPrimaryKey,
-    ulidPrimaryKey,
-    autoIncPrimaryKey,
-  };
+  return typ.governedKeys<DataVaultDomainGovn, Context>();
 }
 
 /**
@@ -394,5 +319,17 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     tableLintRules,
     hubTable,
     linkTable,
+  };
+}
+
+/**
+ * dataVaultTemplateState is a "typical schema" emitter object for data vault models.
+ * @returns a single object with helper functions as properties (for executing SQL templates)
+ */
+export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>() {
+  const gts = typ.governedTemplateState<DataVaultDomainGovn, Context>();
+  return {
+    ...gts,
+    ...dataVaultGovn<Context>(gts.ddlOptions),
   };
 }
