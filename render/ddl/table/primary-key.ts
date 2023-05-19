@@ -37,7 +37,7 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
 
   const primaryKey = <ColumnName extends string, ZodType extends z.ZodTypeAny>(
     zodType: ZodType,
-  ) => {
+  ): ZodType & { sqlDomain: TablePrimaryKeyColumnDefn<ZodType, Context> } => {
     const sqlDomain = sdf.cacheableFrom<ColumnName, typeof zodType>(zodType);
     const pkSD: TablePrimaryKeyColumnDefn<typeof zodType, Context> = {
       ...sqlDomain,
