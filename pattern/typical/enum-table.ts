@@ -1,6 +1,6 @@
-import { zod as z } from "../deps.ts";
-import * as safety from "../lib/universal/safety.ts";
-import * as SQLa from "../render/mod.ts";
+import { zod as z } from "../../deps.ts";
+import * as safety from "../../lib/universal/safety.ts";
+import * as SQLa from "../../render/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easier on Deno linting

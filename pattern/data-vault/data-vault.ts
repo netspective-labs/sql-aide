@@ -1,6 +1,6 @@
-import { zod as z } from "../deps.ts";
-import * as SQLa from "../render/mod.ts";
-import * as typ from "./typical.ts";
+import { zod as z } from "../../deps.ts";
+import * as SQLa from "../../render/mod.ts";
+import * as typ from "../typical/typical.ts";
 
 // for convenience so that deno-lint is not required for use of `any`
 // deno-lint-ignore no-explicit-any

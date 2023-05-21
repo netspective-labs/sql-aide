@@ -1,7 +1,7 @@
-import { zod as z } from "../deps.ts";
-import { testingAsserts as ta } from "../deps-test.ts";
-import { unindentWhitespace as uws } from "../lib/universal/whitespace.ts";
-import * as SQLa from "../render/mod.ts";
+import { zod as z } from "../../deps.ts";
+import { testingAsserts as ta } from "../../deps-test.ts";
+import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
+import * as SQLa from "../../render/mod.ts";
 import * as mod from "./data-vault.ts";
 
 // for convenience so that deno-lint is not required for use of `any`

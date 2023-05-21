@@ -14,6 +14,8 @@ const relativeFileContent = (name: string) => {
 Deno.test("Data Vault Example", async (tc) => {
   const CLI = relativeFilePath("./data-vault-sqla.ts");
 
+  // TODO: add dialect-specific test cases
+
   await tc.step("01. CLI's SQL", async () => {
     const output = await $`./${CLI} sql`.text();
     ta.assertEquals(

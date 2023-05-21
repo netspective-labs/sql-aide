@@ -1,6 +1,6 @@
-import { testingAsserts as ta } from "../deps-test.ts";
-import * as ws from "../lib/universal/whitespace.ts";
-import * as SQLa from "../render/mod.ts";
+import { testingAsserts as ta } from "../../deps-test.ts";
+import * as ws from "../../lib/universal/whitespace.ts";
+import * as SQLa from "../../render/mod.ts";
 import * as mod from "./typical.ts";
 
 // deno-lint-ignore no-explicit-any
