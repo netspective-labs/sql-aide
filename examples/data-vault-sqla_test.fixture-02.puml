@@ -1,0 +1,90 @@
+@startuml IE
+  hide circle
+  skinparam linetype ortho
+  skinparam roundcorner 20
+  skinparam class {
+    BackgroundColor White
+    ArrowColor Silver
+    BorderColor Silver
+    FontColor Black
+    FontSize 12
+  }
+
+  entity "er_algorithm" as er_algorithm {
+    * **algorithm_id**: TEXT
+    --
+    * algorithm_name: TEXT
+    * algorithm_version: TEXT
+    * algorithm_sp: TEXT
+  }
+
+  entity "hub_er_entity" as hub_er_entity {
+    * **hub_er_entity_id**: TEXT
+    --
+    * ssn_business_key: TEXT
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  entity "hub_er_job" as hub_er_job {
+    * **hub_er_job_id**: TEXT
+    --
+    * job_business_job_name: TEXT
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  entity "sat_er_job_er_job_state" as sat_er_job_er_job_state {
+    * **sat_er_job_er_job_state_id**: TEXT
+    --
+    * hub_er_job_id: TEXT
+    * algorithm_id: INTEGER
+    * run_date_time: DATE
+    * status: TEXT
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  entity "link_er_entity_match" as link_er_entity_match {
+    * **link_er_entity_match_id**: TEXT
+    --
+    * hub_entity_id: TEXT
+    * algorithm_ref: TEXT
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  entity "sat_er_entity_match_er_entity_match_levenshtien" as sat_er_entity_match_er_entity_match_levenshtien {
+    * **sat_er_entity_match_er_entity_match_levenshtien_id**: TEXT
+    --
+    * link_er_entity_match_id: TEXT
+    * distance_value: INTEGER
+    * similarity_score: INTEGER
+    * normalized_distance: INTEGER
+    * notes: TEXT
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  entity "sat_er_entity_match_er_entity_match_soundex" as sat_er_entity_match_er_entity_match_soundex {
+    * **sat_er_entity_match_er_entity_match_soundex_id**: TEXT
+    --
+    * link_er_entity_match_id: TEXT
+    * code: TEXT
+    * similarity_score: INTEGER
+    * index: INTEGER
+      created_at: TIMESTAMP
+    * created_by: TEXT
+    * provenance: TEXT
+  }
+
+  hub_er_job |o..o{ sat_er_job_er_job_state
+  er_algorithm |o..o{ link_er_entity_match
+  link_er_entity_match |o..o{ sat_er_entity_match_er_entity_match_levenshtien
+  link_er_entity_match |o..o{ sat_er_entity_match_er_entity_match_soundex
+@enduml
