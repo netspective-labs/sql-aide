@@ -1,0 +1,55 @@
+---
+title: Creating SQL Domain
+---
+
+# How to introduce a new SQL Domain
+
+A new SQL Domain can be introduced several ways:
+
+1. Direct Zod mapping when there's a 1:1 mapping between a `ZodType` and a
+   `SqlDomain` (like `z.string()` or `z.bigint()`).
+2. Using `zodSqlDomainRawCreateParams` to carry instructions in a Zod
+   `description` property when the `ZodType` needs minor enhancements for
+   `SqlDomain` (like when a `z.date()` should provide additional meta data for
+   patterns or defaults or constraints).
+3. Using `ZodTypedBaggage` and `zodBaggage` where more customizations are
+   required (such as a primary key column or foreign key column with constraints
+   or other more advanced use cases).
+
+{% info %}
+
+Strategies 1 and 2 are implemented in `zodTypeSqlDomainFactory` function of
+`render/domain/domain.ts`. Because `zodTypeSqlDomainFactory` is a core library
+module, strategies 1 and 2 are considered part of the `SQLa` _infrastructure_.
+
+Strategy 3 can be implemented either in the `SQLa` _infrastructure_ or can be
+implemented in consumer (non-`SQLa`-library) code.
+
+{% end %}
+
+## Direct Zod mapping
+
+If your new Zod type is a simple 1:1 mapping to SQL Domain (like `z.string()` or
+`z.bigint()`), in `render/domain/domain.ts` see `SqlDomain` interface and then
+determine if your new domain meets one of the following factory patterns:
+
+- `zodStringSqlDomainFactory`
+- `zodJsonSqlDomainFactory`
+- `zodNumberSqlDomainFactory`
+- `zodDateSqlDomainFactory`
+- `zodEnumSqlDomainFactory`
+
+If your new domain falls into the above categories, you should add a new case
+statement in the appropriate factory. If your new Zod type is unrelated to any
+of the existing categories, create a category factory.
+
+After adding your new type's case statement to the above factory switches, call
+the factory method in `zodTypeSqlDomainFactory`.
+
+## Using `zodSqlDomainRawCreateParams`
+
+TODO
+
+## Using `ZodTypedBaggage` and `zodBaggage`
+
+TODO

@@ -76,9 +76,9 @@ There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
       analyzers and other query planners can distinguish between statements.
 - [ ] Simplified type-safe NEFS Axiom-style _query builder_ (select generator)
       using links and filters for typical needs while full SQL is available as
-      complexity increases. See [EdgeDB](edgedb.com) for interesting ideas (such
-      as _composition_, _aggregation functions_, and _nested filters_). Read
-      more about the query builder at
+      complexity increases. See [EdgeDB](https://edgedb.com) for interesting
+      ideas (such as _composition_, _aggregation functions_, and _nested
+      filters_). Read more about the query builder at
       [Designing the ultimate TypeScript query builder](https://www.edgedb.com/blog/designing-the-ultimate-typescript-query-builder).
   - [ ] composable `filter` property
     - [ ] as a function, it would allow user-agent side filtering

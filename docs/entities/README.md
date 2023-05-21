@@ -10,13 +10,13 @@ also be represented as a _view_ or a _stored function_.
 
 ### Entities
 
-- [x] [Table](render/ddl/table/mod.ts)
-- [x] [Enum Table](pattern/enum-table.ts) (text key, numeric values, automatic
+- [x] Table in `render/ddl/table/mod.ts`
+- [x] Enum Table in `pattern/enum-table.ts` (text key, numeric values, automatic
       seeds)
-- [x] [Enum Table](pattern/enum-table.ts) (type-safe text key, text values,
+- [x] Enum Table in `pattern/enum-table.ts` (type-safe text key, text values,
       automatic seeds)
-- [x] [Data Vault 2.0 Tables](pattern/data-vault.ts) (build on _Immutable Table_
-      patterns)
+- [x] Data Vault 2.0 Tables in `pattern/data-vault.ts` (build on _Immutable
+      Table_ patterns)
 - [ ] Immutable Table (see _Data-Oriented Programming_ patterns)
 - [ ] Association Table (`M:M` relationship between two entities)
 - [ ] Unified Star Schema (USS) "presentation layer" measures, bridges, etc.

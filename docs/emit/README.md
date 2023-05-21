@@ -111,9 +111,9 @@ can be one or more of:
 - An array of `SQL.SqlTextSupplier<SyntheticTmplContext>` instances
 - A function which accepts a `SyntheticTmplContext` as a parameter and returns a
   single or array of `SQL.SqlTextSupplier<SyntheticTmplContext>` instances.
-- The full list of typed `${expr}`s allowed are in [sql.ts](./sql.ts) and fully
-  described by the `SqlPartialExpression` algebraic type. If a type is not a
-  component of `SqlPartialExpression` then it's not a valid `${expr}`.
+- The full list of typed `${expr}`s allowed are in `render/emit/sql.ts` and
+  fully described by the `SqlPartialExpression` algebraic type. If a type is not
+  a component of `SqlPartialExpression` then it's not a valid `${expr}`.
 
 Using the mix above, you can prepare all your SQL statements as properly typed
 object instances through literal SQL statements or use any SQL generator to
