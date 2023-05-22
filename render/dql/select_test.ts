@@ -1,6 +1,7 @@
 import { zod as z } from "../deps.ts";
 import { testingAsserts as ta } from "../deps-test.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
+import * as d from "../domain/mod.ts";
 import * as mod from "./select.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as cr from "./criteria.ts";
@@ -59,6 +60,41 @@ Deno.test("SQL Aide (SQLa) custom SELECT statement", async (tc) => {
           FROM customers`),
     );
   });
+
+  await tc.step(
+    "valid named SELECT statement with typed column names and SQL symbols",
+    () => {
+      const sdf = d.sqlDomainsFactory();
+      const { sdSchema: sd, zoSchema: zo } = sdf.sqlDomains({
+        customer_name: z.string(),
+        order_count: z.number().optional(),
+        city: z.string(),
+      });
+      const select = mod.typedSelect(zo.shape, ctx, {
+        selectStmtName: "ss_name",
+      })`
+        SELECT ${sd.customer_name}, ${sd.order_count}, ${sd.city}
+          FROM customers`;
+      ta.assert(select.isValid);
+      ta.assertEquals(select.selectStmtName, "ss_name");
+      ta.assertEquals(
+        Array.from(Object.values(select.zbSchema)).map((d) =>
+          d.sqlDomain.identity
+        ),
+        [
+          "customer_name",
+          "order_count",
+          "city",
+        ],
+      );
+      ta.assertEquals(
+        select.SQL(ctx),
+        uws(`
+        SELECT "customer_name", "order_count", "city"
+          FROM customers`),
+      );
+    },
+  );
 });
 
 Deno.test("SQL Aide (SQLa) typed entity SELECT statement", async (tc) => {
