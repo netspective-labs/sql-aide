@@ -1,6 +1,7 @@
 import { zod as z } from "../deps.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
+import { SQLa } from "../../pattern/typical/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -263,6 +264,33 @@ export function zodJsonSqlDomainFactory<
   };
 }
 
+export type SqlDomainZodNumberDescr = SqlDomainZodDescrMeta & {
+  readonly isFloat: boolean;
+  readonly isBigFloat: boolean;
+};
+
+export function sqlDomainZodNumberDescr(
+  options: Pick<SqlDomainZodNumberDescr, "isFloat" | "isBigFloat">,
+): SqlDomainZodNumberDescr {
+  return {
+    isSqlDomainZodDescrMeta: true,
+    ...options,
+  };
+}
+
+export function isSqlDomainZodNumberDescr<
+  SDZND extends SqlDomainZodNumberDescr,
+>(
+  o: unknown,
+): o is SDZND {
+  const isSDZND = safety.typeGuard<SDZND>(
+    "isSqlDomainZodDescrMeta",
+    "isFloat",
+    "isBigFloat",
+  );
+  return isSDZND(o);
+}
+
 export function zodNumberSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
@@ -319,6 +347,98 @@ export function zodNumberSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
+      };
+    },
+    float: <
+      ZodType extends z.ZodType<number, z.ZodNumberDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
+            return "REAL";
+          },
+        }),
+      };
+    },
+    floatNullable: <
+      ZodType extends z.ZodOptional<z.ZodType<number, z.ZodNumberDef>>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
+            return "REAL";
+          },
+        }),
+      };
+    },
+    bigFloat: <
+      ZodType extends z.ZodType<number, z.ZodNumberDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) {
+              return "DOUBLE PRECISION";
+            }
+            if (SQLa.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return "FLOAT";
+            }
+            return "REAL";
+          },
+        }),
+      };
+    },
+    bigFloatNullable: <
+      ZodType extends z.ZodOptional<z.ZodType<number, z.ZodNumberDef>>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) {
+              return "DOUBLE PRECISION";
+            }
+            if (SQLa.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return "FLOAT";
+            }
+            return "REAL";
+          },
+        }),
       };
     },
   };
@@ -636,7 +756,23 @@ export function zodTypeSqlDomainFactory<
       }
 
       case z.ZodFirstPartyTypeKind.ZodNumber: {
-        return numberSDF.integer(zodType, init);
+        if (zodDefHook?.descrMeta) {
+          if (isSqlDomainZodNumberDescr(zodDefHook.descrMeta)) {
+            return zodDefHook.descrMeta.isBigFloat
+              ? numberSDF.bigFloat(zodType, init)
+              : (zodDefHook.descrMeta.isFloat
+                ? numberSDF.float(zodType, init)
+                : numberSDF.integer(zodType, init));
+          } else {
+            throw new Error(
+              `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodNumber ${
+                JSON.stringify(zodDefHook.descrMeta)
+              }`,
+            );
+          }
+        } else {
+          return numberSDF.integer(zodType, init);
+        }
       }
 
       case z.ZodFirstPartyTypeKind.ZodBigInt: {

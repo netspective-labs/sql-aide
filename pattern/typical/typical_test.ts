@@ -60,6 +60,8 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     resources_originated_count: sd.integer(),
     resources_persisted_count: sd.integer(),
     resources_memoized_count: sd.integer(),
+    running_average: sd.float(),
+    running_average_big: sd.bigFloat(),
     ...housekeeping.columns,
   });
 
@@ -235,6 +237,8 @@ const fixtureSQL = ws.unindentWhitespace(`
       "resources_originated_count" INTEGER NOT NULL,
       "resources_persisted_count" INTEGER NOT NULL,
       "resources_memoized_count" INTEGER NOT NULL,
+      "running_average" REAL NOT NULL,
+      "running_average_big" REAL NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_host_id") REFERENCES "publ_host"("publ_host_id"),
@@ -340,6 +344,8 @@ const fixturePUML = `@startuml IE
     * resources_originated_count: INTEGER
     * resources_persisted_count: INTEGER
     * resources_memoized_count: INTEGER
+    * running_average: REAL
+    * running_average_big: REAL
       created_at: TIMESTAMP
       created_by: TEXT
   }

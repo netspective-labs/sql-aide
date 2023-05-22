@@ -55,8 +55,34 @@ export function governedDomains<
     text: z.string,
     textNullable: () => z.string().optional(),
 
-    integer: z.number,
-    integerNullable: () => z.number().optional(),
+    integer: () => z.number().int(),
+    integerNullable: () => z.number().int().optional(),
+
+    float: () =>
+      z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+        ),
+      ),
+    floatNullable: () =>
+      z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+        ),
+      ).optional(),
+
+    bigFloat: () =>
+      z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: true }),
+        ),
+      ),
+    bigFloatNullable: () =>
+      z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: true }),
+        ),
+      ).optional(),
 
     jsonText: SQLa.zodJsonSchema,
     jsonTextNullable: () => SQLa.zodJsonSchema.optional(),
