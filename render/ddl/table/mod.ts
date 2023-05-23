@@ -5,4 +5,5 @@ export * from "./lint.ts";
 export * from "./primary-key.ts";
 export * from "./record.ts";
 export * from "./select.ts";
+export * from "./self-ref.ts";
 export * from "./table.ts";

@@ -90,8 +90,11 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     },
   );
 
+  const publ_server_error_log_id = keys.autoIncPrimaryKey();
   const publServerErrorLog = gm.autoIncPkTable("publ_server_error_log", {
-    publ_server_error_log_id: keys.autoIncPrimaryKey(),
+    publ_server_error_log_id,
+    parent_publ_server_error_log_id: sd.selfRef(publ_server_error_log_id)
+      .optional(),
     location_href: sd.text(),
     error_summary: sd.text(),
     host_identity: sd.jsonTextNullable(),
@@ -272,12 +275,14 @@ const fixtureSQL = ws.unindentWhitespace(`
 
   CREATE TABLE IF NOT EXISTS "publ_server_error_log" (
       "publ_server_error_log_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+      "parent_publ_server_error_log_id" INTEGER,
       "location_href" TEXT NOT NULL,
       "error_summary" TEXT NOT NULL,
       "host_identity" JSON,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
+      FOREIGN KEY("parent_publ_server_error_log_id") REFERENCES "publ_server_error_log"("parent_publ_server_error_log_id"),
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
@@ -378,6 +383,7 @@ const fixturePUML = `@startuml IE
   entity "publ_server_error_log" as publ_server_error_log {
       **publ_server_error_log_id**: INTEGER
     --
+      parent_publ_server_error_log_id: INTEGER
     * location_href: TEXT
     * error_summary: TEXT
       host_identity: JSON
@@ -390,5 +396,6 @@ const fixturePUML = `@startuml IE
   build_event_type |o..o{ publ_build_event
   publ_build_event |o..o{ publ_server_service
   publ_server_service |o..o{ publ_server_static_access_log
+  publ_server_error_log |o..o{ publ_server_error_log
   publ_server_service |o..o{ publ_server_error_log
 @enduml`;

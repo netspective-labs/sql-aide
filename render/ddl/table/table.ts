@@ -60,53 +60,16 @@ export function tableDefinition<
   zodRawShape: ColumnsShape,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
-  // const beforeDefnDebugText = Deno.inspect(
-  //   { beforeDefnDebug: { zodRawShape } },
-  //   { depth: 10 },
-  // );
   const sdf = d.sqlDomainsFactory<TableName, Context>();
-
-  type BaggageSchema = {
-    [Property in keyof ColumnsShape]: ReturnType<
-      typeof sdf.zodTypeBaggageProxy<ColumnsShape[Property]>
-    >;
-  };
-
   const zoSchema = tdOptions?.zodObject?.(zodRawShape) ??
     z.object(zodRawShape).strict();
-  const zbSchema: BaggageSchema = {} as Any;
   const fkf = fk.foreignKeysFactory<TableName, ColumnsShape, Context>(
     tableName,
     zodRawShape,
     sdf,
   );
 
-  const { shape: tableShape, keys: tableShapeKeys } = zoSchema._getCached();
-  for (const key of tableShapeKeys) {
-    const member = tableShape[key];
-    const placeholder = fkf.foreignKeySrcZB.unwrappedBaggage(member);
-    const sqlDomain = placeholder
-      ? fkf.foreignKeyColumn(key as Any, member, {
-        foreignKeyRelNature: placeholder.nature,
-        foreignKeySource: placeholder.source,
-      })
-      : sdf.cacheableFrom(member, { identity: key as Any });
-    (zbSchema[key] as Any) = sdf.zodTypeBaggageProxy<typeof member>(
-      member,
-      sqlDomain,
-    );
-  }
-
-  // TODO: handle self-ref foreign keys
-  // for (const columnDefn of sd.domains) {
-  //   if (
-  //     isTableForeignKeyColumnDefn(columnDefn) &&
-  //     isTableSelfRefForeignKeyRelNature(columnDefn.foreignRelNature)
-  //   ) {
-  //     // manually "fix" the table name since self-refs are special
-  //     (columnDefn as { foreignTableName: string }).foreignTableName = tableName;
-  //   }
-  // }
+  const { keys: tableShapeKeys } = zoSchema._getCached();
 
   type ColumnDefns = {
     [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
@@ -165,7 +128,7 @@ export function tableDefinition<
   };
 
   const domains = tableShapeKeys.map((key) =>
-    zbSchema[key].sqlDomain as c.TableColumnDefn<
+    fkf.zbSchema[key].sqlDomain as c.TableColumnDefn<
       TableName,
       Any,
       Any,
@@ -305,19 +268,12 @@ export function tableDefinition<
       sqlNS: tdOptions?.sqlNS,
     };
 
-  // TODO: remove debugging after more sophisticated output is available
-  // za.writeDebugFile(`DELETE_ME_DEBUG_${tableName}.txt`, beforeDefnDebugText, {
-  //   zoSchema,
-  //   zbSchema,
-  //   ...tableDefnResult,
-  // });
-
   // we let Typescript infer function return to allow generics in sqlDomains to
   // be more effective but we want other parts of the `result` to be as strongly
   // typed as possible
   return {
     zoSchema,
-    zbSchema,
+    zbSchema: fkf.zbSchema,
     ...tableDefnResult,
   };
 }

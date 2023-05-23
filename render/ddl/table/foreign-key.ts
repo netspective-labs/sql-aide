@@ -3,6 +3,7 @@ import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../../lib/universal/safety.ts";
 import * as za from "../../../lib/universal/zod-aide.ts";
 import * as d from "../../domain/mod.ts";
+import * as sr from "./self-ref.ts";
 import * as g from "../../graph.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -102,16 +103,36 @@ export function foreignKeysFactory<
   const zoSchema = z.object(zodRawShape).strict();
   const zbSchema: BaggageSchema = {} as Any;
 
+  const inferredPlaceholder = (columnName: ColumnName) => {
+    const incomingRefs = new Set<ForeignKeyDestination>();
+    const refSource: ForeignKeySource = {
+      tableName,
+      columnName,
+      incomingRefs,
+      register: (rd) => {
+        incomingRefs.add(rd);
+        return rd;
+      },
+    };
+    return refSource;
+  };
+
   const { shape: tableShape, keys: tableShapeKeys } = zoSchema._getCached();
   for (const key of tableShapeKeys) {
     const member = tableShape[key];
-    const placeholder = foreignKeySrcZB.unwrappedBaggage(member);
-    const sqlDomain = placeholder
+    const fkPlaceholder = foreignKeySrcZB.unwrappedBaggage(member);
+    const srPlaceholder = sr.selfRefPlacholderZB.unwrappedBaggage(member);
+    const sqlDomain = fkPlaceholder
       ? foreignKeyColumn(key as Any, member, {
-        foreignKeyRelNature: placeholder.nature,
-        foreignKeySource: placeholder.source,
+        foreignKeyRelNature: fkPlaceholder.nature,
+        foreignKeySource: fkPlaceholder.source,
       })
-      : sdf.cacheableFrom(member, { identity: key as Any });
+      : (srPlaceholder
+        ? foreignKeyColumn(key as Any, member, {
+          foreignKeyRelNature: { isSelfRef: true },
+          foreignKeySource: inferredPlaceholder(key as Any),
+        })
+        : sdf.cacheableFrom(member, { identity: key as Any }));
     (zbSchema[key] as Any) = sdf.zodTypeBaggageProxy<typeof member>(
       member,
       sqlDomain,
@@ -174,20 +195,6 @@ export function foreignKeysFactory<
     ) =>
       & za.CoreZTA<ColumnsShape[Property]>
       & ForeignKeyPlaceholderSupplier;
-  };
-
-  const inferredPlaceholder = (columnName: ColumnName) => {
-    const incomingRefs = new Set<ForeignKeyDestination>();
-    const refSource: ForeignKeySource = {
-      tableName,
-      columnName,
-      incomingRefs,
-      register: (rd) => {
-        incomingRefs.add(rd);
-        return rd;
-      },
-    };
-    return refSource;
   };
 
   const references: InferReferences = {} as Any;
@@ -298,6 +305,7 @@ export function foreignKeysFactory<
   // be more effective but we want other parts of the `result` to be as strongly
   // typed as possible
   return {
+    zbSchema,
     foreignKeySrcZB,
     foreignKeyColumn,
     references,

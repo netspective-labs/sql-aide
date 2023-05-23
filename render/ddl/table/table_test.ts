@@ -2,6 +2,7 @@ import { zod as z } from "../../deps.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../../lib/universal/whitespace.ts";
 // import * as za from "../../../lib/universal/zod-aide.ts";
+import * as d from "../../domain/mod.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as mod from "./mod.ts";
 import * as dml from "../../dml/mod.ts";
@@ -365,10 +366,17 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
     tableWithAutoIncPK,
   } = syntheticSchema();
 
+  const selfRef = <ZTA extends z.ZodTypeAny>(zodType: ZTA) =>
+    mod.selfRef<ZTA, SyntheticContext>(
+      zodType,
+      d.sqlDomainsFactory<Any, SyntheticContext>(),
+    );
+
+  const auto_inc_primary_key = pkcFactory.autoIncPrimaryKey();
   const table = mod.tableDefinition(
     "synthetic_table_with_foreign_keys",
     {
-      auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
+      auto_inc_primary_key,
       fk_text_primary_key: tableWithOnDemandPK.references
         .ua_on_demand_primary_key(),
       fk_int_primary_key: tableWithAutoIncPK.belongsTo.auto_inc_primary_key(),
@@ -376,6 +384,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
         .ua_on_demand_primary_key().optional(),
       fk_int_primary_key_nullable: tableWithAutoIncPK.references
         .auto_inc_primary_key().optional(),
+      parent_auto_inc_primary_key: selfRef(auto_inc_primary_key).optional(),
     },
   );
 
@@ -462,6 +471,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       "fk_int_primary_key",
       "fk_text_primary_key_nullable",
       "fk_int_primary_key_nullable",
+      "parent_auto_inc_primary_key",
     ]);
     ta.assertEquals(Array.from(Object.keys(table.primaryKey)), [
       "auto_inc_primary_key",
@@ -472,12 +482,14 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
       "fk_int_primary_key",
       "fk_text_primary_key_nullable",
       "fk_int_primary_key_nullable",
+      "parent_auto_inc_primary_key",
     ]);
     ta.assertEquals(Array.from(Object.keys(table.foreignKeys)), [
       "fk_text_primary_key",
       "fk_int_primary_key",
       "fk_text_primary_key_nullable",
       "fk_int_primary_key_nullable",
+      "parent_auto_inc_primary_key",
     ]);
   });
 
@@ -497,10 +509,12 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
           "fk_int_primary_key" INTEGER NOT NULL,
           "fk_text_primary_key_nullable" TEXT,
           "fk_int_primary_key_nullable" INTEGER,
+          "parent_auto_inc_primary_key" INTEGER,
           FOREIGN KEY("fk_text_primary_key") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
           FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
           FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
-          FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key")
+          FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
+          FOREIGN KEY("parent_auto_inc_primary_key") REFERENCES "synthetic_table_with_foreign_keys"("parent_auto_inc_primary_key")
       );`),
     );
   });

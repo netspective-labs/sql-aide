@@ -120,6 +120,9 @@ export function governedDomains<
     uuidNullable: () => z.string().uuid().optional(),
     // TODO [NL Aide Migration]:
     // unique: SQLa.uniqueContraint,
+
+    selfRef: <ZTA extends z.ZodTypeAny>(zodType: ZTA) =>
+      SQLa.selfRef<ZTA, Context>(zodType, sdf),
   };
 }
 
