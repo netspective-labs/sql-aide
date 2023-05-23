@@ -1,11 +1,17 @@
-import { build, emptyDir } from "https://deno.land/x/dnt@0.35.0/mod.ts";
+import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
+import { build, emptyDir } from "https://deno.land/x/dnt@0.36.0/mod.ts";
 
-// Getting latest package.json version before is being deleted
-const { version: pgVersion } = JSON.parse(
-  Deno.readTextFileSync("./npm/package.json"),
-);
+const relativeFilePath = (name: string) => {
+  const absPath = $.path.fromFileUrl(import.meta.resolve(name));
+  return $.path.relative(Deno.cwd(), absPath);
+};
 
-await emptyDir("./npm");
+// get the latest tag and use that as the version so it matches Deno
+const version =
+  await $`git describe --tags ${await $`git rev-list --tags --max-count=1`
+    .text()}`.text();
+const outDir = relativeFilePath("./npm");
+await emptyDir(outDir);
 
 await build({
   // TODO: turn off typeCheck while we figure out error:
@@ -18,8 +24,8 @@ await build({
   declaration: false,
   scriptModule: false,
 
-  entryPoints: ["./entry-point.npm.ts"],
-  outDir: "./npm",
+  entryPoints: [relativeFilePath("./entry-point.npm.ts")],
+  outDir,
   shims: {
     // see JS docs for overview and more options
     deno: true,
@@ -39,24 +45,29 @@ await build({
     },
   },
   postBuild() {
-    // steps to run after building and before running the tests
-    Deno.copyFileSync("LICENSE", "npm/LICENSE");
-    Deno.copyFileSync("README.md", "npm/README.md");
+    Deno.copyFileSync(relativeFilePath("../../LICENSE"), `${outDir}/LICENSE`);
+    Deno.copyFileSync(
+      relativeFilePath("../../README.md"),
+      `${outDir}/README.md`,
+    );
 
     // Adding main property in package.json because DNT is not including it for some reason
-    const pgPath = "./npm/package.json";
-    const pg = JSON.parse(Deno.readTextFileSync(pgPath));
+    const pjPath = `${outDir}/package.json`;
+    const packageJSON = JSON.parse(Deno.readTextFileSync(pjPath));
 
-    pg.main = pg.module;
+    packageJSON.main = packageJSON.module;
 
     // Adding latest version to package.json (if we don't to this, version property won't be included at all)
-    pg.version = pgVersion;
+    packageJSON.version = version;
 
-    Deno.writeTextFileSync(pgPath, JSON.stringify(pg));
+    Deno.writeTextFileSync(
+      pjPath,
+      JSON.stringify(packageJSON, undefined, "  "),
+    );
 
     // Adding .npmrc
     const npmrcContent =
       "@netspective-labs:registry=https://npm.pkg.github.com";
-    Deno.writeTextFileSync("./npm/.npmrc", npmrcContent);
+    Deno.writeTextFileSync(`${outDir}/.npmrc`, npmrcContent);
   },
 });

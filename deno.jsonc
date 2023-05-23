@@ -6,7 +6,7 @@
     "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\") && deno fmt --check --ignore=\"support\" && deno lint  --ignore=\"support\" && deno test --allow-all --unstable",
     "git-hook-pre-push": "deno test --allow-all --unstable",
     "prepare-publish": "git semtag final",
-    "prepare-npm": "deno run -A build-npm.ts",
-    "publish-npm": "cd npm && npm publish"
+    "prepare-npm": "deno run -A support/package-npm/build-npm.ts",
+    "publish-npm": "cd support/package-npm && npm publish"
   }
 }
