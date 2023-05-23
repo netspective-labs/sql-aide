@@ -22,7 +22,7 @@ jobs:
       - run: deno --version
 
       # syntax check all files in case tests don't exist
-      - run: deno check --no-lock --unstable $(find . -name '*.ts')
+      - run: deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\")
 
       # Run all test files in the repository and collect code coverage.
       # The example runs with all permissions, but it is recommended to run
