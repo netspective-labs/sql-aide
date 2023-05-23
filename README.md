@@ -23,16 +23,14 @@ does not rewrite SQL or attempt to remove SQL knowledge.
 
 ## Documentation Server
 
-We use [Doctave](https://cli.doctave.com/) for documentation, start the server
-and launch the site:
+We use [Nextra](https://nextra.site/) for documentation, start the server and
+launch the site:
 
 ```bash
-doctave serve
+cd support/docs-nextra
+pnpm install    # first time or whenever you do a pull
+pnpm next       # docs are available at http://localhost:3000
 ```
-
-If you're using `home-polyglot`, Doctave binaries are installed already. If
-you're not using `home-polyglot` for your sandbox download the binary from
-GitHub and put it in your `PATH`.
 
 ## Unit Testing
 
