@@ -59,6 +59,29 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     identity: "syntheticNumber",
   });
 
+  enum NativeEnumOrdinal {
+    NativeEnumOrdinal_1,
+    NativeEnumOrdinal_2,
+  }
+
+  enum SyntheticZodEnum {
+    NativeEnumText_1 = "enum-text-1",
+    NativeEnumText_2 = "enum-text-2",
+  }
+
+  const nativeEnumOrdinalSD = ztsdFactory.cacheableFrom(
+    z.nativeEnum(NativeEnumOrdinal),
+    { identity: "nativeEnumOrdinal" },
+  );
+
+  type SZE = [`${SyntheticZodEnum}`, ...(readonly `${SyntheticZodEnum}`[])];
+  const szeValues = Object.values(SyntheticZodEnum) as SZE;
+  const zodEnum = z.enum(szeValues);
+
+  const zodEnumSD = ztsdFactory.cacheableFrom(zodEnum, {
+    identity: "syntheticZodEnum",
+  });
+
   await tc.step("SqlDomain compile-time type safety", () => {
     expectType<d.SqlDomain<z.ZodString, SyntheticContext, "syntheticText">>(
       textSD,
@@ -80,6 +103,20 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     expectType<d.SqlDomain<z.ZodNumber, SyntheticContext, "syntheticNumber">>(
       numberSD,
     );
+    expectType<
+      d.SqlDomain<
+        z.ZodNativeEnum<typeof NativeEnumOrdinal>,
+        SyntheticContext,
+        "nativeEnumOrdinal"
+      >
+    >(nativeEnumOrdinalSD);
+    expectType<
+      d.SqlDomain<
+        z.ZodEnum<SZE>,
+        SyntheticContext,
+        "syntheticZodEnum"
+      >
+    >(zodEnumSD);
   });
 
   await tc.step("SqlDomain identity", () => {
@@ -90,6 +127,8 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       "syntheticTextOptionalDefault",
     );
     ta.assertEquals(numberSD.identity, "syntheticNumber");
+    ta.assertEquals(nativeEnumOrdinalSD.identity, "nativeEnumOrdinal");
+    ta.assertEquals(zodEnumSD.identity, "syntheticZodEnum");
   });
 
   await tc.step("SqlDomain can access Dialect", async (tc) => {
@@ -150,6 +189,14 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(numberSD), {
       nullable: false,
       sqlDataType: "INTEGER",
+    });
+    ta.assertEquals(types(nativeEnumOrdinalSD), {
+      nullable: false,
+      sqlDataType: "INTEGER",
+    });
+    ta.assertEquals(types(zodEnumSD), {
+      nullable: false,
+      sqlDataType: "TEXT",
     });
   });
 });

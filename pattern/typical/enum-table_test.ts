@@ -4,6 +4,9 @@ import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as mod from "./enum-table.ts";
 
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
 const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
 };
@@ -79,6 +82,43 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
 
     ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (0, 'code0')`, seedDML[0].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (1, 'code1')`, seedDML[1].SQL(ctx));
+  });
+
+  await tc.step("insert enum values into table rows", () => {
+    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const keys = SQLa.primaryKeyColumnFactory();
+
+    const synthetic = SQLa.tableDefinition("synthetic_table", {
+      synthetic_table_id: keys.primaryKey(z.string()),
+      text: tcf.unique(z.string()),
+      ord_enum_id: numericEnumModel.references.code(),
+    });
+
+    ta.assertEquals(
+      uws(`
+        CREATE TABLE "synthetic_table" (
+            "synthetic_table_id" TEXT PRIMARY KEY NOT NULL,
+            "text" TEXT /* UNIQUE COLUMN */ NOT NULL,
+            "ord_enum_id" INTEGER NOT NULL,
+            FOREIGN KEY("ord_enum_id") REFERENCES "synthetic_enum_numeric"("code"),
+            UNIQUE("text")
+        )`),
+      synthetic.SQL(ctx),
+    );
+
+    const syntheticRF = SQLa.tableColumnsRowFactory(
+      synthetic.tableName,
+      synthetic.zoSchema.shape,
+    );
+
+    ta.assertEquals(
+      `INSERT INTO "synthetic_table" ("synthetic_table_id", "text", "ord_enum_id") VALUES ('synthetic01', 'text', 0)`,
+      syntheticRF.insertDML({
+        synthetic_table_id: "synthetic01",
+        text: "text",
+        ord_enum_id: numericEnumModel.seedEnum.code0,
+      }).SQL(ctx),
+    );
   });
 });
 
@@ -158,5 +198,42 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code1', 'value1')`, seedDML[0].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code2', 'value2')`, seedDML[1].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code3', 'value3')`, seedDML[2].SQL(ctx));
+  });
+
+  await tc.step("insert enum values into table rows", () => {
+    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const keys = SQLa.primaryKeyColumnFactory();
+
+    const synthetic = SQLa.tableDefinition("synthetic_table", {
+      synthetic_table_id: keys.primaryKey(z.string()),
+      text: tcf.unique(z.string()),
+      text_enum_code: textEnumModel.references.code(),
+    });
+
+    ta.assertEquals(
+      uws(`
+        CREATE TABLE "synthetic_table" (
+            "synthetic_table_id" TEXT PRIMARY KEY NOT NULL,
+            "text" TEXT /* UNIQUE COLUMN */ NOT NULL,
+            "text_enum_code" TEXT NOT NULL,
+            FOREIGN KEY("text_enum_code") REFERENCES "synthetic_enum_text"("code"),
+            UNIQUE("text")
+        )`),
+      synthetic.SQL(ctx),
+    );
+
+    const syntheticRF = SQLa.tableColumnsRowFactory(
+      synthetic.tableName,
+      synthetic.zoSchema.shape,
+    );
+
+    ta.assertEquals(
+      `INSERT INTO "synthetic_table" ("synthetic_table_id", "text", "text_enum_code") VALUES ('synthetic01', 'text', 'code1')`,
+      syntheticRF.insertDML({
+        synthetic_table_id: "synthetic01",
+        text: "text",
+        text_enum_code: "code1",
+      }).SQL(ctx),
+    );
   });
 });
