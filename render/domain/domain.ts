@@ -805,7 +805,7 @@ export function zodTypeSqlDomainFactory<
 
       case z.ZodFirstPartyTypeKind.ZodEnum: {
         return enumSDF.zodText(
-          (zodType as Any as z.ZodEnum<Any>)._def.values.values,
+          (zodType as Any as z.ZodEnum<Any>)._def.values,
           init,
         );
       }
