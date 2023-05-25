@@ -11,18 +11,30 @@ const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
 };
 
+enum SyntheticEnumNumeric {
+  code0,
+  code1,
+}
+
+const numericEnumModel = mod.ordinalEnumTable(
+  "synthetic_enum_numeric",
+  SyntheticEnumNumeric,
+);
+
+// code is text, value is text
+enum SyntheticEnumText {
+  code1 = "value1",
+  code2 = "value2",
+  code3 = "value3",
+}
+
+const textEnumModel = mod.textEnumTable(
+  "synthetic_enum_text",
+  SyntheticEnumText,
+);
+
 Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   // code is text, value is a number
-  enum syntheticEnum1 {
-    code0,
-    code1,
-  }
-
-  const numericEnumModel = mod.ordinalEnumTable(
-    "synthetic_enum_numeric",
-    syntheticEnum1,
-  );
-
   const ctx = SQLa.typicalSqlEmitContext();
 
   await tc.step("table definition", () => {
@@ -51,7 +63,7 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
 
   await tc.step("DML type-safety", () => {
     const row = numericEnumModel.prepareInsertable({
-      code: syntheticEnum1.code0,
+      code: SyntheticEnumNumeric.code0,
       value: "code0",
     });
     expectType<number | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(row.code); // should see compile error if this doesn't work
@@ -63,11 +75,11 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   await tc.step("typed Typescript objects", () => {
     type Synthetic = z.infer<typeof numericEnumModel.zoSchema>;
     const synthetic: Synthetic = {
-      code: syntheticEnum1.code1,
+      code: SyntheticEnumNumeric.code1,
       value: "code1",
     };
     expectType<Synthetic>(synthetic);
-    expectType<syntheticEnum1>(synthetic.code);
+    expectType<SyntheticEnumNumeric>(synthetic.code);
     expectType<"code0" | "code1">(synthetic.value);
   });
 
@@ -77,7 +89,7 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
     ta.assert(Array.isArray(seedDML));
     ta.assertEquals(2, seedDML.length);
 
-    expectType<syntheticEnum1>(seedRows[0].code);
+    expectType<SyntheticEnumNumeric>(seedRows[0].code);
     expectType<"code0" | "code1">(seedRows[0].value);
 
     ta.assertEquals(`INSERT INTO "synthetic_enum_numeric" ("code", "value") VALUES (0, 'code0')`, seedDML[0].SQL(ctx));
@@ -89,18 +101,21 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
     const keys = SQLa.primaryKeyColumnFactory();
 
     const synthetic = SQLa.tableDefinition("synthetic_table", {
-      synthetic_table_id: keys.primaryKey(z.string()),
+      synthetic_table_id: keys.autoIncPrimaryKey(),
       text: tcf.unique(z.string()),
       ord_enum_id: numericEnumModel.references.code(),
+      text_enum_code: textEnumModel.references.code(),
     });
 
     ta.assertEquals(
       uws(`
         CREATE TABLE "synthetic_table" (
-            "synthetic_table_id" TEXT PRIMARY KEY NOT NULL,
+            "synthetic_table_id" INTEGER PRIMARY KEY AUTOINCREMENT,
             "text" TEXT /* UNIQUE COLUMN */ NOT NULL,
             "ord_enum_id" INTEGER NOT NULL,
+            "text_enum_code" TEXT NOT NULL,
             FOREIGN KEY("ord_enum_id") REFERENCES "synthetic_enum_numeric"("code"),
+            FOREIGN KEY("text_enum_code") REFERENCES "synthetic_enum_text"("code"),
             UNIQUE("text")
         )`),
       synthetic.SQL(ctx),
@@ -112,29 +127,17 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
     );
 
     ta.assertEquals(
-      `INSERT INTO "synthetic_table" ("synthetic_table_id", "text", "ord_enum_id") VALUES ('synthetic01', 'text', 0)`,
+      `INSERT INTO "synthetic_table" ("text", "ord_enum_id", "text_enum_code") VALUES ('text', 0, 'code1')`,
       syntheticRF.insertDML({
-        synthetic_table_id: "synthetic01",
         text: "text",
         ord_enum_id: numericEnumModel.seedEnum.code0,
+        text_enum_code: "code1",
       }).SQL(ctx),
     );
   });
 });
 
 Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
-  // code is text, value is text
-  enum syntheticEnum2 {
-    code1 = "value1",
-    code2 = "value2",
-    code3 = "value3",
-  }
-
-  const textEnumModel = mod.textEnumTable(
-    "synthetic_enum_text",
-    syntheticEnum2,
-  );
-
   const ctx = SQLa.typicalSqlEmitContext();
 
   await tc.step("table definition", () => {
@@ -164,12 +167,12 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
   await tc.step("DML type-safety", () => {
     const row = textEnumModel.prepareInsertable({
       code: "code1", // TODO: try "codeBad" bad
-      value: syntheticEnum2.code1,
+      value: SyntheticEnumText.code1,
     });
     expectType<
       "code1" | "code2" | "code3" | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>
     >(row.code); // should see compile error if this doesn't work
-    expectType<syntheticEnum2 | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(
+    expectType<SyntheticEnumText | SQLa.SqlTextSupplier<SQLa.SqlEmitContext>>(
       row.value,
     ); // should see compile error if this doesn't work
   });
@@ -178,12 +181,12 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
     type Synthetic = z.infer<typeof textEnumModel.zoSchema>;
     const synthetic: Synthetic = {
       code: "code1",
-      value: syntheticEnum2.code1,
+      value: SyntheticEnumText.code1,
       created_at: new Date(),
     };
     expectType<Synthetic>(synthetic);
     expectType<"code1" | "code2" | "code3">(synthetic.code);
-    expectType<syntheticEnum2>(synthetic.value);
+    expectType<SyntheticEnumText>(synthetic.value);
   });
 
   // deno-fmt-ignore
@@ -193,7 +196,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
     ta.assertEquals(3, seedDML.length);
 
     expectType<"code1" | "code2" | "code3">(seedRows[0].code);
-    expectType<syntheticEnum2>(seedRows[0].value);
+    expectType<SyntheticEnumText>(seedRows[0].value);
 
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code1', 'value1')`, seedDML[0].SQL(ctx));
     ta.assertEquals(`INSERT INTO "synthetic_enum_text" ("code", "value") VALUES ('code2', 'value2')`, seedDML[1].SQL(ctx));
