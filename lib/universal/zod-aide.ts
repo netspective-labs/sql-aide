@@ -200,7 +200,7 @@ export type ZodEnrichment<
  * useful for creating references or other similar use cases.
  * @param original the ZodType we should clone
  * @param referenced if tracking reference graphs, pass along the graph
- * @returns a new instance as close to the type of the original as possible but with Optional, Nullable, or Default signatures
+ * @returns a new instance as close to the type of the original as possible but without Optional, Nullable, or Default signatures
  */
 export const clonedZodType = <Original extends z.ZodTypeAny, Cloned = Original>(
   original: Original,
@@ -222,11 +222,15 @@ export const clonedZodType = <Original extends z.ZodTypeAny, Cloned = Original>(
     }
 
     case z.ZodFirstPartyTypeKind.ZodNativeEnum: {
-      return z.nativeEnum({ ...original._def }) as unknown as Cloned;
+      return z.nativeEnum(original._def.values, {
+        ...original._def,
+      }) as unknown as Cloned;
     }
 
     case z.ZodFirstPartyTypeKind.ZodEnum: {
-      return z.enum({ ...original._def }) as unknown as Cloned;
+      return z.enum(original._def.values, {
+        ...original._def,
+      }) as unknown as Cloned;
     }
 
     default:
