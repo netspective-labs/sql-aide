@@ -43,6 +43,13 @@ const jobPosition = gm.autoIncPkTable("job_position", {
   ...gm.housekeeping.columns,
 });
 
+const jobGrade = gm.autoIncPkTable("job_grade", {
+  job_grade_id: autoIncPK(),
+  grade_name: text(),
+  description: textNullable(),
+  ...gm.housekeeping.columns,
+});
+
 function sqlDDL(
   options: {
     destroyFirst?: boolean;
@@ -65,8 +72,9 @@ function sqlDDL(
         ? `create schema if not exists ${schemaName};`
         : "-- no schemaName provided"
     }
-
     ${jobPosition}
+    ${jobGrade}
+    ${execCtx}
     ${execCtx.seedDML}
      `;
 }
