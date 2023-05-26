@@ -1,4 +1,8 @@
-//import * as tp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.12/pattern/typical/mod.ts";
+#!/usr/bin/env -S deno run --allow-all
+// the #! (`shebang`) descriptor allows us to run this script as a binary on Linux
+
+// IMPORTANT: when you use this outside of library use this type of import with pinned versions:
+// import * as dvp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.10/pattern/typical/mod.ts";
 import * as tp from "../pattern/typical/mod.ts";
 const { SQLa, ws } = tp;
 
@@ -50,43 +54,44 @@ const jobGrade = gm.autoIncPkTable("job_grade", {
   ...gm.housekeeping.columns,
 });
 
-function sqlDDL(
-  options: {
-    destroyFirst?: boolean;
-    schemaName?: string;
-  } = {},
-) {
-  const { destroyFirst, schemaName } = options;
-
+function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
   //       in dvts.tablesDeclared, etc.
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
-    ${
-      destroyFirst && schemaName
-        ? `drop schema if exists ${schemaName} cascade;`
-        : "-- not destroying first (for development)"
-    }
-    ${
-      schemaName
-        ? `create schema if not exists ${schemaName};`
-        : "-- no schemaName provided"
-    }
-    ${jobPosition}
-    ${jobGrade}
     ${execCtx}
     ${execCtx.seedDML}
-     `;
+
+    ${jobPosition}
+
+    ${jobGrade}
+    `;
 }
 
 tp.typicalCLI({
+  defaultDialect: "Microsoft SQL*Server",
   resolve: (specifier) =>
     specifier ? import.meta.resolve(specifier) : import.meta.url,
-  prepareSQL: (options) => ws.unindentWhitespace(sqlDDL(options).SQL(ctx)),
+  prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
   prepareDiagram: () => {
     // "executing" the following will fill gm.tablesDeclared but we don't
     // care about the SQL output, just the state management (tablesDeclared)
     sqlDDL().SQL(ctx);
     return gts.pumlERD(ctx).content;
   },
-}).commands.parse(Deno.args);
+}).commands.command(
+  "driver",
+  // deno-fmt-ignore
+  new tp.cli.Command()
+    .description("Emit SQL*Server Powershell Driver")
+    .option("-d, --dest <file:string>", "Output destination, STDOUT if not supplied")
+    .option("--destroy-first", "Include SQL to destroy existing objects first (dangerous but useful for development)")
+    .action((options) => {
+      const output = tp.powershellDriver(sqlDDL(), ctx);
+      if (options.dest) {
+        Deno.writeTextFileSync(options.dest, output);
+      } else {
+        console.log(output);
+      }
+    }),
+).parse(Deno.args);
