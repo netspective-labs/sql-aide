@@ -103,15 +103,18 @@ export function viewDefinition<
             quoteIdentifiers: true,
             qnss: vdOptions?.sqlNS,
           });
-          const create = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${
-            isIdempotent ? "IF NOT EXISTS " : ""
-          }${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
+          // by default we create for ANSI/SQLite/"other"
+          // deno-fmt-ignore
+          let create = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
+          if (emit.isPostgreSqlDialect(ctx.sqlDialect)) {
+            // deno-fmt-ignore
+            create = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
+          }
           return vdOptions?.before
             ? ctx.embeddedSQL<Context>(vdOptions.embeddedStsOptions)`${[
               vdOptions.before(viewName, vdOptions),
               create,
-            ]}`
-              .SQL(ctx)
+            ]}`.SQL(ctx)
             : create;
         },
       };
@@ -199,9 +202,14 @@ export function safeViewDefinitionCustom<
         const ns = ctx.sqlNamingStrategy(ctx, {
           quoteIdentifiers: true,
         });
-        const create = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${
-          isIdempotent ? "IF NOT EXISTS " : ""
-        }${ns.viewName(viewName)}${
+        // by default we create for ANSI/SQLite/"other"
+        // deno-fmt-ignore
+        let head = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${ns.viewName(viewName)}`;
+        if (emit.isPostgreSqlDialect(ctx.sqlDialect)) {
+          // deno-fmt-ignore
+          head = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)}`;
+        }
+        const create = `${head}${
           columnsList
             ? `(${
               columnsList.map((cn) =>
