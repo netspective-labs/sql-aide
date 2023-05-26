@@ -3,6 +3,13 @@ import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as mod from "./enum-table.ts";
+import * as tp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.18/pattern/typical/mod.ts";
+
+export const ctx = SQLa.typicalSqlEmitContext();
+type EmitContext = typeof ctx;
+
+const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -236,6 +243,115 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
         synthetic_table_id: "synthetic01",
         text: "text",
         text_enum_code: "code1",
+      }).SQL(ctx),
+    );
+  });
+
+  await tc.step("insert enum values into synthetic_graph_table_1 rows", () => {
+    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const keys = SQLa.primaryKeyColumnFactory();
+
+    enum GraphNature {
+      SERVICE = "Service",
+      APP = "Application",
+    }
+
+    const graphNature = mod.textEnumTable(
+      "graph_nature",
+      GraphNature,
+      { isIdempotent: true },
+    );
+
+    const createdAtSD = tcf.dateSDF.createdAt();
+
+    const createdAtZodDomain = tcf.zodTypeBaggageProxy(
+      z.date().default(new Date()).optional(),
+      createdAtSD,
+    );
+
+    const graph = SQLa.tableDefinition("synthetic_graph_1", {
+      synthetic_graph_1_id: keys.autoIncPrimaryKey(),
+      graph_nature_code: graphNature.references.code(),
+      name: z.string(),
+      description: z.string(),
+      created_at: createdAtZodDomain,
+    });
+    // console.log(graph.SQL(ctx));
+    //  created_at: createdAtZodDomain
+    ta.assertEquals(
+      uws(`
+      CREATE TABLE "synthetic_graph_1" (
+          "synthetic_graph_1_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+          "graph_nature_code" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "description" TEXT NOT NULL,
+          "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY("graph_nature_code") REFERENCES "graph_nature"("code")
+      )`),
+      graph.SQL(ctx),
+    );
+
+    const graphRF = SQLa.tableColumnsRowFactory(
+      graph.tableName,
+      graph.zoSchema.shape,
+    );
+
+    ta.assertEquals(
+      `INSERT INTO "synthetic_graph_1" ("graph_nature_code", "name", "description", "created_at") VALUES ('SERVICE', 'text-value', 'description', NULL)`,
+      graphRF.insertDML({
+        name: "text-value",
+        graph_nature_code: "SERVICE",
+        description: "description",
+      }).SQL(ctx),
+    );
+  });
+
+  await tc.step("insert enum values into synthetic_graph_2 table rows", () => {
+    const keys = SQLa.primaryKeyColumnFactory();
+
+    enum GraphNature {
+      SERVICE = "Service",
+      APP = "Application",
+    }
+
+    const graphNature = mod.textEnumTable(
+      "graph_nature",
+      GraphNature,
+      { isIdempotent: true },
+    );
+
+    const graph = SQLa.tableDefinition("synthetic_graph_2", {
+      synthetic_graph_2_id: keys.autoIncPrimaryKey(),
+      graph_nature_code: graphNature.references.code(),
+      name: z.string(),
+      description: z.string(),
+      ...gm.housekeeping.columns,
+    });
+
+    ta.assertEquals(
+      uws(`
+      CREATE TABLE "synthetic_graph_2" (
+          "synthetic_graph_2_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+          "graph_nature_code" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "description" TEXT NOT NULL,
+          "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY("graph_nature_code") REFERENCES "graph_nature"("code")
+      )`),
+      graph.SQL(ctx),
+    );
+
+    const graphRF = SQLa.tableColumnsRowFactory(
+      graph.tableName,
+      graph.zoSchema.shape,
+    );
+
+    ta.assertEquals(
+      `INSERT INTO "synthetic_graph_2" ("graph_nature_code", "name", "description", "created_at") VALUES ('SERVICE', 'text-value', 'description', NULL)`,
+      graphRF.insertDML({
+        name: "text-value",
+        graph_nature_code: "SERVICE",
+        description: "description",
       }).SQL(ctx),
     );
   });
