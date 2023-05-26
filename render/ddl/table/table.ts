@@ -249,7 +249,7 @@ export function tableDefinition<
 
         const { isTemp, isIdempotent } = tdOptions ?? {};
         // deno-fmt-ignore
-        const result = `${steOptions.indentation("create table")}CREATE ${isTemp ? 'TEMP ' : ''}TABLE ${isIdempotent ? "IF NOT EXISTS " : ""}${ns.tableName(tableName)} (\n` +
+        const result = `${steOptions.indentation("create table")}CREATE ${isTemp ? 'TEMP ' : ''}TABLE ${isIdempotent && !tmpl.isMsSqlServerDialect(ctx.sqlDialect) ? "IF NOT EXISTS " : ""}${ns.tableName(tableName)} (\n` +
         columnDefnsSS.map(cdss => cdss.SQL(ctx)).join(",\n") +
         (decoratorsSQL.length > 0 ? `,\n${indent}${decoratorsSQL}` : "") +
         "\n)";
