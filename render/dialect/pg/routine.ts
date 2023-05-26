@@ -136,6 +136,29 @@ export function plSqlLanguage<
     }),
   };
 }
+export const plPythonIdentity = "PL/Python" as const;
+export function plPythonLanguage<
+  Context extends tmpl.SqlEmitContext,
+>(): PgProceduralLang<typeof plPythonIdentity, Context> {
+  return {
+    identity: plPythonIdentity,
+    sqlPartial: () => ({
+      SQL: () => `LANGUAGE PLPYTHON3U`,
+    }),
+  };
+}
+
+export const plJavaIdentity = "PL/Java" as const;
+export function plJavaLanguage<
+  Context extends tmpl.SqlEmitContext,
+>(): PgProceduralLang<typeof plJavaIdentity, Context> {
+  return {
+    identity: plJavaIdentity,
+    sqlPartial: () => ({
+      SQL: () => `LANGUAGE JAVA`,
+    }),
+  };
+}
 
 export interface PgProceduralLangBody<
   BodyIdentity extends string,
@@ -149,7 +172,11 @@ export interface PgProceduralLangBody<
 export function untypedPlSqlBody<
   BodyIdentity extends string,
   Context extends tmpl.SqlEmitContext,
->(identity: BodyIdentity, ess: tmpl.EmbeddedSqlSupplier) {
+>(
+  identity: BodyIdentity,
+  ess: tmpl.EmbeddedSqlSupplier,
+  pgPL: PgProceduralLang<Any, Context> = plSqlLanguage(),
+) {
   return (
     literals: TemplateStringsArray,
     ...expressions: tmpl.SqlPartialExpression<Context>[]
@@ -175,7 +202,7 @@ export function untypedPlSqlBody<
           );
         },
         populateSqlTextLintIssues: () => {},
-        pgPL: plSqlLanguage(),
+        pgPL,
       };
     return result;
   };
@@ -233,6 +260,7 @@ export function typedPlSqlBody<
   identity: BodyIdentity,
   argDefns: ArgsShape,
   ess: tmpl.EmbeddedSqlSupplier,
+  pgPL: PgProceduralLang<Any, Context> = plSqlLanguage(),
 ) {
   return (
     literals: TemplateStringsArray,
@@ -241,6 +269,7 @@ export function typedPlSqlBody<
     const untypedBody = untypedPlSqlBody<BodyIdentity, Context>(
       identity,
       ess,
+      pgPL,
     );
     return {
       ...argDefns,

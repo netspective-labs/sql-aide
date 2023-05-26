@@ -420,4 +420,48 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
       );
     },
   );
+
+  await tc.step(
+    "PL/Python stored procedure (idempotent, auto begin/end)",
+    () => {
+      const sp = mod.storedProcedure(
+        "synthetic_sp1",
+        {
+          arg1: z.string(),
+        },
+        (name, args) =>
+          mod.typedPlSqlBody(name, args, ctx, mod.plPythonLanguage()),
+      )`
+      -- this is the stored procedure body`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp1"("arg1" TEXT) AS $$
+          -- this is the stored procedure body
+        $$ LANGUAGE PLPYTHON3U;`),
+      );
+    },
+  );
+
+  await tc.step(
+    "PL/Java stored procedure (idempotent, auto begin/end)",
+    () => {
+      const sp = mod.storedProcedure(
+        "synthetic_sp1",
+        {
+          arg1: z.string(),
+        },
+        (name, args) =>
+          mod.typedPlSqlBody(name, args, ctx, mod.plJavaLanguage()),
+      )`
+      -- this is the stored procedure body`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp1"("arg1" TEXT) AS $$
+          -- this is the stored procedure body
+        $$ LANGUAGE JAVA;`),
+      );
+    },
+  );
 });
