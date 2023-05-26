@@ -90,7 +90,12 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
               "create table, column defn decorators",
             );
             const decorators: tmpl.SqlTextSupplier<Context> = {
-              SQL: () => `PRIMARY KEY AUTOINCREMENT`,
+              SQL: (ctx) => {
+                if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+                  return `IDENTITY(1,1) NOT NULL`;
+                }
+                return `PRIMARY KEY AUTOINCREMENT`;
+              },
             };
             return ctcdd ? [decorators, ...ctcdd] : [decorators];
           }
