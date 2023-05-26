@@ -506,7 +506,14 @@ export function zodDateSqlDomainFactory<
     ) => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
-        sqlDataType: () => ({ SQL: () => `TIMESTAMP` }),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `DATETIME2`;
+            }
+            return `TIMESTAMP`;
+          },
+        }),
       };
     },
     createdAt: <
@@ -523,8 +530,23 @@ export function zodDateSqlDomainFactory<
           z.date().default(new Date()).optional() as ZodType,
           { isOptional: true, ...init },
         ),
-        sqlDataType: () => ({ SQL: () => `TIMESTAMP` }),
-        sqlDefaultValue: () => ({ SQL: () => `CURRENT_TIMESTAMP` }),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `DATETIME2`;
+            }
+            return `TIMESTAMP`;
+          },
+        }),
+
+        sqlDefaultValue: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `GETDATE()`;
+            }
+            return `CURRENT_TIMESTAMP`;
+          },
+        }),
       };
     },
   };
