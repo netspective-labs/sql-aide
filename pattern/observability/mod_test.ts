@@ -22,7 +22,9 @@ Deno.test("Observability governance", () => {
 });
 
 Deno.test("Telemetry SQLite", () => {
-  const ctx: SyntheticContext = { ...SQLa.typicalSqlEmitContext() };
+  const ctx: SyntheticContext = {
+    ...SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() }),
+  };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const tg = mod.telemetryGovn<SyntheticContext>(stso);
   ta.assertEquals(
@@ -32,7 +34,9 @@ Deno.test("Telemetry SQLite", () => {
 });
 
 Deno.test("Metrics SQLite", () => {
-  const ctx: SyntheticContext = { ...SQLa.typicalSqlEmitContext() };
+  const ctx: SyntheticContext = {
+    ...SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() }),
+  };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const mg = mod.metricsGovn<SyntheticContext>(stso);
   ta.assertEquals(
@@ -41,15 +45,26 @@ Deno.test("Metrics SQLite", () => {
   );
 });
 
-// TODO:
-// Deno.test("Telemetry PostgreSQL", async (tc) => {
-//   const ctx: SyntheticContext = { ...SQLa.typicalSqlEmitContext() };
-//   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
-//   const tg = mod.telemetryGovn<SyntheticContext>(stso);
-// });
+Deno.test("Telemetry PostgreSQL", () => {
+  const ctx: SyntheticContext = {
+    ...SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.postgreSqlDialect() }),
+  };
+  const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
+  const tg = mod.telemetryGovn<SyntheticContext>(stso);
+  ta.assertEquals(
+    relativeFileContent("./mod_test.telem-pg-fixture.sql"),
+    uws(tg.allSpanObjects.SQL(ctx)),
+  );
+});
 
-// Deno.test("Metrics PostgreSQL", async (tc) => {
-//   const ctx: SyntheticContext = { ...SQLa.typicalSqlEmitContext() };
-//   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
-//   const mg = mod.metricsGovn<SyntheticContext>(stso);
-// });
+Deno.test("Metrics PostgreSQL", () => {
+  const ctx: SyntheticContext = {
+    ...SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.postgreSqlDialect() }),
+  };
+  const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
+  const mg = mod.metricsGovn<SyntheticContext>(stso);
+  ta.assertEquals(
+    relativeFileContent("./mod_test.metrics-pg-fixture.sql"),
+    uws(mg.allMetricsObjects.SQL(ctx)),
+  );
+});
