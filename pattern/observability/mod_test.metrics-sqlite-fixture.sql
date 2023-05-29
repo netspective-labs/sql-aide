@@ -5,8 +5,7 @@ CREATE TABLE IF NOT EXISTS "metric" (
     "type" TEXT NOT NULL,
     "unit" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL
+    "created_by" TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "metric_label" (
@@ -16,7 +15,6 @@ CREATE TABLE IF NOT EXISTS "metric_label" (
     "label_value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("metric_id") REFERENCES "metric"("metric_id")
 );
 
@@ -27,7 +25,6 @@ CREATE TABLE IF NOT EXISTS "metric_value" (
     "value" REAL NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
 );
 
@@ -38,7 +35,6 @@ CREATE TABLE IF NOT EXISTS "metric_histogram_bucket" (
     "bucket_value" REAL NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
 );
 
@@ -49,6 +45,5 @@ CREATE TABLE IF NOT EXISTS "metric_summary_quantile" (
     "quantile_value" REAL NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
 );

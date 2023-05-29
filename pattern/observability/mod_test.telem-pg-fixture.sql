@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS "span" (
     "end_time" TIMESTAMP,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("parent_span_id") REFERENCES "span"("parent_span_id")
 );
 
@@ -18,7 +17,6 @@ CREATE TABLE IF NOT EXISTS "span_attribute" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("span_id") REFERENCES "span"("span_id")
 );
 
@@ -29,7 +27,6 @@ CREATE TABLE IF NOT EXISTS "span_event" (
     "timestamp" TIMESTAMP NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("span_id") REFERENCES "span"("span_id")
 );
 
@@ -39,7 +36,6 @@ CREATE TABLE IF NOT EXISTS "span_link" (
     "linked_span_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("span_id") REFERENCES "span"("span_id"),
     FOREIGN KEY("linked_span_id") REFERENCES "span"("span_id")
 );
@@ -51,6 +47,5 @@ CREATE TABLE IF NOT EXISTS "span_baggage" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    "provenance" TEXT NOT NULL,
     FOREIGN KEY("span_id") REFERENCES "span"("span_id")
 );

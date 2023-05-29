@@ -7,8 +7,14 @@ import * as mod from "./mod.ts";
 const relativeFilePath = (name: string) =>
   path.relative(Deno.cwd(), path.fromFileUrl(import.meta.resolve(name)));
 
-const relativeFileContent = (name: string) =>
-  Deno.readTextFileSync(path.relative(Deno.cwd(), relativeFilePath(name)));
+const relativeFileContent = (relFilePath: string) =>
+  Deno.readTextFileSync(
+    path.relative(Deno.cwd(), relativeFilePath(relFilePath)),
+  );
+
+const assertFileContent = (relFilePath: string, expected: string) => {
+  return ta.assertEquals(relativeFileContent(relFilePath), expected);
+};
 
 type SyntheticContext = SQLa.SqlEmitContext;
 
@@ -27,8 +33,8 @@ Deno.test("Telemetry SQLite", () => {
   };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const tg = mod.telemetryGovn<SyntheticContext>(stso);
-  ta.assertEquals(
-    relativeFileContent("./mod_test.telem-sqlite-fixture.sql"),
+  assertFileContent(
+    "./mod_test.telem-sqlite-fixture.sql",
     uws(tg.allSpanObjects.SQL(ctx)),
   );
 });
@@ -39,8 +45,8 @@ Deno.test("Metrics SQLite", () => {
   };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const mg = mod.metricsGovn<SyntheticContext>(stso);
-  ta.assertEquals(
-    relativeFileContent("./mod_test.metrics-sqlite-fixture.sql"),
+  assertFileContent(
+    "./mod_test.metrics-sqlite-fixture.sql",
     uws(mg.allMetricsObjects.SQL(ctx)),
   );
 });
@@ -51,8 +57,8 @@ Deno.test("Telemetry PostgreSQL", () => {
   };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const tg = mod.telemetryGovn<SyntheticContext>(stso);
-  ta.assertEquals(
-    relativeFileContent("./mod_test.telem-pg-fixture.sql"),
+  assertFileContent(
+    "./mod_test.telem-pg-fixture.sql",
     uws(tg.allSpanObjects.SQL(ctx)),
   );
 });
@@ -63,8 +69,10 @@ Deno.test("Metrics PostgreSQL", () => {
   };
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const mg = mod.metricsGovn<SyntheticContext>(stso);
-  ta.assertEquals(
-    relativeFileContent("./mod_test.metrics-pg-fixture.sql"),
-    uws(mg.allMetricsObjects.SQL(ctx)),
-  );
+  const msr = mod.metricsPlPgSqlRoutines(ctx);
+  const withSPs = SQLa.SQL<SyntheticContext>(stso)`
+    ${mg.allMetricsObjects}
+
+    ${msr.insertMetricValueSP}`;
+  assertFileContent("./mod_test.metrics-pg-fixture.sql", uws(withSPs.SQL(ctx)));
 });

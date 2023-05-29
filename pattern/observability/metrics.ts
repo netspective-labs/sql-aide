@@ -1,4 +1,5 @@
 import * as SQLa from "../../render/mod.ts";
+import * as pgSQLa from "../../render/dialect/pg/mod.ts";
 import * as typ from "../typical/typical.ts";
 import * as govn from "./governance.ts";
 
@@ -18,6 +19,8 @@ export function metricsGovn<Context extends SQLa.SqlEmitContext>(
 ) {
   const og = govn.observabilityGovn(ddlOptions);
   const { table, keys, names, domains, housekeeping } = og;
+
+  // TODO: decide whether og.service.service_id should be used (when single instance multi-tenant is used)
 
   const metric = table(names.tableName("metric"), {
     metric_id: keys.autoIncPrimaryKey(),
@@ -97,41 +100,61 @@ export function metricsTemplateState<Context extends SQLa.SqlEmitContext>() {
   };
 }
 
-// CREATE OR REPLACE PROCEDURE insert_metric_value(metric_name_param TEXT, label_key_param TEXT, label_value_param TEXT, timestamp_param TIMESTAMP, value_param DOUBLE PRECISION)
-// LANGUAGE plpgsql
-// AS $$
-// DECLARE
-//   partition_name TEXT;
-//   partition_start TIMESTAMP;
-//   partition_end TIMESTAMP;
-//   metric_id_param INT;
-//   metric_label_id_param INT;
-// BEGIN
-//   partition_name := 'metric_value_' || to_char(timestamp_param, 'YYYY_MM');
-//   partition_start := date_trunc('month', timestamp_param);
-//   partition_end := partition_start + INTERVAL '1 month';
+export function metricsPlPgSqlRoutines(ess: SQLa.EmbeddedSqlSupplier) {
+  const d = govn.observabilityDomains();
+  // we setup srb with our "arguments shape" separately so that we can access
+  // the argument names and types with type-safety
+  const srb = pgSQLa.storedRoutineBuilder("insert_metric_value", {
+    metric_name_param: d.text(),
+    value_param: d.bigFloat(),
+    label_key_param: d.text(),
+    label_value_param: d.text(),
+    timestamp_param: d.dateTime(),
+  });
+  // destructuring argsSD.sdSchema { argsSD: { sdSchema: a } } is a convenient
+  // way of getting all the arguments into `a`
+  const { argsSD: { sdSchema: a } } = srb;
+  const insertMetricValueSP = pgSQLa.storedProcedure(
+    srb.routineName,
+    srb.argsDefn,
+    (name, args) => pgSQLa.typedPlPgSqlBody(name, args, ess),
+  )`
+  DECLARE
+    partition_name TEXT;
+    partition_start TIMESTAMP;
+    partition_end TIMESTAMP;
+    metric_id_selected INT;
+    metric_label_id_selected INT;
+  BEGIN
+    partition_name := 'metric_value_' || to_char(${a.timestamp_param}, 'YYYY_MM');
+    partition_start := date_trunc('month', ${a.timestamp_param});
+    partition_end := partition_start + INTERVAL '1 month';
 
-//   SELECT id INTO metric_id_param FROM metric WHERE name = metric_name_param;
+    SELECT id INTO metric_id_selected FROM metric WHERE name = ${a.metric_name_param};
 
-//   IF metric_id_param IS NULL THEN
-//     RAISE EXCEPTION 'Metric % does not exist.', metric_name_param;
-//   END IF;
+    IF metric_id_selected IS NULL THEN
+      RAISE EXCEPTION 'Metric % does not exist.', ${a.metric_name_param};
+    END IF;
 
-//   SELECT id INTO metric_label_id_param FROM metric_label WHERE metric_id = metric_id_param AND label_key = label_key_param AND label_value = label_value_param;
+    SELECT id INTO metric_label_id_selected FROM metric_label WHERE metric_id = metric_id_selected AND label_key = ${a.label_key_param} AND label_value = ${a.label_value_param};
 
-//   IF metric_label_id_param IS NULL THEN
-//     INSERT INTO metric_label (metric_id, label_key, label_value) VALUES (metric_id_param, label_key_param, label_value_param)
-//     RETURNING id INTO metric_label_id_param;
-//   END IF;
+    IF metric_label_id_selected IS NULL THEN
+      INSERT INTO metric_label (metric_id, label_key, label_value) VALUES (metric_id_selected, ${a.label_key_param}, ${a.label_value_param})
+      RETURNING id INTO metric_label_id_selected;
+    END IF;
 
-//   BEGIN
-//     EXECUTE format('CREATE TABLE IF NOT EXISTS %I PARTITION OF metric_value FOR VALUES FROM (%L) TO (%L);', partition_name, partition_start, partition_end);
-//   EXCEPTION WHEN duplicate_table THEN
-//     -- Do nothing, the partition already exists
-//   END;
+    BEGIN
+      EXECUTE format('CREATE TABLE IF NOT EXISTS %I PARTITION OF metric_value FOR VALUES FROM (%L) TO (%L);', partition_name, partition_start, partition_end);
+    EXCEPTION WHEN duplicate_table THEN
+      -- Do nothing, the partition already exists
+    END;
 
-//   EXECUTE format('INSERT INTO %I (metric_label_id, timestamp, value) VALUES ($1, $2, $3);', partition_name) USING metric_label_id_param, timestamp_param, value_param;
-// END;
-// $$;
+    EXECUTE format('INSERT INTO %I (metric_label_id, timestamp, value) VALUES ($1, $2, $3);', partition_name) USING metric_label_id_selected, ${a.timestamp_param}, ${a.value_param};
+  END;`;
+
+  return {
+    insertMetricValueSP,
+  };
+}
 
 // CALL insert_metric_value('http_requests_total', 'method', 'GET', '2023-05-27 10:00:00', 5000);

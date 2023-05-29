@@ -19,6 +19,8 @@ export function telemetryGovn<Context extends SQLa.SqlEmitContext>(
   const og = govn.observabilityGovn(ddlOptions);
   const { table, keys, names, domains, housekeeping } = og;
 
+  // TODO: decide whether og.service.service_id should be used (when single instance multi-tenant is used)
+
   const span_id = keys.autoIncPrimaryKey();
   const span = table(names.tableName("span"), {
     span_id,

@@ -46,6 +46,7 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     readonly sqlNS?: SQLa.SqlNamespaceSupplier;
   },
 ) {
+  const tcf = SQLa.tableColumnFactory<Any, Any>();
   const names = observabilityNames<Context>();
   const domains = observabilityDomains<Context>();
   const keys = observabilityKeys<Context>();
@@ -55,7 +56,6 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     columns: {
       created_at: domains.createdAt(),
       created_by: domains.text(),
-      provenance: domains.text(),
     },
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: SQLa.InsertStmtPreparerOptions<
@@ -142,6 +142,14 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     return result;
   };
 
+  const obs_service_id = keys.autoIncPrimaryKey();
+  const service = table(names.tableName("obs_service"), {
+    obs_service_id,
+    parent_service_id: domains.selfRef(obs_service_id).optional(),
+    service_name: tcf.unique(domains.text()),
+    ...housekeeping.columns,
+  });
+
   return {
     names,
     domains,
@@ -149,5 +157,6 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     housekeeping,
     table,
     tableLintRules,
+    service,
   };
 }
