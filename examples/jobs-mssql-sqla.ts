@@ -54,6 +54,7 @@ const jobGrade = gm.autoIncPkTable("job_grade", {
   ...gm.housekeeping.columns,
 });
 
+
 function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
   //       in dvts.tablesDeclared, etc.
@@ -61,10 +62,8 @@ function sqlDDL() {
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
     ${execCtx}
     ${execCtx.seedDML}
-
-    ${jobPosition}
-
     ${jobGrade}
+    ${jobPosition}
     `;
 }
 

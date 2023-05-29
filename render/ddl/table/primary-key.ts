@@ -92,7 +92,7 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
             const decorators: tmpl.SqlTextSupplier<Context> = {
               SQL: (ctx) => {
                 if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
-                  return `IDENTITY(1,1) NOT NULL`;
+                  return `IDENTITY(1,1) PRIMARY KEY`;
                 }
                 return `PRIMARY KEY AUTOINCREMENT`;
               },
