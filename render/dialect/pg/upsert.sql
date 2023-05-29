@@ -9,9 +9,14 @@
 -- However, you can create a function generator that generates an upsert
 -- function for a specific table and its unique or primary key.
 
--- how to use:
--- One time: SELECT execute_generated_upsert_sql(generate_upsert_sql('my_table'));
---    After: SELECT * FROM upsert_my_table((1, 'John Doe', 'john.doe@example.com')::my_table);
+-- First (one) time, generate the necessary function:
+--    SELECT execute_generated_upsert_sql(generate_upsert_sql('my_table'));
+
+-- Then, for rows with unique values or inserts (don't pass in PK for auto-inc inserts):
+--    SELECT * FROM upsert_my_table(('John Doe', 'john.doe@example.com')::upsert_my_table);
+--
+-- If you know the PK value, pass it in:
+--    SELECT * FROM upsert_my_table((1, 'John Doe', 'john.doe@example.com')::my_table);
 
 CREATE OR REPLACE FUNCTION generate_upsert_sql(schema_name text, tablename text)
     RETURNS text
