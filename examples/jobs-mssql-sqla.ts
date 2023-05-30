@@ -24,6 +24,13 @@ export enum ExecutionContext {
 }
 const execCtx = gm.ordinalEnumTable("execution_context", ExecutionContext);
 
+const jobGrade = gm.autoIncPkTable("job_grade", {
+  job_grade_id: autoIncPK(),
+  grade_name: text(),
+  description: textNullable(),
+  ...gm.housekeeping.columns,
+});
+
 const jobPosition = gm.autoIncPkTable("job_position", {
   job_position_id: autoIncPK(),
   position_title: text(),
@@ -32,7 +39,7 @@ const jobPosition = gm.autoIncPkTable("job_position", {
   requirements: textNullable(),
   responsibilities: textNullable(),
   department_id: integer(),
-  grade_id: integer(),
+  grade_id: jobGrade.references.job_grade_id(),
   experience_level: textNullable(),
   skills_required: textNullable(),
   location_id: integer(),
@@ -47,23 +54,18 @@ const jobPosition = gm.autoIncPkTable("job_position", {
   ...gm.housekeeping.columns,
 });
 
-const jobGrade = gm.autoIncPkTable("job_grade", {
-  job_grade_id: autoIncPK(),
-  grade_name: text(),
-  description: textNullable(),
-  ...gm.housekeeping.columns,
-});
-
-
 function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
   //       in dvts.tablesDeclared, etc.
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+    IF OBJECT_ID(N'dbo.${execCtx.tableName}', N'U') IS NOT NULL
+      drop table ${execCtx.tableName}
     ${execCtx}
     ${execCtx.seedDML}
     ${jobGrade}
     ${jobPosition}
+
     `;
 }
 
