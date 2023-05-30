@@ -13,8 +13,24 @@
   "deno.lint": true,
   "deno.unstable": true,
   "deno.codeLens.implementations": false,
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "[javascript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
   "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[json]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[jsonc]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "git.decorations.enabled": true,
