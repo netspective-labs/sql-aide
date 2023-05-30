@@ -103,6 +103,46 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     ...housekeeping.columns,
   });
 
+  enum GraphNature {
+    SERVICE = "Service",
+    APP = "Application",
+  }
+  const graphNature = gm.textEnumTable(
+    "graph_nature",
+    GraphNature,
+    { isIdempotent: true },
+  );
+
+  const publ_graph_parent = gm.autoIncPkTable("publ_graph_parent", {
+    publ_graph_parent_id: keys.autoIncPrimaryKey(),
+    name: sd.text(),
+    ...gm.housekeeping.columns,
+  });
+
+  const graphParentInsertion = publ_graph_parent.insertDML({
+    name: "text-value",
+  });
+
+  const graph = gm.autoIncPkTable("graph", {
+    graph_id: keys.autoIncPrimaryKey(),
+    graph_parent_id: publ_graph_parent.references.publ_graph_parent_id(),
+    graph_nature_code: graphNature.references.code(),
+    name: sd.text(),
+    description: sd.textNullable(),
+    ...gm.housekeeping.columns,
+  });
+
+  const graphParentID = publ_graph_parent.select(
+    graphParentInsertion.insertable,
+  );
+
+  const graphInsertable = graph.insertDML({
+    name: "text-value",
+    graph_parent_id: graphParentID,
+    graph_nature_code: "SERVICE",
+    description: "description",
+  });
+
   return {
     governedModel: gm,
     publHost,
@@ -113,6 +153,12 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     publHostView,
     hostType,
     buildEventType,
+    graphNature,
+    graph,
+    publ_graph_parent,
+
+    graphParentID,
+    graphInsertable,
   };
 }
 
@@ -159,6 +205,12 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
 
     ${ss.publServerErrorLog}
 
+    ${ss.publ_graph_parent}
+
+    ${ss.graphNature}
+
+    ${ss.graph}
+
     ${ss.publHost.insertDML({ publ_host_id: "test", host: "test", host_identity: "testHI", mutation_count: 0, host_type_code: ss.hostType.seedEnum.linux })}
 
     ${ss.publHost.select({ host_identity: "testHI"})}
@@ -168,6 +220,11 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
 
     -- TypeScript text enum object entries as RDBMS rows
     ${ss.buildEventType.seedDML}
+
+    ${ss.graphNature.seedDML}
+
+
+    ${ss.graphParentID}
 
     ${gts.lintState.sqlTmplEngineLintSummary}`;
 
@@ -181,7 +238,7 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     0,
     DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length,
   );
-  ta.assertEquals(gts.tablesDeclared.size, 7);
+  ta.assertEquals(gts.tablesDeclared.size, 10);
   ta.assertEquals(gts.viewsDeclared.size, 1);
   ta.assertEquals(fixturePUML, gts.pumlERD(ctx).content);
 });
@@ -286,6 +343,29 @@ const fixtureSQL = ws.unindentWhitespace(`
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
+  CREATE TABLE IF NOT EXISTS "publ_graph_parent" (
+      "publ_graph_parent_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+      "name" TEXT NOT NULL,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      "created_by" TEXT DEFAULT 'UNKNOWN'
+  );
+
+  CREATE TABLE IF NOT EXISTS "graph_nature" (
+      "code" TEXT PRIMARY KEY NOT NULL,
+      "value" TEXT NOT NULL,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS "graph" (
+      "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+      "graph_nature_code" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "description" TEXT,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
+      FOREIGN KEY("graph_nature_code") REFERENCES "graph_nature"("code")
+  );
+
   INSERT INTO "publ_host" ("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_by") VALUES ('test', 'test', 'testHI', 0, 0, NULL);
 
   SELECT "publ_host_id" FROM "publ_host" WHERE "host_identity" = 'testHI';
@@ -297,6 +377,11 @@ const fixtureSQL = ws.unindentWhitespace(`
   -- TypeScript text enum object entries as RDBMS rows
   INSERT INTO "build_event_type" ("code", "value") VALUES ('code1', 'value1');
   INSERT INTO "build_event_type" ("code", "value") VALUES ('code2', 'value2');
+
+  INSERT INTO "graph_nature" ("code", "value") VALUES ('SERVICE', 'Service');
+  INSERT INTO "graph_nature" ("code", "value") VALUES ('APP', 'Application');
+
+  INSERT INTO "graph" ("graph_nature_code", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
 
   -- no template engine lint issues (typicalSqlTextLintManager)`);
 
@@ -392,10 +477,36 @@ const fixturePUML = `@startuml IE
       created_by: TEXT
   }
 
+  entity "publ_graph_parent" as publ_graph_parent {
+      **publ_graph_parent_id**: INTEGER
+    --
+    * name: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "graph_nature" as graph_nature {
+    * **code**: TEXT
+    --
+    * value: TEXT
+      created_at: TIMESTAMP
+  }
+
+  entity "graph" as graph {
+      **graph_id**: INTEGER
+    --
+    * graph_nature_code: TEXT
+    * name: TEXT
+      description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
   publ_host |o..o{ publ_build_event
   build_event_type |o..o{ publ_build_event
   publ_build_event |o..o{ publ_server_service
   publ_server_service |o..o{ publ_server_static_access_log
   publ_server_error_log |o..o{ publ_server_error_log
   publ_server_service |o..o{ publ_server_error_log
+  graph_nature |o..o{ graph
 @enduml`;
