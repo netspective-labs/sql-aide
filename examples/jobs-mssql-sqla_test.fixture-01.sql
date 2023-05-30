@@ -40,4 +40,3 @@ CREATE TABLE [job_position] (
     FOREIGN KEY([grade_id]) REFERENCES [job_grade]([job_grade_id])
 );
 
-
