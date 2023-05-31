@@ -164,6 +164,8 @@ Deno.test("SQL Aide (SQLa) template", () => {
 
     ${syntheticTable2Defn}
 
+    ${mod.preprocess(import.meta.resolve("./mod_test_pp-fixture.sql"))}
+
     -- ${ctx.syntheticBehavior1}`;
 
   const syntheticSQL = DDL.SQL(ctx);
@@ -211,5 +213,11 @@ const fixturePrime = ws.unindentWhitespace(/*sql*/`
     "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE("column_unique")
   );
+
+  -- \\set varName1 varValue1 (variable: varName1, value: varValue1, srcLine: 1)
+  -- \\set varName2 varValue2 (variable: varName2, value: varValue2, srcLine: 2)
+
+  select * from "varValue1";
+  select * from "varValue1" where column = 'varValue2';
 
   -- behavior 1 state value: 2`);
