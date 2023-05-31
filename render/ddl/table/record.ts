@@ -141,7 +141,23 @@ export function tableColumnsRowFactory<
             : true
         );
       },
-      (ir) => td.zoSchema.parse(ir) as InsertableRecord,
+      (ir) => {
+        const parsed = td.zoSchema.safeParse(ir);
+        if (parsed.success) return parsed.data as InsertableRecord;
+
+        const nonSqlTextSupplierErrors = parsed.error.errors.filter((err) => {
+          if (
+            err.code === "invalid_type" && err.received === "object" &&
+            typeof err.path === "string"
+          ) {
+            if (tmpl.isSqlTextSupplier(ir[err.path])) return false;
+            return true;
+          }
+        });
+
+        if (nonSqlTextSupplierErrors.length == 0) return ir as InsertableRecord;
+        throw parsed.error;
+      },
       tdrfOptions?.defaultIspOptions,
     ),
   };

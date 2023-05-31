@@ -634,6 +634,17 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         );
       });
 
+      await innerTC.step("SQL DML with SQL text supplier property", () => {
+        const { ctx } = sqlGen();
+        ta.assertEquals(
+          tableRF.insertDML({
+            text: "text",
+            int: { SQL: () => `select dynamic from somewhere` },
+          }).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, (select dynamic from somewhere), NULL)`,
+        );
+      });
+
       await innerTC.step(
         "SQL DML with SQL expression as insertable value",
         () => {
