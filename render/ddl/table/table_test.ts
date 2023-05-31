@@ -645,6 +645,27 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         );
       });
 
+      await innerTC.step("SQL DML with SQLa select property", () => {
+        const { ctx } = sqlGen();
+        const tableRow = tableRF.insertDML({
+          text: "text",
+          int: 57,
+        });
+
+        const tableSF = mod.tableSelectFactory(
+          table.tableName,
+          table.zoSchema.shape,
+        );
+
+        ta.assertEquals(
+          tableRF.insertDML({
+            text: "text",
+            int: tableSF.select(tableRow.insertable),
+          }).SQL(ctx),
+          `INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable") VALUES ('text', NULL, (SELECT "auto_inc_primary_key" FROM "synthetic_table_with_auto_inc_pk" WHERE "text" = 'text' AND "int" = 57), NULL)`,
+        );
+      });
+
       await innerTC.step(
         "SQL DML with SQL expression as insertable value",
         () => {
