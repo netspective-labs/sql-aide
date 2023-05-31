@@ -271,7 +271,9 @@ if (import.meta.main) {
           for (const srcFile of srcFiles) {
             const pp = psqlPreprocess(
               Deno.readTextFileSync(srcFile),
-              options.set,
+              options.set && Object.keys(options.set).length > 0 ? {
+                setDirective: setVarValueDirective({overrides: options.set})
+              } : undefined,
             );
             if (options?.inspect) {
               console.dir(pp.inspect);
