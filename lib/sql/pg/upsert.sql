@@ -1,3 +1,5 @@
+\set unit_test_schema dcp_assurance
+
 -- In PostgreSQL, creating a generic upsert function that works for any table
 -- is not straightforward due to the strong type safety and type checking. You
 -- can't simply create a stored function that accepts any table and column,
@@ -71,33 +73,33 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
 -- Prepare some data for testing
-CREATE SCHEMA IF NOT EXISTS dcp_assurance;
+CREATE SCHEMA IF NOT EXISTS :unit_test_schema;
 
-CREATE TABLE IF NOT EXISTS dcp_assurance.test_user (
+CREATE TABLE IF NOT EXISTS :unit_test_schema.test_user (
     id serial PRIMARY KEY,
     name text,
     email text UNIQUE
 );
 
-INSERT INTO dcp_assurance.test_user (name, email)
+INSERT INTO :unit_test_schema.test_user (name, email)
 VALUES
 ('John Doe', 'john.doe@example.com'),
 ('Jane Doe', 'jane.doe@example.com')
 ON CONFLICT DO NOTHING;
 
 -- Generate the upsert function for testing
-SELECT execute_generated_upsert_sql(generate_upsert_sql('dcp_assurance', 'test_user'));
+SELECT execute_generated_upsert_sql(generate_upsert_sql(:'unit_test_schema', 'test_user'));
 
 -- Tests
 SELECT plan(3);
 
 -- Test that the function exists
-SELECT has_function('dcp_assurance', 'upsert_test_user');
+SELECT has_function(:'unit_test_schema', 'upsert_test_user');
 
 -- Test that the function updates existing records correctly
 SELECT is(
     (
-        SELECT email FROM dcp_assurance.upsert_test_user((1, 'Updated Name', 'john.doe@example.com')::dcp_assurance.test_user)
+        SELECT email FROM :unit_test_schema.upsert_test_user((1, 'Updated Name', 'john.doe@example.com'):::"unit_test_schema".test_user)
     ),
     'john.doe@example.com',
     'Updates existing record correctly'
@@ -106,7 +108,7 @@ SELECT is(
 -- Test that the function inserts new records correctly
 SELECT is(
     (
-        SELECT email FROM dcp_assurance.upsert_test_user((3, 'New User', 'new.user@example.com')::dcp_assurance.test_user)
+        SELECT email FROM :unit_test_schema.upsert_test_user((3, 'New User', 'new.user@example.com'):::"unit_test_schema".test_user)
     ),
     'new.user@example.com',
     'Inserts new record correctly'
