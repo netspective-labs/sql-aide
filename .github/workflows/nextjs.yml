@@ -62,7 +62,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd sql-aide/support/docs-nextra
+          cd /support/docs-nextra
           pnpm install
         
       - name: Setup Pages
