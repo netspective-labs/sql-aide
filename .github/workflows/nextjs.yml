@@ -31,8 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+#         run: cd support/docs-nextra
         with:
-          path: support/docs-nextra 
+          path: support/docs-nextra
 #       - name: Detect package manager
 #         id: detect-package-manager
 #         run: |
@@ -61,9 +62,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: |
-          cd support/docs-nextra
-          pnpm install
+        run: pnpm install
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
