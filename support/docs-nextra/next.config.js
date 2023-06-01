@@ -7,4 +7,7 @@ module.exports = withNextra({
   // output: "export",
   trailingSlash: true,
   // distDir: "../dist",
+  images: {
+    unoptimized: true,
+  },
 });
