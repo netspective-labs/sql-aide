@@ -92,12 +92,12 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next build
-      - name: Static HTML export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
+#       - name: Static HTML export with Next.js
+#         run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: ./out
+          path: ./next
 
   # Deployment job
   deploy:
