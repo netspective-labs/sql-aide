@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          path: /sql-aide/support/docs-nextra 
+          path: support/docs-nextra 
 #       - name: Detect package manager
 #         id: detect-package-manager
 #         run: |
@@ -62,7 +62,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd /support/docs-nextra
+          cd support/docs-nextra
           pnpm install
         
       - name: Setup Pages
