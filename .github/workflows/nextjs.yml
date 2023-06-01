@@ -64,8 +64,8 @@ jobs:
       - name: Install PNPM
         run: npm install -g pnpm
         
-      - name: Install Next
-        run: npm i -g next
+#       - name: Install Next
+#         run: npm i -g next
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -91,9 +91,9 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next build
       - name: Static HTML export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next export
+        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
