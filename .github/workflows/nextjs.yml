@@ -32,11 +32,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          path: support/docs-nextra 
+          path: sql-aide/support/docs-nextra 
       - name: Detect package manager
         id: detect-package-manager
         run: |
-         cd support/docs-nextra
+         cd sql-aide/support/docs-nextra
           if [ -f "yarn.lock" ]; then
             echo "manager=yarn" >> $GITHUB_OUTPUT
             echo "command=install" >> $GITHUB_OUTPUT
