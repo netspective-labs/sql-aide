@@ -97,7 +97,7 @@ jobs:
       - name: Add .nojekyll File
 #         working-directory: support/docs-nextra/.out
 #         run: touch .nojekyll
-        run: ls
+        run: nano out/.nojekyll
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
