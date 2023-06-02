@@ -263,7 +263,8 @@ CREATE OR REPLACE FUNCTION get_schema_metadata (schema_name text)
   $$
   LANGUAGE plpgsql;
 
-
+-- Function to retrieve metadata about the database
+-- Returns a JSON object containing details about the database, schemas, tables, columns, indexes, constraints, and more.
 
 
 
