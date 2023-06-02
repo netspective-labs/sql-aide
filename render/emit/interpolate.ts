@@ -7,8 +7,8 @@ export function preprocessText<
 >(
   source: string | string[],
   options?: {
-    readonly setDirective?: ppSql.SetVarValueDirective;
-    readonly includeDirective?: ppSql.IncludeDirective;
+    readonly setMetaCmd?: ppSql.PsqlSetMetaCmd;
+    readonly includeMetaCmd?: ppSql.PsqlIncludeMetaCmd;
     readonly inspect?: boolean;
   },
 ): tmpl.SqlTextSupplier<Context> {
@@ -26,8 +26,8 @@ export function preprocess<
 >(
   source: string | URL,
   options?: {
-    readonly setDirective?: ppSql.SetVarValueDirective;
-    readonly includeDirective?: ppSql.IncludeDirective;
+    readonly setMetaCmd?: ppSql.PsqlSetMetaCmd;
+    readonly includeMetaCmd?: ppSql.PsqlIncludeMetaCmd;
     readonly inspect?: boolean;
   },
 ): tmpl.SqlTextSupplier<Context> {

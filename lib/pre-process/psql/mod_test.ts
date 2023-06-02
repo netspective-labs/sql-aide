@@ -22,7 +22,7 @@ Deno.test("Variable substitution, removed \\set from result, no overrides", () =
     SELECT * FROM :"table" WHERE username = :'name';`);
 
   const pp = mod.psqlPreprocess(sql, {
-    setDirective: mod.setVarValueDirective({
+    setMetaCmd: mod.psqlSetMetaCmd({
       handleSetInResult: () => undefined,
     }),
   });
@@ -48,7 +48,7 @@ Deno.test("Variable substitution, keep \\set in result, with overrides", () => {
       SELECT email FROM :unit_test_schema.upsert_test_user((1, 'Updated Name', 'john.doe@example.com'):::"unit_test_schema".test_user)`);
 
   const pp = mod.psqlPreprocess(sql, {
-    setDirective: mod.setVarValueDirective({
+    setMetaCmd: mod.psqlSetMetaCmd({
       onVarValueNotFound: () => `?????`,
       overrides: { name: "Shahid Shah" },
     }),
@@ -77,11 +77,11 @@ Deno.test("Include file and perform variable substitution, keep \\set in result,
       -- *** after first include ***`);
 
   const pp = mod.psqlPreprocess(sql, {
-    setDirective: mod.setVarValueDirective({
+    setMetaCmd: mod.psqlSetMetaCmd({
       onVarValueNotFound: () => `?????`,
       overrides: { name: "Shahid Shah" },
     }),
-    includeDirective: mod.includeDirective({
+    includeMetaCmd: mod.includeMetaCmd({
       resolve: (decl) => ({
         ...decl,
         resolved: relativeFilePath(decl.supplied),

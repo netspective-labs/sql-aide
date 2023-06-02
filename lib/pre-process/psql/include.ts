@@ -1,5 +1,5 @@
 import { path } from "../../../deps.ts";
-import { Directive, DirectiveDeclState } from "./governance.ts";
+import { PsqlMetaCmdState, PsqlMetaCommand } from "./meta-command.ts";
 
 export interface IncludeDecl {
   readonly metaCommand: "i" | "ir" | "include";
@@ -17,7 +17,7 @@ export interface IncludeContent extends IncludeResolved {
   readonly contentError?: Error; // in case content could not be read
 }
 
-export interface IncludeDirective extends Directive {
+export interface PsqlIncludeMetaCmd extends PsqlMetaCommand {
   readonly encountered: IncludeContent[];
 }
 
@@ -29,9 +29,9 @@ export interface IncludeDirective extends Directive {
  *   \include 'filename'
  *
  * @param init provide options for how to handle parsing of \set command
- * @returns a SetVarValueDirective implementation
+ * @returns a IncludeDirective implementation
  */
-export function includeDirective(
+export function includeMetaCmd(
   init?: {
     resolve?: (decl: IncludeDecl) => IncludeResolved;
     content?: (ir: IncludeResolved) => IncludeContent;
@@ -40,7 +40,7 @@ export function includeDirective(
       decl: IncludeResolved,
     ) => string[] | undefined;
   },
-): IncludeDirective {
+): PsqlIncludeMetaCmd {
   const resolve = init?.resolve ??
     ((decl) => {
       const { supplied: include } = decl;
@@ -68,19 +68,19 @@ export function includeDirective(
         };
       }
     });
-  const encountered: IncludeDirective["encountered"] = [];
+  const encountered: PsqlIncludeMetaCmd["encountered"] = [];
 
   // the \2 refers to starting quotation, if any
   // this regex is used across invocations, be careful and don't include `/g`
   const regex = /^\s*\\(i|ir|include)\s+(['"])?((?:[^\2]|\\.)*)\2\s*$/;
 
   return {
-    directive: "include",
+    metaCommand: "include",
     encountered,
-    isDirective: (src) => src.line.match(regex) ? true : false,
-    handleDeclaration: (
+    isMetaCommand: (src) => src.line.match(regex) ? true : false,
+    handleMetaCommand: (
       { line: srcLine, lineNum: srcLineNum },
-    ): DirectiveDeclState => {
+    ): PsqlMetaCmdState => {
       const match = regex.exec(srcLine);
       if (match) {
         const [, method, _quote, supplied] = match;

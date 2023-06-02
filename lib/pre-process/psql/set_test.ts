@@ -1,21 +1,21 @@
 import { testingAsserts as ta } from "../../../deps-test.ts";
 import * as mod from "./set.ts";
 
-Deno.test("setVarValueDirective correctly handles declarations", () => {
-  const d = mod.setVarValueDirective();
+Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
+  const d = mod.psqlSetMetaCmd();
 
   for (
     const c of [
-      [d.handleDeclaration({ line: "\\set count 42", lineNum: 1 }), {
+      [d.handleMetaCommand({ line: "\\set count 42", lineNum: 1 }), {
         state: "mutated",
         line: "-- \\set count 42 (variable: count, value: 42, srcLine: 1)",
       }],
-      [d.handleDeclaration({ line: "\\set name John", lineNum: 2 }), {
+      [d.handleMetaCommand({ line: "\\set name John", lineNum: 2 }), {
         state: "mutated",
         line: "-- \\set name John (variable: name, value: John, srcLine: 2)",
       }],
       [
-        d.handleDeclaration({
+        d.handleMetaCommand({
           line: "\\set url 'https://example.com'",
           lineNum: 3,
         }),
@@ -26,7 +26,7 @@ Deno.test("setVarValueDirective correctly handles declarations", () => {
         },
       ],
       [
-        d.handleDeclaration({
+        d.handleMetaCommand({
           line: "\\set var = value",
           lineNum: 4,
         }),
@@ -37,7 +37,7 @@ Deno.test("setVarValueDirective correctly handles declarations", () => {
         },
       ],
       [
-        d.handleDeclaration({
+        d.handleMetaCommand({
           line: "\\set greeting 'Hello, 'world'!'",
           lineNum: 5,
         }),
@@ -48,7 +48,7 @@ Deno.test("setVarValueDirective correctly handles declarations", () => {
         },
       ],
       [
-        d.handleDeclaration({
+        d.handleMetaCommand({
           line: `\\set greeting2 "Hello, \"world\"!"`,
           lineNum: 6,
         }),
@@ -79,14 +79,14 @@ Deno.test("setVarValueDirective correctly handles declarations", () => {
   );
 });
 
-Deno.test("setVarValueDirective correctly identifies directives", () => {
-  const directive = mod.setVarValueDirective();
-  ta.assert(directive.isDirective({
+Deno.test("psqlSetMetaCmd correctly identifies directives", () => {
+  const directive = mod.psqlSetMetaCmd();
+  ta.assert(directive.isMetaCommand({
     line: "\\set name John",
     lineNum: 1,
   }));
   ta.assertEquals(
-    directive.isDirective({
+    directive.isMetaCommand({
       line: "\\setx name John",
       lineNum: 1,
     }),
@@ -94,13 +94,13 @@ Deno.test("setVarValueDirective correctly identifies directives", () => {
   );
 });
 
-Deno.test("setVarValueDirective correctly handles overrides", () => {
-  const directive = mod.setVarValueDirective({
+Deno.test("psqlSetMetaCmd correctly handles overrides", () => {
+  const directive = mod.psqlSetMetaCmd({
     overrides: {
       name: "Jane",
     },
   });
-  directive.handleDeclaration({
+  directive.handleMetaCommand({
     line: "\\set name John",
     lineNum: 1,
   });
@@ -110,9 +110,9 @@ Deno.test("setVarValueDirective correctly handles overrides", () => {
   ta.assertEquals(vv.varValue, "Jane");
 });
 
-Deno.test("setVarValueDirective handles single quoted values correctly", () => {
-  const directive = mod.setVarValueDirective();
-  directive.handleDeclaration({
+Deno.test("psqlSetMetaCmd handles single quoted values correctly", () => {
+  const directive = mod.psqlSetMetaCmd();
+  directive.handleMetaCommand({
     line: "\\set greeting 'Hello, 'world'!'",
     lineNum: 1,
   });
@@ -122,9 +122,9 @@ Deno.test("setVarValueDirective handles single quoted values correctly", () => {
   ta.assertEquals(vv.varValue, "Hello, 'world'!");
 });
 
-Deno.test("setVarValueDirective handles double quoted values correctly", () => {
-  const directive = mod.setVarValueDirective();
-  directive.handleDeclaration({
+Deno.test("psqlSetMetaCmd handles double quoted values correctly", () => {
+  const directive = mod.psqlSetMetaCmd();
+  directive.handleMetaCommand({
     line: `\\set greeting "Hello, \"world\"!"`,
     lineNum: 1,
   });

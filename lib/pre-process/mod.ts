@@ -26,7 +26,7 @@ if (import.meta.main) {
             const pp = psql.psqlPreprocess(
               Deno.readTextFileSync(srcFile),
               options.set && Object.keys(options.set).length > 0 ? {
-                setDirective: psql.setVarValueDirective({overrides: options.set})
+                setMetaCmd: psql.psqlSetMetaCmd({ overrides: options.set })
               } : undefined,
             );
             if (options?.inspect) {

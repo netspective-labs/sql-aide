@@ -13,7 +13,7 @@ const relativeFilePath = (name: string) => {
 };
 
 Deno.test("includeDirective correctly handles in-memory targets", () => {
-  const directive = mod.includeDirective({
+  const directive = mod.includeMetaCmd({
     content: (decl) => ({
       ...decl,
       content: [
@@ -25,7 +25,7 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
 
   for (
     const c of [
-      [directive.handleDeclaration({ line: `\\i 'file1.sql'`, lineNum: 1 }), {
+      [directive.handleMetaCommand({ line: `\\i 'file1.sql'`, lineNum: 1 }), {
         state: "replaced",
         lines: [
           `-- synthetic line 1 (included file1.sql)`,
@@ -33,7 +33,7 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
         ],
       }],
       [
-        directive.handleDeclaration({
+        directive.handleMetaCommand({
           line: `\\include "file2.sql"`,
           lineNum: 2,
         }),
@@ -46,7 +46,7 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
         },
       ],
       [
-        directive.handleDeclaration({
+        directive.handleMetaCommand({
           line: `\\ir "file3.sql"`,
           lineNum: 2,
         }),
@@ -59,7 +59,7 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
         },
       ],
       [
-        directive.handleDeclaration({ line: "\\i file4.sql", lineNum: 3 }),
+        directive.handleMetaCommand({ line: "\\i file4.sql", lineNum: 3 }),
         {
           state: "replaced",
           lines: [
@@ -90,14 +90,14 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
 });
 
 Deno.test("includeDirective correctly handles file content", () => {
-  const directive = mod.includeDirective({
+  const directive = mod.includeMetaCmd({
     resolve: (decl) => ({ ...decl, resolved: relativeFilePath(decl.supplied) }),
   });
 
   for (
     const c of [
       [
-        directive.handleDeclaration({
+        directive.handleMetaCommand({
           line: `\\i './include_test.fixture-01.sql'`,
           lineNum: 1,
         }),
