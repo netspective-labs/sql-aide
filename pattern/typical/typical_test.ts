@@ -86,6 +86,7 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
       filesys_target_symlink: sd.textNullable(),
       publ_server_service_id: publServerService.references
         .publ_server_service_id(),
+      log: sd.jsonText(),
       ...housekeeping.columns,
     },
   );
@@ -98,6 +99,8 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     location_href: sd.text(),
     error_summary: sd.text(),
     host_identity: sd.jsonTextNullable(),
+    host_meta: sd.jsonTextNullable(),
+    host_baggage: sd.jsonbNullable(),
     publ_server_service_id: publServerService.references
       .publ_server_service_id(),
     ...housekeeping.columns,
@@ -268,6 +271,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "filesys_target_path" TEXT NOT NULL,
       "filesys_target_symlink" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
+      "log" JSON NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
@@ -279,6 +283,8 @@ const fixtureSQL = ws.unindentWhitespace(`
       "location_href" TEXT NOT NULL,
       "error_summary" TEXT NOT NULL,
       "host_identity" JSON,
+      "host_meta" JSON,
+      "host_baggage" JSONB,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -376,6 +382,7 @@ const fixturePUML = `@startuml IE
     * filesys_target_path: TEXT
       filesys_target_symlink: TEXT
     * publ_server_service_id: INTEGER
+    * log: JSON
       created_at: TIMESTAMP
       created_by: TEXT
   }
@@ -387,6 +394,8 @@ const fixturePUML = `@startuml IE
     * location_href: TEXT
     * error_summary: TEXT
       host_identity: JSON
+      host_meta: JSON
+      host_baggage: JSONB
     * publ_server_service_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT

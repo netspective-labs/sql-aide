@@ -84,8 +84,21 @@ export function governedDomains<
         ),
       ).optional(),
 
-    jsonText: SQLa.zodJsonSchema,
-    jsonTextNullable: () => SQLa.zodJsonSchema.optional(),
+    jsonText: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isJsonText: true }),
+        ),
+      ),
+    jsonTextNullable: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isJsonText: true }),
+        ),
+      ).optional(),
+
+    jsonB: SQLa.zodJsonB(),
+    jsonbNullable: () => SQLa.zodJsonB().optional(),
 
     boolean: z.boolean,
     booleanNullable: () => z.boolean().optional(),
