@@ -40,7 +40,14 @@ const syntheticSchema = () => {
   const stso = SQLa.typicalSqlTextSupplierOptions<SyntheticContext>();
   const dvg = mod.dataVaultGovn<SyntheticContext>(stso);
 
-  const { text, textNullable, integer, integerNullable, date } = dvg.domains;
+  const {
+    text,
+    textNullable,
+    integer,
+    integerNullable,
+    date,
+    jsonTextNullable,
+  } = dvg.domains;
   const { ulidPrimaryKey: primaryKey } = dvg.keys;
 
   const syntheticHub0 = dvg.hubTable("synthethic0", {
@@ -64,6 +71,12 @@ const syntheticSchema = () => {
     hub_synthethic0_id: syntheticHub0.references.hub_synthethic0_id(),
     attr_text: textNullable(),
     attr_int: integerNullable(),
+  });
+  const syntheticHub0Sat3 = syntheticHub0.satelliteTable("attrs3", {
+    sat_synthethic0_attrs3_id: primaryKey(),
+    hub_synthethic0_id: syntheticHub0.references.hub_synthethic0_id(),
+    attr_text1: jsonTextNullable(),
+    attr_text2: jsonTextNullable(),
   });
 
   const syntheticHub1 = dvg.hubTable("synthethic1", {
@@ -98,6 +111,7 @@ const syntheticSchema = () => {
     syntheticHub0,
     syntheticHub0Sat1,
     syntheticHub0Sat2,
+    syntheticHub0Sat3,
     syntheticHub1,
     synHub0Hub1Link,
     synHub0Hub1LinkSat1,
@@ -187,6 +201,32 @@ Deno.test("Data Vault tables", async (tc) => {
         created_at?: Date | undefined;
       }>({} as SatRecord);
     });
+    /*await innterTC.step("Satellite 3", () => {
+      const { syntheticHub0Sat3: satTable, ctx } = schema;
+      ta.assertEquals(satTable.lintIssues, []);
+      ta.assertEquals(
+        satTable.SQL(ctx),
+        uws(`
+          CREATE TABLE IF NOT EXISTS "sat_synthethic0_attrs3" (
+              "sat_synthethic0_attrs3_id" TEXT PRIMARY KEY NOT NULL,
+              "hub_synthethic0_id" TEXT NOT NULL,
+              "attr_text1" JSON,
+              "attr_text2" JSON,
+              "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              "created_by" TEXT NOT NULL,
+              "provenance" TEXT NOT NULL,
+              FOREIGN KEY("hub_synthethic0_id") REFERENCES "hub_synthethic0"("hub_synthethic0_id")
+          )`),
+      );
+      type SatRecord = z.infer<typeof satTable.zoSchema>;
+      expectType<{
+        hub_synthethic0_id: string;
+        sat_synthethic0_attrs3_id: string;
+        attr_text?: string | undefined;
+        attr_int?: number | undefined;
+        created_at?: Date | undefined;
+      }>({} as SatRecord);
+    });*/
   });
 
   await tc.step("Synthetic Hub 1", () => {
