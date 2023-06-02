@@ -17,8 +17,8 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
     content: (decl) => ({
       ...decl,
       content: [
-        `-- synthetic line 1 (included ${decl.include})`,
-        `-- synthetic line 2 (included ${decl.include})`,
+        `-- synthetic line 1 (included ${decl.supplied})`,
+        `-- synthetic line 2 (included ${decl.supplied})`,
       ],
     }),
   });
@@ -46,12 +46,25 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
         },
       ],
       [
-        directive.handleDeclaration({ line: "\\i file3.sql", lineNum: 3 }),
+        directive.handleDeclaration({
+          line: `\\ir "file3.sql"`,
+          lineNum: 2,
+        }),
         {
           state: "replaced",
           lines: [
             `-- synthetic line 1 (included file3.sql)`,
             `-- synthetic line 2 (included file3.sql)`,
+          ],
+        },
+      ],
+      [
+        directive.handleDeclaration({ line: "\\i file4.sql", lineNum: 3 }),
+        {
+          state: "replaced",
+          lines: [
+            `-- synthetic line 1 (included file4.sql)`,
+            `-- synthetic line 2 (included file4.sql)`,
           ],
         },
       ],
@@ -62,20 +75,23 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
 
   ta.assertEquals(
     Array.from(directive.encountered.values()).map((e) => ({
-      name: e.include,
-      replCount: e.content?.length ?? 0,
+      name: e.supplied,
+      replCount:
+        e.content?.filter((l) => l.indexOf(`included ${e.supplied}`)).length,
+      method: e.metaCommand,
     })),
     [
-      { name: "file1.sql", replCount: 2 },
-      { name: "file2.sql", replCount: 2 },
-      { name: "file3.sql", replCount: 2 },
+      { method: "i", name: "file1.sql", replCount: 2 },
+      { method: "include", name: "file2.sql", replCount: 2 },
+      { method: "ir", name: "file3.sql", replCount: 2 },
+      { method: "i", name: "file4.sql", replCount: 2 },
     ],
   );
 });
 
 Deno.test("includeDirective correctly handles file content", () => {
   const directive = mod.includeDirective({
-    resolve: (target) => relativeFilePath(target),
+    resolve: (decl) => ({ ...decl, resolved: relativeFilePath(decl.supplied) }),
   });
 
   for (
@@ -109,7 +125,7 @@ Deno.test("includeDirective correctly handles file content", () => {
 
   ta.assertEquals(
     Array.from(directive.encountered.values()).map((e) => ({
-      name: e.include,
+      name: e.supplied,
       replCount: e.content?.length ?? 0,
     })),
     [

@@ -82,7 +82,10 @@ Deno.test("Include file and perform variable substitution, keep \\set in result,
       overrides: { name: "Shahid Shah" },
     }),
     includeDirective: mod.includeDirective({
-      resolve: (target) => relativeFilePath(target),
+      resolve: (decl) => ({
+        ...decl,
+        resolved: relativeFilePath(decl.supplied),
+      }),
     }),
   });
   ta.assertEquals(

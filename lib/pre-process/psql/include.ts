@@ -2,13 +2,17 @@ import { path } from "../../../deps.ts";
 import { Directive, DirectiveDeclState } from "./governance.ts";
 
 export interface IncludeDecl {
-  readonly include: string; // original filename
-  readonly resolved: string; // after "relative" (or absolute) mutation
+  readonly metaCommand: "i" | "ir" | "include";
+  readonly supplied: string; // original filename spplied
   readonly srcLine: string; // original \i or \include line
   readonly srcLineNum: number; // original line number
 }
 
-export interface IncludeContent extends IncludeDecl {
+export interface IncludeResolved extends IncludeDecl {
+  readonly resolved: string; // after "relative" (or absolute) mutation
+}
+
+export interface IncludeContent extends IncludeResolved {
   readonly content: string[] | undefined; // the content in target
   readonly contentError?: Error; // in case content could not be read
 }
@@ -29,16 +33,24 @@ export interface IncludeDirective extends Directive {
  */
 export function includeDirective(
   init?: {
-    resolve?: (target: string, srcLine: string, srcLineNum: number) => string;
-    content?: (decl: IncludeDecl) => IncludeContent;
-    onContentError?: (err: Error, decl: IncludeDecl) => string[] | undefined;
+    resolve?: (decl: IncludeDecl) => IncludeResolved;
+    content?: (ir: IncludeResolved) => IncludeContent;
+    onContentError?: (
+      err: Error,
+      decl: IncludeResolved,
+    ) => string[] | undefined;
   },
 ): IncludeDirective {
   const resolve = init?.resolve ??
-    ((include) =>
-      path.isAbsolute(include) ? include : path.relative(Deno.cwd(), include));
+    ((decl) => {
+      const { supplied: include } = decl;
+      const resolved = path.isAbsolute(include)
+        ? include
+        : path.relative(Deno.cwd(), include);
+      return { ...decl, resolved };
+    });
   const onContentError = init?.onContentError ??
-    ((err, decl) => [`-- \\include ${decl.resolved} error ${err}`]);
+    ((err, decl) => [`-- \\${decl.metaCommand} ${decl.resolved} error ${err}`]);
   const content = init?.content ??
     // regex matches any line terminator: \n (used by Unix and modern macOS),
     // \r\n (used by Windows), and \r (used by older macOS)
@@ -60,28 +72,29 @@ export function includeDirective(
 
   // the \2 refers to starting quotation, if any
   // this regex is used across invocations, be careful and don't include `/g`
-  const regex = /^\s*\\(i|include)\s+(['"])?((?:[^\2]|\\.)*)\2\s*$/;
+  const regex = /^\s*\\(i|ir|include)\s+(['"])?((?:[^\2]|\\.)*)\2\s*$/;
 
   return {
     directive: "include",
     encountered,
     isDirective: (src) => src.line.match(regex) ? true : false,
-    handleDeclaration: ({ line, lineNum: srcLineNum }): DirectiveDeclState => {
-      const match = regex.exec(line);
+    handleDeclaration: (
+      { line: srcLine, lineNum: srcLineNum },
+    ): DirectiveDeclState => {
+      const match = regex.exec(srcLine);
       if (match) {
-        const [, _symbol, _quote, include] = match;
-        const resolved = resolve(include, line, srcLineNum);
-        const decl: IncludeDecl = {
-          include,
-          resolved,
-          srcLine: line,
+        const [, method, _quote, supplied] = match;
+        const resolved = resolve({
+          metaCommand: method as "i" | "ir" | "include",
+          supplied,
+          srcLine,
           srcLineNum,
-        };
-        const ic = content(decl);
+        });
+        const ic = content(resolved);
         encountered.push(ic);
         return { state: "replaced", lines: ic.content };
       }
-      return { line, state: "not-mutated" };
+      return { line: srcLine, state: "not-mutated" };
     },
   };
 }
