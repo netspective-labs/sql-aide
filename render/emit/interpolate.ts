@@ -1,6 +1,6 @@
 import { path } from "../deps.ts";
 import * as tmpl from "./sql.ts";
-import * as ppSql from "../../lib/universal/pre-process-sql.ts";
+import * as ppSql from "../../lib/pre-process/psql/mod.ts";
 
 export function preprocessText<
   Context extends tmpl.SqlEmitContext,
@@ -8,6 +8,7 @@ export function preprocessText<
   source: string | string[],
   options?: {
     readonly setDirective?: ppSql.SetVarValueDirective;
+    readonly includeDirective?: ppSql.IncludeDirective;
     readonly inspect?: boolean;
   },
 ): tmpl.SqlTextSupplier<Context> {
@@ -26,6 +27,7 @@ export function preprocess<
   source: string | URL,
   options?: {
     readonly setDirective?: ppSql.SetVarValueDirective;
+    readonly includeDirective?: ppSql.IncludeDirective;
     readonly inspect?: boolean;
   },
 ): tmpl.SqlTextSupplier<Context> {
