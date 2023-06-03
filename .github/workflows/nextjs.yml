@@ -95,9 +95,9 @@ jobs:
       - name: Static HTML export with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
       - name: Add .nojekyll File
-#         working-directory: support/docs-nextra/.out
-#         run: touch .nojekyll
         run: touch out/.nojekyll
+      - name: Verify .nojekyll File
+        run: cd out && ls
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
