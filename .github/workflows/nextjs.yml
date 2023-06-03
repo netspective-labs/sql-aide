@@ -60,16 +60,16 @@ jobs:
         with:
           node-version: "16"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
-          
+
       - name: Install PNPM
         run: npm install -g pnpm
-        
+
 #       - name: Install Next
 #         run: npm i -g next
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
         with:
@@ -91,15 +91,13 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Clean Build
-        run: rm -rf .next && rm -rf out && ls
+        run: rm -rf .next && rm -rf out
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next build
       - name: Static HTML export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export && ls
+        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
       - name: Add .nojekyll File
         run: touch out/.nojekyll
-      - name: Verify .nojekyll File
-        run: cd out && ls
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
