@@ -322,7 +322,12 @@ export const incidentStatus = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const allEnumTables = [
+// Typescript inference would work here but we're explicit about the array
+// type to improve performance
+export const allReferenceTables: (
+  & SQLa.TableDefinition<Any, EmitContext>
+  & typ.EnumTableDefn<EmitContext>
+)[] = [
   execCtx,
   organizationRoleType,
   partyType,
@@ -1126,7 +1131,9 @@ export const attestationEvidence = gm.autoIncPkTable(
   },
 );
 
-export const allContentTables = [
+// Typescript inference would work here but we're explicit about the array
+// type to improve performance
+export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
   graph,
   boundary,
   host,
@@ -1198,13 +1205,13 @@ export function sqlDDL() {
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
     -- reference tables
-    ${allEnumTables}
+    ${allReferenceTables}
 
     -- content tables
     ${allContentTables}
 
     -- seed Data
-    ${allEnumTables.map(e => e.seedDML).flat()}
+    ${allReferenceTables.map(e => e.seedDML).flat()}
     `;
 }
 
