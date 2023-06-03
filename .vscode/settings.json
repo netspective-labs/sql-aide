@@ -30,6 +30,11 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
+  "[markdown-react]": {
+    "files.trimTrailingWhitespace": false,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
   "[typescript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
