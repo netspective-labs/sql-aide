@@ -39,7 +39,19 @@ export type SqlDomain<
   readonly sqlDefaultValue?: (
     purpose: "create table column" | "stored routine arg",
   ) => tmpl.SqlTextSupplier<Context>;
-  readonly sqlDmlTransformInsertableValue?: (supplied: ZTA | undefined) => ZTA;
+  readonly sqlDqlQuotedLiteral?: <Value extends Any | undefined>(
+    purpose: "select",
+    value: Value,
+    qlSupplier: (value: Value) => [value: Value, quoted: string],
+    ctx: Context,
+  ) => [value: Value, quoted: string];
+  readonly sqlDmlQuotedLiteral?: <Value extends Any | undefined>(
+    purpose: "insert" | "update" | "delete",
+    columnValue: Value,
+    qlSupplier: (value: Value) => [value: Value, quoted: string],
+    rowValues: Record<string, Any>,
+    ctx: Context,
+  ) => [value: Value, quoted: string];
   readonly sqlPartial?: (
     destination:
       | "create table, full column defn"
@@ -525,7 +537,36 @@ export function isSqlDomainZodDateDescr<SDZJD extends SqlDomainZodDateDescr>(
 export function zodDateSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
->() {
+>(
+  factoryInit?: {
+    sqlDateFormat?: (date: Date) => string;
+    sqlDateTimeFormat?: (date: Date) => string;
+  },
+) {
+  // For "YYYY-MM-DD"
+  const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  // For "YYYY-MM-DD HH:MM"
+  const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const sqlDateFormat = factoryInit?.sqlDateFormat ??
+    ((date) =>
+      dateFormatter.format(date).split("/").reverse().join(
+        "-",
+      ));
+  const sqlDateTimeFormat = factoryInit?.sqlDateTimeFormat ??
+    ((date) => dateTimeFormatter.format(date).replace(/\//g, "-"));
   const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
   return {
     ...ztaSDF,
@@ -538,11 +579,20 @@ export function zodDateSqlDomainFactory<
         readonly identity?: Identity;
         readonly isOptional?: boolean;
         readonly parents?: z.ZodTypeAny[];
+        readonly formattedDate?: (date: Date) => string;
       },
-    ) => {
+    ): SqlDomain<ZodType, Context, Identity> => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `DATE` }),
+        sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
+          if (value instanceof Date) {
+            return quotedLiteral(
+              (init?.formattedDate ?? sqlDateFormat)(value) as Any,
+            );
+          }
+          return quotedLiteral(value);
+        },
       };
     },
     dateTime: <
@@ -554,8 +604,9 @@ export function zodDateSqlDomainFactory<
         readonly identity?: Identity;
         readonly isOptional?: boolean;
         readonly parents?: z.ZodTypeAny[];
+        readonly formattedDate?: (date: Date) => string;
       },
-    ) => {
+    ): SqlDomain<ZodType, Context, Identity> => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
@@ -566,6 +617,14 @@ export function zodDateSqlDomainFactory<
             return `TIMESTAMP`;
           },
         }),
+        sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
+          if (value instanceof Date) {
+            return quotedLiteral(
+              (init?.formattedDate ?? sqlDateTimeFormat)(value) as Any,
+            );
+          }
+          return quotedLiteral(value);
+        },
       };
     },
     createdAt: <
@@ -574,7 +633,8 @@ export function zodDateSqlDomainFactory<
     >(init?: {
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
-    }) => {
+      readonly dateFormat?: Intl.DateTimeFormatOptions;
+    }): SqlDomain<ZodType, Context, Identity> => {
       return {
         ...ztaSDF.defaults<Identity>(
           z.date().default(new Date()).optional() as ZodType,

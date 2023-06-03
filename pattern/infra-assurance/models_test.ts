@@ -111,10 +111,11 @@ const organizationInsertion = mod.organization
     registration_date: new Date("02/06/2023"),
   });
 
-const personID = mod.person.select(personInsertion.insertable);
-const organizationID = mod.organization.select(
-  organizationInsertion.insertable,
-);
+const personID = mod.person.select({
+  person_first_name: "Test First Name",
+  person_last_name: "Test Last Name",
+});
+const organizationID = mod.organization.select({ name: "Test Name" });
 
 const organizationRoleInsertion = mod.organizationRole
   .insertDML({

@@ -167,7 +167,7 @@ export function typicalInsertStmtSqlPreparerSync<
           ec = emitColumn(cn, ir, cdom, tableName, ns, ctx);
         } else {
           const { quotedLiteral } = eo;
-          let recordValueRaw = (ir as Any)[cn];
+          const recordValueRaw = (ir as Any)[cn];
           if (tmpl.isSqlTextSupplier(recordValueRaw)) {
             ec = [
               cn as string,
@@ -175,25 +175,15 @@ export function typicalInsertStmtSqlPreparerSync<
               `(${recordValueRaw.SQL(ctx)})`, // e.g. `(SELECT x from y) as SQL expr`
             ];
           } else {
-            /* TODO: in NL Aide we used AxiomSerDe which supported defaults
-                     differently than zod; now we're going to use Zod but not
-                     sure if it's a 1:1 mapping...
-            if (
-              ax.isDefaultableAxiomSerDe(cdom) &&
-              cdom.isDefaultable(recordValueRaw)
-            ) {
-              recordValueRaw = cdom.defaultValue(
+            const qValue = cdom.sqlDmlQuotedLiteral
+              ? cdom.sqlDmlQuotedLiteral(
+                "insert",
                 recordValueRaw,
-                ctx as ax.AxiomSerDeValueSupplierContext,
-              );
-            }
-            */
-            if (cdom.sqlDmlTransformInsertableValue) {
-              recordValueRaw = cdom.sqlDmlTransformInsertableValue(
-                recordValueRaw,
-              );
-            }
-            const qValue = quotedLiteral(recordValueRaw);
+                quotedLiteral,
+                ir as Record<string, Any>,
+                ctx,
+              )
+              : quotedLiteral(recordValueRaw);
             ec = [cn as string, ...qValue];
           }
         }
