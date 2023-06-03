@@ -90,10 +90,12 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      - name: Clean Build
+        run: rm -rf .next && rm -rf out && ls
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next build
       - name: Static HTML export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export
+        run: ${{ steps.detect-package-manager.outputs.runner }} pnpm next export && ls
       - name: Add .nojekyll File
         run: touch out/.nojekyll
       - name: Verify .nojekyll File
