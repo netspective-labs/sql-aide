@@ -4,6 +4,10 @@ import * as ws from "../../lib/universal/whitespace.ts";
 
 export * as cli from "https://deno.land/x/cliffy@v0.25.7/command/mod.ts";
 
+// for convenience so that deno-lint is not required for use of `any`
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
 export const dialects = [
   "SQLite",
   "PostgreSQL",
@@ -145,3 +149,84 @@ export function powershellDriver<Context extends SQLa.SqlEmitContext>(
     }
   `);
 }
+
+/**
+ * Wrap the provided SQL into a SQLite bash script which will first load the
+ * file into an in-memory SQLite database then dump that SQL into a file-based
+ * SQLite database. We do the interim step because complex SQL will load
+ * faster with this two-step process.
+ *
+ * @param ss SQL supplier
+ * @param ctx active Context
+ * @returns text suitable for emitting to STDOUT or saving a text file
+ */
+export function sqliteMemToFileDriver<Context extends SQLa.SqlEmitContext>(
+  ss: SQLa.SqlTextSupplier<Context>,
+  ctx: Context,
+) {
+  // deno-fmt-ignore
+  return ws.unindentWhitespace(`
+    #!/bin/bash
+
+    destroy_first=0
+    db_file=""
+
+    # Parse command-line options
+    for arg in "$@"; do
+        case $arg in
+            --destroy-first)
+                destroy_first=1
+                shift # Remove --destroy-first from processing
+                ;;
+            *)
+                db_file=$1
+                shift # Remove database filename from processing
+                ;;
+        esac
+    done
+
+    # Check if the database file parameter is supplied
+    if [ -z "$db_file" ]; then
+        echo "No database file supplied. Usage: ./your_script.sh [--destroy-first] <database_file>"
+        exit 1
+    fi
+
+    # If the destroy_first flag is set, delete the database file
+    if [ $destroy_first -eq 1 ] && [ -f "$db_file" ]; then
+        rm "$db_file"
+    fi
+
+    SQL=$(cat <<-EOF
+    ${ws.unindentWhitespace(ss.SQL(ctx)).split("\n").map((line) => "    " + line).join("\n")}
+    -- the .dump in the last line is necessary because we load into :memory:
+    -- first because performance is better and then emit all the SQL for saving
+    -- into the destination file
+    .dump
+    EOF
+    )
+
+    # Create an in-memory SQLite database, load the first pass for optimal
+    # performance then export the in-memory database to the given file; this
+    # two phase approach works because the last line in the SQL is '.dump'.
+    echo "$SQL" | sqlite3 ":memory:" | sqlite3 "$db_file"
+  `);
+}
+
+export const sqliteDriverCommand = <Context extends SQLa.SqlEmitContext>(
+  sql: () => SQLa.SqlTextSupplier<Context>,
+  ctx: Context,
+) =>
+  new cli.Command()
+    .description("Emit SQLite Bash Driver")
+    .option(
+      "-d, --dest <file:string>",
+      "Output destination, STDOUT if not supplied",
+    )
+    .action((options) => {
+      const output = sqliteMemToFileDriver(sql(), ctx);
+      if (options.dest) {
+        Deno.writeTextFileSync(options.dest, output);
+      } else {
+        console.log(output);
+      }
+    });
