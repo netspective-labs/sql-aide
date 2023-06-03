@@ -5,13 +5,20 @@ import * as SQLa from "../../render/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easier on Deno linting
 
-export interface EnumTableDefn {
+export interface EnumTableDefn<Context extends SQLa.SqlEmitContext> {
   readonly enumTableNature: "text" | "numeric";
+  readonly seedDML: string | SQLa.SqlTextSupplier<Context>[];
 }
 
-export const isEnumTableDefn = safety.typeGuard<EnumTableDefn>(
-  "enumTableNature",
-);
+export function isEnumTableDefn<Context extends SQLa.SqlEmitContext>(
+  o: unknown,
+): o is EnumTableDefn<Context> {
+  const isETD = safety.typeGuard<EnumTableDefn<Context>>(
+    "enumTableNature",
+    "seedDML",
+  );
+  return isETD(o);
+}
 
 /**
  * Some of our tables will just have fixed ("seeded") values and act as
@@ -112,13 +119,8 @@ export function ordinalEnumTable<
       isColumnEmittable: (name) => name == "created_at" ? false : true,
     },
   });
-  const etn: EnumTableDefn = { enumTableNature: "numeric" };
-  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
-  return {
-    ...etn,
-    ...td,
-    ...tdrf,
-    seedRows,
+  const etn: EnumTableDefn<Context> = {
+    enumTableNature: "numeric",
     // seed will be used in SQL interpolation template literal, which accepts
     // either a string, SqlTextSupplier, or array of SqlTextSuppliers; in our
     // case, if seed data is provided we'll prepare the insert DMLs as an
@@ -126,6 +128,13 @@ export function ordinalEnumTable<
     seedDML: seedRows && seedRows.length > 0
       ? seedRows.map((s) => tdrf.insertDML(s as Any))
       : `-- no ${tableName} seed rows`,
+  };
+  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
+  return {
+    ...etn,
+    ...td,
+    ...tdrf,
+    seedRows,
     seedEnum,
     select: SQLa.entitySelectStmtPreparer<
       TableName,
@@ -247,13 +256,8 @@ export function textEnumTable<
       isColumnEmittable: (name) => name == "created_at" ? false : true,
     },
   });
-  const etn: EnumTableDefn = { enumTableNature: "text" };
-  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
-  return {
-    ...etn,
-    ...td,
-    ...tdrf,
-    seedRows,
+  const etn: EnumTableDefn<Context> = {
+    enumTableNature: "text",
     // seed will be used in SQL interpolation template literal, which accepts
     // either a string, SqlTextSupplier, or array of SqlTextSuppliers; in our
     // case, if seed data is provided we'll prepare the insert DMLs as an
@@ -261,6 +265,13 @@ export function textEnumTable<
     seedDML: seedRows && seedRows.length > 0
       ? seedRows.map((s) => tdrf.insertDML(s as Any))
       : `-- no ${tableName} seed rows`,
+  };
+  const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
+  return {
+    ...etn,
+    ...td,
+    ...tdrf,
+    seedRows,
     seedEnum,
     select: SQLa.entitySelectStmtPreparer<
       TableName,
