@@ -1,7 +1,7 @@
 {
   "tasks": {
     "init": "git config core.hooksPath .githooks",
-    "doctor": "git config core.hooksPath",
+    "doctor": "support/bin/doctor.ts",
     "update-deno-deps": "udd deps.ts deps-test.ts",
     "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\") && deno fmt --check --ignore=\"support\" && deno lint  --ignore=\"support\" && deno test --allow-all --unstable",
     "git-hook-pre-push": "deno test --allow-all --unstable",

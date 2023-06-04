@@ -28,6 +28,21 @@ please do the following:
 deno task init
 ```
 
+## Check for missing deps
+
+```bash
+deno task doctor
+```
+
+### Maintain Deno dependencies
+
+You can check which deps need to be updated:
+
+```bash
+find . -name 'deps*.ts' -type f -not -path "./support/*" -exec udd --dry-run {} \;   # check first
+find . -name 'deps*.ts' -type f -not -path "./support/*" -exec udd {} \;             # update deps
+```
+
 ## Documentation
 
 SQLa documentation is available at https://netspective-labs.github.io/sql-aide/.
@@ -60,6 +75,39 @@ deno task git-hook-pre-commit   # run all tests/validation that will be run by G
 git commit -m ...               # commit your if the above shows no errors
 deno task prepare-publish       # bump the version tag and prepare for push
 git push                        # push the code with the bumped version
+```
+
+## Visualizing Entity-Relationship Diagrams (ERDs) using PlantUML in VS Code
+
+To preview `*.puml` PlantUML-based Information Engineering (IE) ERDs in VS Code,
+you'll need to:
+
+- Install the
+  [PlantUML VS Code (jebbs.plantuml)](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml)
+  extension
+- Install Graphviz `dot` executable
+- Install Java JRE
+
+To setup Graphviz on a Debian-based distro:
+
+```bash
+sudo apt-get update && sudo apt-get install graphviz
+```
+
+To install Java (you can use any version, below are just examples):
+
+```bash
+asdf plugin add java
+asdf install java oracle-17
+asdf global java oracle-17
+whereis java
+```
+
+Add the following to your `bash_profile` and restart VS Code so that it will
+pick up the location of Java and any other ASDF-based executables:
+
+```bash
+export PATH=$PATH:$HOME/.asdf/shims
 ```
 
 ## NPM Packaging
