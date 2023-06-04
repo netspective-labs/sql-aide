@@ -13,15 +13,26 @@ This _information pattern_ is general purpose but was designed to be used by the
 Opsfolio suite of tools. Opsfolio uses the `infra-assurance` pattern to generate
 SQLite tables that are accessed via osQuery ATCs.
 
-## CLI Tests
+## Tests
 
-You can create the SQL, PlantUML, and other files to either STDOUT or saved to a
-file.
+The tests need _fixtures_ to run and you can generate the fixtures all at once:
 
 ```bash
-$ ./models_test.ts sql
-$ ./models_test.ts sql --dest models_test.fixture.sql
-$ ./models_test.ts diagram --dest models_test.fixture.puml
+$ ./models_test.ts test-fixtures
+```
+
+You should only re-generate the fixtures when you are developing models. Once
+the models are defined, you should git-track the fixtures so that if the SQLa
+libraries are updated you can ensure that future updates do not impact your
+models.
+
+You can create the SQL, PlantUML, and other files individually to either STDOUT
+or saved to a file.
+
+```bash
+$ ./models_test.ts sql                                      # stdout
+$ ./models_test.ts sql --dest models_test.fixture.sql       # file
+$ ./models_test.ts diagram --dest models_test.fixture.puml  # file
 ```
 
 You can create the SQLite file by using the `driver` script generator and saving
@@ -37,87 +48,6 @@ If you want to create SQLite all in memory and verify some SQL try this:
 
 ```bash
 $ ./models_test.ts driver | bash -s :memory: "select count(*) as objects_count from sqlite_master"
-```
-
-## Unit Tests
-
-Until better documentation is available, the best way to learn about Opsfolio is
-to review and run the unit tests (`mod_test.ts`). You can run the following in
-the base directory:
-
-```bash
-deno test -A --unstable
-```
-
-The unit tests auto-generate all files, deploy a SQLite database, and then
-execute `osqueryi` to validate ATCs. By default, OPSFOLIO_UT_CLEAN_ARTIFACTS is
-set to true but you can turn it off if you want to retain the generated
-artifacts after testing completed:
-
-```bash
-OPSFOLIO_UT_CLEAN_ARTIFACTS=false deno test -A --unstable
-```
-
-If you use `OPSFOLIO_UT_CLEAN_ARTIFACTS=false` you'll see the following files
-after `deno test`:
-
-- `opsfolio.auto.sqlite.db` is the SQLite database that will be automatically
-  integrated into `osqueryi` through ATCs; it's referred to in the
-  `opsfolio.auto.osquery-atc.json` config files and indirectly used by osQuery.
-- `opsfolio.auto.osquery-atc.json` is the osQuery ATC config that will allow
-  integration of `opsfolio_*` tables into osQuery; this file is directly used by
-  osQuery.
-- `opsfolio.auto.puml` is a PlantUML Information Engineering ("IE") that can be
-  used to generate an entity-relationship diagram (ERD); this file is not used
-  by osQuery, it's just to enhance understanding and describe the schema.
-- `opsfolio.auto.sql` is the SQL file that was used to create
-  `opsfolio.auto.sqlite.db` (check the `INSERT INTO` statements to see what data
-  is available); this file is not used by osQuery, it's only used to create the
-  SQLite database file (`opsfolio.auto.sqlite.db`)
-
-## osQuery ATC Database Deployment
-
-Opsfolio uses osQuery's
-[Automatic Table Construction (ATC)](https://osquery.readthedocs.io/en/stable/deployment/configuration/#automatic-table-construction)
-feature to register new `opsfolio_*` tables. Once `deno test` is used, a SQLite
-database is created along with `opsfolio.auto.osquery-atc.json` which registers
-the Opsfolio tables so that they can be used via `osqueryi` or other osQuery
-interfaces.
-
-```bash
-# generate the artifacts and test automatically, but don't delete the artifacts
-OPSFOLIO_UT_CLEAN_ARTIFACTS=false deno test -A --unstable
-
-# test the artifacts manually
-osqueryi --config_path ./opsfolio.auto.osquery-atc.json "select code, value from opsfolio_execution_context"
-```
-
-Once you run `osqueryi` you should see the following output if the osQuery ATC
-configuration and database were properly deployed:
-
-```
-+------+-------------+
-| code | value       |
-+------+-------------+
-| 0    | DEVELOPMENT |
-| 1    | TEST        |
-| 2    | PRODUCTION  |
-+------+-------------+
-```
-
-If you get `Error: no such table: opsfolio_execution_context` when you run
-`osqueryi` try running with `--verbose` flag:
-
-```bash
-osqueryi --verbose --config_path ./opsfolio.auto.osquery-atc.json "select code, value from opsfolio_execution_context"
-```
-
-Look for lines like this:
-
-```
-...auto_constructed_tables... Removing stale ATC entries
-                          ... ATC table: opsfolio_execution_context Registered
-                          ... ATC table: opsfolio_asset_risk_type Registered
 ```
 
 ## Information Models

@@ -169,7 +169,7 @@ function sqlDDL() {
 }
 
 if (import.meta.main) {
-  tp.typicalCLI({
+  await tp.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
     prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
@@ -182,8 +182,21 @@ if (import.meta.main) {
         }
       }, tp.diaPUML.typicalPlantUmlIeOptions()).content;
     },
-  }).commands.command("driver", tp.sqliteDriverCommand(sqlDDL, ctx))
-    .parse(Deno.args);
+  }).commands.command("driver", tp.sqliteDriverCommand(sqlDDL, ctx)).command(
+    "test-fixtures",
+    new tp.cli.Command()
+      .description("Emit all test fixtures")
+      .action(async () => {
+        const CLI = relativeFilePath("./models_test.ts");
+        const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
+          relativeFilePath(`./models_test.fixture${extn}`)
+        );
+        Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
+        Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
+        Deno.writeTextFileSync(sh, await $`./${CLI} driver`.text());
+        [sql, puml, sh].forEach((f) => console.log(f));
+      }),
+  ).parse(Deno.args);
 }
 
 /**
@@ -192,7 +205,10 @@ if (import.meta.main) {
  * if SQLa or other library changes impact what's generated we'll know because
  * the Deno test will fail.
  *
- * to re-generate the fixtures:
+ * to re-generate all fixtures
+ * $ ./models_test.ts test-fixtures
+ *
+ * to re-generate the fixtures one at a time:
  * $ ./models_test.ts sql --dest models_test.fixture.sql
  * $ ./models_test.ts diagram --dest models_test.fixture.puml
  * $ ./models_test.ts driver --dest ./models_test.fixture.sh && chmod +x ./models_test.fixture.sh
