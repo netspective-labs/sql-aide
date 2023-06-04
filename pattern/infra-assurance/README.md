@@ -56,6 +56,10 @@ If you want to verify in more detail you can pass it into jq or other tools too:
 $ ./models_test.ts driver | bash -s :memory: -json "$(../../lib/sql/sqlite/mod.sqla.ts inspect)" | jq "group_by(.table_name) | map({ tableName: .[0].table_name, columns: length })"
 ```
 
+The `../../lib/sql/sqlite/mod.sqla.ts inspect` command will emit SQL from the
+SQLa SQLite standard library. See
+[lib/sql/sqlite/README.md](../../lib/sql/sqlite/README.md) for more information.
+
 ## Information Models
 
 - **Graph**. This is the top-level "assets graph" which is considered the _root
