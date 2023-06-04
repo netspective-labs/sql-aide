@@ -186,25 +186,56 @@ if (import.meta.main) {
     .parse(Deno.args);
 }
 
+/**
+ * This is an "end-to-end" test strategy; we generate our fixtures whenever
+ * our information model (schema) changes and git-track those files so that
+ * if SQLa or other library changes impact what's generated we'll know because
+ * the Deno test will fail.
+ *
+ * to re-generate the fixtures:
+ * $ ./models_test.ts sql --dest models_test.fixture.sql
+ * $ ./models_test.ts diagram --dest models_test.fixture.puml
+ * $ ./models_test.ts driver --dest ./models_test.fixture.sh && chmod +x ./models_test.fixture.sh
+ */
 Deno.test("Information Assurance Pattern", async (tc) => {
   const CLI = relativeFilePath("./models_test.ts");
 
-  // this is mainly an "end-to-end" test strategy; we generate our fixtures
-  // whenever our information model (schema) changes and git-track those files
-  // so that if SQLa or other library changes impact what's generated we'll
-  // know because the Deno test will fail.
-
-  // to re-generate the fixtures:
-  // $ ./models_test.ts sql --dest models_test.fixture.sql
-  // $ ./models_test.ts diagram --dest models_test.fixture.puml
-  // $ ./models_test.ts driver --dest ./models_test.fixture.sh && chmod +x ./models_test.fixture.sh
-
-  await tc.step("CLI SQL", async () => {
+  await tc.step("CLI SQL content", async () => {
     const output = await $`./${CLI} sql`.text();
     ta.assertEquals(
       output,
       relativeFileContent("./models_test.fixture.sql"),
     );
+  });
+
+  await tc.step("CLI diagram", async () => {
+    const output = await $`./${CLI} diagram`.text();
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.puml"),
+    );
+  });
+
+  await tc.step("CLI driver content", async () => {
+    const output = await $`./${CLI} driver`.text();
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.sh"),
+    );
+  });
+
+  /**
+   * Execute the "driver" so that it creates an in-memory SQLite database and
+   * returns the total number of objects found in the SQLite ephemeral DB. If
+   * the count is equivalent to our expectation it means everything worked.
+   */
+  await tc.step("CLI driver execution result", async () => {
+    const sh = relativeFilePath("./models_test.fixture.sh");
+    // TODO: right now we just check the total count of object but this should be
+    // improved to actually check the names of each table, view, etc.
+    // deno-fmt-ignore
+    const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
+    ta.assertEquals(output, "153");
   });
 
   // deno-lint-ignore require-await
