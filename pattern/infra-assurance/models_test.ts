@@ -174,10 +174,13 @@ if (import.meta.main) {
       specifier ? import.meta.resolve(specifier) : import.meta.url,
     prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
     prepareDiagram: () => {
-      // "executing" the following will fill gm.tablesDeclared but we don't
-      // care about the SQL output, just the state management (tablesDeclared)
-      sqlDDL().SQL(ctx);
-      return gts.pumlERD(ctx).content;
+      return tp.diaPUML.plantUmlIE(ctx, function* () {
+        for (const table of mod.allContentTables) {
+          if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+            yield table.graphEntityDefn();
+          }
+        }
+      }, tp.diaPUML.typicalPlantUmlIeOptions()).content;
     },
   }).commands.command("driver", tp.sqliteDriverCommand(sqlDDL, ctx))
     .parse(Deno.args);
