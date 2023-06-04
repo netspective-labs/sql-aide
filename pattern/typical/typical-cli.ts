@@ -183,7 +183,8 @@ export function sqliteMemToFileDriver<Context extends SQLa.SqlEmitContext>(
     db_file=""
 
     # Parse command-line options
-    for arg in "$@"; do
+    for arg in "$@"
+    do
         case $arg in
             --destroy-first)
                 destroy_first=1
@@ -192,13 +193,15 @@ export function sqliteMemToFileDriver<Context extends SQLa.SqlEmitContext>(
             *)
                 db_file=$1
                 shift # Remove database filename from processing
+                break # Stop processing after the filename so we can pass the rest into final SQLite DB
                 ;;
         esac
     done
 
     # Check if the database file parameter is supplied
-    if [ -z "$db_file" ]; then
-        echo "No database file supplied. Usage: ./your_script.sh [--destroy-first] <database_file>"
+    if [ -z "$db_file" ]
+    then
+        echo "No database file supplied. Usage: ./your_script.sh [--destroy-first] <database_file> [<sqlite3 arguments>...]"
         exit 1
     fi
 
@@ -219,7 +222,8 @@ export function sqliteMemToFileDriver<Context extends SQLa.SqlEmitContext>(
     # Create an in-memory SQLite database, load the first pass for optimal
     # performance then export the in-memory database to the given file; this
     # two phase approach works because the last line in the SQL is '.dump'.
-    echo "$SQL" | sqlite3 ":memory:" | sqlite3 "$db_file"
+    # All arguments after <database_file> will be passed into the final DB.
+    sqlite3 "$db_file" "$(echo "$SQL" | sqlite3 ":memory:")" "\${@}"
   `);
 }
 

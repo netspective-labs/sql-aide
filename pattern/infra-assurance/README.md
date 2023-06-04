@@ -29,7 +29,14 @@ the script for later execution or executing the output script via STDIN.
 
 ```bash
 $ ./models_test.ts driver --dest ./models_test.fixture.sh && chmod +x ./models_test.fixture.sh
-$ ./models_test.ts driver | bash -s ./models_test.fixture.db --destroy-first
+$ ./models_test.ts driver | bash -s --destroy-first ./models_test.fixture.db
+$ ./models_test.ts driver | bash -s --destroy-first ./models_test.fixture.db -json "select count(*) as objects_count from sqlite_master"
+```
+
+If you want to create SQLite all in memory and verify some SQL try this:
+
+```bash
+$ ./models_test.ts driver | bash -s :memory: "select count(*) as objects_count from sqlite_master"
 ```
 
 ## Unit Tests
