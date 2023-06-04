@@ -52,6 +52,14 @@ export function denoDoctor(): DoctorCategory {
   });
 }
 
+/**
+ * Doctor task legend:
+ * - 🚫 is used to indicate a warning or error and should be corrected
+ * - 💡 is used to indicate an (optional) _suggestion_
+ * - 🆗 is used to indicate success
+ * @param categories
+ * @returns
+ */
 export function doctor(categories: () => Generator<DoctorCategory>) {
   return async () => {
     for (const cat of categories()) {

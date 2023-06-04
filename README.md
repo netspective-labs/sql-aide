@@ -34,6 +34,30 @@ deno task init
 deno task doctor
 ```
 
+You should see something like this:
+
+```bash
+Git dependencies
+  🆗 .githooks/pre-commit
+  🆗 .githooks/pre-push
+  🆗 .githooks/prepare-commit-msg
+Runtime dependencies
+  🆗 deno 1.34.0 (release, x86_64-unknown-linux-gnu)
+Build dependencies
+  🆗 dot - graphviz version 2.43.0 (0)
+  🆗 java 17 2021-09-14 LTS
+  🆗 PlantUML version 1.2022.6 (Tue Jun 21 13:34:49 EDT 2022)
+```
+
+Doctor task legend:
+
+- 🚫 is used to indicate a warning or error and should be corrected
+- 💡 is used to indicate an (optional) _suggestion_
+- 🆗 is used to indicate success
+
+If you get any error messages for `dot`, `Java`, or `PlantUML` then you will not
+get auto-generated entity relationship diagrams (ERDs).
+
 ### Maintain Deno dependencies
 
 You can check which deps need to be updated:
