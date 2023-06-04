@@ -50,6 +50,12 @@ If you want to create SQLite all in memory and verify some SQL try this:
 $ ./models_test.ts driver | bash -s :memory: "select count(*) as objects_count from sqlite_master"
 ```
 
+If you want to verify in more detail you can pass it into jq or other tools too:
+
+```bash
+$ ./models_test.ts driver | bash -s :memory: -json "$(../../lib/sql/sqlite/mod.sqla.ts inspect)" | jq "group_by(.table_name) | map({ tableName: .[0].table_name, columns: length })"
+```
+
 ## Information Models
 
 - **Graph**. This is the top-level "assets graph" which is considered the _root
