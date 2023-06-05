@@ -27,20 +27,18 @@ const graphTableInsertion = mod.graph.insertDML({
   description: "description",
 });
 
-const boundaryInsertion = mod.boundary.insertDML({
+const taxIdBoundary = mod.boundary.insertDML({
   boundary_nature_id: "REGULATORY_TAX_ID",
   name: "Boundery Name",
   description: "test description",
-  parent_boundary_id: 0,
 });
+const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
 
-const parentBoundaryID = mod.boundary.select(boundaryInsertion.insertable);
-
-const boundarySelfInsertion = mod.boundary.insertDML({
+const primaryBoundary = mod.boundary.insertDML({
   boundary_nature_id: "REGULATORY_TAX_ID",
   name: "Boundery Name Self Test",
   description: "test description",
-  parent_boundary_id: parentBoundaryID,
+  parent_boundary_id: taxIdBoundaryIdSelect,
 });
 
 const hostInsertion = mod.host.insertDML({
@@ -63,7 +61,7 @@ const raciMatrixInsertion = mod.raciMatrix.insertDML({
 
 const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
   .insertDML({
-    boundary_id: parentBoundaryID,
+    boundary_id: mod.boundary.select(primaryBoundary.insertable),
     raci_matrix_subject_id: "CURATION_WORKS",
   });
 
@@ -138,9 +136,9 @@ function sqlDDL() {
     -- synthetic / test data
     ${graphTableInsertion}
 
-    ${boundaryInsertion}
+    ${taxIdBoundary}
 
-    ${boundarySelfInsertion}
+    ${primaryBoundary}
 
     ${hostInsertion}
 

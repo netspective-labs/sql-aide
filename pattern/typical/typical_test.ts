@@ -288,7 +288,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
-      FOREIGN KEY("parent_publ_server_error_log_id") REFERENCES "publ_server_error_log"("parent_publ_server_error_log_id"),
+      FOREIGN KEY("parent_publ_server_error_log_id") REFERENCES "publ_server_error_log"("publ_server_error_log_id"),
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 

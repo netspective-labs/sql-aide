@@ -23,7 +23,7 @@
   entity "boundary" as boundary {
       **boundary_id**: INTEGER
     --
-    * parent_boundary_id: INTEGER
+      parent_boundary_id: INTEGER
     * boundary_nature_id: TEXT
     * name: TEXT
       description: TEXT

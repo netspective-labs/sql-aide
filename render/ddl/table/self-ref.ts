@@ -8,11 +8,13 @@ import * as d from "../../domain/mod.ts";
 type Any = any; // make it easy on linter
 
 export type SelfRefPlaceholder = {
-  readonly isSelfRefPlaceholder: boolean;
+  readonly isSelfRefPlaceholder: true;
+  readonly selfRefDomain: d.SqlDomain<Any, Any, Any> | undefined;
 };
 
 export const isSelfRefPlaceholder = safety.typeGuard<SelfRefPlaceholder>(
   "isSelfRefPlaceholder",
+  "selfRefDomain",
 );
 
 export type SelfRefPlaceholderSupplier = {
@@ -48,6 +50,11 @@ export function selfRef<
   );
   return selfRefPlacholderZB.zodTypeBaggageProxy(
     cloned,
-    { isSelfRefPlaceholder: true },
+    {
+      isSelfRefPlaceholder: true,
+      selfRefDomain: sdf.isBaggageSupplier(zodType)
+        ? zodType.sqlDomain
+        : undefined,
+    },
   ) as SelfReference;
 }

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "span" (
     "end_time" TIMESTAMP,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    FOREIGN KEY("parent_span_id") REFERENCES "span"("parent_span_id")
+    FOREIGN KEY("parent_span_id") REFERENCES "span"("span_id")
 );
 
 CREATE TABLE IF NOT EXISTS "span_attribute" (

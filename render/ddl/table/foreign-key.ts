@@ -129,8 +129,13 @@ export function foreignKeysFactory<
       })
       : (srPlaceholder
         ? foreignKeyColumn(key as Any, member, {
-          foreignKeyRelNature: { isSelfRef: true },
-          foreignKeySource: inferredPlaceholder(key as Any),
+          foreignKeyRelNature: {
+            isSelfRef: true,
+            selfRefDomain: srPlaceholder.selfRefDomain,
+          },
+          foreignKeySource: inferredPlaceholder(
+            srPlaceholder.selfRefDomain?.identity ?? "??self-ref",
+          ),
         })
         : sdf.cacheableFrom(member, { identity: key as Any }));
     (zbSchema[key] as Any) = sdf.zodTypeBaggageProxy<typeof member>(
@@ -146,6 +151,7 @@ export function foreignKeysFactory<
 
   type TableSelfRefDestNature = {
     readonly isSelfRef: true;
+    readonly selfRefDomain: d.SqlDomain<Any, Context, Any> | undefined;
   };
 
   type ForeignKeyRelNature =

@@ -381,7 +381,7 @@ export const graph = gm.autoIncPkTable("graph", {
 export const boundary_id = autoIncPK();
 export const boundary = gm.autoIncPkTable("boundary", {
   boundary_id,
-  parent_boundary_id: selfRef(boundary_id),
+  parent_boundary_id: selfRef(boundary_id).optional(),
   boundary_nature_id: boundaryNature.references.code(),
   name: text(),
   description: textNullable(),
@@ -1204,6 +1204,8 @@ export function sqlDDL() {
   //       in gm.tablesDeclared, etc.
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+    PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
+
     -- reference tables
     ${allReferenceTables}
 

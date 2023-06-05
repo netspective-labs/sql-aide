@@ -514,7 +514,7 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
           FOREIGN KEY("fk_int_primary_key") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
           FOREIGN KEY("fk_text_primary_key_nullable") REFERENCES "synthetic_table_with_uaod_pk"("ua_on_demand_primary_key"),
           FOREIGN KEY("fk_int_primary_key_nullable") REFERENCES "synthetic_table_with_auto_inc_pk"("auto_inc_primary_key"),
-          FOREIGN KEY("parent_auto_inc_primary_key") REFERENCES "synthetic_table_with_foreign_keys"("parent_auto_inc_primary_key")
+          FOREIGN KEY("parent_auto_inc_primary_key") REFERENCES "synthetic_table_with_foreign_keys"("auto_inc_primary_key")
       );`),
     );
   });
