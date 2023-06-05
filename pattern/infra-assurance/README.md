@@ -50,9 +50,18 @@ If you want to create SQLite all in memory and verify some SQL try this:
 $ ./models_test.ts driver | bash -s :memory: "select count(*) as objects_count from sqlite_master"
 ```
 
-If you want to verify in more detail you can pass it into jq or other tools too:
+If you want to verify in more detail you can pass it into jq or other tools,
+too. For example the first command line below creates an in-memory SQLite
+database and returns a single JSON object with all tables as keys and the values
+as the number of columns in those tables. The second command line is the same
+query but shows how other details can be added per row.
+
+Because we use `:memory:` as the destination, only interim SQLite memory mapped
+files are created. If you wanted to create physical storage files you can pass
+in a proper file path and name.
 
 ```bash
+$ ./models_test.ts driver | bash -s :memory: -json "$(../../lib/sql/sqlite/mod.sqla.ts inspect)" | jq 'reduce .[] as $item ({}; .[$item.table_name] += 1)'
 $ ./models_test.ts driver | bash -s :memory: -json "$(../../lib/sql/sqlite/mod.sqla.ts inspect)" | jq "group_by(.table_name) | map({ tableName: .[0].table_name, columns: length })"
 ```
 
