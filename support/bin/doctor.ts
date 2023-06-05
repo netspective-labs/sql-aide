@@ -18,6 +18,10 @@ export interface DoctorReporter {
     } | {
       expectText: string;
       textNotFound: string;
+      pass?: (reporter: {
+        expectText: string;
+        textNotFound: string;
+      }) => string;
     },
   ): void;
 }
@@ -68,7 +72,10 @@ export function doctor(categories: () => Generator<DoctorCategory>) {
         await diag.diagnose((options) => {
           if ("expectText" in options) {
             if (options.expectText && options.expectText.trim().length > 0) {
-              console.info("  🆗", colors.green(options.expectText));
+              console.info(
+                "  🆗",
+                colors.green(options.pass?.(options) ?? options.expectText),
+              );
             } else {
               console.warn("  🚫", colors.brightRed(options.textNotFound));
             }
@@ -120,6 +127,16 @@ export const checkup = doctor(function* () {
   });
   yield doctorCategory("Runtime dependencies", function* () {
     yield* denoDoctor().diagnostics();
+    yield {
+      // deno-fmt-ignore
+      diagnose: async (report) => {
+        report({
+          expectText: (await $`sqlite3 --version`.noThrow().text()).split("\n")[0],
+          textNotFound: "SQLite not found in PATH, install it",
+          pass: (args) => `SQLite ${args.expectText.split(' ')[0]}` });
+        report({ expectText: (await $`psql --version`.noThrow().text()).split("\n")[0], textNotFound: "PostgreSQL psql not found in PATH, install it" });
+      },
+    };
   });
   yield doctorCategory("Build dependencies", function* () {
     yield {
