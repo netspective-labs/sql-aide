@@ -5,6 +5,7 @@
 // import * as dvp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.10/pattern/typical/mod.ts";
 import * as tp from "../pattern/typical/mod.ts";
 const { SQLa, ws } = tp;
+import { zod as z } from "../deps.ts";
 
 const ctx = SQLa.typicalSqlEmitContext({
   sqlDialect: SQLa.msSqlServerDialect(),
@@ -14,8 +15,10 @@ type EmitContext = typeof ctx;
 
 const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
 const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
-const { text, textNullable, integer, date } = gm.domains;
+const { text, textNullable, integer, integerNullable, date } = gm.domains;
 const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+
+const jobSchema = "dbo";
 
 export enum ExecutionContext {
   DEVELOPMENT, // code is text, value is a number
@@ -24,22 +27,41 @@ export enum ExecutionContext {
 }
 const execCtx = gm.ordinalEnumTable("execution_context", ExecutionContext);
 
-const jobGrade = gm.autoIncPkTable("job_grade", {
-  job_grade_id: autoIncPK(),
-  grade_name: text(),
-  description: textNullable(),
+export enum JobStatusContext {
+  ACTIVE,
+  DELETED,
+}
+const jobStatusCtx = gm.ordinalEnumTable("job_status", JobStatusContext);
+
+export enum jobPositionStatusContext {
+  Current,
+  Past,
+  Future,
+}
+
+const jobPositionStatusCtx = gm.ordinalEnumTable(
+  "job_position_status",
+  jobPositionStatusContext,
+);
+
+const _jobOfficial = gm.autoIncPkTable("job_official", {
+  job_official_id: autoIncPK(),
+  official_name: text(),
+  official_email: textNullable(),
+  status_id: jobStatusCtx.references.code(),
   ...gm.housekeeping.columns,
 });
 
+// deno-fmt-ignore
 const jobPosition = gm.autoIncPkTable("job_position", {
   job_position_id: autoIncPK(),
   position_title: text(),
-  job_category_id: integer(),
+  job_category_id: integerNullable(),
   description: textNullable(),
   requirements: textNullable(),
   responsibilities: textNullable(),
   department_id: integer(),
-  grade_id: jobGrade.references.job_grade_id(),
+  grade: text(),
   experience_level: textNullable(),
   skills_required: textNullable(),
   location_id: integer(),
@@ -49,23 +71,60 @@ const jobPosition = gm.autoIncPkTable("job_position", {
   end_date: date(),
   search_committee: textNullable(),
   question_answers: textNullable(),
-  official_id: integer(),
-  status_id: integer(),
+  official: text(),
+  status_id: jobStatusCtx.references.code(),
+  position_status_id: jobPositionStatusCtx.references.code(),
   ...gm.housekeeping.columns,
 });
+
+// deno-fmt-ignore
+const allActiveJobPositionVW = SQLa.safeViewDefinition("vwjobposition", {
+  job_position_id: z.string(),
+  position_title: z.string(),
+  description: z.string(),
+  grade: z.string(),
+  official: z.string(),
+  positionstatuscode: z.number(),
+  positionstatus: z.string(),
+  start_date: z.date(),
+  end_date: z.date(),
+  search_committee: z.string(),
+  question_answers: z.string(),
+})`
+SELECT
+    job_position_id,
+    position_title,
+    description,
+    grade,
+    official,
+    positionstatus.code positionstatuscode,
+    positionstatus.value positionstatus,
+    start_date,
+    end_date,
+    search_committee,
+    question_answers
+FROM
+    $ {jobSchema}.${jobPosition} AS jobposition
+    LEFT JOIN $ {jobSchema}.${jobStatusCtx} AS jobstatus ON jobstatus.code = jobposition.status_id
+    LEFT JOIN $ {jobSchema}.${jobPositionStatusCtx} AS positionstatus ON jobposition.position_status_id = positionstatus.code
+WHERE (CONVERT(VARCHAR, jobstatus.value) = 'ACTIVE') `;
 
 function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
   //       in dvts.tablesDeclared, etc.
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
-    IF OBJECT_ID(N'dbo.${execCtx.tableName}', N'U') IS NOT NULL
+  IF OBJECT_ID(N'${jobSchema}.${execCtx.tableName}', N'U') IS NOT NULL
       drop table ${execCtx.tableName}
     ${execCtx}
     ${execCtx.seedDML}
-    ${jobGrade}
+    ${jobStatusCtx}
+    ${jobStatusCtx.seedDML}
+    ${jobPositionStatusCtx}
+    ${jobPositionStatusCtx.seedDML}
     ${jobPosition}
-
+    GO
+    ${allActiveJobPositionVW}
     `;
 }
 

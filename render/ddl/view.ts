@@ -106,9 +106,16 @@ export function viewDefinition<
           // by default we create for ANSI/SQLite/"other"
           // deno-fmt-ignore
           let create = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
-          if (emit.isPostgreSqlDialect(ctx.sqlDialect)) {
+          if (
+            emit.isPostgreSqlDialect(ctx.sqlDialect)
+          ) {
             // deno-fmt-ignore
             create = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
+          } else if (
+            emit.isMsSqlServerDialect(ctx.sqlDialect)
+          ) {
+            // deno-fmt-ignore
+            create = `CREATE ${ isIdempotent ? "OR ALTER " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)} AS\n${viewSelectStmtSqlText}`;
           }
           return vdOptions?.before
             ? ctx.embeddedSQL<Context>(vdOptions.embeddedStsOptions)`${[
@@ -205,9 +212,16 @@ export function safeViewDefinitionCustom<
         // by default we create for ANSI/SQLite/"other"
         // deno-fmt-ignore
         let head = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${ns.viewName(viewName)}`;
-        if (emit.isPostgreSqlDialect(ctx.sqlDialect)) {
+        if (
+          emit.isPostgreSqlDialect(ctx.sqlDialect)
+        ) {
           // deno-fmt-ignore
           head = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)}`;
+        } else if (
+          emit.isMsSqlServerDialect(ctx.sqlDialect)
+        ) {
+          // deno-fmt-ignore
+          head = `CREATE ${ isIdempotent ? "OR ALTER " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)}`;
         }
         const create = `${head}${
           columnsList
