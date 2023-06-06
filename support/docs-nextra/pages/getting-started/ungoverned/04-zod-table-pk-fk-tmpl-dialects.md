@@ -4,7 +4,7 @@ title: Multiple Zod Tables with Dialects and Naming
 
 ```typescript filename="examples/getting-started/04-zod-table-pk-fk-tmpl-dialects.sqla.ts"
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/pattern/typical/mod.ts";
+import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/render/mod.ts";
 
 type SyntheticContext = SQLa.SqlEmitContext;
 const pkcFactory = SQLa.primaryKeyColumnFactory<SyntheticContext>();

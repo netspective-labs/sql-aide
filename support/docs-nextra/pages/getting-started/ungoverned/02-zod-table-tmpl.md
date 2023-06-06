@@ -4,7 +4,7 @@ title: Single Zod Table (with template)
 
 ```typescript filename="examples/getting-started/02-zod-table-tmpl.sqla.ts"
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/pattern/typical/mod.ts";
+import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/render/mod.ts";
 
 const tableWithoutPK = SQLa.tableDefinition("synthetic_table_without_pk", {
   text: z.string(),
