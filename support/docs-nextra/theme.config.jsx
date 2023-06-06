@@ -1,4 +1,11 @@
 export default {
+    head: (
+      <>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta property="og:title" content="SQL Aide (SQLa)" />
+        <meta property="og:description" content="SQL-first DX" />
+      </>
+    ),
     logo: <span>SQL Aide (SQLa) Documentation</span>,
     project: {
       link: 'https://github.com/netspective-labs/sql-aide'

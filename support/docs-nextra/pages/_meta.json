@@ -7,5 +7,7 @@
   "architecture": "Architecture",
   "domains": "Domains",
   "entities": "Entities",
-  "emit": "SQL Templates"
+  "emit": "SQL Templates",
+  "roadmap": "Roadmap",
+  "contributors": "Contributors"
 }
