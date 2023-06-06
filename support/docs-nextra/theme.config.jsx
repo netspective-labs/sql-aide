@@ -6,6 +6,11 @@ export default {
         <meta property="og:description" content="SQL-first DX" />
       </>
     ),
+    useNextSeoProps() {
+      return {
+        titleTemplate: '%s – SQLa'
+      }
+    },
     logo: <span>SQL Aide (SQLa) Documentation</span>,
     project: {
       link: 'https://github.com/netspective-labs/sql-aide'
