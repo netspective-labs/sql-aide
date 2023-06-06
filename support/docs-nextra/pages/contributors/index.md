@@ -83,6 +83,7 @@ new users and sponsors. You can contribute by:
 - Speaking at conferences and meetups
 - Sharing SQLa's features and benefits on social media
 - Organizing events to promote the project
+- [See more here](contributors/evangelist)
 
 ## Financial Contributors
 

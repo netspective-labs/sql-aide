@@ -2,7 +2,12 @@
 title: Roadmap
 ---
 
-# Governance
+# Roadmap
+
+_This is a draft page and isn't really a "Roadmap" yet, just mainly some notes
+about what features and enhancements we need. It needs significant formatting._
+
+## Governance
 
 - [ ] Learn from [DataHub](https://datahubproject.io/docs/features) about how to
       document and manage meta data ('data governance') artifacts and
@@ -16,13 +21,13 @@ title: Roadmap
   - [ ] Fine-Grained Access Control with Policies
   - [ ] Metadata quality & usage analytics
 
-# Safety and Security Capabilities
+## Safety and Security Capabilities
 
 - [x] String literals for injection-safe SQL generation
   - [ ] Integration of
         [pg-format](https://github.com/grantcarthew/deno-pg-format)
 
-# Information Model Evolution (migrations, etc.)
+## Information Model Evolution (migrations, etc.)
 
 See [Atlas open\-source schema migration tool](https://atlasgo.io/) and create a
 SQLa to Atlas schema / DDL file.
@@ -33,7 +38,7 @@ interesting ideas.
 Consider generating [Flyway](https://flywaydb.org/documentation/command/migrate)
 and Liquibase migrations.
 
-# DDL (Data Definition Language)
+## DDL (Data Definition Language)
 
 There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
 
@@ -54,7 +59,7 @@ There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
 - [ ] support
       [multi-tenant SaaS using Row-Level Security](https://www.thenile.dev/blog/multi-tenant-rls)
 
-# DQL (Data Query Language)
+## DQL (Data Query Language)
 
 - [x] Trusted SELECT statement to read typed data
 - [x] Basic single-entity focused SELECT generated using `table.select({})`
@@ -105,7 +110,7 @@ There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
         anything other than SQL string templates but perhaps if it's type-safe
         enough for non-SQL-experts to use, Kysely could be a candidate.
 
-# DML(Data Manipulation Language)
+## DML(Data Manipulation Language)
 
 - [x] Type-safe INSERT single TS/JS object row with `returning` support
   - [x] INSERTS with auto-selected foreign key IDs using `table.select()`
@@ -150,12 +155,12 @@ There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
         and other visualizers.
 - [~] LOCK: Table control concurrency.
 
-# PL (Procedural or Programming Language)
+## PL (Procedural or Programming Language)
 
 - [x] BODY defines PL (stored function or stored procedure) body
 - [x] CONTRACT defines the header, parameter, etcs.
 
-# DCL (Data Control Language)
+## DCL (Data Control Language)
 
 - [ ] GRANT: This command gives users access privileges to the database.
   - [ ] Refer to https://supabase.com/blog/2021/07/01/roles-postgres-hooks for
@@ -163,14 +168,14 @@ There are two types of DDL: _seed_ and _evolution_ (also known as _migration_).
 - [ ] REVOKE: This command withdraws the user’s access privileges given by using
       the GRANT command.
 
-# TCL (Transaction Control Language)
+## TCL (Transaction Control Language)
 
 - COMMIT: Commits a Transaction.
 - ROLLBACK: Rollbacks a transaction in case of any error occurs.
 - SAVEPOINT: Sets a savepoint within a transaction.
 - SET TRANSACTION: Specify characteristics for the transaction.
 
-# Dialect/Engine-specific
+## Dialect/Engine-specific
 
 These engines / dialects are supported:
 
@@ -216,7 +221,7 @@ References:
 
 - [PostgreSQL Vs MySQL Syntax](https://tipseason.com/postgres-vs-mysql-syntax-comparision/)
 
-# Dialect Engines
+## Dialect Engines
 
 - [ ] Universal
       [PostgreSQL wire interface pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator)
@@ -229,13 +234,13 @@ References:
       execution results. All SQL engines support the same query execution
       results so that results and queries can be mixed/matched across engines.
 
-# Engineering and QA (IDE)
+## Engineering and QA (IDE)
 
 - [ ] Render
       [SQL Notebook](https://marketplace.visualstudio.com/items?itemName=cmoog.sqlnotebook)
       output that will allow interactive use through VS Code.
 
-# PostgreSQL
+## PostgreSQL
 
 - [x] Anonymous PL/pgSQL and PL/SQL blocks
 - [x] Stored procedures definition (namespaced and type-safe)
@@ -250,7 +255,7 @@ References:
 - [x] Extensions
 - [x] search_path
 
-# Structural Lint Rules
+## Structural Lint Rules
 
 The system generates lint messages:
 
@@ -268,12 +273,12 @@ The system generates lint messages:
 - [ ] Integrate [SQLFluff](https://github.com/sqlfluff/sqlfluff) or learn from
       their rules.
 
-# Content Lint and Data Validation Rules
+## Content Lint and Data Validation Rules
 
 - [ ] [Soda Checks Language](https://docs.soda.io/soda-cl/soda-cl-overview.html)
       (SodaCL) style validation rules
 
-## TODO
+## General TODOs
 
 - [ ] Evaluate
       [pg-server](https://github.com/oguimbal/pg-server#-usage-as-a-postgres-server-emulator),
