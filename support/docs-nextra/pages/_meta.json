@@ -1,6 +1,8 @@
 {
   "index": "Welcome",
-  "dcp": "Data Computer Platform",
+  "installation": "Installation",
+  "getting-started": "Getting Started",
+  "dcp": "Data Compute Platform",
   "concepts": "Concepts",
   "architecture": "Architecture",
   "domains": "Domains",
