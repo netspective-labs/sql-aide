@@ -396,6 +396,18 @@
       created_by: TEXT
   }
 
+  entity "awareness_training" as awareness_training {
+      **awareness_training_id**: INTEGER
+    --
+    * training_subject_id: TEXT
+    * person_id: INTEGER
+    * organization_id: INTEGER
+    * training_status_id: TEXT
+    * attended_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
   entity "rating" as rating {
       **rating_id**: INTEGER
     --
@@ -824,6 +836,8 @@
   security_impact_analysis |o..o{ proposed_controls
   person |o..o{ security_incident_response_team
   organization |o..o{ security_incident_response_team
+  person |o..o{ awareness_training
+  organization |o..o{ awareness_training
   person |o..o{ rating
   organization |o..o{ rating
   party |o..o{ note
