@@ -612,6 +612,20 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("training_status_id") REFERENCES "status_value"("code")
 );
+CREATE TABLE IF NOT EXISTS "awareness_training" (
+    "awareness_training_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "training_subject_id" TEXT NOT NULL,
+    "person_id" INTEGER NOT NULL,
+    "organization_id" INTEGER NOT NULL,
+    "training_status_id" TEXT NOT NULL,
+    "attended_date" DATE NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("code"),
+    FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
+    FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
+    FOREIGN KEY("training_status_id") REFERENCES "status_value"("code")
+);
 CREATE TABLE IF NOT EXISTS "rating" (
     "rating_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "author_id" INTEGER NOT NULL,
@@ -1025,6 +1039,213 @@ CREATE TABLE IF NOT EXISTS "attestation_evidence" (
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("attestation_id") REFERENCES "attestation"("attestation_id")
 );
+
+--content views
+CREATE VIEW IF NOT EXISTS "security_incident_response_team_view"("person_name", "organization_name", "team_role", "email") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name, o.name AS organization_name, ort.value AS team_role,e.electronics_details AS email
+    FROM security_incident_response_team sirt
+    INNER JOIN person p ON p.person_id = sirt.person_id
+    INNER JOIN organization o ON o.organization_id=sirt.organization_id
+    INNER JOIN organization_role orl ON orl.person_id = sirt.person_id AND orl.organization_id = sirt.organization_id
+    INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+    INNER JOIN party pr ON pr.party_id = p.party_id
+    INNER JOIN contact_electronic e ON e.party_id=pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL';
+CREATE VIEW IF NOT EXISTS "awareness_training_view"("person_name", "person_role", "trainigng_subject", "training_status_id", "attended_date") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,ort.value AS person_role,sub.value AS trainigng_subject,at.training_status_id,at.attended_date
+    FROM awareness_training at
+    INNER JOIN person p ON p.person_id = at.person_id
+    INNER JOIN organization_role orl ON orl.person_id = at.person_id AND orl.organization_id = at.organization_id
+    INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+    INNER JOIN training_subject sub ON sub.code = at.training_subject_id;
+CREATE VIEW IF NOT EXISTS "person_skill_view"("person_name", "skill", "proficiency") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
+    FROM person_skill ps
+    INNER JOIN person p ON p.person_id = ps.person_id
+    INNER JOIN skill s ON s.code = ps.skill_id
+    INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id;
+CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "incident_date", "asset_name", "category", "severity", "priority", "internal_or_external", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by", "reported_to", "brief_description", "detailed_description", "assigned_to", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status", "closed_date", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "root_cause_of_the_issue", "probability_of_issue", "testing_for_possible_root_cause_analysis", "solution", "likelihood_of_risk", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results") AS
+    SELECT i.title AS incident,i.incident_date,ast.name as asset_name,ic.value AS category,s.value AS severity,
+    p.value AS priority,it.value AS internal_or_external,i.location,i.it_service_impacted,
+    i.impacted_modules,i.impacted_dept,p1.person_first_name || ' ' || p1.person_last_name AS reported_by,
+    p2.person_first_name || ' ' || p2.person_last_name AS reported_to,i.brief_description,
+    i.detailed_description,p3.person_first_name || ' ' || p3.person_last_name AS assigned_to,
+    i.assigned_date,i.investigation_details,i.containment_details,i.eradication_details,i.business_impact,
+    i.lessons_learned,ist.value AS status,i.closed_date,i.feedback_from_business,i.reported_to_regulatory,i.report_date,i.report_time,
+    irc.description AS root_cause_of_the_issue,p1.value AS probability_of_issue,irc.testing_analysis AS testing_for_possible_root_cause_analysis,
+    irc.solution,p2.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
+    FROM incident i
+    INNER JOIN asset ast ON ast.asset_id = i.asset_id
+    INNER JOIN incident_category ic ON ic.code = i.category_id
+    INNER JOIN severity s ON s.code = i.severity_id
+    INNER JOIN priority p ON p.code = i.priority_id
+    INNER JOIN incident_type it ON it.code = i.internal_or_external_id
+    INNER JOIN person p1 ON p1.person_id = i.reported_by_id
+    INNER JOIN person p2 ON p2.person_id = i.reported_to_id
+    INNER JOIN person p3 ON p3.person_id = i.assigned_to_id
+    INNER JOIN incident_status ist ON ist.code = i.status_id
+    LEFT JOIN incident_root_cause irc ON irc.incident_id = i.incident_id
+    LEFT JOIN priority p1 ON p1.code = irc.probability_id
+    LEFT JOIN priority p2 ON p2.code = irc.likelihood_of_risk_id;
+CREATE VIEW IF NOT EXISTS "raci_matrix_assignment_view"("person_name", "subject", "activity", "assignment_nature") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rma.activity,
+    rman.value AS assignment_nature
+    FROM raci_matrix_assignment rma
+    INNER JOIN person p ON p.person_id = rma.person_id
+    INNER JOIN raci_matrix_subject rms on rms.code = rma.subject_id
+    INNER JOIN raci_matrix_activity rma on rma.raci_matrix_activity_id = rma.activity_id
+    INNER JOIN raci_matrix_assignment_nature rman on rman.code = rma.raci_matrix_assignment_nature_id;
+CREATE VIEW IF NOT EXISTS "security_impact_analysis_view"("vulnerability", "security_risk", "security_threat", "impact_of_risk", "proposed_controls", "impact_level", "risk_level", "existing_controls", "priority", "reported_date", "reported_by", "responsible_by") AS
+    SELECT v.short_name as vulnerability, ast.name as security_risk,te.title as security_threat,
+    ir.impact as impact_of_risk,pc.controls as proposed_controls,p1.value as impact_level,
+    p2.value as risk_level,sia.existing_controls,pr.value as priority,sia.reported_date,
+    pn1.person_first_name || ' ' || pn1.person_last_name AS reported_by,
+    pn2.person_first_name || ' ' || pn2.person_last_name AS responsible_by
+    FROM security_impact_analysis sia
+    INNER JOIN vulnerability v ON v.vulnerability_id = sia.vulnerability_id
+    INNER JOIN asset_risk ar ON ar.asset_risk_id = sia.asset_risk_id
+    INNER JOIN asset ast ON ast.asset_id = ar.asset_id
+    INNER JOIN threat_event te ON te.threat_event_id = ar.threat_event_id
+    INNER JOIN impact_of_risk ir ON ir.security_impact_analysis_id = sia.security_impact_analysis_id
+    INNER JOIN proposed_controls pc ON pc.security_impact_analysis_id = sia.security_impact_analysis_id
+    INNER JOIN probability p1 ON p1.code = sia.impact_level_id
+    INNER JOIN probability p2 ON p2.code = sia.risk_level_id
+    INNER JOIN priority pr ON pr.code = sia.priority_id
+    INNER JOIN person pn1 ON pn1.person_id = sia.reported_by_id
+    INNER JOIN person pn2 ON pn2.person_id = sia.responsible_by_id;
+CREATE VIEW IF NOT EXISTS "key_performance_indicator_view"("kpi_lower_threshold_critical", "kpi_lower_threshold_major", "kpi_lower_threshold_minor", "kpi_lower_threshold_ok", "kpi_lower_threshold_warning", "kpi_threshold_critical", "kpi_threshold_major", "kpi_threshold_minor", "kpi_threshold_ok", "kpi_threshold_warning", "kpi_value", "score", "kpi_unit_of_measure", "key_performance", "calendar_period", "asset_name", "asset_type", "kpi_comparison_operator", "kpi_measurement_type", "kpi_status", "tracking_period", "trend") AS
+    SELECT
+    kpi.kpi_lower_threshold_critical,
+    kpi.kpi_lower_threshold_major,
+    kpi.kpi_lower_threshold_minor,
+    kpi.kpi_lower_threshold_ok,
+    kpi.kpi_lower_threshold_warning,
+    kpi.kpi_threshold_critical,
+    kpi.kpi_threshold_major,
+    kpi.kpi_threshold_minor,
+    kpi.kpi_threshold_ok,
+    kpi.kpi_threshold_warning,
+    kpi.kpi_value,
+    kpi.score,
+    kpi.kpi_unit_of_measure,
+    kp.title AS key_performance,
+    cp.value AS calendar_period,
+    ast.name AS asset_name,
+    at.value AS asset_type,
+    co.value AS kpi_comparison_operator,
+    kmt.value AS kpi_measurement_type,
+    ks.value AS kpi_status,
+    tp.value AS tracking_period,
+    t.value AS trend
+    FROM key_performance_indicator kpi
+    INNER JOIN asset ast ON ast.asset_id = kpi.asset_id
+    INNER JOIN asset_type at ON at.code = ast.asset_type_id
+    INNER JOIN key_performance kp ON kp.key_performance_id = kpi.key_performance_id
+    INNER JOIN calendar_period cp ON cp.code = kpi.calendar_period_id
+    INNER JOIN comparison_operator co ON co.code = kpi.kpi_comparison_operator_id
+    INNER JOIN kpi_measurement_type kmt ON kmt.code = kpi.kpi_measurement_type_id
+    INNER JOIN kpi_status ks ON ks.code = kpi.kpi_status_id
+    INNER JOIN tracking_period tp ON tp.code = kpi.tracking_period_id
+    INNER JOIN trend t ON t.code = kpi.trend_id;
+CREATE VIEW IF NOT EXISTS "attestation_view"("attestation", "attestation_explain", "attested_on", "expires_on", "person_name", "foreign_integration", "assertion", "assertion_explain", "assertion_expires_on", "assertion_expires_poam", "boundary") AS
+    SELECT
+    at.attestation,
+    at.attestation_explain,
+    at.attested_on,
+    at.expires_on,
+    p.person_first_name || ' ' || p.person_last_name AS person_name,
+    ar.foreign_integration,
+    ar.assertion,
+    ar.assertion_explain,
+    ar.assertion_expires_on,
+    ar.assertion_expires_poam,
+    b.name as boundary
+    FROM attestation at
+    INNER JOIN person p ON p.person_id = at.person_id
+    INNER JOIN assertion ar ON ar.assertion_id = at.assertion_id
+    LEFT JOIN boundary b on b.boundary_id = at.boundary_id;
+CREATE VIEW IF NOT EXISTS "root_cause_analysis_view"("issue", "source", "cause_of_the_issue", "testing_analysis", "solution", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "probability_of_issue", "likelihood_of_risk") AS
+    SELECT
+    i.title as issue,
+    irc.source,
+    irc.description as cause_of_the_issue,
+    irc.testing_analysis,
+    irc.solution,
+    irc.modification_of_the_reported_issue,
+    irc.testing_for_modified_issue,
+    irc.test_results,
+    p.value as probability_of_issue,
+    p1.value as likelihood_of_risk
+    FROM incident_root_cause irc
+    INNER JOIN incident i on i.incident_id = irc.incident_id
+    INNER JOIN priority p on p.code = irc.probability_id
+    INNER JOIN priority p1 on p1.code = irc.likelihood_of_risk_id;
+CREATE VIEW IF NOT EXISTS "vender_view"("name", "email", "address", "state", "city", "zip", "country") AS
+    SELECT pr.party_name as name,
+    e.electronics_details as email,
+    l.address_line1 as address,
+    l.address_state as state,
+    l.address_city as city,
+    l.address_zip as zip,
+    l.address_country as country
+    FROM party_relation prl
+    INNER JOIN party pr ON pr.party_id = prl.party_id
+    INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'
+    INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
+    WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON';
+CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment_type", "contract_status", "contract_type", "document_reference", "periodicity", "start_date", "end_date", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval") AS
+    SELECT
+    p1.party_name as contract_by,
+    p2.party_name as contract_to,
+    pt.value as payment_type,
+    cs.value as contract_status,
+    ctp.value as contract_type,
+    ct.document_reference,
+    p.value as periodicity,
+    ct.start_date,
+    ct.end_date,
+    ct.date_of_last_review,
+    ct.date_of_next_review,
+    ct.date_of_contract_review,
+    ct.date_of_contract_approval
+    FROM contract ct
+    INNER JOIN party p1 on p1.party_id = ct.contract_from_id
+    INNER JOIN party p2 on p2.party_id = ct.contract_to_id
+    INNER JOIN payment_type pt on pt.code = ct.payment_type_id
+    INNER JOIN contract_status cs on cs.code = ct.contract_status_id
+    INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
+    INNER JOIN periodicity p on p.code = ct.periodicity_id;
+CREATE VIEW IF NOT EXISTS "systeminfo_view"("hostname", "ip_addresses", "status", "platform", "processor", "processor_core", "ram", "disk_free", "disk_used", "disk_total", "importance", "asymmetric_keys_encryption_enabled", "symmetric_keys_encryption_enabled", "cryptographic_key_encryption_enabled", "mfa_2fa_enabled_id", "public_key_encryption_enabled_id") AS
+    SELECT
+    si.hostname,
+    nwi.ip_addresses,
+    asstatus.value as status,
+    asset.name as platform,
+    cpu.name as processor,
+    cpu.cores as processor_core,
+    m.total_bytes as ram,
+    m.available_bytes as disk_free,
+    m.used_percent as disk_used,
+    m.total_bytes as disk_total,
+    sever.value as importance,
+    sv1.value as asymmetric_keys_encryption_enabled,
+    sv2.value as symmetric_keys_encryption_enabled,
+    sv3.value as cryptographic_key_encryption_enabled,
+    sv4.value as mfa_2fa_enabled_id,
+    sv5.value as public_key_encryption_enabled_id
+    FROM systeminfo si
+    INNER JOIN operating_system os ON si.os_id = os.operating_system_id
+    INNER JOIN network_interface nwi ON os.network_interface_id = nwi.network_interface_id
+    INNER JOIN asset_status asstatus ON si.status_id = asstatus.code
+    INNER JOIN asset ON asset.asset_id = si.platform_id
+    INNER JOIN cpu ON cpu.cpu_id = si.cpu_id
+    INNER JOIN memory m ON m.memory_id = si.memory_id
+    INNER JOIN severity sever ON si.importance_id = sever.code
+    INNER JOIN systeminfo_mode sim ON si.systeminfo_mode_id = sim.systeminfo_mode_id
+    INNER JOIN status_value sv1 ON sim.asymmetric_keys_encryption_enabled_id = sv1.code
+    INNER JOIN status_value sv2 ON sim.symmetric_keys_encryption_enabled_id = sv2.code
+    INNER JOIN status_value sv3 ON sim.cryptographic_key_encryption_enabled_id = sv3.code
+    INNER JOIN status_value sv4 ON sim.mfa_2fa_enabled_id = sv4.code
+    INNER JOIN status_value sv5 ON sim.public_key_encryption_enabled_id = sv5.code;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES (0, 'DEVELOPMENT');
