@@ -2,7 +2,7 @@
 
 // IMPORTANT: when you use this outside of library use this type of import with pinned versions:
 // import * as dvp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.10/pattern/typical/mod.ts";
-import * as tp from "../pattern/typical/mod.ts";
+import * as tp from "../../pattern/typical/mod.ts";
 const { SQLa, ws } = tp;
 
 const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() });

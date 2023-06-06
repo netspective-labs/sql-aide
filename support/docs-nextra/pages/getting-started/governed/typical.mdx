@@ -1,9 +1,9 @@
 ---
-title: Installation
+title: Typical (Common) Example
 ---
 import { Steps } from 'nextra-theme-docs'
 
-# Getting Started
+# Typical (most common) Example
 
 The following code is a complete working example of how to specify a small
 "governed" schema (follows certain rules).
@@ -172,6 +172,20 @@ version (pinning versions is highly recommended, though).
 * The `import` statements bring in the necessary modules from the SQLa Typical Pattern library (tp), which is specifically designed for small to medium-sized databases with common business domains and table schemas.
 * The SQLa symbol provides access to the SQLa functionality, while `ws` provides support for whitespace management.
 * `EmitContext` is not too useful here but it's an example of how the template can have a complete type-safe _contextual environment_ for passing around variables or other dynamic content.
+
+### Prepare domains and table types
+
+SQLa prefers _governed schemas_ meaning standard naming conventions and rules should be followed.
+
+```typescript
+const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
+const { text, textNullable, integer, date } = gm.domains;
+const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+```
+
+* `gts` is the _governed template state_ which controls SQL emit functionality
+* `gm` is the _governed model_ which has the domains (column types) keys, table types, etc.
 
 ### Define your schema
 
