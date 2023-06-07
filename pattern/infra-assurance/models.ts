@@ -25,7 +25,6 @@ const {
   dateTime,
   selfRef,
   dateTimeNullable,
-  float,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
