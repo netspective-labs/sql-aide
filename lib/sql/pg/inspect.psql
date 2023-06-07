@@ -1,12 +1,15 @@
 \set ddl_schema dcp_lib
 \set unit_test_schema unit_test_schema
-\set dcp_extensions dcp_extensions
-\set extensions dcp_extensions
+\set extensions_schema dcp_extensions
+\set create_trigger 'BEGIN IF EXISTS (SELECT * FROM pg_trigger WHERE tgname=''test_trigger'') THEN RAISE NOTICE ''Trigger "test_trigger" already exists. Skipping.''; ELSE CREATE TRIGGER test_trigger BEFORE INSERT ON ':unit_test_schema'.test_table FOR EACH ROW EXECUTE FUNCTION ':unit_test_schema'.test_function(); END IF; END;'
+\set uq_constraint 'BEGIN IF EXISTS(SELECT FROM information_schema.constraint_column_usage WHERE table_name = ''test_table_other'' AND table_schema = ':'unit_test_schema''  AND constraint_name = ''uq_description'') THEN RAISE NOTICE ''Constraint "fk_uq_descriptionid" already exists. Skipping.''; ELSE ALTER TABLE ':unit_test_schema'.test_table_other ADD CONSTRAINT uq_description UNIQUE (description); END IF; END;'
+\set fk_constraint 'BEGIN IF EXISTS(SELECT FROM information_schema.constraint_column_usage WHERE table_name = ''test_table_other'' AND table_schema = ':'unit_test_schema''  AND constraint_name = ''fk_id'') THEN RAISE NOTICE ''Constraint "fk_id" already exists. Skipping.''; ELSE ALTER TABLE unit_test_schema.test_table ADD CONSTRAINT fk_id FOREIGN KEY (id) REFERENCES ' :unit_test_schema'.test_table_other(id); END IF; END;'
+\set policy 'BEGIN CREATE POLICY test_policy ON ' :unit_test_schema'.test_table FOR ALL TO test_role USING (age > 18) WITH CHECK (age > 18); EXCEPTION WHEN duplicate_object THEN RAISE NOTICE ''Policy already exists. Ignoring...''; END;'
 
-SET search_path to :'extensions',:'ddl_schema';
+-- Search path does not usually require coded symbols but when run through psql the set variables
+SET search_path to :'extensions_schema',:'ddl_schema';
 
 CREATE SCHEMA IF NOT EXISTS :ddl_schema;
-
 
 /*
 This function takes a schema name as input and returns metadata information about the tables, columns, indexes,
@@ -308,18 +311,16 @@ BEGIN
     RETURN result;
 END;
 $$
-LANGUAGE plpgsql;
-
-
+LANGUAGE plpgsql set search_path to :ddl_schema;
 
 -- Prepare database for unit testing
 
 BEGIN;
 
-CREATE SCHEMA IF NOT EXISTS :dcp_extensions;
+CREATE SCHEMA IF NOT EXISTS :extensions_schema;
 
-CREATE EXTENSION pgtap
-	SCHEMA :extensions;
+CREATE EXTENSION IF NOT EXISTS pgtap
+	SCHEMA :extensions_schema;
 
 CREATE SCHEMA IF NOT EXISTS :unit_test_schema;
 
@@ -342,13 +343,10 @@ CREATE TABLE IF NOT EXISTS :unit_test_schema.test_table_other (
 );
 
 -- Add a unique constraint
-ALTER TABLE :unit_test_schema.test_table_other
-ADD CONSTRAINT uq_description UNIQUE (description);
+DO :'uq_constraint';
 
 -- Add a foreign key constraint
-ALTER TABLE :unit_test_schema.test_table
-ADD CONSTRAINT fk_id FOREIGN KEY (id) REFERENCES :unit_test_schema.test_table_other(id);
-
+DO :'fk_constraint';
 
 -- Create a partitioned table
 CREATE TABLE IF NOT EXISTS :unit_test_schema.partitioned_table (
@@ -375,12 +373,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER test_trigger
-    BEFORE INSERT ON :unit_test_schema.test_table
-    FOR EACH ROW
-    EXECUTE FUNCTION :unit_test_schema.test_function();
-
-
+-- DROP TRIGGER IF EXISTS test_trigger ON :unit_test_schema.test_table;
+DO :'create_trigger';
 
 -- Create a sequence
 CREATE SEQUENCE if not exists :unit_test_schema.test_sequence
@@ -391,15 +385,15 @@ NO CYCLE;
 
 -- Create a view
 CREATE or replace VIEW :unit_test_schema.test_view AS
-SELECT id, name
-FROM :unit_test_schema.test_table
-WHERE age > 18;
+    SELECT id, name
+    FROM :unit_test_schema.test_table
+    WHERE age > 18;
 
 -- Create a materialized view
 CREATE MATERIALIZED VIEW if not exists :unit_test_schema.test_materialized_view AS
-SELECT id, name
-FROM :unit_test_schema.test_table
-WHERE age > 18
+    SELECT id, name
+    FROM :unit_test_schema.test_table
+    WHERE age > 18
 WITH DATA;
 
 -- Create a rule
@@ -425,44 +419,45 @@ $do$;
 
 ALTER TABLE :unit_test_schema.test_table ENABLE ROW LEVEL security;
 -- Create a policy
-CREATE POLICY test_policy ON :unit_test_schema.test_table
-FOR ALL TO test_role
-USING (age > 18)
-WITH CHECK (age > 18);
+
+DO :'policy';
 
 -- Create statistics
 
-CREATE STATISTICS test_statistics (dependencies) ON id, name FROM :unit_test_schema.test_table;
-
-create table if not exists :unit_test_schema.get_database_metadata_expected_output(outputdata json);
-
-create table if not exists :unit_test_schema.get_schema_metadata_expected_output(outputdata json);
-
-insert into :unit_test_schema.get_database_metadata_expected_output select * from :ddl_schema.get_database_metadata();
-
-insert into :unit_test_schema.get_schema_metadata_expected_output select * from :ddl_schema.get_schema_metadata(:'unit_test_schema');
-
+CREATE STATISTICS IF NOT EXISTS test_statistics (dependencies) ON id, name FROM :unit_test_schema.test_table;
 
 CREATE OR REPLACE FUNCTION :unit_test_schema.test_get_metadata(schema_name text default :'ddl_schema')
  RETURNS SETOF text
  LANGUAGE plpgsql
 AS $function$
-
 BEGIN
-
   RETURN NEXT has_function(schema_name,'get_schema_metadata','get_schema_metadata available in'|| schema_name ||' schema');
   RETURN NEXT has_function(schema_name,'get_database_metadata','get_database_metadata available'|| schema_name ||'schema');
   RETURN NEXT can(schema_name,ARRAY['get_schema_metadata','get_database_metadata'] );
-  RETURN NEXT   function_lang_is( schema_name,'get_schema_metadata', ARRAY['text'],'plpgsql' ,'function language is plpgsql');
-  RETURN NEXT  function_lang_is( schema_name, 'get_database_metadata', 'plpgsql', 'function language is plpgsql' );
-  RETURN NEXT  function_returns(schema_name,'get_schema_metadata','json','get_schema_metadata returns a JSON');
-  RETURN NEXT  function_returns(schema_name,'get_database_metadata','json','get_database_metadata returns a JSON');
-  RETURN NEXT   results_eq('SELECT get_database_metadata::jsonb   from '||  schema_name ||'.get_database_metadata()','select outputdata::jsonb from unit_test_schema.get_database_metadata_expected_output','data matches' );
-  RETURN NEXT   results_eq('SELECT get_schema_metadata::jsonb   from  '||  schema_name ||'.get_schema_metadata(''unit_test_schema'')','select outputdata::jsonb from unit_test_schema.get_schema_metadata_expected_output','data matches' );
-
+  RETURN NEXT function_lang_is( schema_name,'get_schema_metadata', ARRAY['text'],'plpgsql' ,'function language is plpgsql');
+  RETURN NEXT function_lang_is( schema_name, 'get_database_metadata', 'plpgsql', 'function language is plpgsql' );
+  RETURN NEXT function_returns(schema_name,'get_schema_metadata','json','get_schema_metadata returns a JSON');
+  RETURN NEXT function_returns(schema_name,'get_database_metadata','json','get_database_metadata returns a JSON');
+  RETURN NEXT results_eq('SELECT get_schema_metadata::jsonb   from  '||  schema_name ||'.get_schema_metadata(''unit_test_schema'')',
+  'select outputdata::jsonb from unit_test_schema.get_schema_metadata_expected_output','data matches' );
+  RETURN NEXT results_eq('SELECT get_database_metadata::jsonb   from '||  schema_name ||'.get_database_metadata()',
+  'select outputdata::jsonb from unit_test_schema.get_database_metadata_expected_output','data matches' );
 END;
 $function$
 ;
+
+END;
+
+CREATE TABLE IF NOT EXISTS :unit_test_schema.get_database_metadata_expected_output(outputdata json);
+
+CREATE TABLE IF NOT EXISTS :unit_test_schema.get_schema_metadata_expected_output(outputdata json);
+
+TRUNCATE TABLE :unit_test_schema.get_database_metadata_expected_output;
+INSERT INTO :unit_test_schema.get_database_metadata_expected_output select * from :ddl_schema.get_database_metadata();
+
+TRUNCATE TABLE :unit_test_schema.get_schema_metadata_expected_output;
+INSERT INTO :unit_test_schema.get_schema_metadata_expected_output select * from :ddl_schema.get_schema_metadata('unit_test_schema');
+
 
 /*
 You should get a unit test result as below -
@@ -486,12 +481,6 @@ You should get a unit test result as below -
 */
 
 SELECT * from runtests(:'unit_test_schema'::name, 'test_get_metadata');
-
-END;
-
-
-
-
 
 
 
