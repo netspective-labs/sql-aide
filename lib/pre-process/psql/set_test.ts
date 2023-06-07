@@ -184,57 +184,64 @@ Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
   );
 });
 
-Deno.test("psqlSetMetaCmd correctly identifies directives", () => {
-  const directive = mod.psqlSetMetaCmd();
-  ta.assert(directive.isMetaCommand({
-    line: "\\set name John",
-    lineNum: 1,
-  }));
+Deno.test("psqlSetMetaCmd correctly identifies meta command", () => {
+  const mc = mod.psqlSetMetaCmd();
+  ta.assert(mc.isMetaCommand({ line: "\\set name John", lineNum: 1 }));
   ta.assertEquals(
-    directive.isMetaCommand({
-      line: "\\setx name John",
-      lineNum: 1,
-    }),
+    mc.isMetaCommand({ line: "\\setx name John", lineNum: 1 }),
     false,
   );
 });
 
-Deno.test("psqlSetMetaCmd correctly handles overrides", () => {
-  const directive = mod.psqlSetMetaCmd({
-    overrides: {
-      name: "Jane",
-    },
-  });
-  directive.handleMetaCommand({
-    line: "\\set name John",
-    lineNum: 1,
-  });
-
-  const vv = directive.varValue("name");
+Deno.test("psqlSetMetaCmd correctly handles meta command", () => {
+  const mc = mod.psqlSetMetaCmd({ overrides: { name: "Jane" } });
+  mc.handleMetaCommand({ line: "\\set name John", lineNum: 1 });
+  const vv = mc.varValue("name");
   ta.assert(vv.found);
   ta.assertEquals(vv.varValue, "Jane");
 });
 
+Deno.test("psqlSetMetaCmd correctly handles dependent variables", () => {
+  const mc = mod.psqlSetMetaCmd({ overrides: { name: "Jane" } });
+  mc.handleMetaCommand({ line: "\\set name John", lineNum: 1 });
+  mc.handleMetaCommand({ line: "\\set greeting 'Hello ' :name", lineNum: 2 });
+  mc.handleMetaCommand({
+    line: "\\set greeting2 'Hello ' :'name' ', how are you?'",
+    lineNum: 3,
+  });
+  const name = mc.varValue("name");
+  ta.assert(name.found);
+  ta.assertEquals(name.varValue, "Jane");
+
+  const greeting = mc.varValue("greeting");
+  ta.assert(greeting.found);
+  ta.assertEquals(greeting.varValue, "Hello Jane");
+
+  const greeting2 = mc.varValue("greeting2");
+  ta.assert(greeting2.found);
+  ta.assertEquals(greeting2.varValue, "Hello 'Jane', how are you?");
+});
+
 Deno.test("psqlSetMetaCmd handles single quoted values correctly", () => {
-  const directive = mod.psqlSetMetaCmd();
-  directive.handleMetaCommand({
+  const mc = mod.psqlSetMetaCmd();
+  mc.handleMetaCommand({
     line: "\\set greeting 'Hello, ''world''!'",
     lineNum: 1,
   });
 
-  const vv = directive.varValue("greeting");
+  const vv = mc.varValue("greeting");
   ta.assert(vv.found);
   ta.assertEquals(vv.varValue, "Hello, 'world'!");
 });
 
 Deno.test("psqlSetMetaCmd handles double quoted values correctly", () => {
-  const directive = mod.psqlSetMetaCmd();
-  directive.handleMetaCommand({
+  const mc = mod.psqlSetMetaCmd();
+  mc.handleMetaCommand({
     line: `\\set greeting "Hello, ""world""!"`,
     lineNum: 1,
   });
 
-  const vv = directive.varValue("greeting");
+  const vv = mc.varValue("greeting");
   ta.assert(vv.found);
   ta.assertEquals(vv.varValue, `Hello, "world"!`);
 });
