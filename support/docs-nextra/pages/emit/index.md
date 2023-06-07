@@ -1,5 +1,5 @@
 ---
-title: SQL Templates (emitter)
+title: SQLa Javascript/Typescript Templates
 ---
 
 These are the core interfaces:

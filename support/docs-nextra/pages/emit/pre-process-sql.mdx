@@ -1,5 +1,5 @@
 ---
-title: Pre-process SQL files for typical variable replacements
+title: SQLpp (SQLa Preprocessor)
 ---
 import { Callout, Steps } from 'nextra-theme-docs'
 
@@ -122,9 +122,8 @@ Supports these types of _include relative_ statements:
 
 ```psql
 \ir filename.sql
-\ir ../filename.sql
-\ir '../filename.sql'
-\ir "../filename.sql"
+\ir 'filename.sql'
+\ir "filename.sql"
 ```
 
 Similar to `psql`, `\ir` includes files relative to the location of the source
@@ -152,3 +151,57 @@ Similar to `psql`, supports this type of replacement:
 | `:name`   | John        |
 | `:'name'` | 'John'      |
 | `:"name"` | "John"      |
+
+## Examples
+
+Assume this file:
+
+```sql filename="include_test.fixture-01.sql"
+-- fixture-01
+
+\set name 'John Doe'
+\set table users
+\set unit_test_schema dcp_assurance
+
+SELECT * FROM users WHERE username = :'name';
+SELECT * FROM :table WHERE username = :'name';
+SELECT * FROM :"table" WHERE username = :'name';
+SELECT * FROM :"table" WHERE username::"varchar" = :'name';
+SELECT email FROM :unit_test_schema.upsert_test_user((1, 'Updated Name', 'john.doe@example.com'):::"unit_test_schema".test_user);
+```
+
+Assume these declarations in a `*.psql` file:
+
+```sql filename="test.sql"
+-- *** before first include ***
+
+\\include './include_test.fixture-01.sql'
+
+-- *** after first include ***
+```
+
+Running this command:
+
+```shell
+deno run ./pre-process/mod.ts psql test.sql --set.name="Shahid Shah"
+```
+
+Produces this output:
+
+```sql
+-- *** before first include ***
+
+-- fixture-01
+
+-- \\set name 'John Doe' (variable: name, value: John Doe, srcLine: 5)
+-- \\set table users (variable: table, value: users, srcLine: 6)
+-- \\set unit_test_schema dcp_assurance (variable: unit_test_schema, value: dcp_assurance, srcLine: 7)
+
+SELECT * FROM users WHERE username = 'Shahid Shah';
+SELECT * FROM users WHERE username = 'Shahid Shah';
+SELECT * FROM "users" WHERE username = 'Shahid Shah';
+SELECT * FROM "users" WHERE username::"varchar" = 'Shahid Shah';
+SELECT email FROM dcp_assurance.upsert_test_user((1, 'Updated Name', 'john.doe@example.com')::"dcp_assurance".test_user);
+
+-- *** after first include ***
+```
