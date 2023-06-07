@@ -98,7 +98,7 @@ Deno.test("includeDirective correctly handles file content", () => {
     const c of [
       [
         directive.handleMetaCommand({
-          line: `\\i './include_test.fixture-01.sql'`,
+          line: `\\i './include_test.fixture-01.psql'`,
           lineNum: 1,
         }),
         {
@@ -129,7 +129,7 @@ Deno.test("includeDirective correctly handles file content", () => {
       replCount: e.content?.length ?? 0,
     })),
     [
-      { name: "./include_test.fixture-01.sql", replCount: 11 },
+      { name: "./include_test.fixture-01.psql", replCount: 11 },
     ],
   );
 });

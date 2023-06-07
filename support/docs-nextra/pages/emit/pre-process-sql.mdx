@@ -156,7 +156,7 @@ Similar to `psql`, supports this type of replacement:
 
 Assume this file:
 
-```sql filename="include_test.fixture-01.sql"
+```sql filename="include_test.fixture-01.psql"
 -- fixture-01
 
 \set name 'John Doe'
@@ -175,7 +175,7 @@ Assume these declarations in a `*.psql` file:
 ```sql filename="test.sql"
 -- *** before first include ***
 
-\\include './include_test.fixture-01.sql'
+\\include './include_test.fixture-01.psql'
 
 -- *** after first include ***
 ```

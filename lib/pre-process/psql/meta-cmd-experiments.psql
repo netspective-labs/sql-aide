@@ -1,0 +1,49 @@
+----------------------------------------------------------------------
+-- use single-line \set commands that do not refer to other variables;
+-- these are supported in `psql` and in SQLpp
+----------------------------------------------------------------------
+
+\set name 'Shahid Shah'
+\set table_name 'users'
+\set column_name 'email'
+
+----------------------------------------------------------------------
+-- use single-line \set commands that refer to other variables;
+-- these are supported in `psql` but need to be implemented for SQLpp
+----------------------------------------------------------------------
+
+-- note :'name' is defined above
+\set greeting 'Hello, ' :'name' '!'
+
+-- note special quoting :"column_name" and :table_name
+\set select_cmd 'SELECT ' :"column_name" ' FROM ' :table_name ';'
+
+\echo :greeting
+\echo :select_cmd
+
+--------------------------------------------------------------------------
+-- use `format` to create multi-line variables (\set does not support it);
+-- these are supported in `psql` but need to be implemented for SQLpp
+--------------------------------------------------------------------------
+
+-- build dynamic SQL using `format` and store
+SELECT format('
+    SELECT "%1$s"
+    FROM %2$s;',
+    :'column_name', :'table_name')
+AS select_cmd_multi_line_1;
+\gset
+
+-- reminder: \gexec after a select format('...') as X will execute as SQL X
+
+-- if you execute the above in psql you will get: --
+
+-- SELECT "email" FROM users;
+-- ┌─────────────────────────┐
+-- │ select_cmd_multi_line_1 │
+-- ├─────────────────────────┤
+-- │                        ↵│
+-- │     SELECT "email"     ↵│
+-- │     FROM users;         │
+-- └─────────────────────────┘
+-- (1 row)

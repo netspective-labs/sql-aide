@@ -72,7 +72,7 @@ Deno.test("Include file and perform variable substitution, keep \\set in result,
   const sql = uws(`
       -- *** before first include ***
 
-      \\include './include_test.fixture-01.sql'
+      \\include './include_test.fixture-01.psql'
 
       -- *** after first include ***`);
 

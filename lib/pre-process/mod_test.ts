@@ -9,7 +9,7 @@ const relativeFilePath = (name: string) => {
 
 Deno.test("psql-style pre-process", async () => {
   const CLI = relativeFilePath("./mod.ts");
-  const srcFile = relativeFilePath("./psql/include_test.fixture-01.sql");
+  const srcFile = relativeFilePath("./psql/include_test.fixture-01.psql");
   const output = await $`./${CLI} psql ${srcFile}`.text();
   ta.assertEquals(
     output,
