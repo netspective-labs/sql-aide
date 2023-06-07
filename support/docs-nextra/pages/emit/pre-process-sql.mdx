@@ -102,7 +102,7 @@ to be defined in the source and overridden via CLI.
   you can contribute them or create tickets for suggested additions.
 </Callout>
 
-## \include
+## `\include`
 
 Supports these types of `include` statements (must be at the start of a line):
 
@@ -116,7 +116,23 @@ Supports these types of `include` statements (must be at the start of a line):
 Similar to `psql`, `\i` and `\include` are synonyms; relative files are resolved
 from the current working directory but other rules can be provided as well.
 
-## \set
+## `\ir`
+
+Supports these types of _include relative_ statements:
+
+```psql
+\ir filename.sql
+\ir ../filename.sql
+\ir '../filename.sql'
+\ir "../filename.sql"
+```
+
+Similar to `psql`, `\ir` includes files relative to the location of the source
+file. Because _source file_ might not be clear in the context of SQLpp you may
+need to provide a callback function to the preprocessor to define what "relative"
+means.
+
+## `\set`
 
 Supports these types of `set` statements (must be at the start of a line):
 
