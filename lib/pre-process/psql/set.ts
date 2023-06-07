@@ -7,11 +7,87 @@ export interface VarValueDictionary {
     | undefined;
 }
 
+export interface PsqlSetMetaCmdToken {
+  readonly token: string;
+  readonly quoteType?: "'" | '"' | undefined;
+  readonly hasColon?: boolean;
+}
+
+export interface PsqlSetMetaCmdTokens {
+  readonly isSet: boolean;
+  readonly identifier?: string;
+  readonly values?: PsqlSetMetaCmdToken[];
+  readonly resolve?: (metaCmd: PsqlSetMetaCmd) => string;
+}
+
+export const psqlSetMetaCmdRegex = /^\s*\\set\s+(\w+)\s*=?\s*(.*)$/;
+export const isPsqlSetMetaCmd = (line: string) =>
+  line.match(psqlSetMetaCmdRegex) ? true : false;
+
+export function psqlSetMetaCmdTokens(line: string): PsqlSetMetaCmdTokens {
+  const setMatch = line.match(psqlSetMetaCmdRegex);
+  if (!setMatch) {
+    return { isSet: false };
+  }
+
+  const identifier = setMatch[1];
+  let remainder = setMatch[2].trim();
+
+  const values: PsqlSetMetaCmdToken[] = [];
+  while (remainder) {
+    const hasColon = remainder[0] === ":";
+    if (hasColon) remainder = remainder.slice(1);
+
+    let quoteType: "'" | '"' | undefined = undefined;
+    if (remainder[0] === "'" || remainder[0] === '"') {
+      quoteType = remainder[0] as "'" | '"';
+      remainder = remainder.slice(1);
+    }
+
+    let endIdx = 0;
+    while (
+      endIdx < remainder.length &&
+      (quoteType
+        ? remainder[endIdx] !== quoteType || remainder[endIdx + 1] === quoteType
+        : !/\s/.test(remainder[endIdx]))
+    ) {
+      if (quoteType && remainder[endIdx] === quoteType) endIdx++;
+      endIdx++;
+    }
+
+    const token = remainder.slice(0, endIdx).replace(
+      new RegExp(`${quoteType}{2}`, "g"),
+      quoteType ?? "",
+    );
+    values.push({ token, quoteType, hasColon });
+
+    remainder = remainder.slice(endIdx + (quoteType ? 1 : 0)).trim();
+  }
+
+  const resolve = (cmd: PsqlSetMetaCmd) => {
+    let value = "";
+    for (const v of values) {
+      if (v.hasColon) {
+        const vv = cmd.varValue(v.token);
+        if (vv.found) {
+          value += v.quoteType
+            ? `${v.quoteType}${vv.varValue}${v.quoteType}`
+            : (vv.varValue ?? "");
+        } else {
+          value += cmd.onVarValueNotFound(v.token) ?? `??${v.token}??`;
+        }
+      } else {
+        value += v.token;
+      }
+    }
+    return value;
+  };
+
+  return { isSet: true, identifier, values, resolve };
+}
+
 export interface SetVarValueDecl {
-  readonly varName: string;
-  readonly varValue: string;
-  readonly varValueQuote: string | undefined;
-  readonly hasEquals: boolean;
+  readonly mcTokens: PsqlSetMetaCmdTokens;
   readonly srcLine: string;
   readonly srcLineNum: number;
 }
@@ -22,6 +98,7 @@ export interface PsqlSetMetaCmd extends PsqlMetaCommand {
     | {
       readonly found: true;
       readonly override: false;
+      readonly varValue: string | undefined;
     } & SetVarValueDecl
     | {
       readonly found: true;
@@ -32,8 +109,7 @@ export interface PsqlSetMetaCmd extends PsqlMetaCommand {
       readonly found: false;
     };
   readonly handleSetInResult: (
-    variable: string,
-    value: string,
+    mcTokens: PsqlSetMetaCmdTokens,
     line: string,
     lineNum: number,
   ) => string | undefined;
@@ -68,16 +144,14 @@ export function psqlSetMetaCmd(
     & { readonly overrides?: VarValueDictionary },
 ): PsqlSetMetaCmd {
   const catalog: PsqlSetMetaCmd["catalog"] = new Map();
-  // the \3 refers to starting quotation, if any
-  // this regex is used across invocations, be careful and don't include `/g`
-  const regex = /^\s*\\set\s+(\w+)\s*(=)?\s*(['"])?((?:[^\3]|\\.)*)\3\s*$/;
   const handleSetInResult = init?.handleSetInResult ?? ((
-    variable,
-    value,
+    mcTokens,
     line,
     lineNum,
   ) =>
-    `-- ${line} (variable: ${variable}, value: ${value}, srcLine: ${lineNum})`);
+    `-- ${line} (variable: ${mcTokens.identifier}, value: ${mcTokens.resolve?.(
+      psmcInstance,
+    )}, srcLine: ${lineNum})`);
   const onVarValueNotFound = init?.onVarValueNotFound ?? (() => undefined);
   const onUndefinedVarValue = init?.onUndefinedVarValue ?? (() => undefined);
 
@@ -97,34 +171,33 @@ export function psqlSetMetaCmd(
       }
       const entry = catalog.get(varName);
       if (entry) {
-        return { found: true, override: false, ...entry };
+        return {
+          found: true,
+          override: false,
+          ...entry,
+          varValue: entry.mcTokens.resolve?.(psmcInstance),
+        };
       }
       return { found: false };
     },
-    isMetaCommand: (encountered) =>
-      encountered.line.match(regex) ? true : false,
+    isMetaCommand: (encountered) => isPsqlSetMetaCmd(encountered.line),
     handleSetInResult,
     onVarValueNotFound,
     onUndefinedVarValue,
     handleMetaCommand: (encountered) => {
       let line = encountered.line;
       let state: "mutated" | "not-mutated" | "removed" = "not-mutated";
-      const match = regex.exec(encountered.line);
-      if (match) {
-        const [, varName, hasEquals, varValueQuote, varValue] = match;
+      const mcTokens = psqlSetMetaCmdTokens(line);
+      if (mcTokens.isSet && mcTokens.identifier) {
         const srcLine = encountered.line;
         const srcLineNum = encountered.lineNum;
-        catalog.set(varName, {
-          varName,
-          varValue,
-          hasEquals: hasEquals ? true : false,
-          varValueQuote,
+        catalog.set(mcTokens.identifier, {
+          mcTokens,
           srcLine: encountered.line,
           srcLineNum: encountered.lineNum,
         });
         const hsir = handleSetInResult(
-          varName,
-          varValue,
+          mcTokens,
           srcLine,
           srcLineNum,
         );
@@ -140,65 +213,6 @@ export function psqlSetMetaCmd(
     interpolate: (text) => interpolatePsql(text, psmcInstance),
   };
   return psmcInstance;
-}
-
-export interface PsqlSetMetaCmdToken {
-  readonly token: string;
-  readonly quoteType: "'" | '"' | null;
-  readonly hasColon: boolean;
-}
-
-export interface PsqlSetMetaCmdTokens {
-  readonly isSet: boolean;
-  readonly identifier?: string;
-  readonly values?: PsqlSetMetaCmdToken[];
-}
-
-export function psqlSetMetaCmdTokens(
-  line: string,
-): PsqlSetMetaCmdTokens {
-  const setRegex = /^\s*\\set\s+(\w+)\s*(.*)$/;
-
-  const setMatch = line.match(setRegex);
-  if (!setMatch) {
-    return { isSet: false };
-  }
-
-  const identifier = setMatch[1];
-  let remainder = setMatch[2].trim();
-
-  const values: PsqlSetMetaCmdToken[] = [];
-  while (remainder) {
-    const hasColon = remainder[0] === ":";
-    if (hasColon) remainder = remainder.slice(1);
-
-    let quoteType: "'" | '"' | null = null;
-    if (remainder[0] === "'" || remainder[0] === '"') {
-      quoteType = remainder[0] as "'" | '"';
-      remainder = remainder.slice(1);
-    }
-
-    let endIdx = 0;
-    while (
-      endIdx < remainder.length &&
-      (quoteType
-        ? remainder[endIdx] !== quoteType || remainder[endIdx + 1] === quoteType
-        : !/\s/.test(remainder[endIdx]))
-    ) {
-      if (quoteType && remainder[endIdx] === quoteType) endIdx++;
-      endIdx++;
-    }
-
-    const token = remainder.slice(0, endIdx).replace(
-      new RegExp(`${quoteType}{2}`, "g"),
-      quoteType ?? "",
-    );
-    values.push({ token, quoteType, hasColon });
-
-    remainder = remainder.slice(endIdx + (quoteType ? 1 : 0)).trim();
-  }
-
-  return { isSet: true, identifier, values };
 }
 
 export function interpolatePsql(text: string[] | string, svvd: PsqlSetMetaCmd) {

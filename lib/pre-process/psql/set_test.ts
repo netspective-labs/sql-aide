@@ -9,7 +9,8 @@ Deno.test("psqlSetMetaCmdTokens simple unquoted", () => {
   ta.assertEquals(result, {
     isSet: true,
     identifier: "hello",
-    values: [{ token: "world", quoteType: null, hasColon: false }],
+    values: [{ token: "world", quoteType: undefined, hasColon: false }],
+    resolve: result.resolve,
   });
 });
 
@@ -21,6 +22,7 @@ Deno.test("psqlSetMetaCmdTokens simple single quotes", () => {
     isSet: true,
     identifier: "hello",
     values: [{ token: "world", quoteType: "'", hasColon: false }],
+    resolve: result.resolve,
   });
 });
 
@@ -32,6 +34,7 @@ Deno.test("psqlSetMetaCmdTokens simple single quotes with escaped single quote",
     isSet: true,
     identifier: "hello",
     values: [{ token: "wor'ld", quoteType: "'", hasColon: false }],
+    resolve: result.resolve,
   });
 });
 
@@ -42,7 +45,8 @@ Deno.test("psqlSetMetaCmdTokens simple dependent variable", () => {
   ta.assertEquals(result, {
     isSet: true,
     identifier: "hello",
-    values: [{ token: "world", quoteType: null, hasColon: true }],
+    values: [{ token: "world", quoteType: undefined, hasColon: true }],
+    resolve: result.resolve,
   });
 });
 
@@ -65,8 +69,9 @@ Deno.test("psqlSetMetaCmdTokens with mixed quotes and dependent variable", () =>
     values: [
       { token: "world", quoteType: "'", hasColon: false },
       { token: "universe", quoteType: '"', hasColon: false },
-      { token: "planet", quoteType: null, hasColon: true },
+      { token: "planet", quoteType: undefined, hasColon: true },
     ],
+    resolve: result.resolve,
   });
 });
 
@@ -81,6 +86,7 @@ Deno.test("psqlSetMetaCmdTokens with mixed quotes and escapes for those quotes",
       { token: "wor'ld", quoteType: "'", hasColon: false },
       { token: 'uni"verse', quoteType: '"', hasColon: false },
     ],
+    resolve: result.resolve,
   });
 });
 
@@ -92,28 +98,29 @@ Deno.test("psqlSetMetaCmdTokens with multiple dependent variables tokens", () =>
     isSet: true,
     identifier: "hello",
     values: [
-      { token: "world", quoteType: null, hasColon: true },
+      { token: "world", quoteType: undefined, hasColon: true },
       { token: "universe", quoteType: "'", hasColon: true },
       { token: "planet", quoteType: '"', hasColon: true },
     ],
+    resolve: result.resolve,
   });
 });
 
 Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
-  const d = mod.psqlSetMetaCmd();
+  const smc = mod.psqlSetMetaCmd();
 
   for (
     const c of [
-      [d.handleMetaCommand({ line: "\\set count 42", lineNum: 1 }), {
+      [smc.handleMetaCommand({ line: "\\set count 42", lineNum: 1 }), {
         state: "mutated",
         line: "-- \\set count 42 (variable: count, value: 42, srcLine: 1)",
       }],
-      [d.handleMetaCommand({ line: "\\set name John", lineNum: 2 }), {
+      [smc.handleMetaCommand({ line: "\\set name John", lineNum: 2 }), {
         state: "mutated",
         line: "-- \\set name John (variable: name, value: John, srcLine: 2)",
       }],
       [
-        d.handleMetaCommand({
+        smc.handleMetaCommand({
           line: "\\set url 'https://example.com'",
           lineNum: 3,
         }),
@@ -124,7 +131,7 @@ Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
         },
       ],
       [
-        d.handleMetaCommand({
+        smc.handleMetaCommand({
           line: "\\set var = value",
           lineNum: 4,
         }),
@@ -135,25 +142,25 @@ Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
         },
       ],
       [
-        d.handleMetaCommand({
-          line: "\\set greeting 'Hello, 'world'!'",
+        smc.handleMetaCommand({
+          line: "\\set greeting 'Hello, ''world''!'",
           lineNum: 5,
         }),
         {
           state: "mutated",
           line:
-            "-- \\set greeting 'Hello, 'world'!' (variable: greeting, value: Hello, 'world'!, srcLine: 5)",
+            "-- \\set greeting 'Hello, ''world''!' (variable: greeting, value: Hello, 'world'!, srcLine: 5)",
         },
       ],
       [
-        d.handleMetaCommand({
-          line: `\\set greeting2 "Hello, \"world\"!"`,
+        smc.handleMetaCommand({
+          line: `\\set greeting2 "Hello, ""world""!"`,
           lineNum: 6,
         }),
         {
           state: "mutated",
           line:
-            `-- \\set greeting2 "Hello, \"world\"!" (variable: greeting2, value: Hello, "world"!, srcLine: 6)`,
+            `-- \\set greeting2 "Hello, ""world""!" (variable: greeting2, value: Hello, "world"!, srcLine: 6)`,
         },
       ],
     ]
@@ -162,9 +169,9 @@ Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
   }
 
   ta.assertEquals(
-    Array.from(d.catalog.values()).map((e) => ({
-      name: e.varName,
-      value: e.varValue,
+    Array.from(smc.catalog.values()).map((e) => ({
+      name: e.mcTokens.identifier,
+      value: e.mcTokens.resolve?.(smc),
     })),
     [
       { name: "count", value: "42" },
@@ -211,7 +218,7 @@ Deno.test("psqlSetMetaCmd correctly handles overrides", () => {
 Deno.test("psqlSetMetaCmd handles single quoted values correctly", () => {
   const directive = mod.psqlSetMetaCmd();
   directive.handleMetaCommand({
-    line: "\\set greeting 'Hello, 'world'!'",
+    line: "\\set greeting 'Hello, ''world''!'",
     lineNum: 1,
   });
 
@@ -223,7 +230,7 @@ Deno.test("psqlSetMetaCmd handles single quoted values correctly", () => {
 Deno.test("psqlSetMetaCmd handles double quoted values correctly", () => {
   const directive = mod.psqlSetMetaCmd();
   directive.handleMetaCommand({
-    line: `\\set greeting "Hello, \"world\"!"`,
+    line: `\\set greeting "Hello, ""world""!"`,
     lineNum: 1,
   });
 
