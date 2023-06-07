@@ -2,14 +2,14 @@
 title: Overview of Examples
 ---
 
-## Getting Started
+# Getting Started
 
-The "Getting Started" section is divided into two sub-sections: "Governed
-Examples" and "Ungoverned Examples." These sections offer insights into using
-SQLa for SQL generation in different contexts. Let's take a closer look at each
-section:
+The "Getting Started" section is divided into three sub-sections: "Governed
+Examples", "Ungoverned Examples", and "SQLa Preprocessor." These sections offer
+insights into using SQLa for SQL generation in different contexts. Let's take a
+closer look at each section:
 
-### Ungoverned Examples
+## Ungoverned Examples (full Typescript/Javascript templates)
 
 The Ungoverned Examples section provides insights on how to use Zod-based
 schemas directly to generate SQL. Zod is a powerful TypeScript library that
@@ -19,7 +19,7 @@ the need for a predefined governance structure. This section offers flexibility
 and freedom for projects that don't require strict governance but still benefit
 from the strong typing and schema validations provided by Zod.
 
-### Governed Examples
+## Governed Examples (full Typescript/Javascript templates)
 
 This section showcases how to implement governed schemas in SQLa to ensure
 consistency, adherence to conventions, and robust SQL generation. Governed
@@ -54,11 +54,35 @@ enforce rules within your SQL generation workflow. By combining the power of Zod
 and SQLa, you can achieve type-safety, maintain standardized SQL generation
 practices, and ensure the integrity of your generated SQL code.
 
-### Mix and Match
+## `SQLpp` Preprocess (for migrating existing SQL files)
 
-By exploring both the Governed Examples and Ungoverned Examples sections, you
-can gain a comprehensive understanding of how to utilize SQLa for SQL generation
-in different scenarios. Whether you need to enforce governance and consistency
-or require flexibility with schema definitions, SQLa provides the necessary
-tools and features to streamline your SQL generation workflow and ensure
-high-quality SQL code.
+If you have existing SQL files that need to be re-used, check out
+[`SQLa`'s `SQLpp` (SQL preprocessor)](../emit/pre-process-sql/) which serves as
+an intermediary stepping stone in the progression from raw SQL to complex SQL
+generation.
+
+For developers starting with raw SQL or DBAs that are not developers, jumping
+directly into the deep end with sophisticated SQL generators might be a daunting
+challenge. SQLpp, with its simpler templating and basic functionalities like
+`include` statements and variable setting, provides a more gradual transition.
+
+It allows users to enhance their SQL scripting capabilities beyond raw SQL,
+without the immediate complexity of full-scale SQL generators. This enables a
+smoother learning curve, building confidence and familiarity with SQL scripting
+conventions before progressing to more advanced SQL generation techniques.
+
+This phased approach also allows developers to appreciate and better understand
+the nuances and power of SQL generation, ultimately resulting in more effective
+and efficient SQL operations when they transition to using full-fledged SQL
+generators.
+
+## Mix and Match
+
+By exploring the `SQLpp`, Governed Examples and Ungoverned Examples sections,
+you can gain a comprehensive understanding of how to utilize SQLa for SQL
+generation in different scenarios. Whether you need to enforce governance and
+consistency or require flexibility with schema definitions, SQLa provides the
+necessary tools and features to streamline your SQL generation workflow and
+ensure high-quality SQL code. And if you just need some minimal templating
+capabilities while you learn the full power of Typescript and Javascript
+templates you can start with `SQLpp`.
