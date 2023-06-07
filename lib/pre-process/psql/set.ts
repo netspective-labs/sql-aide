@@ -142,6 +142,65 @@ export function psqlSetMetaCmd(
   return psmcInstance;
 }
 
+export interface PsqlSetMetaCmdToken {
+  readonly token: string;
+  readonly quoteType: "'" | '"' | null;
+  readonly hasColon: boolean;
+}
+
+export interface PsqlSetMetaCmdTokens {
+  readonly isSet: boolean;
+  readonly identifier?: string;
+  readonly values?: PsqlSetMetaCmdToken[];
+}
+
+export function psqlSetMetaCmdTokens(
+  line: string,
+): PsqlSetMetaCmdTokens {
+  const setRegex = /^\s*\\set\s+(\w+)\s*(.*)$/;
+
+  const setMatch = line.match(setRegex);
+  if (!setMatch) {
+    return { isSet: false };
+  }
+
+  const identifier = setMatch[1];
+  let remainder = setMatch[2].trim();
+
+  const values: PsqlSetMetaCmdToken[] = [];
+  while (remainder) {
+    const hasColon = remainder[0] === ":";
+    if (hasColon) remainder = remainder.slice(1);
+
+    let quoteType: "'" | '"' | null = null;
+    if (remainder[0] === "'" || remainder[0] === '"') {
+      quoteType = remainder[0] as "'" | '"';
+      remainder = remainder.slice(1);
+    }
+
+    let endIdx = 0;
+    while (
+      endIdx < remainder.length &&
+      (quoteType
+        ? remainder[endIdx] !== quoteType || remainder[endIdx + 1] === quoteType
+        : !/\s/.test(remainder[endIdx]))
+    ) {
+      if (quoteType && remainder[endIdx] === quoteType) endIdx++;
+      endIdx++;
+    }
+
+    const token = remainder.slice(0, endIdx).replace(
+      new RegExp(`${quoteType}{2}`, "g"),
+      quoteType ?? "",
+    );
+    values.push({ token, quoteType, hasColon });
+
+    remainder = remainder.slice(endIdx + (quoteType ? 1 : 0)).trim();
+  }
+
+  return { isSet: true, identifier, values };
+}
+
 export function interpolatePsql(text: string[] | string, svvd: PsqlSetMetaCmd) {
   // now perform variables replacement
   const inspect: {

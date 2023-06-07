@@ -1,5 +1,103 @@
 import { testingAsserts as ta } from "../../../deps-test.ts";
 import * as mod from "./set.ts";
+import { PsqlSetMetaCmdTokens, psqlSetMetaCmdTokens } from "./set.ts";
+
+Deno.test("psqlSetMetaCmdTokens simple unquoted", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello world`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [{ token: "world", quoteType: null, hasColon: false }],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens simple single quotes", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello 'world'`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [{ token: "world", quoteType: "'", hasColon: false }],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens simple single quotes with escaped single quote", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello 'wor''ld'`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [{ token: "wor'ld", quoteType: "'", hasColon: false }],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens simple dependent variable", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello :world`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [{ token: "world", quoteType: null, hasColon: true }],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens is not a set meta command", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  hello world`,
+  );
+  ta.assertEquals(result, {
+    isSet: false,
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens with mixed quotes and dependent variable", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello 'world' "universe" :planet`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [
+      { token: "world", quoteType: "'", hasColon: false },
+      { token: "universe", quoteType: '"', hasColon: false },
+      { token: "planet", quoteType: null, hasColon: true },
+    ],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens with mixed quotes and escapes for those quotes", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello 'wor''ld' "uni""verse"`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [
+      { token: "wor'ld", quoteType: "'", hasColon: false },
+      { token: 'uni"verse', quoteType: '"', hasColon: false },
+    ],
+  });
+});
+
+Deno.test("psqlSetMetaCmdTokens with multiple dependent variables tokens", () => {
+  const result: PsqlSetMetaCmdTokens = psqlSetMetaCmdTokens(
+    `  \\set hello :world :'universe' :"planet"`,
+  );
+  ta.assertEquals(result, {
+    isSet: true,
+    identifier: "hello",
+    values: [
+      { token: "world", quoteType: null, hasColon: true },
+      { token: "universe", quoteType: "'", hasColon: true },
+      { token: "planet", quoteType: '"', hasColon: true },
+    ],
+  });
+});
 
 Deno.test("psqlSetMetaCmd correctly handles declarations", () => {
   const d = mod.psqlSetMetaCmd();
