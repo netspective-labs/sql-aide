@@ -18,15 +18,22 @@
 -- note special quoting :"column_name" and :table_name
 \set select_cmd 'SELECT ' :"column_name" ' FROM ' :table_name ';'
 
+-- example of how to create dynamic code without `format`
+\set dcp_extensions 'dcp_extensions'
+\set code 'BEGIN CREATE DOMAIN ' :dcp_extensions '.execution_context as ' :"dcp_extensions" '.ltree; EXCEPTION WHEN DUPLICATE_OBJECT THEN RAISE NOTICE ''domain "execution_context" already exists in schema ' :dcp_extensions ', skipping''; END'
+
 \echo :greeting
 \echo :select_cmd
+\echo :code
+
+-- if you run `DO :code` in psql you can execute the dynamically
 
 --------------------------------------------------------------------------
 -- use `format` to create multi-line variables (\set does not support it);
 -- these are supported in `psql` but need to be implemented for SQLpp
 --------------------------------------------------------------------------
 
--- build dynamic SQL using `format` and store
+-- build dynamic SQL using `format` and store into variable using \gset
 SELECT format('
     SELECT "%1$s"
     FROM %2$s;',
@@ -41,6 +48,7 @@ AS select_cmd_multi_line_1;
 
 -- Hello, 'Shahid Shah'!
 -- SELECT "email" FROM users;
+-- BEGIN CREATE DOMAIN dcp_extensions.execution_context as "dcp_extensions".ltree; EXCEPTION WHEN DUPLICATE_OBJECT THEN RAISE NOTICE 'domain "execution_context" already exists in schema dcp_extensions, skipping'; END
 -- ┌─────────────────────────┐
 -- │ select_cmd_multi_line_1 │
 -- ├─────────────────────────┤
@@ -50,8 +58,8 @@ AS select_cmd_multi_line_1;
 -- └─────────────────────────┘
 -- (1 row)
 
--- Time: 22.938 ms
--- Time: 17.769 ms
+-- Time: 16.758 ms
+-- Time: 15.564 ms
 
 --     SELECT "email"
 --     FROM users;
