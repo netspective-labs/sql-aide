@@ -8,10 +8,15 @@ assignees: ''
 ---
 
 **Describe the bug and SQLa version**
-A clear and concise description of what the bug is and the version of SQLa you were using.
+
+A clear and concise description of what the bug is and the version of SQLa you
+were using.
 
 **To Reproduce**
-What code did you write that created the invalid output? SQLa is a code generator that usually generates SQL so include the wrong behavior in a SQL block like below.
+
+What code did you write that created the invalid output? SQLa is a code
+generator that usually generates SQL so include the wrong behavior in a SQL
+block like below.
 
 ```typescript
 // the Typescript code you used
@@ -22,7 +27,9 @@ What code did you write that created the invalid output? SQLa is a code generato
 ```
 
 **Expected behavior**
-SQLa is a code generator that usually generates SQL so include what SQL you _wanted_ generated. Include a full example of the SQL block.
+
+SQLa is a code generator that usually generates SQL so include what SQL you
+_wanted_ generated. Include a full example of the SQL block.
 
 ```sql
 --- the right SQL goes here
