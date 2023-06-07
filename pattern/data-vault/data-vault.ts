@@ -212,12 +212,16 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         ReturnType<typeof keys.ulidPrimaryKey>
       >
       & typeof housekeeping.columns,
-  >(hubName: HubName, props: ColumnsShape) => {
+  >(
+    hubName: HubName,
+    props: ColumnsShape,
+    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  ) => {
     const hubTableName = names.hubTableName(hubName);
     const hubTableDefn = table(hubTableName, {
       ...props,
       ...housekeeping.columns,
-    });
+    }, tdOptions);
 
     const satelliteTable = <
       SatelliteName extends string,
