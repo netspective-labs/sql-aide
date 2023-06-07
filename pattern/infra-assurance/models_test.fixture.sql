@@ -151,11 +151,6 @@ CREATE TABLE IF NOT EXISTS "audit_status" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS "ethernet_interface" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "party_relation_type" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
@@ -205,12 +200,12 @@ CREATE TABLE IF NOT EXISTS "graph_nature" (
 -- content tables
 CREATE TABLE IF NOT EXISTS "graph" (
     "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "graph_nature_code" TEXT NOT NULL,
+    "graph_nature_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("graph_nature_code") REFERENCES "graph_nature"("code")
+    FOREIGN KEY("graph_nature_id") REFERENCES "graph_nature"("code")
 );
 CREATE TABLE IF NOT EXISTS "boundary" (
     "boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -297,7 +292,7 @@ CREATE TABLE IF NOT EXISTS "party_relation" (
     "party_id" INTEGER NOT NULL,
     "related_party_id" INTEGER NOT NULL,
     "relation_type_id" TEXT NOT NULL,
-    "party_role_id" TEXT NOT NULL,
+    "party_role_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
@@ -636,108 +631,6 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
     FOREIGN KEY("auditor_org_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("auditor_person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("auditor_status_type_id") REFERENCES "audit_status"("code")
-);
-CREATE TABLE IF NOT EXISTS "load_average" (
-    "load_average_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "load_average" REAL NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
-);
-CREATE TABLE IF NOT EXISTS "disk_usage" (
-    "disk_usage_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "total_bytes" INTEGER NOT NULL,
-    "used_bytes" INTEGER NOT NULL,
-    "free_bytes" INTEGER NOT NULL,
-    "percent_used" REAL NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
-);
-CREATE TABLE IF NOT EXISTS "network_interface" (
-    "network_interface_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT NOT NULL,
-    "ethernet_interface_id" TEXT NOT NULL,
-    "mac_address" TEXT NOT NULL,
-    "ip_addresses" TEXT NOT NULL,
-    "netmask" TEXT NOT NULL,
-    "gateway" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("ethernet_interface_id") REFERENCES "ethernet_interface"("code")
-);
-CREATE TABLE IF NOT EXISTS "operating_system" (
-    "operating_system_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT NOT NULL,
-    "version" TEXT NOT NULL,
-    "architecture" TEXT NOT NULL,
-    "kernel_version" TEXT NOT NULL,
-    "boot_time" TIMESTAMP NOT NULL,
-    "uptime_seconds" INTEGER NOT NULL,
-    "load_average_id" INTEGER NOT NULL,
-    "cpu_usage_percent" REAL NOT NULL,
-    "memory_total_bytes" INTEGER NOT NULL,
-    "memory_available_bytes" INTEGER NOT NULL,
-    "swap_total_bytes" INTEGER NOT NULL,
-    "swap_used_bytes" INTEGER NOT NULL,
-    "disk_usage_id" INTEGER NOT NULL,
-    "network_interface_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("load_average_id") REFERENCES "load_average"("load_average_id"),
-    FOREIGN KEY("disk_usage_id") REFERENCES "disk_usage"("disk_usage_id"),
-    FOREIGN KEY("network_interface_id") REFERENCES "network_interface"("network_interface_id")
-);
-CREATE TABLE IF NOT EXISTS "cpu" (
-    "cpu_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT NOT NULL,
-    "cores" INTEGER NOT NULL,
-    "usage_percent" REAL NOT NULL,
-    "load_average_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("load_average_id") REFERENCES "load_average"("load_average_id")
-);
-CREATE TABLE IF NOT EXISTS "memory" (
-    "memory_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "total_bytes" INTEGER NOT NULL,
-    "available_bytes" INTEGER NOT NULL,
-    "used_percent" REAL NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
-);
-CREATE TABLE IF NOT EXISTS "systeminfo_mode" (
-    "systeminfo_mode_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "asymmetric_keys_encryption_enabled_id" TEXT NOT NULL,
-    "symmetric_keys_encryption_enabled_id" TEXT NOT NULL,
-    "cryptographic_key_encryption_enabled_id" TEXT NOT NULL,
-    "mfa_2fa_enabled_id" TEXT NOT NULL,
-    "public_key_encryption_enabled_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("asymmetric_keys_encryption_enabled_id") REFERENCES "status_value"("code"),
-    FOREIGN KEY("symmetric_keys_encryption_enabled_id") REFERENCES "status_value"("code"),
-    FOREIGN KEY("cryptographic_key_encryption_enabled_id") REFERENCES "status_value"("code"),
-    FOREIGN KEY("mfa_2fa_enabled_id") REFERENCES "status_value"("code"),
-    FOREIGN KEY("public_key_encryption_enabled_id") REFERENCES "status_value"("code")
-);
-CREATE TABLE IF NOT EXISTS "systeminfo" (
-    "systeminfo_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "hostname" TEXT NOT NULL,
-    "os_id" INTEGER NOT NULL,
-    "cpu_id" INTEGER NOT NULL,
-    "memory_id" INTEGER NOT NULL,
-    "platform_id" INTEGER NOT NULL,
-    "systeminfo_mode_id" INTEGER NOT NULL,
-    "importance_id" TEXT NOT NULL,
-    "status_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN',
-    FOREIGN KEY("os_id") REFERENCES "operating_system"("operating_system_id"),
-    FOREIGN KEY("cpu_id") REFERENCES "cpu"("cpu_id"),
-    FOREIGN KEY("memory_id") REFERENCES "memory"("memory_id"),
-    FOREIGN KEY("platform_id") REFERENCES "asset"("asset_id"),
-    FOREIGN KEY("systeminfo_mode_id") REFERENCES "systeminfo_mode"("systeminfo_mode_id"),
-    FOREIGN KEY("importance_id") REFERENCES "severity"("code"),
-    FOREIGN KEY("status_id") REFERENCES "asset_status"("code")
 );
 CREATE TABLE IF NOT EXISTS "contract" (
     "contract_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1180,38 +1073,6 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "systeminfo_view"("hostname", "ip_addresses", "status", "platform", "processor", "processor_core", "ram", "disk_free", "disk_used", "disk_total", "importance", "asymmetric_keys_encryption_enabled", "symmetric_keys_encryption_enabled", "cryptographic_key_encryption_enabled", "mfa_2fa_enabled_id", "public_key_encryption_enabled_id") AS
-    SELECT
-    si.hostname,
-    nwi.ip_addresses,
-    asstatus.value as status,
-    asset.name as platform,
-    cpu.name as processor,
-    cpu.cores as processor_core,
-    m.total_bytes as ram,
-    m.available_bytes as disk_free,
-    m.used_percent as disk_used,
-    m.total_bytes as disk_total,
-    sever.value as importance,
-    sv1.value as asymmetric_keys_encryption_enabled,
-    sv2.value as symmetric_keys_encryption_enabled,
-    sv3.value as cryptographic_key_encryption_enabled,
-    sv4.value as mfa_2fa_enabled_id,
-    sv5.value as public_key_encryption_enabled_id
-    FROM systeminfo si
-    INNER JOIN operating_system os ON si.os_id = os.operating_system_id
-    INNER JOIN network_interface nwi ON os.network_interface_id = nwi.network_interface_id
-    INNER JOIN asset_status asstatus ON si.status_id = asstatus.code
-    INNER JOIN asset ON asset.asset_id = si.platform_id
-    INNER JOIN cpu ON cpu.cpu_id = si.cpu_id
-    INNER JOIN memory m ON m.memory_id = si.memory_id
-    INNER JOIN severity sever ON si.importance_id = sever.code
-    INNER JOIN systeminfo_mode sim ON si.systeminfo_mode_id = sim.systeminfo_mode_id
-    INNER JOIN status_value sv1 ON sim.asymmetric_keys_encryption_enabled_id = sv1.code
-    INNER JOIN status_value sv2 ON sim.symmetric_keys_encryption_enabled_id = sv2.code
-    INNER JOIN status_value sv3 ON sim.cryptographic_key_encryption_enabled_id = sv3.code
-    INNER JOIN status_value sv4 ON sim.mfa_2fa_enabled_id = sv4.code
-    INNER JOIN status_value sv5 ON sim.public_key_encryption_enabled_id = sv5.code;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES (0, 'DEVELOPMENT');
@@ -1469,13 +1330,6 @@ INSERT INTO "audit_status" ("code", "value") VALUES ('OUTSTANDING', 'Outstanding
 INSERT INTO "audit_status" ("code", "value") VALUES ('FULFILLED', 'Fulfilled');
 INSERT INTO "audit_status" ("code", "value") VALUES ('REJECTED', 'Rejected');
 INSERT INTO "audit_status" ("code", "value") VALUES ('ACCEPTED', 'Accepted');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('ETH0', 'eth0');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('ETH1', 'eth1');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('WLAN0', 'wlan0');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('ENP2', 'enp2s0f0');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('EN01', 'eno1');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('ENP41', 'enp41s0');
-INSERT INTO "ethernet_interface" ("code", "value") VALUES ('ENP195', 'enp195s0 ');
 INSERT INTO "party_relation_type" ("code", "value") VALUES ('PERSON_TO_PERSON', 'Person To Person');
 INSERT INTO "party_relation_type" ("code", "value") VALUES ('ORGANIZATION_TO_PERSON', 'Organization To Person');
 INSERT INTO "party_relation_type" ("code", "value") VALUES ('ORGANIZATION_TO_ORGANIZATION', 'Organization To Organization');
@@ -1511,7 +1365,7 @@ INSERT INTO "graph_nature" ("code", "value") VALUES ('APP', 'Application');
 ;
 
 -- synthetic / test data
-INSERT INTO "graph" ("graph_nature_code", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
+INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
 
 INSERT INTO "boundary" ("parent_boundary_id", "boundary_nature_id", "name", "description", "created_by") VALUES (NULL, 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL);
 

@@ -13,7 +13,7 @@
   entity "graph" as graph {
       **graph_id**: INTEGER
     --
-    * graph_nature_code: TEXT
+    * graph_nature_id: TEXT
     * name: TEXT
       description: TEXT
       created_at: TIMESTAMP
@@ -113,7 +113,7 @@
     * party_id: INTEGER
     * related_party_id: INTEGER
     * relation_type_id: TEXT
-    * party_role_id: TEXT
+      party_role_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
   }
@@ -448,107 +448,6 @@
       created_by: TEXT
   }
 
-  entity "load_average" as load_average {
-      **load_average_id**: INTEGER
-    --
-    * load_average: REAL
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "disk_usage" as disk_usage {
-      **disk_usage_id**: INTEGER
-    --
-    * total_bytes: INTEGER
-    * used_bytes: INTEGER
-    * free_bytes: INTEGER
-    * percent_used: REAL
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "network_interface" as network_interface {
-      **network_interface_id**: INTEGER
-    --
-    * name: TEXT
-    * ethernet_interface_id: TEXT
-    * mac_address: TEXT
-    * ip_addresses: TEXT
-    * netmask: TEXT
-    * gateway: TEXT
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "operating_system" as operating_system {
-      **operating_system_id**: INTEGER
-    --
-    * name: TEXT
-    * version: TEXT
-    * architecture: TEXT
-    * kernel_version: TEXT
-    * boot_time: TIMESTAMP
-    * uptime_seconds: INTEGER
-    * load_average_id: INTEGER
-    * cpu_usage_percent: REAL
-    * memory_total_bytes: INTEGER
-    * memory_available_bytes: INTEGER
-    * swap_total_bytes: INTEGER
-    * swap_used_bytes: INTEGER
-    * disk_usage_id: INTEGER
-    * network_interface_id: INTEGER
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "cpu" as cpu {
-      **cpu_id**: INTEGER
-    --
-    * name: TEXT
-    * cores: INTEGER
-    * usage_percent: REAL
-    * load_average_id: INTEGER
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "memory" as memory {
-      **memory_id**: INTEGER
-    --
-    * total_bytes: INTEGER
-    * available_bytes: INTEGER
-    * used_percent: REAL
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "systeminfo_mode" as systeminfo_mode {
-      **systeminfo_mode_id**: INTEGER
-    --
-    * asymmetric_keys_encryption_enabled_id: TEXT
-    * symmetric_keys_encryption_enabled_id: TEXT
-    * cryptographic_key_encryption_enabled_id: TEXT
-    * mfa_2fa_enabled_id: TEXT
-    * public_key_encryption_enabled_id: TEXT
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
-  entity "systeminfo" as systeminfo {
-      **systeminfo_id**: INTEGER
-    --
-    * hostname: TEXT
-    * os_id: INTEGER
-    * cpu_id: INTEGER
-    * memory_id: INTEGER
-    * platform_id: INTEGER
-    * systeminfo_mode_id: INTEGER
-    * importance_id: TEXT
-    * status_id: TEXT
-      created_at: TIMESTAMP
-      created_by: TEXT
-  }
-
   entity "contract" as contract {
       **contract_id**: INTEGER
     --
@@ -843,16 +742,6 @@
   party |o..o{ note
   organization |o..o{ audit_assertion
   person |o..o{ audit_assertion
-  load_average |o..o{ operating_system
-  disk_usage |o..o{ operating_system
-  network_interface |o..o{ operating_system
-  load_average |o..o{ cpu
-  operating_system |o..o{ systeminfo
-  cpu |o..o{ systeminfo
-  memory |o..o{ systeminfo
-  asset |o..o{ systeminfo
-  systeminfo_mode |o..o{ systeminfo
-  severity |o..o{ systeminfo
   party |o..o{ contract
   party |o..o{ contract
   risk_subject |o..o{ risk_register

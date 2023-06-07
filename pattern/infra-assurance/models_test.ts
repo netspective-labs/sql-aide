@@ -23,7 +23,7 @@ const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
 
 const graphTableInsertion = mod.graph.insertDML({
   name: "text-value",
-  graph_nature_code: "SERVICE",
+  graph_nature_id: "SERVICE",
   description: "description",
 });
 
@@ -249,7 +249,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "166");
+    ta.assertEquals(output, "155");
   });
 
   // deno-lint-ignore require-await
