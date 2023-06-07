@@ -1,6 +1,7 @@
 {
   "files.associations": {
-    ".githooks/prepare-commit-msg": "typescript"
+    ".githooks/prepare-commit-msg": "typescript",
+    "*.psql": "sql"
   },
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
