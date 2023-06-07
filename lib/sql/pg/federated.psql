@@ -6,12 +6,12 @@
 CREATE SCHEMA IF NOT EXISTS :"dcp_lib";
 SET search_path TO :"dcp_lib";
 
-\set code 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_construct_storage() AS $$ BEGIN CREATE TABLE IF NOT EXISTS ':dcp_confidential'.fdw_postgres_authn ( context dcp_context.execution_context NOT NULL, identity text NOT NULL, host text NOT NULL, port integer NOT NULL, dbname text NOT NULL, remote_schema text[] NOT NULL, local_schema text[] NOT NULL, server_name text NOT NULL, fetch_size integer DEFAULT 50, user_name text NOT NULL, password_clear text NOT NULL, prepare_function_name text DEFAULT NULL, purpose text NOT NULL, ssl_cert text NULL, ssl_key text NULL, ssl_ca text NULL, ssl_capath text NULL, CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity) ); END; $$ LANGUAGE PLPGSQL;END'
-DO :'code';
+\set federated_construct_storage 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_construct_storage() AS $$ BEGIN CREATE TABLE IF NOT EXISTS ':dcp_confidential'.fdw_postgres_authn ( context dcp_context.execution_context NOT NULL, identity text NOT NULL, host text NOT NULL, port integer NOT NULL, dbname text NOT NULL, remote_schema text[] NOT NULL, local_schema text[] NOT NULL, server_name text NOT NULL, fetch_size integer DEFAULT 50, user_name text NOT NULL, password_clear text NOT NULL, prepare_function_name text DEFAULT NULL, purpose text NOT NULL, ssl_cert text NULL, ssl_key text NULL, ssl_ca text NULL, ssl_capath text NULL, CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity) ); END; $$ LANGUAGE PLPGSQL;END'
+DO :'federated_construct_storage';
 
 
-\set code1 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_destroy_idempotent() AS $$ BEGIN DROP FUNCTION IF EXISTS ':dcp_assurance_engineering'.test_federated(); DROP TABLE IF EXISTS ':dcp_confidential'.fdw_postgres_authn; END; $$ LANGUAGE PLPGSQL; END'
-DO :'code1';
+\set federated_destroy_idempotent 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_destroy_idempotent() AS $$ BEGIN DROP FUNCTION IF EXISTS ':dcp_assurance_engineering'.test_federated(); DROP TABLE IF EXISTS ':dcp_confidential'.fdw_postgres_authn; END; $$ LANGUAGE PLPGSQL; END'
+DO :'federated_destroy_idempotent';
 
 
 CREATE OR REPLACE FUNCTION :dcp_assurance_engineering.test_federated() RETURNS SETOF TEXT AS $$

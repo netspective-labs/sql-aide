@@ -1,0 +1,71 @@
+
+\set dcp_extensions dcp_extensions
+\set dcp_experimental dcp_experimental
+\set dcp_lib dcp_lib
+\set dcp_lifecycle dcp_lifecycle
+\set dcp_assurance_engineering dcp_assurance_engineering
+CREATE SCHEMA IF NOT EXISTS :"dcp_extensions";
+CREATE EXTENSION IF NOT EXISTS pgtap SCHEMA :"dcp_extensions";
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA :"dcp_extensions";
+CREATE EXTENSION IF NOT EXISTS ltree SCHEMA :"dcp_extensions";
+CREATE EXTENSION IF NOT EXISTS semver SCHEMA :"dcp_extensions";
+CREATE EXTENSION IF NOT EXISTS is_jsonb_valid SCHEMA :"dcp_extensions";
+
+-- make sure everybody can use everything in the extensions schema
+grant usage on schema :"dcp_extensions" to public;
+grant execute on all functions in schema :"dcp_extensions" to public;
+
+-- include future extensions
+alter default privileges in schema :"dcp_extensions"
+  grant execute on functions to public;
+
+alter default privileges in schema :"dcp_extensions"
+  grant usage on types to public;
+
+
+\set engine_construct_idempotent 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.engine_construct_idempotent() AS $$ BEGIN CALL ':dcp_lifecycle'.version_construct('':dcp_lifecycle'', ''asset_version'', ''asset'', NULL, ''1.0.0''::semver); insert into asset_version (nature, asset, version) values (''storage'', '':dcp_lifecycle.asset_version_store'', ':dcp_lifecycle'.asset_version_initial_revision()); insert into asset_version (nature, asset, version) values (''storage'', '':dcp_lifecycle.asset_version_label_store'', ':dcp_lifecycle'.asset_version_initial_revision()); insert into asset_version (nature, asset, version) values (''storage'', '':dcp_lifecycle.asset_version_history'', ':dcp_lifecycle'.asset_version_initial_revision()); CALL ':dcp_lifecycle'.event_manager_construct('':dcp_lifecycle'', ''activity'', ''event'', ''lifecycle''); END; $$ LANGUAGE PLPGSQL; END'
+DO :'engine_construct_idempotent';
+
+
+\set engine_destroy_idempotent 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.engine_destroy_idempotent() AS $$ BEGIN DROP SCHEMA IF EXISTS ':dcp_experimental' CASCADE; DROP SCHEMA IF EXISTS ':dcp_assurance_engineering' CASCADE; DROP SCHEMA IF EXISTS ':dcp_lib' CASCADE; END; $$ LANGUAGE PLPGSQL;END'
+DO :'engine_destroy_idempotent';
+
+--
+-- source: https://stackoverflow.com/questions/7622908/drop-function-without-knowing-the-number-type-of-parameters
+--
+CREATE OR REPLACE FUNCTION :dcp_lifecycle.drop_all_functions_with_name(function_name text) RETURNS text AS $$
+DECLARE
+    funcrow RECORD;
+    numfunctions smallint := 0;
+    numparameters int;
+    i int;
+    paramtext text;
+BEGIN
+    FOR funcrow IN SELECT proargtypes FROM pg_proc WHERE proname = function_name LOOP
+        --for some reason array_upper is off by one for the oidvector type, hence the +1
+        numparameters = array_upper(funcrow.proargtypes, 1) + 1;
+        i = 0;
+        paramtext = '';
+        LOOP
+            IF i < numparameters THEN
+                IF i > 0 THEN
+                    paramtext = paramtext || ', ';
+                END IF;
+                paramtext = paramtext || (SELECT typname FROM pg_type WHERE oid = funcrow.proargtypes[i]);
+                i = i + 1;
+            ELSE
+                EXIT;
+            END IF;
+        END LOOP;
+        EXECUTE 'DROP FUNCTION ' || function_name || '(' || paramtext || ');';
+        numfunctions = numfunctions + 1;
+    END LOOP;
+RETURN 'Dropped ' || numfunctions || ' functionNames';
+END;
+$$ LANGUAGE plpgsql VOLATILE COST 100;
+
+CREATE OR REPLACE FUNCTION :dcp_lifecycle.test_engine_version() RETURNS SETOF TEXT LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN NEXT ok(pg_version_num() > 13000,
+    format('PostgreSQL engine instance versions should be at least 13000 [%s]', pg_version()));
+END;$$;
