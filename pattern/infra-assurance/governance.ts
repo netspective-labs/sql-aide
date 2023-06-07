@@ -464,16 +464,6 @@ export enum AuditorStatusType {
   ACCEPTED = "Accepted",
 }
 
-export enum EthernetInterfaceType {
-  ETH0 = "eth0",
-  ETH1 = "eth1",
-  WLAN0 = "wlan0",
-  ENP2 = "enp2s0f0",
-  EN01 = "eno1",
-  ENP41 = "enp41s0",
-  ENP195 = "enp195s0 ",
-}
-
 /**
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/enum_contract_status_enum.html
  */

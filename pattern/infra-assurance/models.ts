@@ -25,7 +25,6 @@ const {
   dateTime,
   selfRef,
   dateTimeNullable,
-  float,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
@@ -208,12 +207,6 @@ export const auditorStatusType = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const ethernetInterfaceType = gm.textEnumTable(
-  "ethernet_interface",
-  govn.EthernetInterfaceType,
-  { isIdempotent: true },
-);
-
 export const partyIdentifierType = gm.textEnumTable(
   "party_identifier_type",
   govn.PartyIdentifierType,
@@ -358,7 +351,6 @@ export const allReferenceTables: (
   auditorType,
   auditPurpose,
   auditorStatusType,
-  ethernetInterfaceType,
   partyRelationType,
   partyIdentifierType,
   personType,
@@ -372,7 +364,7 @@ export const allReferenceTables: (
 
 export const graph = gm.autoIncPkTable("graph", {
   graph_id: autoIncPK(),
-  graph_nature_code: graphNature.references.code(),
+  graph_nature_id: graphNature.references.code(),
   name: text(),
   description: textNullable(),
   ...gm.housekeeping.columns,
@@ -464,7 +456,7 @@ export const partyRelation = gm.autoIncPkTable("party_relation", {
   party_id: party.references.party_id(),
   related_party_id: party.references.party_id(),
   relation_type_id: partyRelationType.references.code(),
-  party_role_id: partyRole.references.code(),
+  party_role_id: partyRole.references.code().optional(),
   ...gm.housekeeping.columns,
 });
 
@@ -767,147 +759,6 @@ export const auditAssertion = gm.autoIncPkTable(
 );
 
 /**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const loadAverage = gm.autoIncPkTable(
-  "load_average",
-  {
-    load_average_id: autoIncPK(),
-    load_average: float(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const diskUsage = gm.autoIncPkTable(
-  "disk_usage",
-  {
-    disk_usage_id: autoIncPK(),
-    total_bytes: integer(),
-    used_bytes: integer(),
-    free_bytes: integer(),
-    percent_used: float(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const networkInterface = gm.autoIncPkTable(
-  "network_interface",
-  {
-    network_interface_id: autoIncPK(),
-    name: text(),
-    ethernet_interface_id: ethernetInterfaceType.references.code(),
-    mac_address: text(),
-    ip_addresses: text(),
-    netmask: text(),
-    gateway: text(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const operatingSystem = gm.autoIncPkTable(
-  "operating_system",
-  {
-    operating_system_id: autoIncPK(),
-    name: text(),
-    version: text(),
-    architecture: text(),
-    kernel_version: text(),
-    boot_time: dateTime(),
-    uptime_seconds: integer(),
-    load_average_id: loadAverage.references.load_average_id(),
-    cpu_usage_percent: float(),
-    memory_total_bytes: integer(),
-    memory_available_bytes: integer(),
-    swap_total_bytes: integer(),
-    swap_used_bytes: integer(),
-    disk_usage_id: diskUsage.references.disk_usage_id(),
-    network_interface_id: networkInterface.references
-      .network_interface_id(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const cpu = gm.autoIncPkTable(
-  "cpu",
-  {
-    cpu_id: autoIncPK(),
-    name: text(),
-    cores: integer(),
-    usage_percent: float(),
-    load_average_id: loadAverage.references.load_average_id(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const memory = gm.autoIncPkTable(
-  "memory",
-  {
-    memory_id: autoIncPK(),
-    total_bytes: integer(),
-    available_bytes: integer(),
-    used_percent: float(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-export const systemInfoMode = gm.autoIncPkTable(
-  "systeminfo_mode",
-  {
-    systeminfo_mode_id: autoIncPK(),
-    asymmetric_keys_encryption_enabled_id: statusValues.references
-      .code(),
-    symmetric_keys_encryption_enabled_id: statusValues.references
-      .code(),
-    cryptographic_key_encryption_enabled_id: statusValues.references
-      .code(),
-    mfa_2fa_enabled_id: statusValues.references.code(),
-    public_key_encryption_enabled_id: statusValues.references.code(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
- * Reference URL: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-start-page
- */
-
-export const systemInfo = gm.autoIncPkTable(
-  "systeminfo",
-  {
-    systeminfo_id: autoIncPK(),
-    hostname: text(),
-    os_id: operatingSystem.references.operating_system_id(),
-    cpu_id: cpu.references.cpu_id(),
-    memory_id: memory.references.memory_id(),
-    platform_id: asset.references.asset_id(),
-    systeminfo_mode_id: systemInfoMode.references.systeminfo_mode_id(),
-    importance_id: severity.references.code(),
-    status_id: assetStatus.references.code(),
-    ...gm.housekeeping.columns,
-  },
-);
-
-/**
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
@@ -1184,14 +1035,6 @@ export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
   rating,
   notes,
   auditAssertion,
-  loadAverage,
-  diskUsage,
-  networkInterface,
-  operatingSystem,
-  cpu,
-  memory,
-  systemInfoMode,
-  systemInfo,
   contract,
   riskSubject,
   riskType,
@@ -1568,59 +1411,6 @@ const contractView = SQLa.safeViewDefinition(
   INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
   INNER JOIN periodicity p on p.code = ct.periodicity_id`;
 
-const systemInfoView = SQLa.safeViewDefinition(
-  "systeminfo_view",
-  {
-    hostname: text(),
-    ip_addresses: text(),
-    status: text(),
-    platform: text(),
-    processor: text(),
-    processor_core: text(),
-    ram: text(),
-    disk_free: text(),
-    disk_used: text(),
-    disk_total: text(),
-    importance: text(),
-    asymmetric_keys_encryption_enabled: text(),
-    symmetric_keys_encryption_enabled: text(),
-    cryptographic_key_encryption_enabled: text(),
-    mfa_2fa_enabled_id: text(),
-    public_key_encryption_enabled_id: text(),
-  },
-)`
-  SELECT
-  si.hostname,
-  nwi.ip_addresses,
-  asstatus.value as status,
-  asset.name as platform,
-  cpu.name as processor,
-  cpu.cores as processor_core,
-  m.total_bytes as ram,
-  m.available_bytes as disk_free,
-  m.used_percent as disk_used,
-  m.total_bytes as disk_total,
-  sever.value as importance,
-  sv1.value as asymmetric_keys_encryption_enabled,
-  sv2.value as symmetric_keys_encryption_enabled,
-  sv3.value as cryptographic_key_encryption_enabled,
-  sv4.value as mfa_2fa_enabled_id,
-  sv5.value as public_key_encryption_enabled_id
-  FROM systeminfo si
-  INNER JOIN operating_system os ON si.os_id = os.operating_system_id
-  INNER JOIN network_interface nwi ON os.network_interface_id = nwi.network_interface_id
-  INNER JOIN asset_status asstatus ON si.status_id = asstatus.code
-  INNER JOIN asset ON asset.asset_id = si.platform_id
-  INNER JOIN cpu ON cpu.cpu_id = si.cpu_id
-  INNER JOIN memory m ON m.memory_id = si.memory_id
-  INNER JOIN severity sever ON si.importance_id = sever.code
-  INNER JOIN systeminfo_mode sim ON si.systeminfo_mode_id = sim.systeminfo_mode_id
-  INNER JOIN status_value sv1 ON sim.asymmetric_keys_encryption_enabled_id = sv1.code
-  INNER JOIN status_value sv2 ON sim.symmetric_keys_encryption_enabled_id = sv2.code
-  INNER JOIN status_value sv3 ON sim.cryptographic_key_encryption_enabled_id = sv3.code
-  INNER JOIN status_value sv4 ON sim.mfa_2fa_enabled_id = sv4.code
-  INNER JOIN status_value sv5 ON sim.public_key_encryption_enabled_id = sv5.code`;
-
 export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
   securityResponseTeamView,
   awarenessTrainingView,
@@ -1633,7 +1423,6 @@ export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
   rootCauseAnalysisView,
   vendorView,
   contractView,
-  systemInfoView,
 ];
 
 export function sqlDDL() {
