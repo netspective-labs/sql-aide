@@ -9,7 +9,7 @@
 
 ----------------------------------------------------------------------
 -- use single-line \set commands that refer to other variables;
--- these are supported in `psql` but need to be implemented for SQLpp
+-- these are supported in `psql` and in SQLpp
 ----------------------------------------------------------------------
 
 -- note :'name' is defined above

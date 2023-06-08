@@ -35,6 +35,53 @@ Deno.test("Variable substitution, removed \\set from result, no overrides", () =
   );
 });
 
+Deno.test("Variable substitution, removed \\set from result, with dependent variables", () => {
+  const sql = uws(`
+    \\set dcp_lib dcp_lib
+    \\set dcp_lifecycle dcp_lifecycle
+    \\set dcp_confidential dcp_confidential
+    \\set dcp_assurance_engineering dcp_assurance_engineering
+
+    CREATE SCHEMA IF NOT EXISTS :"dcp_lib";
+    SET search_path TO :"dcp_lib";
+
+    \\set federated_construct_storage 'BEGIN CREATE OR REPLACE PROCEDURE ' :dcp_lifecycle '.federated_construct_storage() AS $$ BEGIN CREATE TABLE IF NOT EXISTS ' :dcp_confidential '.fdw_postgres_authn ( context dcp_context.execution_context NOT NULL, identity text NOT NULL, host text NOT NULL, port integer NOT NULL, dbname text NOT NULL, remote_schema text[] NOT NULL, local_schema text[] NOT NULL, server_name text NOT NULL, fetch_size integer DEFAULT 50, user_name text NOT NULL, password_clear text NOT NULL, prepare_function_name text DEFAULT NULL, purpose text NOT NULL, ssl_cert text NULL, ssl_key text NULL, ssl_ca text NULL, ssl_capath text NULL, CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity) ); END; $$ LANGUAGE PLPGSQL;END'
+    DO :'federated_construct_storage';
+
+    \\set federated_destroy_idempotent 'BEGIN CREATE OR REPLACE PROCEDURE ' :dcp_lifecycle '.federated_destroy_idempotent() AS $$ BEGIN DROP FUNCTION IF EXISTS ' :dcp_assurance_engineering '.test_federated(); DROP TABLE IF EXISTS ' :dcp_confidential '.fdw_postgres_authn; END; $$ LANGUAGE PLPGSQL; END'
+    DO :federated_destroy_idempotent;
+
+    CREATE OR REPLACE FUNCTION :dcp_assurance_engineering.test_federated() RETURNS SETOF TEXT AS $$
+    BEGIN
+      RETURN NEXT has_table(':dcp_confidential', 'fdw_postgres_authn');
+    END;
+    $$ LANGUAGE plpgsql;`);
+
+  const pp = mod.psqlPreprocess(sql, {
+    setMetaCmd: mod.psqlSetMetaCmd({
+      handleSetInResult: () => undefined,
+      onVarValueNotFound: () => `?????`,
+    }),
+  });
+  ta.assertEquals(
+    pp.interpolatedText,
+    uws(`
+
+        CREATE SCHEMA IF NOT EXISTS "dcp_lib";
+        SET search_path TO "dcp_lib";
+
+        DO 'BEGIN CREATE OR REPLACE PROCEDURE dcp_lifecycle.federated_construct_storage() AS $$ BEGIN CREATE TABLE IF NOT EXISTS dcp_confidential.fdw_postgres_authn ( context dcp_context.execution_context NOT NULL, identity text NOT NULL, host text NOT NULL, port integer NOT NULL, dbname text NOT NULL, remote_schema text[] NOT NULL, local_schema text[] NOT NULL, server_name text NOT NULL, fetch_size integer DEFAULT 50, user_name text NOT NULL, password_clear text NOT NULL, prepare_function_name text DEFAULT NULL, purpose text NOT NULL, ssl_cert text NULL, ssl_key text NULL, ssl_ca text NULL, ssl_capath text NULL, CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity) ); END; $$ LANGUAGE PLPGSQL;END';
+
+        DO BEGIN CREATE OR REPLACE PROCEDURE dcp_lifecycle.federated_destroy_idempotent() AS $$ BEGIN DROP FUNCTION IF EXISTS dcp_assurance_engineering.test_federated(); DROP TABLE IF EXISTS dcp_confidential.fdw_postgres_authn; END; $$ LANGUAGE PLPGSQL; END;
+
+        CREATE OR REPLACE FUNCTION dcp_assurance_engineering.test_federated() RETURNS SETOF TEXT AS $$
+        BEGIN
+          RETURN NEXT has_table('dcp_confidential', 'fdw_postgres_authn');
+        END;
+        $$ LANGUAGE plpgsql;`),
+  );
+});
+
 Deno.test("Variable substitution, keep \\set in result, with overrides", () => {
   const sql = uws(`
       \\set name 'John Doe'
