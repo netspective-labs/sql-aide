@@ -235,6 +235,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     >(
       satelliteName: SatelliteName,
       columnsShape: ColumnsShape,
+      tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
     ) => {
       const satTableName = names.linkSatelliteTableName(hubName, satelliteName);
       // TODO: add lint rule for checking if key or group of keys is unique
@@ -248,6 +249,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
           },
         ),
         hubTable: hubTableDefn,
+        tdOptions,
       };
     };
 
