@@ -16,8 +16,8 @@ CREATE SCHEMA IF NOT EXISTS :"dcp_confidential";
 CREATE SCHEMA IF NOT EXISTS :"dcp_assurance_engineering";
 CREATE SCHEMA IF NOT EXISTS :"dcp_experimental";
 
-\set code 'BEGIN CREATE DOMAIN ':dcp_context'.execution_context as' :dcp_extensions'.ltree; EXCEPTION WHEN DUPLICATE_OBJECT THEN RAISE NOTICE '' domain "execution_context" already exists, skipping ''; END'
-DO :'code';
+\set ddl_domain 'BEGIN CREATE DOMAIN ':dcp_context'.execution_context as' :dcp_extensions'.ltree; EXCEPTION WHEN DUPLICATE_OBJECT THEN RAISE NOTICE '' domain "execution_context" already exists, skipping ''; END'
+DO :'ddl_domain';
 
 SELECT format('
 CREATE OR REPLACE PROCEDURE %1$s.dcp_context_construct_storage() AS $$
