@@ -1,0 +1,45 @@
+# -----------------------------------------------------------------------------
+# If PostgreSQL is not on the same network, connect to a remote Postgres server
+# using SSH tunnel first. Assuming that Postgres listens on 5432 on remote:
+#
+#    ssh -fNTML 9432:localhost:5432 sshusername@you-server.com
+#
+# Then, just launch psql, connecting to port 9432 at localhost:
+#
+#    psql -h localhost -p 9432 -U <username> <dbname>
+# -----------------------------------------------------------------------------
+# see https://www.postgresql.org/docs/current/libpq-pgpass.html for docs
+# -----------------------------------------------------------------------------
+# * run `$HOME/bin/pgpass --help` to see how to use `pgpass` to process the
+#   contents of this file and emit in multiple formats (env, psql, etc.)
+# * run `psqlconnect` at CLI to show a TUI to interactively select db conn
+# -----------------------------------------------------------------------------
+# Before each .pgpass line you should include a strict JSON5L definition that
+# includes a line like { id: "XYZ", description: "Purpose", boundary: "Network" }
+# - id: unique ID where "XYZ" will be used by pgpass.ts to identify connection
+# - description: human=friendly elaboration of purpose
+# - boundary: human=friendly name of network or location of the connection
+#
+# * `pgpass test` will list warning/issues
+# * `pgpass ls conn` will list all connections to copy/paste ID
+# * `pgpass env --conn-id="MY_SPECIAL_DB"` exports conn env vars
+# * `pgpass psql --conn-id="MY_SPECIAL_DB"` emits psql command
+# * `pgpass url --conn-id="MY_SPECIAL_DB"` emits URL
+# * `pgpass inspect` allows detailed inspection in JSON5 format
+# -----------------------------------------------------------------------------
+
+# hostname:port:database:username:password
+# 192.168.2.x:5432:database:postgres:sup3rSecure!
+
+# { id: "MY_SPECIAL_DB", description: "Human-friendly description of database", boundary: "Network" }
+192.168.2.24:5432:pgDB_name:pgDB_username:sup3rSecure!
+
+# { id: "MY_SPECIAL_DB2", description: "Human-friendly description of database 2", boundary: "Network" }
+192.168.2.24:5033:pgDB2_name:pgDB2_username:sup3rSecure!
+
+# this connection has no descriptor and should generate an error
+192.168.2.24:5432:pgDB3_name:pgDB3_username:sup3rSecure!
+
+# this connection has an invalid JSON format for the descriptor and should generate an error
+# { badID: "MY_SPECIAL_DB2", description: "Human-friendly description of database 4", boundary: "Network" }
+192.168.2.24:5432:pgDB4_name:pgDB4_username:sup3rSecure!
