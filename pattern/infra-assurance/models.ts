@@ -374,6 +374,7 @@ export const boundary_id = autoIncPK();
 export const boundary = gm.autoIncPkTable("boundary", {
   boundary_id,
   parent_boundary_id: selfRef(boundary_id).optional(),
+  graph_id: graph.references.graph_id(),
   boundary_nature_id: boundaryNature.references.code(),
   name: text(),
   description: textNullable(),
@@ -689,11 +690,11 @@ export const securityIncidentResponseTeam = gm.autoIncPkTable(
   "security_incident_response_team",
   {
     security_incident_response_team_id: autoIncPK(),
-    training_subject_id: trainingSubject.references.code(),
+    training_subject_id: trainingSubject.references.code().optional(),
     person_id: person.references.person_id(),
     organization_id: organization.references.organization_id(),
-    training_status_id: statusValues.references.code(),
-    attended_date: date(),
+    training_status_id: statusValues.references.code().optional(),
+    attended_date: date().optional(),
     ...gm.housekeeping.columns,
   },
 );

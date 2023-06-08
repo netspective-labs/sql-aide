@@ -24,6 +24,7 @@
       **boundary_id**: INTEGER
     --
       parent_boundary_id: INTEGER
+    * graph_id: INTEGER
     * boundary_nature_id: TEXT
     * name: TEXT
       description: TEXT
@@ -387,11 +388,11 @@
   entity "security_incident_response_team" as security_incident_response_team {
       **security_incident_response_team_id**: INTEGER
     --
-    * training_subject_id: TEXT
+      training_subject_id: TEXT
     * person_id: INTEGER
     * organization_id: INTEGER
-    * training_status_id: TEXT
-    * attended_date: DATE
+      training_status_id: TEXT
+      attended_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
   }
@@ -706,6 +707,7 @@
   }
 
   boundary |o..o{ boundary
+  graph |o..o{ boundary
   host |o..o{ host_boundary
   boundary |o..o{ raci_matrix_subject_boundary
   party |o..o{ party_identifier
