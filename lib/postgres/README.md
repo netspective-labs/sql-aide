@@ -166,25 +166,30 @@ to use '\`...\`' where ... is a JS string literal type that can use:
 `${varName}` `${conn.host}` `${String(conn.port)}` `${conn.database}`
 `${conn.username}` `${conn.password}`
 
-NOTE: --conn-id is passed into \`new RegExp(connId)\` so you can use any
+NOTE: `--conn-id` is passed into \`new RegExp(connId)\` so you can use any
 parseable regex.
 
 # TODO
 
-- Using `./postgres/pgpass.ts` and
-  [mklabs/tabtab](https://github.com/mklabs/tabtab) create a solution similar to
-  [martin1keogh/zsh_pgpass_completion](https://github.com/martin1keogh/zsh_pgpass_completion).
-  The end solution will show a list of the databases found in the `.pgpass` file
-  to fill out `psql` or other CLI.
-- Provide Fish and Bash one-liners to use `pgpass` to generate combined SSH
-  tunnel and, for example, `psql` in the same command. This would allow an
-  almost-ready SASE or zero-trust security model?
-  - Consider adding a `{ sshTunnel: { port: xyz} }` to the descriptor so that we
-    can supply SSH tunnel port differently than local port in case there are any
-    port conflicts
-- Use Deno compiler to
-  [create single-binaries](https://deno.land/manual@v1.30.0/tools/compiler#compiling-executables)
-  instead of requiring Deno installation?
-- `pgpass env --var-name` and `pgpass prepare <js-eval-expr>` use unsafe
-  `eval()` to format strings. This is unsafe on anything other trusted machines
-  so be careful. Find a string replacement library to upgrade later.
+- [ ] Introduce `pgpass` through SQLa primary documentation site
+- [ ] Switch from `docopt` to Cliffy for CLI to increase type-safety and allow
+      command completions generator
+- [ ] Using `./postgres/pgpass.ts` and
+      [mklabs/tabtab](https://github.com/mklabs/tabtab) create a solution
+      similar to
+      [martin1keogh/zsh_pgpass_completion](https://github.com/martin1keogh/zsh_pgpass_completion).
+      The end solution will show a list of the databases found in the `.pgpass`
+      file to fill out `psql` or other CLI.
+- [ ] Provide Fish and Bash one-liners to use `pgpass` to generate combined SSH
+      tunnel and, for example, `psql` in the same command. This would allow an
+      almost-ready SASE or zero-trust security model?
+  - [ ] Consider adding a `{ sshTunnel: { port: xyz} }` to the descriptor so
+        that we can supply SSH tunnel port differently than local port in case
+        there are any port conflicts
+- [ ] Use Deno compiler to
+      [create single-binaries](https://deno.land/manual@v1.30.0/tools/compiler#compiling-executables)
+      instead of requiring Deno installation?
+- [ ] `pgpass env --var-name` and `pgpass prepare <js-eval-expr>` use unsafe
+      `eval()` to format strings. This is unsafe on anything other trusted
+      machines so be careful. Find a string replacement library to upgrade
+      later.
