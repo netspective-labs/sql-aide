@@ -1,21 +1,63 @@
 \set dcp_lib dcp_lib
 \set dcp_lifecycle dcp_lifecycle
+\set dcp_extensions dcp_extensions
 \set dcp_confidential dcp_confidential
 \set dcp_assurance_engineering dcp_assurance_engineering
+\set dcp_context dcp_context
 
 CREATE SCHEMA IF NOT EXISTS :"dcp_lib";
-SET search_path TO :"dcp_lib";
+CREATE SCHEMA IF NOT EXISTS :"dcp_lifecycle";
+CREATE SCHEMA IF NOT EXISTS :"dcp_assurance_engineering";
+CREATE SCHEMA IF NOT EXISTS :"dcp_confidential";
+SET search_path TO :'dcp_lib', :'dcp_extensions';
 
-\set federated_construct_storage 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_construct_storage() AS $$ BEGIN CREATE TABLE IF NOT EXISTS ':dcp_confidential'.fdw_postgres_authn ( context dcp_context.execution_context NOT NULL, identity text NOT NULL, host text NOT NULL, port integer NOT NULL, dbname text NOT NULL, remote_schema text[] NOT NULL, local_schema text[] NOT NULL, server_name text NOT NULL, fetch_size integer DEFAULT 50, user_name text NOT NULL, password_clear text NOT NULL, prepare_function_name text DEFAULT NULL, purpose text NOT NULL, ssl_cert text NULL, ssl_key text NULL, ssl_ca text NULL, ssl_capath text NULL, CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity) ); END; $$ LANGUAGE PLPGSQL;END'
-DO :'federated_construct_storage';
+CREATE EXTENSION IF NOT EXISTS pgtap SCHEMA :dcp_extensions;
+
+SELECT format('
+    CREATE OR REPLACE PROCEDURE %1$s.federated_construct_storage() AS $$
+      BEGIN
+        CREATE TABLE IF NOT EXISTS %2$s.fdw_postgres_authn (
+          context %3$s.execution_context NOT NULL,
+          identity text NOT NULL,
+          host text NOT NULL,
+          port integer NOT NULL,
+          dbname text NOT NULL,
+          remote_schema text[] NOT NULL,
+          local_schema text[] NOT NULL,
+          server_name text NOT NULL,
+          fetch_size integer DEFAULT 50,
+          user_name text NOT NULL,
+          password_clear text NOT NULL,
+          prepare_function_name text DEFAULT NULL,
+          purpose text NOT NULL,
+          ssl_cert text NULL,
+          ssl_key text NULL,
+          ssl_ca text NULL,
+          ssl_capath text NULL,
+          -- TODO: add readonly, readwrite, etc. suggested permissions?
+          CONSTRAINT fdw_postgres_authn_unq_row UNIQUE(context, identity)
+        );
+      END;
+      $$ LANGUAGE PLPGSQL;
+
+      CREATE OR REPLACE PROCEDURE %1$s.federated_destroy_idempotent() AS $$
+      BEGIN
+        DROP FUNCTION IF EXISTS %4$s.test_federated();
+        DROP TABLE IF EXISTS %2$s.fdw_postgres_authn;
+      END;
+      $$ LANGUAGE PLPGSQL;
+
+      CREATE OR REPLACE FUNCTION %4$s.test_federated() RETURNS SETOF TEXT AS $$
+      BEGIN
+        RETURN NEXT has_table(''%2$s''::name, ''fdw_postgres_authn''::name);
+        RETURN NEXT  has_function( ''%1$s''::name, ''federated_destroy_idempotent''::name );
+      END;
+      $$ LANGUAGE plpgsql;',
+    :'dcp_lifecycle', :'dcp_confidential',:'dcp_context',:'dcp_assurance_engineering')
+AS ddl_dyn_exec; \gexec
+
+--:ddl_dyn_exec;
+--call :dcp_lifecycle.federated_construct_storage();
 
 
-\set federated_destroy_idempotent 'BEGIN CREATE OR REPLACE PROCEDURE ':dcp_lifecycle'.federated_destroy_idempotent() AS $$ BEGIN DROP FUNCTION IF EXISTS ':dcp_assurance_engineering'.test_federated(); DROP TABLE IF EXISTS ':dcp_confidential'.fdw_postgres_authn; END; $$ LANGUAGE PLPGSQL; END'
-DO :'federated_destroy_idempotent';
-
-
-CREATE OR REPLACE FUNCTION :dcp_assurance_engineering.test_federated() RETURNS SETOF TEXT AS $$
-BEGIN
-  RETURN NEXT has_table(':"dcp_confidential"', 'fdw_postgres_authn');
-END;
-$$ LANGUAGE plpgsql;
+--SELECT * FROM dcp_extensions.runtests('dcp_assurance_engineering'::name,'test_federated');
