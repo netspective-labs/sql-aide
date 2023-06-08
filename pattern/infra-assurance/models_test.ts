@@ -27,10 +27,12 @@ const graphTableInsertion = mod.graph.insertDML({
   description: "description",
 });
 
+const graphIdSelect = mod.boundary.select(graphTableInsertion.insertable);
 const taxIdBoundary = mod.boundary.insertDML({
   boundary_nature_id: "REGULATORY_TAX_ID",
   name: "Boundery Name",
   description: "test description",
+  graph_id: graphIdSelect,
 });
 const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
 
@@ -39,6 +41,7 @@ const primaryBoundary = mod.boundary.insertDML({
   name: "Boundery Name Self Test",
   description: "test description",
   parent_boundary_id: taxIdBoundaryIdSelect,
+  graph_id: graphIdSelect,
 });
 
 const hostInsertion = mod.host.insertDML({

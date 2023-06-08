@@ -210,12 +210,14 @@ CREATE TABLE IF NOT EXISTS "graph" (
 CREATE TABLE IF NOT EXISTS "boundary" (
     "boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "parent_boundary_id" INTEGER,
+    "graph_id" INTEGER NOT NULL,
     "boundary_nature_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("parent_boundary_id") REFERENCES "boundary"("boundary_id"),
+    FOREIGN KEY("graph_id") REFERENCES "graph"("graph_id"),
     FOREIGN KEY("boundary_nature_id") REFERENCES "boundary_nature"("code")
 );
 CREATE TABLE IF NOT EXISTS "host" (
@@ -561,11 +563,11 @@ CREATE TABLE IF NOT EXISTS "device" (
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     "security_incident_response_team_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "training_subject_id" TEXT NOT NULL,
+    "training_subject_id" TEXT,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
-    "training_status_id" TEXT NOT NULL,
-    "attended_date" DATE NOT NULL,
+    "training_status_id" TEXT,
+    "attended_date" DATE,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("code"),
@@ -1367,9 +1369,9 @@ INSERT INTO "graph_nature" ("code", "value") VALUES ('APP', 'Application');
 -- synthetic / test data
 INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "boundary_nature_id", "name", "description", "created_by") VALUES (NULL, 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL);
+INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES (NULL, (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "boundary_nature_id", "name", "description", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description'), 'REGULATORY_TAX_ID', 'Boundery Name Self Test', 'test description', NULL);
+INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name Self Test', 'test description', NULL);
 
 INSERT INTO "host" ("host_name", "description", "created_by") VALUES ('Test Host Name', 'description test', NULL);
 
@@ -1377,7 +1379,7 @@ INSERT INTO "host_boundary" ("host_id", "created_by") VALUES ((SELECT "host_id" 
 
 INSERT INTO "raci_matrix" ("asset", "responsible", "accountable", "consulted", "informed", "created_by") VALUES ('asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL);
 
-INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "parent_boundary_id" = (SELECT "boundary_id" FROM "boundary" WHERE "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name Self Test' AND "description" = 'test description'), 'CURATION_WORKS', NULL);
+INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "parent_boundary_id" = (SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description') AND "graph_id" = (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name Self Test' AND "description" = 'test description'), 'CURATION_WORKS', NULL);
 
 INSERT INTO "raci_matrix_activity" ("activity", "created_by") VALUES ('Activity', NULL);
 
