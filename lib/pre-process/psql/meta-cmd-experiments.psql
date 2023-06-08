@@ -8,6 +8,18 @@
 \set column_name 'email'
 
 ----------------------------------------------------------------------
+-- use conditional \set commands which be overriden from `psql` 11+;
+-- example: `psql -v myVar=other`
+-- `\if`, `\else`, `\endif` supported in `psql` but not in SQLpp yet;
+----------------------------------------------------------------------
+
+\if :{?myVar}
+\else
+   \set myVar default_value
+\endif
+\echo myVar is :'myVar'
+
+----------------------------------------------------------------------
 -- use single-line \set commands that refer to other variables;
 -- these are supported in `psql` and in SQLpp
 ----------------------------------------------------------------------
@@ -47,6 +59,7 @@ AS select_cmd_multi_line_1;
 -- if you execute the above in psql you will get something like this: --
 
 -- Hello, 'Shahid Shah'!
+-- myVar is 'default_value'
 -- SELECT "email" FROM users;
 -- BEGIN CREATE DOMAIN dcp_extensions.execution_context as "dcp_extensions".ltree; EXCEPTION WHEN DUPLICATE_OBJECT THEN RAISE NOTICE 'domain "execution_context" already exists in schema dcp_extensions, skipping'; END
 -- ┌─────────────────────────┐
