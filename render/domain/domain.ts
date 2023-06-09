@@ -146,11 +146,13 @@ export function zodTypeAnySqlDomainFactory<
 }
 
 export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
-  readonly isJsonText: boolean;
+  readonly isJsonText?: boolean;
+} & {
+  readonly isVarChar?: boolean;
 };
 
 export function sqlDomainZodStringDescr(
-  options: Pick<SqlDomainZodStringDescr, "isJsonText">,
+  options: Pick<SqlDomainZodStringDescr, "isJsonText" | "isVarChar">,
 ): SqlDomainZodStringDescr {
   return {
     isSqlDomainZodDescrMeta: true,
@@ -161,17 +163,14 @@ export function sqlDomainZodStringDescr(
 export function isSqlDomainZodStringDescr<
   SDZND extends SqlDomainZodStringDescr,
 >(o: unknown): o is SDZND {
-  const isSDZSD = safety.typeGuard<SDZND>(
-    "isSqlDomainZodDescrMeta",
-    "isJsonText",
-  );
-  return isSDZSD(o);
+  const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
+  return isSDZSD(o) && ("isJsonText" in o || "isVarChar" in o);
 }
 
 export function zodStringSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
->() {
+>(zsdfOptions?: { defaultVarCharMaxLen?: number }) {
   const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
   return {
     ...ztaSDF,
@@ -214,6 +213,43 @@ export function zodStringSqlDomainFactory<
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
           SQL: () => `JSON`,
+        }),
+        parents: init?.parents,
+      };
+    },
+    varChar: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            let maxLength: number | undefined = undefined;
+            const maxLengthCheck = zodType._def.checks.find((c) =>
+              c.kind === "max"
+            );
+            if (maxLengthCheck) {
+              maxLength = maxLengthCheck.kind === "max"
+                ? maxLengthCheck.value
+                : undefined;
+            }
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `NVARCHAR(${maxLength ? maxLength : "MAX"})`;
+            }
+            return `VARCHAR(${
+              maxLength
+                ? maxLength
+                : (zsdfOptions?.defaultVarCharMaxLen ?? "4096")
+            })`;
+          },
         }),
         parents: init?.parents,
       };
@@ -886,7 +922,9 @@ export function zodTypeSqlDomainFactory<
           if (isSqlDomainZodStringDescr(zodDefHook.descrMeta)) {
             return zodDefHook.descrMeta.isJsonText
               ? stringSDF.jsonString(zodType, init)
-              : stringSDF.string(zodType, init);
+              : (zodDefHook.descrMeta.isVarChar
+                ? stringSDF.varChar(zodType, init)
+                : stringSDF.string(zodType, init));
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${

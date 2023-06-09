@@ -46,9 +46,27 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   const textSD = ztsdFactory.cacheableFrom(z.string(), {
     identity: "syntheticText",
   });
+  const varCharSD = ztsdFactory.cacheableFrom(
+    z.string(
+      d.zodSqlDomainRawCreateParams(
+        d.sqlDomainZodStringDescr({ isVarChar: true }),
+      ),
+    ).max(47),
+    {
+      identity: "syntheticVarChar47",
+    },
+  );
   const textOptionalSD = ztsdFactory.cacheableFrom(z.string().optional(), {
     identity: "syntheticTextOptional",
   });
+  const varCharOptionalSD = ztsdFactory.cacheableFrom(
+    z.string(d.zodSqlDomainRawCreateParams(
+      d.sqlDomainZodStringDescr({ isVarChar: true }),
+    )).max(52).optional(),
+    {
+      identity: "syntheticVarChar52Optional",
+    },
+  );
   const textOptionalDefaultSD = ztsdFactory.cacheableFrom(
     z.string().optional().default("syntheticTextOptionalDefault-defaultValue"),
     {
@@ -87,12 +105,24 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       textSD,
     );
     expectType<
+      d.SqlDomain<z.ZodString, SyntheticContext, "syntheticVarChar47">
+    >(
+      varCharSD,
+    );
+    expectType<
       d.SqlDomain<
         z.ZodOptional<z.ZodString>,
         SyntheticContext,
         "syntheticTextOptional"
       >
     >(textOptionalSD);
+    expectType<
+      d.SqlDomain<
+        z.ZodOptional<z.ZodString>,
+        SyntheticContext,
+        "syntheticVarChar52Optional"
+      >
+    >(varCharOptionalSD);
     expectType<
       d.SqlDomain<
         z.ZodDefault<z.ZodOptional<z.ZodString>>,
@@ -178,9 +208,17 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       sqlDataType: domain.sqlDataType("create table column").SQL(ctx),
     });
     ta.assertEquals(types(textSD), { nullable: false, sqlDataType: "TEXT" });
+    ta.assertEquals(types(varCharSD), {
+      nullable: false,
+      sqlDataType: "VARCHAR(47)",
+    });
     ta.assertEquals(types(textOptionalSD), {
       nullable: true,
       sqlDataType: "TEXT",
+    });
+    ta.assertEquals(types(varCharOptionalSD), {
+      nullable: true,
+      sqlDataType: "VARCHAR(52)",
     });
     ta.assertEquals(types(textOptionalDefaultSD), {
       nullable: true,

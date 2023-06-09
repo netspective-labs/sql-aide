@@ -55,6 +55,19 @@ export function governedDomains<
     text: z.string,
     textNullable: () => z.string().optional(),
 
+    varChar: (maxLength: number) =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      ).max(maxLength),
+    varChartNullable: (maxLength: number) =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      ).max(maxLength).optional(),
+
     integer: () => z.number().int(),
     integerNullable: () => z.number().int().optional(),
 
