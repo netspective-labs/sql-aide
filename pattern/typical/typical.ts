@@ -61,7 +61,7 @@ export function governedDomains<
           SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
         ),
       ).max(maxLength),
-    varChartNullable: (maxLength: number) =>
+    varCharNullable: (maxLength: number) =>
       z.string(
         SQLa.zodSqlDomainRawCreateParams(
           SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
