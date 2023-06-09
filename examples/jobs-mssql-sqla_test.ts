@@ -16,14 +16,9 @@ Deno.test("Jobs Example for Microsoft SQL Server", async (tc) => {
 
   await tc.step("01. CLI's SQL", async () => {
     const output = await $`./${CLI} sql`.text();
-    const fileContent = relativeFileContent(
-      "./jobs-mssql-sqla_test.fixture-01.sql",
-    );
-    const trimmedFileContent = fileContent.replace(/\n$/, "");
-    console.log(output);
     ta.assertEquals(
       output,
-      trimmedFileContent,
+      relativeFileContent("./jobs-mssql-sqla_test.fixture-01.sql"),
     );
   });
 

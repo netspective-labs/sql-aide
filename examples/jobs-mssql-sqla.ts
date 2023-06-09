@@ -15,7 +15,15 @@ type EmitContext = typeof ctx;
 
 const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
 const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
-const { text, textNullable, integer, integerNullable, date } = gm.domains;
+const {
+  text,
+  textNullable,
+  integer,
+  integerNullable,
+  varChar,
+  varCharNullable,
+  date,
+} = gm.domains;
 const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
 const jobSchema = "dbo";
@@ -27,11 +35,30 @@ export enum ExecutionContext {
 }
 const execCtx = gm.ordinalEnumTable("execution_context", ExecutionContext);
 
-export enum JobStatusContext {
-  ACTIVE,
-  DELETED,
+// export enum JobStatusContext {
+//   ACTIVE,
+//   DELETED,
+// }
+// const jobStatusCtx = gm.ordinalEnumTable("job_status", JobStatusContext);
+
+export enum jobStatusContext {
+  ACTIVE = "ACTIVE",
+  DRAFT = "DRAFT",
+  DELETED = "DELETED",
 }
-const jobStatusCtx = gm.ordinalEnumTable("job_status", JobStatusContext);
+
+const jobStatusCtx = gm.varCharEnumTable("job_status", jobStatusContext, 100);
+
+// export enum jobPositionStatusContext {
+//   Current = "Current",
+//   Past = "Past",
+//   Future = "Future",
+// }
+
+// const jobPositionStatusCtx = gm.textEnumTable(
+//   "job_position_status",
+//   jobPositionStatusContext,
+// );
 
 export enum jobPositionStatusContext {
   Current,
@@ -72,8 +99,11 @@ const jobPosition = gm.autoIncPkTable("job_position", {
   search_committee: textNullable(),
   question_answers: textNullable(),
   official: text(),
+  official_name: varChar(150),
+  official_phone: varCharNullable(20),
   status_id: jobStatusCtx.references.code(),
   position_status_id: jobPositionStatusCtx.references.code(),
+
   ...gm.housekeeping.columns,
 });
 
