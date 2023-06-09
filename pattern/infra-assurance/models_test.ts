@@ -27,7 +27,7 @@ const graphTableInsertion = mod.graph.insertDML({
   description: "description",
 });
 
-const graphIdSelect = mod.boundary.select(graphTableInsertion.insertable);
+const graphIdSelect = mod.graph.select(graphTableInsertion.insertable);
 const taxIdBoundary = mod.boundary.insertDML({
   boundary_nature_id: "REGULATORY_TAX_ID",
   name: "Boundery Name",
@@ -64,7 +64,7 @@ const raciMatrixInsertion = mod.raciMatrix.insertDML({
 
 const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
   .insertDML({
-    boundary_id: mod.boundary.select(primaryBoundary.insertable),
+    boundary_id: mod.boundary.select({ name: "Boundery Name Self Test" }),
     raci_matrix_subject_id: "CURATION_WORKS",
   });
 
