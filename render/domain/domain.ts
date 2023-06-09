@@ -753,8 +753,15 @@ export function zodEnumSqlDomainFactory<
     ) => {
       return {
         ...ztaSDF.defaults<Identity>(z.enum(values), init),
-        sqlDataType: () => ({ SQL: () => `TEXT` }),
-        parents: init?.parents,
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              // TODO: refactor this to its own render/dialect/mssql similar to render/dialect/pg
+              return `NVARCHAR(450)`;
+            }
+            return `TEXT`;
+          },
+        }),
       };
     },
   };
