@@ -757,6 +757,32 @@ export function zodEnumSqlDomainFactory<
         parents: init?.parents,
       };
     },
+    zodVarChar: <
+      U extends string,
+      T extends Readonly<[U, ...U[]]> | [U, ...U[]],
+      Identity extends string,
+    >(
+      values: T,
+      maxLength: number,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(z.enum(values), init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `NVARCHAR(${maxLength})`;
+            }
+            return `VARCHAR(${maxLength})`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
   };
 }
 

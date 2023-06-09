@@ -427,6 +427,7 @@ export function governedModel<
     safeView,
     ordinalEnumTable: etf.ordinalTable,
     textEnumTable: etf.textTable,
+    varCharEnumTable: etf.varCharTable,
   };
 }
 

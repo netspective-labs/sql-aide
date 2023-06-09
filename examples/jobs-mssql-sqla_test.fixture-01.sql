@@ -9,12 +9,13 @@ IF OBJECT_ID(N'dbo.execution_context', N'U') IS NOT NULL
 INSERT INTO [execution_context] ([code], [value]) VALUES (1, 'TEST');
 INSERT INTO [execution_context] ([code], [value]) VALUES (2, 'PRODUCTION');
   CREATE TABLE [job_status] (
-    [code] INTEGER PRIMARY KEY NOT NULL,
+    [code] NVARCHAR(100) PRIMARY KEY NOT NULL,
     [value] TEXT NOT NULL,
     [created_at] DATETIME2 DEFAULT GETDATE()
 );
-  INSERT INTO [job_status] ([code], [value]) VALUES (0, 'ACTIVE');
-INSERT INTO [job_status] ([code], [value]) VALUES (1, 'DELETED');
+  INSERT INTO [job_status] ([code], [value]) VALUES ('ACTIVE', 'ACTIVE');
+INSERT INTO [job_status] ([code], [value]) VALUES ('DRAFT', 'DRAFT');
+INSERT INTO [job_status] ([code], [value]) VALUES ('DELETED', 'DELETED');
   CREATE TABLE [job_position_status] (
     [code] INTEGER PRIMARY KEY NOT NULL,
     [value] TEXT NOT NULL,
@@ -42,7 +43,9 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES (2, 'Future');
     [search_committee] NVARCHAR(MAX),
     [question_answers] NVARCHAR(MAX),
     [official] NVARCHAR(MAX) NOT NULL,
-    [status_id] INTEGER NOT NULL,
+    [official_name] NVARCHAR(150) NOT NULL,
+    [official_phone] NVARCHAR(20),
+    [status_id] TEXT NOT NULL,
     [position_status_id] INTEGER NOT NULL,
     [created_at] DATETIME2 DEFAULT GETDATE(),
     [created_by] TEXT DEFAULT 'UNKNOWN',
