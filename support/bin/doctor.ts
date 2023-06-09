@@ -1,29 +1,24 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import * as colors from "https://deno.land/std@0.190.0/fmt/colors.ts";
-import $ from "https://deno.land/x/dax@0.31.1/mod.ts";
+import { build$, CommandBuilder } from "https://deno.land/x/dax@0.31.1/mod.ts";
+
+const $ = build$({ commandBuilder: new CommandBuilder().noThrow() });
+
+export type ReportResult = {
+  readonly ok: string;
+} | {
+  readonly warn: string;
+} | {
+  readonly suggest: string;
+};
 
 export interface DoctorReporter {
   (
-    args: {
-      ok: string;
-    } | {
-      warn: string;
-    } | {
-      suggest: string;
-    } | {
-      test: () => boolean;
-      pass: string;
-      fail: string;
-    } | {
-      expectText: string;
-      textNotFound: string;
-      pass?: (reporter: {
-        expectText: string;
-        textNotFound: string;
-      }) => string;
+    args: ReportResult | {
+      test: () => ReportResult | Promise<ReportResult>;
     },
-  ): void;
+  ): Promise<void>;
 }
 
 export interface DoctorDiagnostic {
@@ -49,7 +44,7 @@ export function denoDoctor(): DoctorCategory {
   return doctorCategory("Deno", function* () {
     const deno: DoctorDiagnostic = {
       diagnose: async (report: DoctorReporter) => {
-        report({ ok: (await $`deno --version`.text()).split("\n")[0] });
+        report({ ok: (await $`deno --version`.lines())[0] });
       },
     };
     yield deno;
@@ -65,34 +60,30 @@ export function denoDoctor(): DoctorCategory {
  * @returns
  */
 export function doctor(categories: () => Generator<DoctorCategory>) {
+  // deno-lint-ignore require-await
+  const report = async (options: ReportResult) => {
+    if ("ok" in options) {
+      console.info("  🆗", colors.green(options.ok));
+    } else if ("suggest" in options) {
+      console.info("  💡", colors.yellow(options.suggest));
+    } else {
+      console.warn("  🚫", colors.brightRed(options.warn));
+    }
+  };
+
   return async () => {
     for (const cat of categories()) {
       console.info(colors.dim(cat.label));
       for (const diag of cat.diagnostics()) {
-        await diag.diagnose((options) => {
-          if ("expectText" in options) {
-            if (options.expectText && options.expectText.trim().length > 0) {
-              console.info(
-                "  🆗",
-                colors.green(options.pass?.(options) ?? options.expectText),
-              );
-            } else {
-              console.warn("  🚫", colors.brightRed(options.textNotFound));
+        await diag.diagnose(async (options) => {
+          if ("test" in options) {
+            try {
+              report(await options.test());
+            } catch (err) {
+              report({ warn: err.toString() });
             }
-          } else if ("test" in options) {
-            if (options.test()) {
-              console.info("  🆗", colors.green(options.pass));
-            } else {
-              console.warn("  🚫", colors.brightRed(options.fail));
-            }
-          } else if ("suggest" in options) {
-            console.info("  💡", colors.yellow(options.suggest));
           } else {
-            if ("ok" in options) {
-              console.info("  🆗", colors.green(options.ok));
-            } else {
-              console.warn("  🚫", colors.brightRed(options.warn));
-            }
+            report(options);
           }
         });
       }
@@ -104,47 +95,65 @@ export const checkup = doctor(function* () {
   yield doctorCategory("Git dependencies", function* () {
     yield {
       diagnose: async (report) => {
-        const hooksPath =
-          (await $`git config core.hooksPath`.noThrow().text()).split("\n")[0];
+        const hooksPath = (await $`git config core.hooksPath`.lines())[0];
         if (hooksPath.trim().length > 0) {
           const hooks =
             await $`find ${hooksPath} -maxdepth 1 -type f -executable`.noThrow()
               .text();
           for (const hook of hooks.split("\n")) {
-            report({
-              expectText: hook,
-              textNotFound: "this should never happen",
-            });
+            report({ test: () => ({ ok: hook }) });
           }
         } else {
           report({
-            expectText: hooksPath,
-            textNotFound: "Git hooks not setup, run `deno task init`",
+            test: () => ({ warn: "Git hooks not setup, run `deno task init`" }),
           });
         }
       },
     };
   });
-  yield doctorCategory("Runtime dependencies", function* () {
-    yield* denoDoctor().diagnostics();
+  yield doctorCategory("Optional runtime dependencies", function* () {
     yield {
-      // deno-fmt-ignore
       diagnose: async (report) => {
-        report({
-          expectText: (await $`sqlite3 --version`.noThrow().text()).split("\n")[0],
-          textNotFound: "SQLite not found in PATH, install it",
-          pass: (args) => `SQLite ${args.expectText.split(' ')[0]}` });
-        report({ expectText: (await $`psql --version`.noThrow().text()).split("\n")[0], textNotFound: "PostgreSQL psql not found in PATH, install it" });
+        await report({
+          test: async () => (await $.commandExists("sqlite3")
+            ? { ok: `SQLite ${(await $`sqlite3 --version`.lines())[0]}` }
+            : { suggest: "SQLite not found in PATH, install it" }),
+        });
+        await report({
+          test: async () => (await $.commandExists("psql")
+            ? { ok: (await $`psql --version`.lines())[0] }
+            : { suggest: "PostgreSQL psql not found in PATH, install it" }),
+        });
       },
     };
   });
   yield doctorCategory("Build dependencies", function* () {
+    yield* denoDoctor().diagnostics();
+  });
+  yield doctorCategory("Optional build dependencies", function* () {
     yield {
-      // deno-fmt-ignore
       diagnose: async (report) => {
-        report({ expectText: (await $`dot -V`.noThrow().captureCombined()).combined.split("\n")[0], textNotFound: "graphviz dot not found in PATH, install it" });
-        report({ expectText: (await $`java --version`.noThrow().text()).split("\n")[0], textNotFound: "java not found in PATH, install it" });
-        report({ expectText: (await $`java -jar support/bin/plantuml.jar -version`.noThrow().text()).split("\n")[0], textNotFound: `plantuml.jar not found in support/bin` });
+        await report({
+          // deno-fmt-ignore
+          test: async () => (await $.commandExists("dot")
+            ? { ok: (await $`dot -V`.noThrow().captureCombined()).combined.split("\n")[0] }
+            : { suggest: "graphviz dot not found in PATH, install it to be able to generate ERDs" }),
+        });
+        await report({
+          // deno-fmt-ignore
+          test: async () => (await $.commandExists("java")
+            ? { ok: (await $`java --version`.lines())[0] }
+            : { suggest: "java not found in PATH, install it to be able to use PlantUML for ERDs" }),
+        });
+        if (await $.commandExists("java")) {
+          await report({
+            test:
+              // deno-fmt-ignore
+              async () => ((await $`java -jar support/bin/plantuml.jar -version`.noThrow().quiet().spawn()).code == 0
+                ? { ok: (await $`java -jar support/bin/plantuml.jar -version`.lines())[0] }
+                : { suggest: "plantuml.jar not found in support/bin" }),
+          });
+        }
       },
     };
   });
