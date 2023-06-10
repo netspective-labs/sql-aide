@@ -16,27 +16,34 @@ request or open tickets to request explanations, clarifications, etc.
 
 Welcome to SQLa (SQL Aide), an innovative SQL generation library designed to
 simplify the process of generating SQL statements in Typescript and beyond. SQLa
-combines the power of Typescript and SQL templates to provide a comprehensive
-solution for generating SQL code compatible with multiple database systems.
+uses the power of [Template literals (Template strings)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals).
 
-SQLa takes inspiration from the concept of static site generators and applies it
-to SQL-heavy applications and services. It leverages the capabilities of
-JavaScript functions and
+SQLa is like a "[static site generator](https://en.wikipedia.org/wiki/Static_site_generator)"
+for SQL and related database artifacts, allowing you to efficiently prepare,
+organize, and assemble SQL code and other database source code components.
+Similar to how a static site generator simplifies the process of creating static
+websites, SQLa streamlines the generation of SQL statements and related
+artifacts for SQL-heavy applications and services.
+
+By preparing relational tables, columns, views, stored procedures, and stored
+functions in TypeScript using SQLa's intuitive syntax and the Zod library,
+you can ensure consistency and reliability in your SQL and application source
+code generation workflow.
+
+Just like a static site generator allows you to define templates and content
+that get transformed into static web pages, SQLa enables you to define templates
+and schemas that get transformed into SQL statements and other database
+artifacts that you can pull into your apps and services as libraries. It
+provides a structured approach to SQL generation, allowing you to compose SQL
+code in a consistent and maintainable manner.
+
+SQLa leverages the capabilities of JavaScript functions and
 [Template literals (Template strings)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals)
 to prepare SQL components as composable building blocks, known as "SQL
-partials." These partials serve as the fundamental units for constructing SQL
-files and other database artifacts.
-
-The goal of SQLa is to assist in the preparation, organization, assembly,
-loading, and revision management of type-safe and deterministically reproducible
-SQL code. It eliminates the need for introducing a separate template language by
-utilizing a set of naming conventions and harnessing the full power of
-JavaScript (and TypeScript) template strings.
-
-With SQLa, you can leverage JavaScript's dynamic and expressive nature to
-prepare the final SQL statements that will be assembled and loaded into your
-relational databases. This approach allows for a flexible and efficient way of
-generating SQL code, while ensuring type safety and reproducibility.
+partials." It eliminates the need for introducing a separate template language
+by utilizing a set of naming conventions and harnessing the full power of
+JavaScript (and TypeScript) template strings. These _partials_ serve as the
+fundamental units for constructing SQL files and other database artifacts.
 
 By adopting SQLa, you can benefit from:
 
@@ -80,6 +87,10 @@ with SQL-heavy applications and services.
   columns, views, stored procedures, and stored functions. This capability
   allows for easier management and organization of your SQL code, even outside
   of a Typescript codebase.
+- **App/Service Source Code Generation for any Language**: SQLa can go beyond
+  SQL to generate a wide range of artifacts that support your database-related
+  workflows such as ORM specifications, database documentation, schema migration,
+  etc. from a single "source of truth".
 - **Multi-Dialect SQL Generation**: SQLa provides a unified interface to
   generate SQL statements compatible with different SQL dialects. Whether you're
   working with MySQL, PostgreSQL, SQLite, or other popular database systems,
@@ -124,6 +135,60 @@ your SQL code generation workflow and enhance your development experience.
 apps and services but is beneficial in other SQL-centric use cases for non-PostgreSQL-based
 databases.
 </Callout>
+
+## Beyond SQL
+
+In addition to its first-class support for generating SQL code, SQLa offers a
+versatile framework that enables the generation of various related
+text artifacts. With SQLa, you can go beyond SQL generation and leverage its
+capabilities to generate a wide range of artifacts that support your
+all database-related workflows in any target language, framework, or ecosystem.
+
+### ORM Definition Files
+
+SQLa can be used to generate ORM (Object-Relational Mapping) definition files
+that serve as a bridge between your database and an ORM framework of your choice.
+By defining a consistent, well-documented schema using SQLa's schema definition
+capabilities, you can generate ORM definition files that accurately reflect your
+database structure. These files provide a foundation for leveraging any ORM in
+any programming language, ensuring seamless integration between your application
+code and the database.
+
+### Database Documentation
+
+SQLa can generate comprehensive database documentation by leveraging its schema
+definition and SQL generation features. By annotating your SQLa schema with
+descriptive comments and generating documentation files based on the schema,
+you can easily produce well-documented and up-to-date documentation for your
+database. This documentation can serve as a valuable resource for developers,
+database administrators, and other stakeholders involved in understanding and
+maintaining the database structure.
+
+### Migration Files
+
+SQLa's SQL generation capabilities can be used to generate migration files that
+facilitate database schema changes and version control. By defining your database
+schema using SQLa's schema definition syntax and utilizing SQLa's migration
+generation features, you can automate the generation of migration files that
+capture the necessary SQL statements to migrate your database from one version
+to another. These migration files enable seamless and consistent database
+schema evolution, ensuring smooth deployments and version management.
+
+### Data Seeder Files
+
+SQLa can also assist in generating data seeder files that provide initial or
+sample data for your database. By utilizing SQLa's schema definition and SQL
+generation capabilities, you can define data seeder templates that populate
+your database with pre-defined data. These seeder files can be executed during
+the database setup or as part of a data import process, allowing you to
+bootstrap your database with consistent and meaningful data.
+
+The flexibility of SQLa allows you to adapt its text generation capabilities to
+suit your specific needs outside of pure SQL and for any target programming
+language(s). By harnessing SQLa's ability to generate an unlimited range of text
+artifacts, you can streamline your development workflows, maintain consistency
+across different tools and frameworks, and ensure the reliability and accuracy
+of your database-related processes.
 
 ## Test Coverage
 
