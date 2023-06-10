@@ -1,8 +1,6 @@
 #!/usr/bin/env -S deno run -A
 
-import * as c from "https://deno.land/std@0.173.0/fmt/colors.ts";
-import * as path from "https://deno.land/std@0.173.0/path/mod.ts";
-import docopt from "https://deno.land/x/docopt@v1.0.7/mod.ts";
+import { colors as c, docopt as cli, path } from "./deps.ts";
 import { Connection, parse } from "./pgpass-parse.ts";
 
 // TODO: `pgpass env --var-name` and `pgpass prepare <js-eval-expr>` use
@@ -10,7 +8,7 @@ import { Connection, parse } from "./pgpass-parse.ts";
 //       trusted machines so be careful. Find a string replacement library to
 //       upgrade later.
 
-const version = "1.0.2";
+const version = "1.0.3";
 const cmd = "pgpass";
 const pgPassFile = path.join(`${Deno.env.get("HOME")}`, ".pgpass");
 const doc = `
@@ -146,7 +144,7 @@ interface Arguments {
 
 let args: Arguments;
 try {
-  args = docopt(doc) as unknown as Arguments;
+  args = cli.default(doc) as unknown as Arguments;
   if (args.inspect) args["--warn-no-descriptors"] = true;
   args.connMatchers = args["--conn-id"] && args["--conn-id"].length > 0
     ? (args["--conn-id"].map((re) => new RegExp(re)))

@@ -1,5 +1,5 @@
 import JSON5 from "npm:json5";
-import { z } from "https://deno.land/x/zod@v3.20.2/mod.ts";
+import { zod as z } from "./deps.ts";
 
 export const connectionDescriptorSchema = z.object({
   vendor: z.string().optional().default("PostgreSQL"),
