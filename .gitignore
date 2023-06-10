@@ -1,5 +1,10 @@
+# we don't track OS-specific file system meta-data
+.DS_Store
+
 # if you create any test files, use this as the prefix
 DELETE_ME_DEBUG_*
+
+# we don't track NPM or NextJS artifacts
 support/package-npm/npm/
 support/docs-nextra/node_modules
 support/docs-nextra/.next
