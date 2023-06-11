@@ -41,6 +41,15 @@ export class PgDcpEmitter<
     super(init);
   }
 
+  sqlEmitContext(): PgDcpEmitContext {
+    return {
+      isPgDcpEmitContext: true,
+      ...SQLa.typicalSqlEmitContext({
+        sqlDialect: SQLa.postgreSqlDialect(),
+      }),
+    };
+  }
+
   lifecycle(
     args?: {
       lcSchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;

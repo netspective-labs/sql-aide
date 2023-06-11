@@ -1,6 +1,6 @@
 import * as g from "./governance.ts";
 
-export const context = <Context extends g.PgDcpEmitContext>(
+export const context = (
   args?: { tmplEngine: ReturnType<typeof g.PgDcpEmitter.init> },
 ) => {
   const te = args?.tmplEngine ?? g.PgDcpEmitter.init(import.meta);
