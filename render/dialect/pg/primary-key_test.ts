@@ -13,7 +13,9 @@ Deno.test("SQL Aide (SQLa) PostgreSQL primary keys", async (tc) => {
     "synthetic_table_keys",
     keysShape,
   );
-  const ctx = emit.typicalSqlEmitContext();
+  const ctx = emit.typicalSqlEmitContext({
+    sqlDialect: emit.postgreSqlDialect(),
+  });
   const ddlOptions = emit.typicalSqlTextSupplierOptions();
   const lintState = emit.typicalSqlLintSummaries(ddlOptions.sqlTextLintState);
 

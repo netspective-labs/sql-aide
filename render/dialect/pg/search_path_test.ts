@@ -6,7 +6,9 @@ import * as emit from "../../emit/mod.ts";
 type SchemaName = "synthetic_schema1" | "synthetic_schema2";
 
 Deno.test("SQL Aide (SQLa) schema", async (tc) => {
-  const ctx = emit.typicalSqlEmitContext();
+  const ctx = emit.typicalSqlEmitContext({
+    sqlDialect: emit.postgreSqlDialect(),
+  });
 
   await tc.step("PostgreSQL schema search path declaration", () => {
     const schema1 = sch.sqlSchemaDefn<SchemaName, emit.SqlEmitContext>(

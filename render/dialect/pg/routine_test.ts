@@ -6,7 +6,9 @@ import * as mod from "./routine.ts";
 import * as ddl from "../../ddl/mod.ts";
 
 Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
-  const ctx = tmpl.typicalSqlEmitContext();
+  const ctx = tmpl.typicalSqlEmitContext({
+    sqlDialect: tmpl.postgreSqlDialect(),
+  });
 
   await tc.step("PL/pgSQL anonymous block (auto begin/end)", () => {
     const autoBeginEndAnonBlock = mod.anonymousPlPgSqlRoutine(ctx)`

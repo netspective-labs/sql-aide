@@ -3,10 +3,24 @@ import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../../lib/universal/whitespace.ts";
 import * as mod from "./domain.ts";
 import * as tmpl from "../../emit/mod.ts";
+import * as s from "../../ddl/schema.ts";
 
 Deno.test("SQL Aide (SQLa) custom data type (domain)", async (tc) => {
-  const ctx = tmpl.typicalSqlEmitContext();
+  const ctx = tmpl.typicalSqlEmitContext({
+    sqlDialect: tmpl.postgreSqlDialect(),
+  });
   const pgdf = mod.pgDomainsFactory();
+
+  await tc.step("domain reference", () => {
+    const dr = pgdf.pgDomainRef(
+      s.sqlSchemaDefn("my_schema"),
+      "custom_type_1",
+    );
+    ta.assertEquals(
+      dr.sqlDataType("create table column").SQL(ctx),
+      `"my_schema"."custom_type_1"`,
+    );
+  });
 
   await tc.step("idempotent domain declaration", () => {
     const domain = pgdf.pgDomainDefn(
