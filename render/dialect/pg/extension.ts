@@ -2,11 +2,11 @@ import * as safety from "../../../lib/universal/safety.ts";
 import * as emit from "../../emit/mod.ts";
 import * as sch from "../../ddl/schema.ts";
 
-export type PostgresExtension = string;
+export type PgExtensionName = string;
 
 export interface ExtensionDefinition<
   SchemaName extends emit.SqlNamespace,
-  ExtensionName extends PostgresExtension,
+  ExtensionName extends PgExtensionName,
   Context extends emit.SqlEmitContext,
 > extends emit.SqlTextSupplier<Context> {
   readonly isValid: boolean;
@@ -17,7 +17,7 @@ export interface ExtensionDefinition<
 
 export function isExtensionDefinition<
   SchemaName extends emit.SqlNamespace,
-  ExtensionName extends PostgresExtension,
+  ExtensionName extends PgExtensionName,
   Context extends emit.SqlEmitContext,
 >(
   o: unknown,
@@ -33,7 +33,7 @@ export function isExtensionDefinition<
 
 export interface ExtensionDefnOptions<
   SchemaName extends emit.SqlNamespace,
-  ExtensionName extends PostgresExtension,
+  ExtensionName extends PgExtensionName,
   Context extends emit.SqlEmitContext,
 > {
   readonly isIdempotent?: boolean;
@@ -41,7 +41,7 @@ export interface ExtensionDefnOptions<
 
 export function pgExtensionDefn<
   SchemaName extends emit.SqlNamespace,
-  ExtensionName extends PostgresExtension,
+  ExtensionName extends PgExtensionName,
   Context extends emit.SqlEmitContext,
 >(
   schema: sch.SchemaDefinition<SchemaName, Context>,
