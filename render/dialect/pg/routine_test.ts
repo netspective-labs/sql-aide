@@ -91,6 +91,46 @@ Deno.test("SQL Aide (SQLa) anonymous stored routine", async (tc) => {
   });
 
   await tc.step(
+    "PL/SQL no-args stored procedure (idempotent, auto begin/end)",
+    () => {
+      const sp = mod.storedProcedure(
+        "synthetic_sp0",
+        {},
+        (name) => mod.untypedPlSqlBody(name, ctx),
+      )`
+      -- this is the stored procedure body`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp0"() AS $$
+          -- this is the stored procedure body
+        $$ LANGUAGE SQL;`),
+      );
+    },
+  );
+
+  await tc.step(
+    "PL/pgSQL no-args stored procedure (idempotent, auto begin/end)",
+    () => {
+      const sp = mod.storedProcedure(
+        "synthetic_sp0",
+        {},
+        (name) => mod.untypedPlPgSqlBody(name, ctx),
+      )`
+      -- this is the stored procedure body`;
+      ta.assertEquals(
+        sp.SQL(ctx),
+        uws(`
+        CREATE OR REPLACE PROCEDURE "synthetic_sp0"() AS $$
+        BEGIN
+          -- this is the stored procedure body
+        END;
+        $$ LANGUAGE PLPGSQL;`),
+      );
+    },
+  );
+
+  await tc.step(
     "PL/SQL stored procedure (idempotent, auto begin/end)",
     () => {
       const sp = mod.storedProcedure("synthetic_sp1", {
