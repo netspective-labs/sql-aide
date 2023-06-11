@@ -57,7 +57,9 @@ export function pgDomainsFactory<
   >(
     dd: d.SqlDomain<ZodType, Context, DomainName>,
     domainName: DomainName,
-    ddOptions?: DomainDefnOptions<DomainName, Context>,
+    ddOptions?:
+      & DomainDefnOptions<DomainName, Context>
+      & { nsOptions?: tmpl.SqlObjectNamingStrategyOptions },
   ) => {
     const { isIdempotent = false, humanFriendlyFmtIndent: hffi } = ddOptions ??
       {};
@@ -66,7 +68,8 @@ export function pgDomainsFactory<
       & tmpl.SqlTextSupplier<Context> = {
         populateSqlTextLintIssues: () => {},
         SQL: (ctx) => {
-          const identifier = domainName;
+          const identifier = ctx.sqlNamingStrategy(ctx, ddOptions?.nsOptions)
+            .domainName(domainName);
           const asType = dd.sqlDataType("PostgreSQL domain").SQL(ctx);
           if (isIdempotent) {
             if (ddOptions?.warnOnDuplicate) {
