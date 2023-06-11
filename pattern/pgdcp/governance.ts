@@ -1,119 +1,122 @@
-import { pgSQLa, safety, SQLa } from "./deps.ts";
+import { pgSQLa, SQLa, zod as z } from "./deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export type SqlEmitContext = SQLa.SqlEmitContext;
-
-export interface TemplateProvenance {
-  readonly identity: string;
-  readonly version: string;
-  readonly source: string;
+export interface PgDcpEmitContext extends SQLa.SqlEmitContext {
+  readonly isPgDcpEmitContext: true;
 }
 
-export interface TypeScriptModuleProvenance extends TemplateProvenance {
-  readonly importMeta: ImportMeta;
-}
+export class PgDcpEmitter<
+  SchemaDefns extends {
+    context: SQLa.SchemaDefinition<"context", PgDcpEmitContext>;
+    extensions: SQLa.SchemaDefinition<"extensions", PgDcpEmitContext>;
+    lifecycle: SQLa.SchemaDefinition<"lifecycle", PgDcpEmitContext>;
+    lib: SQLa.SchemaDefinition<"lib", PgDcpEmitContext>;
+    confidential: SQLa.SchemaDefinition<"confidential", PgDcpEmitContext>;
+    assurance: SQLa.SchemaDefinition<"assurance", PgDcpEmitContext>;
+    experimental: SQLa.SchemaDefinition<"experimental", PgDcpEmitContext>;
+  },
+  ExtensionDefns extends {
+    ltree: pgSQLa.ExtensionDefinition<"extensions", "ltree", PgDcpEmitContext>;
+  },
+  PgDomainDefns extends {
+    execution_context: SQLa.SqlTextSupplier<PgDcpEmitContext>;
+    execution_host_identity: SQLa.SqlTextSupplier<PgDcpEmitContext>;
+  },
+> extends pgSQLa.EmitCoordinator<
+  SchemaDefns,
+  ExtensionDefns,
+  PgDomainDefns,
+  PgDcpEmitContext
+> {
+  public constructor(
+    readonly init: pgSQLa.EmitCoordinatorInit<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns,
+      PgDcpEmitContext
+    >,
+  ) {
+    super(init);
+  }
 
-export const isTypeScriptModuleProvenance = safety.typeGuard<
-  TypeScriptModuleProvenance
->("importMeta");
+  lifecycle(
+    args?: {
+      lcSchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;
+    },
+  ) {
+    const ctx = this.sqlEmitContext();
 
-export const emitter = <Context extends SqlEmitContext>(
-  importMeta: ImportMeta,
-  defaultP?: Partial<TemplateProvenance>,
-) => {
-  const stsOptions = SQLa.typicalSqlTextSupplierOptions<Context>();
-  return {
-    stsOptions,
-    SQL: SQLa.SQL<Context>(stsOptions),
-    sqlEmitContext: () =>
-      SQLa.typicalSqlEmitContext({
-        sqlDialect: SQLa.postgreSqlDialect(),
+    const constructStorage = (identity: string) => {
+      const spIdentifier = `construct_storage_${identity}`;
+      return pgSQLa.storedProcedure(
+        spIdentifier,
+        {},
+        (name) => pgSQLa.untypedPlPgSqlBody(name, ctx),
+        // we the same text options as prime because `create table`, and other
+        // DDL statements are likely so we don't want to process symbols
+        {
+          embeddedStsOptions: this.primeSTSO,
+          sqlNS: args?.lcSchema ?? this.schemaDefns.lifecycle,
+        },
+      );
+    };
+
+    return {
+      constructStorage,
+    };
+  }
+
+  static init(importMeta: ImportMeta) {
+    return new PgDcpEmitter({
+      importMeta,
+      schemaDefns: (define) => ({
+        context: define("context"),
+        extensions: define("extensions"),
+        lifecycle: define("lifecycle"),
+        lib: define("lib"),
+        confidential: define("confidential"),
+        assurance: define("assurance"),
+        experimental: define("experimental"),
       }),
-    provenance: () => {
-      const result: TypeScriptModuleProvenance = {
-        source: importMeta.url,
-        importMeta,
-        identity: defaultP?.identity || importMeta.url.split("/").pop() ||
-          importMeta.url,
-        version: defaultP?.version || "0.0.0",
-      };
-      return result;
-    },
-  };
-};
-
-export const schemas = <Context extends SqlEmitContext>() => {
-  const schemaDefn = <SchemaName extends string>(name: SchemaName) =>
-    SQLa.sqlSchemaDefn<SchemaName, Context>(name, { isIdempotent: true });
-
-  const context = schemaDefn("context");
-  const extensions = schemaDefn("extensions");
-  const lifecycle = schemaDefn("lifecycle");
-  const lib = schemaDefn("lib");
-  const confidential = schemaDefn("confidential");
-  const assurance = schemaDefn("assurance");
-  const experimental = schemaDefn("experimental");
-
-  return {
-    context,
-    extensions,
-    lifecycle,
-    lib,
-    confidential,
-    assurance,
-    experimental,
-    pick: (...pickFrom: SQLa.SchemaDefinition<Any, Context>[]) => {
-      return pickFrom.filter(
-        (schema, index, self) =>
-          self.findIndex((s) => s.sqlNamespace === schema.sqlNamespace) ===
-            index,
-      );
-    },
-  };
-};
-
-export const extensions = <Context extends SqlEmitContext>() => {
-  const s = schemas<Context>();
-  type ExtnDefn = ReturnType<typeof pgSQLa.pgExtensionDefn<Any, Any, Context>>;
-  const ltree = pgSQLa.pgExtensionDefn(s.extensions, "ltree");
-  return {
-    ltree,
-    pick: (...extns: ExtnDefn[]) => {
-      // find all the schemas which the extensions belong to
-      const extnSchemas = extns.filter(
-        (extension, index, self) =>
-          self.findIndex((e) =>
-            e.schema.sqlNamespace === extension.schema.sqlNamespace
-          ) === index,
-      ).map((e) => e.schema);
-      const uniqueExtns = extns.filter(
-        (extension, index, self) =>
-          self.findIndex((e) => e.extension === extension.extension) === index,
-      );
-      return { extnSchemas, uniqueExtns };
-    },
-  };
-};
-
-export const lifecycle = <Context extends SqlEmitContext>() => {
-  const e = emitter(import.meta);
-  const ctx = e.sqlEmitContext();
-  const { lifecycle: lcSchema } = schemas<Context>();
-
-  const constructStorage = (identity: string) => {
-    const spIdentifier = `construct_storage_${identity}`;
-    return pgSQLa.storedProcedure(
-      spIdentifier,
-      {},
-      (name) => pgSQLa.untypedPlPgSqlBody(name, ctx),
-      { embeddedStsOptions: e.stsOptions, sqlNS: lcSchema },
-    );
-  };
-
-  return {
-    lcSchema,
-    constructStorage,
-  };
-};
+      extnDefns: (define, schemas) => ({
+        ltree: define(schemas.extensions, "ltree"),
+      }),
+      pgDomainDefns: (pgdf, schemas) => ({
+        execution_context: pgdf.pgDomainDefn(
+          // we type-cast because it's a reference ... "execution_context" as "ltree" in SQL
+          pgdf.pgDomainRef(
+            schemas.extensions,
+            "ltree",
+          ) as unknown as SQLa.SqlDomain<
+            Any,
+            PgDcpEmitContext,
+            "execution_context"
+          >,
+          "execution_context",
+          {
+            isIdempotent: true,
+            nsOptions: {
+              quoteIdentifiers: true,
+              qnss: schemas.context,
+            },
+          },
+        ),
+        execution_host_identity: pgdf.pgDomainDefn(
+          pgdf.stringSDF.string<z.ZodString, "execution_host_identity">(
+            z.string(),
+          ),
+          "execution_host_identity",
+          {
+            isIdempotent: true,
+            nsOptions: {
+              quoteIdentifiers: true,
+              qnss: schemas.context,
+            },
+          },
+        ),
+      }),
+    });
+  }
+}
