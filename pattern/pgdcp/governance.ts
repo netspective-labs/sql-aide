@@ -5,34 +5,6 @@ type Any = any;
 
 export type SqlEmitContext = SQLa.SqlEmitContext;
 
-export const sqlDomainReference = <
-  SchemaName extends string,
-  Target extends string,
-  Context extends SqlEmitContext,
->(
-  schema: SQLa.SchemaDefinition<SchemaName, Context>,
-  identity: Target,
-) => {
-  const result: SQLa.SqlDomain<Any, Context, Target> = {
-    isSqlDomain: true as true, // must not be a boolean but `true`
-    identity,
-    isNullable: () => false,
-    sqlSymbol: (ctx) =>
-      ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true, qnss: schema })
-        .domainName(identity),
-    sqlDataType: () => ({
-      SQL: (ctx) => {
-        return ctx.sqlNamingStrategy(ctx, {
-          quoteIdentifiers: true,
-          qnss: schema,
-        })
-          .domainName(identity);
-      },
-    }),
-  };
-  return result;
-};
-
 export interface TemplateProvenance {
   readonly identity: string;
   readonly version: string;

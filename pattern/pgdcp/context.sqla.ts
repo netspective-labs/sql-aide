@@ -8,7 +8,7 @@ export const context = () => {
   const extns = e.pick(e.ltree);
   const schemas = s.pick(...extns.extnSchemas, s.lifecycle, s.context);
   const execCtxDomain = pgdf.pgDomainDefn(
-    govn.sqlDomainReference(s.extensions, e.ltree.extension),
+    pgdf.pgDomainRef(s.extensions, e.ltree.extension),
     "execution_context",
     {
       isIdempotent: true,

@@ -3,6 +3,7 @@ import * as safety from "../../../lib/universal/safety.ts";
 import { unindentWhitespace as uws } from "../../../lib/universal/whitespace.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as d from "../../domain/mod.ts";
+import * as s from "../../ddl/schema.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -50,6 +51,32 @@ export function pgDomainsFactory<
     );
     return df.anySDF.isSqlDomain(o) && isSD(o);
   }
+
+  const pgDomainRef = <
+    SchemaName extends string,
+    Target extends string,
+  >(
+    schema: s.SchemaDefinition<SchemaName, Context>,
+    identity: Target,
+  ) => {
+    const result: d.SqlDomain<Any, Context, Target> = {
+      isSqlDomain: true as true, // must not be a boolean but `true`
+      identity,
+      isNullable: () => false,
+      sqlSymbol: (ctx) =>
+        ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true, qnss: schema })
+          .domainName(identity),
+      sqlDataType: () => ({
+        SQL: (ctx) => {
+          return ctx.sqlNamingStrategy(ctx, {
+            quoteIdentifiers: true,
+            qnss: schema,
+          }).domainName(identity);
+        },
+      }),
+    };
+    return result;
+  };
 
   const pgDomainDefn = <
     ZodType extends z.ZodTypeAny,
@@ -100,6 +127,7 @@ export function pgDomainsFactory<
           }
         },
       };
+
     return {
       ...dd,
       isValid: true,
@@ -134,5 +162,6 @@ export function pgDomainsFactory<
     isDomainDefinition,
     serial,
     serialNullable,
+    pgDomainRef,
   };
 }
