@@ -1,25 +1,42 @@
+#!/usr/bin/env -S deno run --allow-all
 import * as g from "./governance.ts";
 
-export const context = (
-  args?: { tmplEngine: ReturnType<typeof g.PgDcpEmitter.init> },
-) => {
-  const te = args?.tmplEngine ?? g.PgDcpEmitter.init(import.meta);
-  const { pgDomains: pgd } = te;
-  const extns = te.extensions("ltree");
-  const schemas = te.schemas(...extns.extnSchemaNames, "lifecycle", "context");
-  const lc = te.lifecycle();
+export const context = () => {
+  const tmplEngine = g.PgDcpEmitter.init(import.meta);
+  const { pgDomains: pgd } = tmplEngine;
+  const extns = tmplEngine.extensions("ltree");
+  const schemas = tmplEngine.schemas(
+    ...extns.extnSchemaNames,
+    "dcp_lifecycle",
+    "dcp_context",
+  );
+  const lc = tmplEngine.lifecycle();
   const constructStorage = lc.constructStorage("context")`
     ${pgd.execution_host_identity}
   `;
-  return te.SQL()`
-    -- ${te.provenance.identity} version ${te.provenance.version}
 
-    ${schemas}
+  return {
+    tmplEngine,
+    extns,
+    schemas,
+    lc,
+    constructStorage,
+    content: tmplEngine.SQL()`
+      ${tmplEngine.psqlHeader}
 
-    ${extns.uniqueExtns}
+      ${schemas}
 
-    ${pgd.execution_context}
+      ${extns.uniqueExtns}
 
-    ${constructStorage}
-  `;
+      ${pgd.execution_context}
+
+      ${constructStorage}`,
+  };
 };
+
+export default context;
+
+if (import.meta.main) {
+  const tmpl = context();
+  console.log(tmpl.content.SQL(tmpl.tmplEngine.sqlEmitContext()));
+}
