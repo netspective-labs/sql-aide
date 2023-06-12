@@ -21,7 +21,7 @@ export const context = () => {
     schemas,
     lc,
     constructStorage,
-    content: tmplEngine.SQL()`
+    psqlText: tmplEngine.SQL()`
       ${tmplEngine.psqlHeader}
 
       ${schemas}
@@ -38,5 +38,5 @@ export default context;
 
 if (import.meta.main) {
   const tmpl = context();
-  console.log(tmpl.content.SQL(tmpl.tmplEngine.sqlEmitContext()));
+  console.log(tmpl.psqlText.SQL(tmpl.tmplEngine.sqlEmitContext()));
 }

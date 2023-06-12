@@ -12,27 +12,12 @@ export * from "./context.sqla.ts";
 // it in Deno. everything below this is only used when being called as a main
 // module
 
-import { path } from "../../deps.ts";
-import { pgDcpPersist, pgDcpPersistCmdOutput } from "./governance.ts";
+import * as g from "./governance.ts";
 
 if (import.meta.main) {
-  const persist = pgDcpPersist({
-    destPath: (file) =>
-      path.relative(
-        Deno.cwd(),
-        path.join(path.dirname(path.fromFileUrl(import.meta.url)), file),
-      ),
-    content: async function* () {
-      yield pgDcpPersistCmdOutput({
-        provenance: () => ({
-          identity: "context",
-          source: path.fromFileUrl(import.meta.resolve("./context.sqla.ts")),
-          version: "v0.0.0",
-        }),
-        // deno-lint-ignore require-await
-        psqlBasename: async () => "context.auto.sql",
-      });
-    },
+  const persister = g.pgDcpPersister({
+    importMeta: import.meta,
+    sources: [{ source: "./context.sqla.ts" }],
   });
-  await persist.emitAll();
+  await persister.emitAll();
 }

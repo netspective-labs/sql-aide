@@ -1,5 +1,4 @@
-import { TemplateProvenance } from "../../render/dialect/pg/coordinator.ts";
-import { path, pgSQLa, SQLa, zod as z } from "./deps.ts";
+import { path, persistContent as pc, pgSQLa, SQLa, zod as z } from "./deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -152,74 +151,47 @@ export class PgDcpEmitter<
   }
 }
 
-export interface PgDcpPersistContent {
-  readonly psqlBasename: () => Promise<string>;
-  readonly psqlText: () => Promise<
-    {
-      readonly provenance: TemplateProvenance;
-      readonly content: string;
-    } | {
-      readonly provenance: TemplateProvenance;
-      readonly error: Error;
-    }
-  >;
-}
-
-export function pgDcpPersistCmdOutput(
-  source: {
-    readonly provenance: () => TemplateProvenance;
-    readonly psqlBasename: () => Promise<string>;
-  },
-) {
-  const provenance = source.provenance();
-  const result: PgDcpPersistContent = {
-    psqlBasename: source.psqlBasename,
-    psqlText: async () => {
-      try {
-        const command = new Deno.Command(provenance.source);
-        const { code, stdout, stderr } = await command.output();
-        if (code === 0) {
-          return { provenance, content: new TextDecoder().decode(stdout) };
-        } else {
-          return {
-            provenance,
-            error: new Error(new TextDecoder().decode(stderr)),
-          };
-        }
-      } catch (error) {
-        return { provenance, error };
+export function pgDcpPersister({ importMeta, sources }: {
+  readonly importMeta: ImportMeta;
+  readonly sources: pc.PersistProvenance[];
+}) {
+  const relativeToCWD = (fsPath: string) => path.relative(Deno.cwd(), fsPath);
+  return pc.textFilesPersister({
+    destPath: (file) =>
+      path.isAbsolute(file)
+        ? file
+        : path.fromFileUrl(importMeta.resolve(`./${file}`)),
+    content: async function* () {
+      // in our case we assume that each `psql` file X is in a `X.sqla.ts`
+      // source file and that it's executable and that executing it will
+      // return its `psl` content which needs to be saved to `X.auto.psql`.
+      for (const s of sources) {
+        const source = path.fromFileUrl(importMeta.resolve(s.source));
+        yield pc.persistCmdOutput({
+          // deno-fmt-ignore
+          provenance: () => ({ source }),
+          basename: () => path.basename(source, ".sqla.ts") + ".auto.psql",
+        });
       }
     },
-  };
-  return result;
-}
-
-export interface PgDcpPersistStrategy {
-  readonly destPath: (target: string) => string;
-  readonly content: () => AsyncGenerator<PgDcpPersistContent>;
-}
-
-export function pgDcpPersist(strategy: PgDcpPersistStrategy) {
-  const { destPath, content } = strategy;
-  return {
-    emitAll: async () => {
-      for await (const c of content()) {
-        const destFile = destPath(await c.psqlBasename());
-        const psqlText = await c.psqlText();
-        const { provenance } = psqlText;
-        if ("content" in psqlText) {
-          await Deno.writeTextFile(destFile, psqlText.content);
-          console.log(
-            path.relative(Deno.cwd(), provenance.source),
-            path.relative(Deno.cwd(), destFile),
-          );
-        } else {
-          console.log(
-            path.relative(Deno.cwd(), provenance.source),
-            psqlText.error,
-          );
-        }
-      }
+    finalize: async ({ emitted, persist, destPath }) => {
+      const driver = destPath("driver.auto.psql");
+      await persist(
+        driver,
+        emitted.map((e) => `\\ir ${path.basename(e.destFile)}`).join("\n"),
+      );
     },
-  };
+    reportSuccess: ({ provenance, destFile }) => {
+      console.log(
+        provenance ? relativeToCWD(provenance.source) : "<?>",
+        path.relative(Deno.cwd(), destFile),
+      );
+    },
+    reportFailure: ({ provenance, error }) => {
+      console.error(
+        provenance ? relativeToCWD(provenance.source) : "<?>",
+        error,
+      );
+    },
+  });
 }

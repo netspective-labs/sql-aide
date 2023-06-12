@@ -3,7 +3,7 @@ import * as mod from "./mod.ts";
 
 Deno.test("context", () => {
   const dcpe = mod.context();
-  const SQL = dcpe.content.SQL(
+  const SQL = dcpe.psqlText.SQL(
     dcpe.tmplEngine.sqlEmitContext(),
   );
   ta.assert(SQL);
