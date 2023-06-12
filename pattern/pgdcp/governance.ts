@@ -1,4 +1,5 @@
-import { fs, path, pgSQLa, SQLa, zod as z } from "./deps.ts";
+import { TemplateProvenance } from "../../render/dialect/pg/coordinator.ts";
+import { path, pgSQLa, SQLa, zod as z } from "./deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -151,77 +152,72 @@ export class PgDcpEmitter<
   }
 }
 
-export interface PgDcpPersistStrategy {
-  readonly destPath: (file: string) => string;
-  readonly handlePath: (entry: fs.WalkEntry) =>
-    | ({
-      // TODO: add readonly weight: number; or index, sort-order, etc.
-      readonly entry: fs.WalkEntry;
-      readonly destFile: (destPath?: (file: string) => string) => string;
-    })
-    | false;
+export interface PgDcpPersistContent {
+  readonly psqlBasename: () => Promise<string>;
+  readonly psqlText: () => Promise<
+    {
+      readonly provenance: TemplateProvenance;
+      readonly content: string;
+    } | {
+      readonly provenance: TemplateProvenance;
+      readonly error: Error;
+    }
+  >;
 }
 
-export function typicalPgDcpPersistStrategy(
-  destPath: (basename: string) => string,
-  suffix = ".sqla.ts",
-): PgDcpPersistStrategy {
-  return {
-    destPath,
-    handlePath: (entry) => {
-      if (!entry.name.endsWith(suffix)) return false;
-      return {
-        entry,
-        destFile: (overrideDestPath) => {
-          const destFN = path.basename(entry.path, suffix) + ".auto.psql";
-          return overrideDestPath ? overrideDestPath(destFN) : destPath(destFN);
-        },
-      };
-    },
-  };
-}
-
-export function pgDcpPersist(options: PgDcpPersistStrategy) {
-  const { destPath, handlePath } = options;
-  return {
-    destroyAll: async (rootPath: string) => {
-      for await (
-        const entry of fs.walk(rootPath, {
-          includeFiles: true,
-          includeDirs: false,
-        })
-      ) {
-        const handler = handlePath(entry);
-        if (handler) {
-          const destFile = handler.destFile(destPath);
-          console.log(
-            path.relative(Deno.cwd(), handler.entry.path),
-            path.relative(Deno.cwd(), destFile),
-          );
-        }
-      }
-    },
-    emitAll: async (rootPath: string) => {
-      for await (
-        const entry of fs.walk(rootPath, {
-          includeFiles: true,
-          includeDirs: false,
-        })
-      ) {
-        const handler = handlePath(entry);
-        if (!handler) continue;
-        const command = new Deno.Command(entry.path);
+export function pgDcpPersistCmdOutput(
+  source: {
+    readonly provenance: () => TemplateProvenance;
+    readonly psqlBasename: () => Promise<string>;
+  },
+) {
+  const provenance = source.provenance();
+  const result: PgDcpPersistContent = {
+    psqlBasename: source.psqlBasename,
+    psqlText: async () => {
+      try {
+        const command = new Deno.Command(provenance.source);
         const { code, stdout, stderr } = await command.output();
         if (code === 0) {
-          const destFile = handler.destFile(destPath);
-          const output = new TextDecoder().decode(stdout);
-          await Deno.writeTextFile(destFile, output);
+          return { provenance, content: new TextDecoder().decode(stdout) };
+        } else {
+          return {
+            provenance,
+            error: new Error(new TextDecoder().decode(stderr)),
+          };
+        }
+      } catch (error) {
+        return { provenance, error };
+      }
+    },
+  };
+  return result;
+}
+
+export interface PgDcpPersistStrategy {
+  readonly destPath: (target: string) => string;
+  readonly content: () => AsyncGenerator<PgDcpPersistContent>;
+}
+
+export function pgDcpPersist(strategy: PgDcpPersistStrategy) {
+  const { destPath, content } = strategy;
+  return {
+    emitAll: async () => {
+      for await (const c of content()) {
+        const destFile = destPath(await c.psqlBasename());
+        const psqlText = await c.psqlText();
+        const { provenance } = psqlText;
+        if ("content" in psqlText) {
+          await Deno.writeTextFile(destFile, psqlText.content);
           console.log(
-            path.relative(Deno.cwd(), handler.entry.path),
+            path.relative(Deno.cwd(), provenance.source),
             path.relative(Deno.cwd(), destFile),
           );
         } else {
-          console.error(new TextDecoder().decode(stderr));
+          console.log(
+            path.relative(Deno.cwd(), provenance.source),
+            psqlText.error,
+          );
         }
       }
     },

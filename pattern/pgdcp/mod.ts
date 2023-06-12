@@ -13,16 +13,26 @@ export * from "./context.sqla.ts";
 // module
 
 import { path } from "../../deps.ts";
-import { pgDcpPersist, typicalPgDcpPersistStrategy } from "./governance.ts";
+import { pgDcpPersist, pgDcpPersistCmdOutput } from "./governance.ts";
 
 if (import.meta.main) {
-  const persist = pgDcpPersist(
-    typicalPgDcpPersistStrategy((file) =>
+  const persist = pgDcpPersist({
+    destPath: (file) =>
       path.relative(
         Deno.cwd(),
         path.join(path.dirname(path.fromFileUrl(import.meta.url)), file),
-      )
-    ),
-  );
-  await persist.emitAll(path.dirname(path.fromFileUrl(import.meta.url)));
+      ),
+    content: async function* () {
+      yield pgDcpPersistCmdOutput({
+        provenance: () => ({
+          identity: "context",
+          source: path.fromFileUrl(import.meta.resolve("./context.sqla.ts")),
+          version: "v0.0.0",
+        }),
+        // deno-lint-ignore require-await
+        psqlBasename: async () => "context.auto.sql",
+      });
+    },
+  });
+  await persist.emitAll();
 }
