@@ -55,6 +55,66 @@ const stContext = () => {
   };
 };
 
+const syntheticNS: mod.SqlNamespaceSupplier = {
+  sqlNamespace: "synthetic",
+  qualifiedNames: (ctx, baseNS) => {
+    const ns = baseNS ?? ctx.sqlNamingStrategy(ctx);
+    const nsQualifier = mod.qualifyName(ns.schemaName("synthetic"));
+    return mod.qualifiedNamingStrategy(ns, nsQualifier);
+  },
+};
+
+Deno.test("qualified identifiers", async (tc) => {
+  await tc.step("qualifier function without schema", () => {
+    const [qualify] = mod.tokenQualifier({
+      sqlNSS: { sqlNamingStrategy: mod.typicalSqlNamingStrategy() },
+      tokens: (text, ns) => ({ sqlInjection: ns.typeName(text) }),
+    });
+    ta.assert(typeof qualify === "function");
+    ta.assertEquals(qualify("no_schema_identifier"), {
+      sqlInjection: "no_schema_identifier",
+    });
+  });
+
+  await tc.step("qualifier function with namespace", () => {
+    const [qualify] = mod.tokenQualifier({
+      sqlNSS: { sqlNamingStrategy: mod.typicalSqlNamingStrategy() },
+      tokens: (text, ns) => ({ sqlInjection: ns.typeName(text) }),
+      nsOptions: { quoteIdentifiers: true, qnss: syntheticNS },
+    });
+    ta.assert(typeof qualify === "function");
+    ta.assertEquals(qualify("identifier"), {
+      sqlInjection: `"synthetic"."identifier"`,
+    });
+  });
+
+  await tc.step(
+    "generated identifiers in namespace with qualifier function at end",
+    () => {
+      const [identifier1, identifier2, identifier3] = mod
+        .qualifiedTokens(
+          {
+            sqlNSS: { sqlNamingStrategy: mod.typicalSqlNamingStrategy() },
+            tokens: (text, ns) => ({ sqlInjection: ns.typeName(text) }),
+            nsOptions: { quoteIdentifiers: true, qnss: syntheticNS },
+          },
+          "identifier1",
+          "identifier2",
+          "identifier3",
+        );
+      ta.assertEquals(identifier1, {
+        sqlInjection: `"synthetic"."identifier1"`,
+      });
+      ta.assertEquals(identifier2, {
+        sqlInjection: `"synthetic"."identifier2"`,
+      });
+      ta.assertEquals(identifier3, {
+        sqlInjection: `"synthetic"."identifier3"`,
+      });
+    },
+  );
+});
+
 Deno.test("SQL Aide (SQLa) template", () => {
   const syntheticTable1Defn: mod.SqlTextSupplier<SyntheticTmplContext> & {
     isTableDefinition: true;
@@ -131,6 +191,17 @@ Deno.test("SQL Aide (SQLa) template", () => {
     }
   }
 
+  const [tokens1, tokens2, tokens3] = mod.qualifiedTokens(
+    {
+      sqlNSS: { sqlNamingStrategy: mod.typicalSqlNamingStrategy() },
+      tokens: (text, ns) => ({ sqlInjection: ns.typeName(text) }),
+      nsOptions: { quoteIdentifiers: true, qnss: syntheticNS },
+    },
+    "tokens1_sql",
+    "tokens2_sql",
+    "tokens3_sql",
+  );
+
   const ctx = stContext();
   const ddlOptions = mod.typicalSqlTextSupplierOptions<SyntheticTmplContext>({
     prepareEvents: (spEE) => {
@@ -165,6 +236,8 @@ Deno.test("SQL Aide (SQLa) template", () => {
     ${syntheticTable2Defn}
 
     ${mod.preprocess(import.meta.resolve("./mod_test_pp-fixture.sql"))}
+
+    -- show that arbitrary "SQL tokens" can be emitted in the template...${tokens1} ${tokens2} ${tokens3}
 
     -- ${ctx.syntheticBehavior1}`;
 
@@ -219,5 +292,7 @@ const fixturePrime = ws.unindentWhitespace(/*sql*/`
 
   select * from "varValue1";
   select * from "varValue1" where column = 'varValue2';
+
+  -- show that arbitrary "SQL tokens" can be emitted in the template..."synthetic"."tokens1_sql" "synthetic"."tokens2_sql" "synthetic"."tokens3_sql"
 
   -- behavior 1 state value: 2`);

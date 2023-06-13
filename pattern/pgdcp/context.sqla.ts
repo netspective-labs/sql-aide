@@ -4,7 +4,7 @@ import * as g from "./governance.ts";
 export const context = () => {
   const ec = g.PgDcpEmitCoordinator.init(import.meta);
   const lc = g.PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
-  const dcpcQN = ec.schemaQN("dcp_context");
+  const sQR = ec.schemaQN("dcp_context");
   const { pgDomains: pgd } = ec;
   const extns = ec.extensions("ltree");
   const schemas = ec.schemas(
@@ -13,7 +13,9 @@ export const context = () => {
     "dcp_lifecycle_destroy",
     "dcp_context",
   );
-  const [execCtx, execHostID] = ec.symbols(
+  const [execCtx, execHostID] = ec.qualifiedTokens(
+    "dcp_context",
+    (value, son) => ({ sqlInjection: son.injectable(value) }),
     pgd.execution_context,
     pgd.execution_host_identity,
   );
@@ -23,7 +25,7 @@ export const context = () => {
     ${pgd.execution_host_identity}
 
     -- a single-row table which contains the global context (prod/test/devl/sandbox/etc.)
-    CREATE TABLE IF NOT EXISTS ${dcpcQN.tableName('context')} (
+    CREATE TABLE IF NOT EXISTS ${sQR.tableName('context')} (
       singleton_id bool PRIMARY KEY DEFAULT TRUE,
       active ${execCtx} NOT NULL,
       host ${execHostID} NOT NULL,

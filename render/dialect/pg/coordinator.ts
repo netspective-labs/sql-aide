@@ -168,13 +168,27 @@ export class EmitCoordinator<
     return { extnSchemas, extnSchemaNames, uniqueExtns };
   }
 
-  symbols(...ssSuppliers: emit.SqlSymbolSupplier<Context>[]) {
-    const result: string[] = [];
-    const ctx = { sqlNamingStrategy: this.sqlNamingStrategy };
-    for (const sss of ssSuppliers) {
-      result.push(sss.sqlSymbol(ctx));
-    }
-    return result;
+  tokenQualifier(
+    schemaName: SchemaName,
+    tokens: (value: string, son: emit.SqlObjectNames) => emit.SqlInjection,
+  ) {
+    return emit.tokenQualifier({
+      sqlNSS: { sqlNamingStrategy: this.sqlNamingStrategy },
+      tokens,
+      nsOptions: { quoteIdentifiers: true, qnss: this.schemaDefns[schemaName] },
+    });
+  }
+
+  qualifiedTokens(
+    schemaName: SchemaName,
+    tokens: (value: string, son: emit.SqlObjectNames) => emit.SqlInjection,
+    ...ssSuppliers: (string | emit.SqlSymbolSupplier<Any>)[]
+  ) {
+    return emit.qualifiedTokens({
+      sqlNSS: { sqlNamingStrategy: this.sqlNamingStrategy },
+      tokens,
+      nsOptions: { quoteIdentifiers: true, qnss: this.schemaDefns[schemaName] },
+    }, ...ssSuppliers);
   }
 
   static schemaDefn<

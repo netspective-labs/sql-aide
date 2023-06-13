@@ -53,6 +53,9 @@ export function sqlDomainsFactory<
     SqlSymbolsSchema extends {
       [Property in keyof RawShape]: (ctx: Context) => string;
     },
+    SqlQualifiedIdentifiersSchema extends {
+      [Property in keyof RawShape]: tmpl.SqlInjection;
+    },
   >(zodRawShape: RawShape, init?: {
     readonly identity?: (init: {
       readonly zoSchema: z.ZodObject<RawShape>;
@@ -83,6 +86,7 @@ export function sqlDomainsFactory<
 
     const identity = init?.identity?.({ zoSchema, zbSchema, sdSchema }) ??
       (`anonymous${++sqlDomainsIterationIndex}` as EntityIdentity);
+
     return {
       identity,
       zoSchema,
@@ -91,6 +95,33 @@ export function sqlDomainsFactory<
       domains,
       symbolSuppliers,
       symbols,
+
+      /**
+       * Creates a type-safe object that can be used to "inject" the qualified
+       * identifiers into a SQL template literal text stream.
+       * @param sqlNSS the Context or naming strategy supplier
+       * @param nsOptions if qualified names should include quotes or specific schema
+       * @returns an object that can be used in SQL template literal text streams
+       */
+      qualifiedIdentifiers: (
+        sqlNSS: tmpl.SqlNamingStrategySupplier,
+        nsOptions?: tmpl.SqlObjectNamingStrategyOptions,
+      ) => {
+        const [qualified, son] = tmpl.tokenQualifier({
+          sqlNSS,
+          tokens: (text, son) => ({ sqlInjection: son.injectable(text) }),
+          nsOptions,
+        });
+        const qualifiedIdentifiers:
+          & tmpl.SqlInjection
+          & SqlQualifiedIdentifiersSchema = {
+            sqlInjection: son.injectable(identity),
+          } as Any;
+        for (const key of shapeKeys) {
+          (qualifiedIdentifiers[key] as Any) = qualified(key);
+        }
+        return qualifiedIdentifiers;
+      },
     };
   };
 

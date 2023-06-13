@@ -8,7 +8,11 @@ import * as l from "./lint.ts";
 type Any = any;
 
 export interface SqlSymbolSupplier<Context extends SqlEmitContext> {
-  readonly sqlSymbol: (ctx: SqlNamingStrategySupplier | Context) => string;
+  readonly sqlSymbol: (
+    ctx:
+      | SqlNamingStrategySupplier
+      | Context,
+  ) => string;
 }
 
 export function isSqlSymbolSupplier<Context extends SqlEmitContext>(
@@ -22,6 +26,67 @@ export function isOnlySqlSymbolSupplier<Context extends SqlEmitContext>(
   o: unknown,
 ): o is SqlSymbolSupplier<Context> {
   return isSqlSymbolSupplier(o) && !isSqlTextSupplier(o);
+}
+
+/**
+ * A stream of text that should be emitted as-is without further transformation.
+ * SqlSymbolSuppliers and other "governed" text sources can produce tokens for
+ * insertion into string template literals.
+ */
+export interface SqlInjection {
+  readonly sqlInjection: string;
+}
+
+const isSqlInjection = safety.typeGuard<SqlInjection>("sqlInjection");
+
+/**
+ * Create a function which allows text to be passed in and "qualifies" the
+ * token by being wrapped in a SqlToken which can be passed into SQL template
+ * literal strings.
+ * @param strategy The rules for how text qualification should occur
+ * @returns a function which receives text and returns the text transformed using the token qualifier strategy
+ */
+export function tokenQualifier(
+  strategy: {
+    readonly sqlNSS: SqlNamingStrategySupplier;
+    readonly tokens: (text: string, son: SqlObjectNames) => SqlInjection;
+    readonly nsOptions?: SqlObjectNamingStrategyOptions;
+  },
+): [qualify: (text: string) => SqlInjection, sons: SqlObjectNames] {
+  const sons = strategy.sqlNSS.sqlNamingStrategy(
+    strategy.sqlNSS,
+    strategy.nsOptions,
+  );
+  return [(text: string) => strategy.tokens(text, sons), sons];
+}
+
+/**
+ * Receive a series of text inputs and "qualify" each input as a token by being
+ * wrapped in a SqlToken which can be passed into SQL template literal strings.
+ * @param strategy The rules for how text qualification should occur
+ * @param ssSuppliers array of text which need transformation
+ * @returns array of text transformed using the token qualifier strategy
+ */
+export function qualifiedTokens(
+  strategy: {
+    readonly sqlNSS: SqlNamingStrategySupplier;
+    readonly tokens: (text: string, son: SqlObjectNames) => SqlInjection;
+    readonly nsOptions?: SqlObjectNamingStrategyOptions;
+  },
+  ...ssSuppliers: (string | SqlInjection | SqlSymbolSupplier<Any>)[]
+) {
+  const [qualify] = tokenQualifier(strategy);
+  const result: SqlInjection[] = [];
+  for (const sss of ssSuppliers) {
+    if (typeof sss === "string") {
+      result.push(qualify(sss));
+    } else if (isSqlInjection(sss)) {
+      result.push(qualify(sss.sqlInjection));
+    } else {
+      result.push({ sqlInjection: sss.sqlSymbol(strategy.sqlNSS) });
+    }
+  }
+  return result;
 }
 
 export type SafeTemplateStringReturnType<
@@ -38,6 +103,8 @@ export type SafeTemplateString<Expressions, ReturnType> = (
 export type NameQualifier = (unqualifiedName: string) => string;
 
 export interface SqlObjectNames {
+  readonly isSqlObjectNames: true;
+  readonly injectable: (text: string) => string;
   readonly schemaName: (schemaName: string) => string;
   readonly tableName: (tableName: string) => string;
   readonly domainName: (domainName: string) => string;
@@ -60,6 +127,10 @@ export interface SqlObjectNames {
   readonly storedRoutineReturns: (name: string) => string;
 }
 
+export const isSqlObjectNames = safety.typeGuard<SqlObjectNames>(
+  "isSqlObjectNames",
+);
+
 export function qualifyName(qualifier: string, delim = "."): NameQualifier {
   return (name) => `${qualifier}${delim}${name}`;
 }
@@ -69,6 +140,8 @@ export function qualifiedNamingStrategy(
   q: NameQualifier,
 ): SqlObjectNames {
   return {
+    isSqlObjectNames: true,
+    injectable: (name) => q(ns.injectable(name)),
     schemaName: (name) => q(ns.schemaName(name)),
     tableName: (name) => q(ns.tableName(name)),
     domainName: (name) => q(ns.domainName(name)),
@@ -109,6 +182,10 @@ export interface SqlObjectNamesSupplier {
 export interface SqlNamingStrategySupplier {
   readonly sqlNamingStrategy: SqlObjectNamesSupplier;
 }
+
+export const isSqlNamingStrategySupplier = safety.typeGuard<
+  SqlNamingStrategySupplier
+>("sqlNamingStrategy");
 
 export interface SqlTextEmitOptions {
   readonly quotedLiteral: (value: unknown) => [value: unknown, quoted: string];
@@ -174,6 +251,8 @@ export function typicalQuotedSqlLiteral(
 
 export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
   const quotedIdentifiersNS: SqlObjectNames = {
+    isSqlObjectNames: true,
+    injectable: (text) => `"${text}"`,
     schemaName: (name) => `"${name}"`,
     tableName: (name) => `"${name}"`,
     domainName: (name) => `"${name}"`,
@@ -198,6 +277,8 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
   };
 
   const bareIdentifiersNS: SqlObjectNames = {
+    isSqlObjectNames: true,
+    injectable: (text) => text,
     schemaName: (name) => name,
     tableName: (name) => name,
     domainName: (name) => name,
@@ -235,6 +316,8 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
 
 export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
   const quotedIdentifiersNS: SqlObjectNames = {
+    isSqlObjectNames: true,
+    injectable: (text) => text,
     schemaName: (name) => `[${name}]`,
     tableName: (name) => `[${name}]`,
     domainName: (name) => `[${name}]`,
@@ -259,6 +342,8 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
   };
 
   const bareIdentifiersNS: SqlObjectNames = {
+    isSqlObjectNames: true,
+    injectable: (text) => text,
     schemaName: (name) => name,
     tableName: (name) => name,
     domainName: (name) => name,
@@ -479,31 +564,16 @@ export const isPersistableSqlTextIndexSupplier = safety.typeGuard<
 export class SqlPartialExprEventEmitter<
   Context extends SqlEmitContext,
 > extends events.EventEmitter<{
-  symbolEncountered(
-    ctx: Context,
-    sss: SqlSymbolSupplier<Context>,
-  ): void;
-  sqlEncountered(
-    ctx: Context,
-    sts: SqlTextSupplier<Context>,
-  ): void;
-  persistableSqlEncountered(
-    ctx: Context,
-    sts: SqlTextSupplier<Context>,
-  ): void;
+  symbolEncountered(ctx: Context, sss: SqlSymbolSupplier<Context>): void;
+  sqlPartialEncountered(ctx: Context, sts: SqlTextSupplier<Context>): void;
+  sqlTokensEncountered(ctx: Context, st: SqlInjection): void;
+  persistableSqlEncountered(ctx: Context, sts: SqlTextSupplier<Context>): void;
   sqlBehaviorEncountered(
     ctx: Context,
     sts: SqlTextBehaviorSupplier<Context>,
   ): void;
-  symbolEmitted(
-    ctx: Context,
-    sss: SqlSymbolSupplier<Context>,
-  ): void;
-  sqlEmitted(
-    ctx: Context,
-    sts: SqlTextSupplier<Context>,
-    sql: string,
-  ): void;
+  symbolEmitted(ctx: Context, sss: SqlSymbolSupplier<Context>): void;
+  sqlEmitted(ctx: Context, sts: SqlTextSupplier<Context>, sql: string): void;
   sqlPersisted(
     ctx: Context,
     destPath: string,
@@ -701,13 +771,16 @@ export type SqlPartialExpression<Context extends SqlEmitContext> =
   | ((ctx: Context, options: SqlTextSupplierOptions<Context>) => SqlTextSupplier<Context> | SqlTextSupplier<Context>[])
   | ((ctx: Context, options: SqlTextSupplierOptions<Context>) => PersistableSqlText<Context> | PersistableSqlText<Context>[])
   | ((ctx: Context, options: SqlTextSupplierOptions<Context>) => SqlTextBehaviorSupplier<Context>)
+  | ((ctx: Context, options: SqlTextSupplierOptions<Context>) => SqlInjection)
   | ((ctx: Context, options: SqlTextSupplierOptions<Context>) => string)
   | SqlSymbolSupplier<Context>
   | SqlTextSupplier<Context>
+  | SqlInjection
   | PersistableSqlText<Context>
   | SqlTextBehaviorSupplier<Context>
   | (
     | SqlTextSupplier<Context>
+    | SqlInjection
     | PersistableSqlText<Context>
     | SqlTextBehaviorSupplier<Context>
     | string
@@ -774,7 +847,9 @@ export function SQL<
             expr.sqlTextSupplier,
           );
         } else if (isSqlTextSupplier<Context>(expr)) {
-          speEE?.emitSync("sqlEncountered", ctx, expr);
+          speEE?.emitSync("sqlPartialEncountered", ctx, expr);
+        } else if (isSqlInjection(expr)) {
+          speEE?.emitSync("sqlTokensEncountered", ctx, expr);
         } else if (isSqlTextBehaviorSupplier<Context>(expr)) {
           speEE?.emitSync("sqlBehaviorEncountered", ctx, expr);
         }
@@ -839,6 +914,8 @@ export function SQL<
             interpolated += sqlSuppliersDelimText;
           }
           speEE?.emitSync("sqlEmitted", ctx, expr, SQL);
+        } else if (isSqlInjection(expr)) {
+          interpolated += expr.sqlInjection;
         } else if (
           typeof expr === "string" || typeof expr === "number" ||
           typeof expr === "bigint"

@@ -153,6 +153,32 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
             from Y`),
       );
     });
+
+    await innerTC.step("qualified names injections", () => {
+      const syntheticNS: tmpl.SqlNamespaceSupplier = {
+        sqlNamespace: "synthetic",
+        qualifiedNames: (ctx, baseNS) => {
+          const ns = baseNS ?? ctx.sqlNamingStrategy(ctx);
+          const nsQualifier = tmpl.qualifyName(ns.schemaName("synthetic"));
+          return tmpl.qualifiedNamingStrategy(ns, nsQualifier);
+        },
+      };
+
+      const { ctx, ddlOptions } = sqlGen();
+      const qn = domains.qualifiedIdentifiers(ctx, {
+        quoteIdentifiers: true,
+        qnss: syntheticNS,
+      });
+      const injectionsFixture = tmpl.SQL(ddlOptions)`
+        select ${qn.text_nullable}, ${qn.text_optional_defaultable}
+          from ${qn}`;
+      ta.assertEquals(
+        injectionsFixture.SQL(ctx),
+        uws(`
+          select "synthetic"."text_nullable", "synthetic"."text_optional_defaultable"
+            from "synthetic"."anonymous1"`),
+      );
+    });
   });
 });
 

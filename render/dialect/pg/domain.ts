@@ -130,6 +130,8 @@ export function pgDomainsFactory<
 
     return {
       ...dd,
+      identity: domainName, // this overrides dd.identity
+      sqlSymbol: () => domainName, // this overrides dd.sqlSymbol
       isValid: true,
       domainName: domainName,
       isIdempotent,
