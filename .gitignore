@@ -4,6 +4,9 @@
 # if you create any test files, use this as the prefix
 DELETE_ME_DEBUG_*
 
+# PgDCP generates *.auto.psql and we don't want those tracked yet
+pattern/pgdcp/*.auto.psql
+
 # we don't track NPM or NextJS artifacts
 support/package-npm/npm/
 support/docs-nextra/node_modules
