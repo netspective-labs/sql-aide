@@ -8,7 +8,7 @@ import * as l from "./lint.ts";
 type Any = any;
 
 export interface SqlSymbolSupplier<Context extends SqlEmitContext> {
-  readonly sqlSymbol: (ctx: Context) => string;
+  readonly sqlSymbol: (ctx: SqlNamingStrategySupplier | Context) => string;
 }
 
 export function isSqlSymbolSupplier<Context extends SqlEmitContext>(
@@ -85,7 +85,7 @@ export function qualifiedNamingStrategy(
 
 export interface QualifiedNamingStrategySupplier {
   readonly qualifiedNames: (
-    ctx: SqlEmitContext,
+    ctx: SqlNamingStrategySupplier | SqlEmitContext,
     baseNS?: SqlObjectNames,
   ) => SqlObjectNames;
 }
@@ -101,7 +101,7 @@ export interface SqlObjectNamingStrategyOptions {
 
 export interface SqlObjectNamesSupplier {
   (
-    ctx: SqlEmitContext,
+    ctx: SqlNamingStrategySupplier,
     nsOptions?: SqlObjectNamingStrategyOptions,
   ): SqlObjectNames;
 }

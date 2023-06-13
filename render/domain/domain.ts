@@ -125,10 +125,10 @@ export function zodTypeAnySqlDomainFactory<
         identity: (init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION) as Identity,
         isNullable: () =>
           init?.isOptional || zodType.isOptional() || zodType.isNullable(),
-        sqlSymbol: (ctx: Context) =>
-          ctx
-            .sqlNamingStrategy(ctx, { quoteIdentifiers: true })
-            .domainName(init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION),
+        sqlSymbol: (ctx) =>
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
+            init?.identity ?? SQL_DOMAIN_NOT_IN_COLLECTION,
+          ),
         lintIssues,
         registerLintIssue: (...slis: tmpl.SqlLintIssueSupplier[]) => {
           lintIssues.push(...slis);
