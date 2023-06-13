@@ -1,5 +1,6 @@
 import * as safety from "../../../lib/universal/safety.ts";
 import * as emit from "../../emit/mod.ts";
+import { SqlDomain } from "../../domain/mod.ts";
 import { pgDomainsFactory } from "./domain.ts";
 import { SchemaDefinition, sqlSchemaDefn } from "../../ddl/schema.ts";
 import {
@@ -31,7 +32,7 @@ export interface EmitCoordinatorInit<
     string,
     ExtensionDefinition<SchemaName, string, Context>
   >,
-  PgDomainDefns extends Record<string, emit.SqlTextSupplier<Context>>,
+  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any>>,
   Context extends emit.SqlEmitContext,
   SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
   ExtensionName extends keyof ExtensionDefns & string =
@@ -72,7 +73,7 @@ export class EmitCoordinator<
     string,
     ExtensionDefinition<keyof SchemaDefns & string, string, Context>
   >,
-  PgDomainDefns extends Record<string, emit.SqlTextSupplier<Context>>,
+  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any>>,
   Context extends emit.SqlEmitContext,
   SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
   ExtensionName extends keyof ExtensionDefns & string =
@@ -82,6 +83,8 @@ export class EmitCoordinator<
     & keyof PgDomainDefns
     & string,
 > {
+  readonly sqlDialect = emit.postgreSqlDialect();
+  readonly sqlNamingStrategy = emit.typicalSqlNamingStrategy();
   readonly provenance: TypeScriptModuleProvenance;
   readonly primeSTSO: emit.SqlTextSupplierOptions<Context>;
   readonly embedSymsSTSO: emit.SqlTextSupplierOptions<Context>;
@@ -106,6 +109,7 @@ export class EmitCoordinator<
         init.importMeta.url,
       version: init.provenance?.version || "0.0.0",
     };
+
     this.schemaDefns = init.schemaDefns(EmitCoordinator.schemaDefn);
     this.extnDefns = init.extnDefns(
       EmitCoordinator.extensionDefn,
@@ -127,12 +131,24 @@ export class EmitCoordinator<
 
   sqlEmitContext(): Context {
     return emit.typicalSqlEmitContext({
-      sqlDialect: emit.postgreSqlDialect(),
+      sqlDialect: this.sqlDialect,
     }) as Context;
   }
 
   schemas(...schemaNames: SchemaName[]) {
     return schemaNames.map((name) => this.schemaDefns[name]);
+  }
+
+  /**
+   * Return the qualified naming strategy for a given schema
+   * @param schemaName Which schema to return qualifiedNames from
+   * @returns an object that can be used to create qualified names in the supplied schema
+   */
+  schemaQN(schemaName: SchemaName, baseNS?: emit.SqlObjectNames) {
+    return this.schemaDefns[schemaName].qualifiedNames(
+      { sqlNamingStrategy: this.sqlNamingStrategy },
+      baseNS,
+    );
   }
 
   extensions(...extnNames: ExtensionName[]) {
@@ -150,6 +166,15 @@ export class EmitCoordinator<
         self.findIndex((e) => e.extension === extension.extension) === index,
     );
     return { extnSchemas, extnSchemaNames, uniqueExtns };
+  }
+
+  symbols(...ssSuppliers: emit.SqlSymbolSupplier<Context>[]) {
+    const result: string[] = [];
+    const ctx = { sqlNamingStrategy: this.sqlNamingStrategy };
+    for (const sss of ssSuppliers) {
+      result.push(sss.sqlSymbol(ctx));
+    }
+    return result;
   }
 
   static schemaDefn<

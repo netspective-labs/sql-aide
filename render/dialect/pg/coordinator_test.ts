@@ -23,7 +23,7 @@ class SyntheticTemplate<
     ltree: ExtensionDefinition<"extensions", "ltree", SyntheticContext>;
   },
   PgDomainDefns extends {
-    execution_context: emit.SqlTextSupplier<SyntheticContext>;
+    execution_context: SqlDomain<Any, SyntheticContext, Any>;
   },
 > extends mod.EmitCoordinator<
   SchemaDefns,
