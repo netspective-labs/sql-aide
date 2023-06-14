@@ -270,12 +270,16 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         ReturnType<typeof keys.ulidPrimaryKey>
       >
       & typeof housekeeping.columns,
-  >(linkName: LinkName, props: ColumnsShape) => {
+  >(
+    linkName: LinkName,
+    props: ColumnsShape,
+    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  ) => {
     const linkTableName = names.linkTableName(linkName);
     const linkTableDefn = table(linkTableName, {
       ...props,
       ...housekeeping.columns,
-    });
+    }, tdOptions);
 
     const satelliteTable = <
       SatelliteName extends string,
