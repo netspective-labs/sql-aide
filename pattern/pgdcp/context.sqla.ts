@@ -4,6 +4,15 @@ import * as g from "./governance.ts";
 // see https://maxgreenwald.me/blog/do-more-with-run
 // const run = <T>(fn: () => T): T => fn();
 
+export const executionContexts = [
+  "production",
+  "test",
+  "devl",
+  "sandbox",
+  "experimental",
+] as const;
+export type ExecutionContext = typeof executionContexts[number];
+
 export const context = () => {
   const ec = g.PgDcpEmitCoordinator.init(import.meta);
   const lc = g.PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
@@ -40,63 +49,45 @@ export const context = () => {
     -- TODO: add trigger to ensure that no improper values can be added into context`;
 
   // deno-fmt-ignore
+  const ecConstantFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'` });
+
+  // deno-fmt-ignore
+  const isCompareExecCtxFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end'` });
+
+  // deno-fmt-ignore
+  const isActiveExecCtxFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'` });
+
+  const dropExecCtxFns = (
+    ec: ExecutionContext,
+  ) => [{
+    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`exec_context_${ec}`)}()`,
+  }, {
+    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_exec_context_${ec}`)}()`,
+  }, {
+    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_active_context_${ec}`)}()`,
+  }];
+
+  // deno-fmt-ignore
   const constructIdempotent = lc.constructIdempotent()`
-    CREATE OR REPLACE FUNCTION ${sQR("exec_context_production")}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''production''::${sQR("execution_context")}';
-    CREATE OR REPLACE FUNCTION ${sQR("exec_context_test")}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''test''::${sQR("execution_context")}';
-    CREATE OR REPLACE FUNCTION ${sQR("exec_context_devl")}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''devl''::${sQR("execution_context")}';
-    CREATE OR REPLACE FUNCTION ${sQR("exec_context_sandbox")}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''sandbox''::${sQR("execution_context")}';
-    CREATE OR REPLACE FUNCTION ${sQR("exec_context_experimental")}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''experimental''::${sQR("execution_context")}';
+    ${executionContexts.map(ec => ecConstantFn(ec))}
 
-    CREATE OR REPLACE FUNCTION ${sQR("is_exec_context_production")}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR("exec_context_production")}() THEN true else false end';
-    CREATE OR REPLACE FUNCTION ${sQR("is_exec_context_test")}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR("exec_context_test")}() THEN true else false end';
-    CREATE OR REPLACE FUNCTION ${sQR("is_exec_context_devl")}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR("exec_context_devl")}() THEN true else false end';
-    CREATE OR REPLACE FUNCTION ${sQR("is_exec_context_sandbox")}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR("exec_context_sandbox")}() THEN true else false end';
-    CREATE OR REPLACE FUNCTION ${sQR("is_exec_context_experimental")}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR("exec_context_experimental")}() THEN true else false end';
+    ${executionContexts.map(ec => isCompareExecCtxFn(ec))}
 
-    CREATE OR REPLACE FUNCTION ${sQR("is_active_context_production")}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR("exec_context_production")}() THEN true else false end from ${sQR("context")} where singleton_id = true';
-    CREATE OR REPLACE FUNCTION ${sQR("is_active_context_test")}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR("exec_context_test")}() THEN true else false end from ${sQR("context")} where singleton_id = true';
-    CREATE OR REPLACE FUNCTION ${sQR("is_active_context_devl")}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR("exec_context_devl")}() THEN true else false end from ${sQR("context")} where singleton_id = true';
-    CREATE OR REPLACE FUNCTION ${sQR("is_active_context_sandbox")}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR("exec_context_sandbox")}() THEN true else false end from ${sQR("context")} where singleton_id = true';
-    CREATE OR REPLACE FUNCTION ${sQR("is_active_context_experimental")}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR("exec_context_experimental")}() THEN true else false end from ${sQR("context")} where singleton_id = true';`;
+    ${executionContexts.map(ec => isActiveExecCtxFn(ec))}`;
 
   // deno-fmt-ignore
   const destroyIdempotent = lc.destroyIdempotent()`
     -- TODO: DROP FUNCTION IF EXISTS {lcf.unitTest(state).qName}();
-    DROP FUNCTION IF EXISTS ${sQR("exec_context_production")}();
-    DROP FUNCTION IF EXISTS ${sQR("exec_context_test")}();
-    DROP FUNCTION IF EXISTS ${sQR("exec_context_devl")}();
-    DROP FUNCTION IF EXISTS ${sQR("exec_context_sandbox")}();
-    DROP FUNCTION IF EXISTS ${sQR("exec_context_experimental")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_exec_context_production")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_exec_context_test")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_exec_context_devl")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_exec_context_sandbox")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_exec_context_experimental")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_active_context_production")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_active_context_test")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_active_context_devl")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_active_context_sandbox")}();
-    DROP FUNCTION IF EXISTS ${sQR("is_active_context_experimental")}();`;
+    ${executionContexts.map(ec => dropExecCtxFns(ec)).flat()}`;
 
   // TODO: convert unitTest() to a stored function not a stored procedure, returns what PgTAP expects.
   // TODO: refer to has_function directly in PgTAP and don't require search_path
   // deno-fmt-ignore
   const unitTest = ae.unitTest()`
-    ${ae.hasFunction("dcp_context", 'exec_context_production')}
-    ${ae.hasFunction("dcp_context", 'exec_context_test')}
-    ${ae.hasFunction("dcp_context", 'exec_context_devl')}
-    ${ae.hasFunction("dcp_context", 'exec_context_sandbox')}
-    ${ae.hasFunction("dcp_context", 'exec_context_experimental')}
-    ${ae.hasFunction("dcp_context", 'is_exec_context_production')}
-    ${ae.hasFunction("dcp_context", 'is_exec_context_test')}
-    ${ae.hasFunction("dcp_context", 'is_exec_context_devl')}
-    ${ae.hasFunction("dcp_context", 'is_exec_context_sandbox')}
-    ${ae.hasFunction("dcp_context", 'is_exec_context_experimental')}
-    ${ae.hasFunction("dcp_context", 'is_active_context_production')}
-    ${ae.hasFunction("dcp_context", 'is_active_context_test')}
-    ${ae.hasFunction("dcp_context", 'is_active_context_devl')}
-    ${ae.hasFunction("dcp_context", 'is_active_context_sandbox')}
-    ${ae.hasFunction("dcp_context", 'is_active_context_experimental')}`;
+    ${executionContexts.map(ec => [
+      ae.hasFunction("dcp_context", `exec_context_${ec}`),
+      ae.hasFunction("dcp_context", `is_exec_context_${ec}`),
+      ae.hasFunction("dcp_context", `is_active_context_${ec}`)]).flat()}`;
 
   return {
     ec,
