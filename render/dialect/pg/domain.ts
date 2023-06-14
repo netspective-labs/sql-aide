@@ -131,7 +131,11 @@ export function pgDomainsFactory<
     return {
       ...dd,
       identity: domainName, // this overrides dd.identity
-      sqlSymbol: () => domainName, // this overrides dd.sqlSymbol
+      sqlSymbol: (ctx: Context | tmpl.SqlNamingStrategySupplier) => {
+        return ctx.sqlNamingStrategy(ctx, ddOptions?.nsOptions).domainName(
+          domainName,
+        );
+      }, // this overrides dd.sqlSymbol
       isValid: true,
       domainName: domainName,
       isIdempotent,

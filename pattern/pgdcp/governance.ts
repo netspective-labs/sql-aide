@@ -81,6 +81,7 @@ export class PgDcpEmitCoordinator<
   SchemaDefns extends PgDcpSchemaDefns,
   ExtensionDefns extends PgDcpExtensionDefns,
   PgDomainDefns extends PgDcpPgDomainDefns,
+  SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
 > extends pgSQLa.EmitCoordinator<
   SchemaDefns,
   ExtensionDefns,
@@ -116,6 +117,22 @@ export class PgDcpEmitCoordinator<
         sqlDialect: SQLa.postgreSqlDialect(),
       }),
     };
+  }
+
+  subjectArea(target: SchemaName | SQLa.SqlNamespaceSupplier) {
+    // schemas also represent "subject areas" but in those cases the dcp_ prefix
+    // in front of all of our lifecycle methods looks ugly so we strip it
+    return typeof target === "string"
+      ? (target.startsWith("dcp_") ? target.slice(4) : target)
+      : (target.sqlNamespace.startsWith("dcp_")
+        ? target.sqlNamespace.slice(4)
+        : target.sqlNamespace);
+  }
+
+  subjectAreas(...schemaNames: SchemaName[]) {
+    // schemas also represent "subject areas" but in those cases the dcp_ prefix
+    // in front of all of our lifecycle methods looks ugly so we strip it
+    return schemaNames.map((name) => this.subjectArea(name));
   }
 
   static init(importMeta: ImportMeta) {
@@ -186,16 +203,11 @@ export class PgDcpLifecycle<
       ExtensionDefns,
       PgDomainDefns
     >,
-    readonly ns: SQLa.SqlNamespaceSupplier,
+    readonly principalSchema: SQLa.SqlNamespaceSupplier,
   ) {
     this.lcSchema = ec.schemaDefns.dcp_lifecycle;
     this.lcDestroySchema = ec.schemaDefns.dcp_lifecycle_destroy;
-
-    // we prefix all lifecycle methods by "subject area" but the dcp_ prefix in
-    // front of all of our lifecycle methods looks ugly so we strip it
-    this.subjectArea = ns.sqlNamespace.startsWith("dcp_")
-      ? ns.sqlNamespace.slice(4)
-      : ns.sqlNamespace;
+    this.subjectArea = ec.subjectArea(principalSchema);
   }
 
   untypedEmptyArgsSP(
@@ -278,24 +290,7 @@ export class PgDcpLifecycle<
     );
   }
 
-  unitTest(identity?: string) {
-    return this.untypedEmptyArgsSP(
-      `test_${identity ?? this.subjectArea}`,
-    );
-  }
-
-  lint(identity?: string) {
-    return this.untypedEmptyArgsSP(
-      `lint_${identity ?? this.subjectArea}`,
-    );
-  }
-
-  doctor(identity?: string) {
-    return this.untypedEmptyArgsSP(
-      `test_doctor_${identity ?? this.subjectArea}`,
-    );
-  }
-
+  // TODO: move this to its own class `PgDcpObservability` or similar
   metrics(identity?: string) {
     return this.untypedEmptyArgsSP(
       `observability_metrics_${identity ?? this.subjectArea}`,
@@ -339,6 +334,77 @@ export class PgDcpLifecycle<
     ns: SQLa.SqlNamespaceSupplier,
   ) {
     return new PgDcpLifecycle(ec, ns);
+  }
+}
+
+export class PgDcpAssurance<
+  SchemaDefns extends PgDcpSchemaDefns,
+  ExtensionDefns extends PgDcpExtensionDefns,
+  PgDomainDefns extends PgDcpPgDomainDefns,
+> {
+  readonly subjectArea: string;
+  readonly aeSchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;
+  protected constructor(
+    readonly ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+    readonly principalSchema: SQLa.SqlNamespaceSupplier,
+  ) {
+    this.aeSchema = ec.schemaDefns.dcp_assurance;
+    this.subjectArea = ec.subjectArea(principalSchema);
+  }
+
+  untypedEmptyArgsSP(
+    spIdentifier: string,
+    schema?: SQLa.SchemaDefinition<Any, PgDcpEmitContext>,
+  ) {
+    const ctx = this.ec.sqlEmitContext();
+    return pgSQLa.storedProcedure(
+      spIdentifier,
+      {},
+      (name) => pgSQLa.untypedPlPgSqlBody(name, ctx),
+      // we the same text options as prime because `create table`, and other
+      // DDL statements are likely so we don't want to process symbols
+      {
+        embeddedStsOptions: this.ec.primeSTSO,
+        sqlNS: schema ?? this.aeSchema,
+      },
+    );
+  }
+
+  unitTest(identity?: string) {
+    return this.untypedEmptyArgsSP(
+      `test_${identity ?? this.subjectArea}`,
+    );
+  }
+
+  lint(identity?: string) {
+    return this.untypedEmptyArgsSP(
+      `lint_${identity ?? this.subjectArea}`,
+    );
+  }
+
+  doctor(identity?: string) {
+    return this.untypedEmptyArgsSP(
+      `test_doctor_${identity ?? this.subjectArea}`,
+    );
+  }
+
+  static init<
+    SchemaDefns extends PgDcpSchemaDefns,
+    ExtensionDefns extends PgDcpExtensionDefns,
+    PgDomainDefns extends PgDcpPgDomainDefns,
+  >(
+    ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+    ns: SQLa.SqlNamespaceSupplier,
+  ) {
+    return new PgDcpAssurance(ec, ns);
   }
 }
 

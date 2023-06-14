@@ -141,14 +141,32 @@ export class EmitCoordinator<
 
   /**
    * Return the qualified naming strategy for a given schema
-   * @param schemaName Which schema to return qualifiedNames from
-   * @returns an object that can be used to create qualified names in the supplied schema
+   * @param schemaNames schemas to return qualifiedNames from
+   * @returns an array of objects that can be used to create qualified names in the supplied schemas
    */
-  schemaQN(schemaName: SchemaName, baseNS?: emit.SqlObjectNames) {
-    return this.schemaDefns[schemaName].qualifiedNames(
-      { sqlNamingStrategy: this.sqlNamingStrategy },
-      baseNS,
+  schemaQN(...schemaNames: SchemaName[]) {
+    return schemaNames.map((schemaName) =>
+      this.schemaDefns[schemaName].qualifiedNames(
+        { sqlNamingStrategy: this.sqlNamingStrategy },
+      )
     );
+  }
+
+  /**
+   * Return the qualified naming strategy for a given schema along with injectables wrapper
+   * @param schemaNames schemas to return qualifiedNames and injectables wrapper from
+   * @returns an array of objects that can be used to create qualified names in the supplied schemas
+   */
+  schemaQNI(
+    ...schemaNames: SchemaName[]
+  ): [qn: emit.SqlObjectNames, qni: (text: string) => string][] {
+    return schemaNames.map((schemaName) => {
+      const qn = this.schemaDefns[schemaName].qualifiedNames(
+        { sqlNamingStrategy: this.sqlNamingStrategy },
+      );
+      const qni = (text: string) => qn.injectable(text);
+      return [qn, qni];
+    });
   }
 
   extensions(...extnNames: ExtensionName[]) {
