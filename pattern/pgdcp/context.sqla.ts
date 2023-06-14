@@ -49,13 +49,19 @@ export const context = () => {
     -- TODO: add trigger to ensure that no improper values can be added into context`;
 
   // deno-fmt-ignore
-  const ecConstantFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'` });
+  const ecConstantFn = (ec: ExecutionContext) => ({
+    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'`
+  });
 
   // deno-fmt-ignore
-  const isCompareExecCtxFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end'` });
+  const isCompareExecCtxFn = (ec: ExecutionContext) => ({
+    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
+  });
 
   // deno-fmt-ignore
-  const isActiveExecCtxFn = (ec: ExecutionContext) => ({ SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'` });
+  const isActiveExecCtxFn = (ec: ExecutionContext) => ({
+    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
+  });
 
   const dropExecCtxFns = (
     ec: ExecutionContext,
