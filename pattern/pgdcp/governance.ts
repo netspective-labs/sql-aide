@@ -34,6 +34,10 @@ export type PgDcpSchemaDefns = {
     "dcp_experimental",
     PgDcpEmitContext
   >;
+  readonly dcp_observability: SQLa.SchemaDefinition<
+    "dcp_observability",
+    PgDcpEmitContext
+  >;
 };
 
 export type PgDcpExtensionDefns = {
@@ -147,6 +151,7 @@ export class PgDcpEmitCoordinator<
         dcp_confidential: define("dcp_confidential"),
         dcp_assurance: define("dcp_assurance"),
         dcp_experimental: define("dcp_experimental"),
+        dcp_observability: define("dcp_observability"),
       }),
       extnDefns: (define, schemas) => ({
         ltree: define(schemas.dcp_extensions, "ltree"),
@@ -195,8 +200,11 @@ export class PgDcpLifecycle<
   PgDomainDefns extends PgDcpPgDomainDefns,
 > {
   readonly subjectArea: string;
-  readonly lcSchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;
-  readonly lcDestroySchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;
+  readonly lcSchema: SQLa.SchemaDefinition<"dcp_lifecycle", PgDcpEmitContext>;
+  readonly lcDestroySchema: SQLa.SchemaDefinition<
+    "dcp_lifecycle_destroy",
+    PgDcpEmitContext
+  >;
   protected constructor(
     readonly ec: PgDcpEmitCoordinator<
       SchemaDefns,
@@ -210,114 +218,99 @@ export class PgDcpLifecycle<
     this.subjectArea = ec.subjectArea(principalSchema);
   }
 
-  untypedEmptyArgsSP(
-    spIdentifier: string,
-    schema?: SQLa.SchemaDefinition<Any, PgDcpEmitContext>,
-  ) {
-    const ctx = this.ec.sqlEmitContext();
-    return pgSQLa.storedProcedure(
-      spIdentifier,
-      {},
-      (name) => pgSQLa.untypedPlPgSqlBody(name, ctx),
-      // we the same text options as prime because `create table`, and other
-      // DDL statements are likely so we don't want to process symbols
-      {
-        embeddedStsOptions: this.ec.primeSTSO,
-        sqlNS: schema ?? this.lcSchema,
-      },
-    );
-  }
-
   // TODO: remove these PgDCP -> SQLa migration notes
   // note1: in PgDCP we had _construct_* and _destroy_* in the same schema
   //        but in SQLa we moved destructive objects to different schema
   //        to allow easier security
 
   constructStorage(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_construct_storage`,
+      this.lcSchema,
     );
   }
 
   constructShield(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_construct_shield`,
+      this.lcSchema,
     );
   }
 
   constructDomains(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_construct_domains`,
+      this.lcSchema,
     );
   }
 
   constructIdempotent(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_construct_idempotent`,
+      this.lcSchema,
     );
   }
 
   destroyShield(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_destroy_shield`,
       this.lcDestroySchema,
     );
   }
 
   destroyStorage(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_destroy_storage`,
       this.lcDestroySchema,
     );
   }
 
   destroyIdempotent(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_destroy_idempotent`,
       this.lcDestroySchema,
     );
   }
 
   deployProvenanceHttpRequest(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_deploy_provenance_http_request`,
+      this.lcSchema,
     );
   }
 
   upgrade(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_upgrade`,
-    );
-  }
-
-  // TODO: move this to its own class `PgDcpObservability` or similar
-  metrics(identity?: string) {
-    return this.untypedEmptyArgsSP(
-      `observability_metrics_${identity ?? this.subjectArea}`,
+      this.lcSchema,
     );
   }
 
   populateContext(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_populate_experimental_data`,
+      this.lcSchema,
     );
   }
 
   populateSecrets(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_populate_secrets`,
+      this.lcSchema,
     );
   }
 
   populateSeedData(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_populate_seed_data`,
+      this.lcSchema,
     );
   }
 
   populateData(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.untypedEmptyArgsSP(
       `${identity ?? this.subjectArea}_populate_data`,
+      this.lcSchema,
     );
   }
 
@@ -341,9 +334,10 @@ export class PgDcpAssurance<
   SchemaDefns extends PgDcpSchemaDefns,
   ExtensionDefns extends PgDcpExtensionDefns,
   PgDomainDefns extends PgDcpPgDomainDefns,
+  SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
 > {
   readonly subjectArea: string;
-  readonly aeSchema: SQLa.SchemaDefinition<Any, PgDcpEmitContext>;
+  readonly aeSchema: SQLa.SchemaDefinition<"dcp_assurance", PgDcpEmitContext>;
   protected constructor(
     readonly ec: PgDcpEmitCoordinator<
       SchemaDefns,
@@ -356,39 +350,31 @@ export class PgDcpAssurance<
     this.subjectArea = ec.subjectArea(principalSchema);
   }
 
-  untypedEmptyArgsSP(
-    spIdentifier: string,
-    schema?: SQLa.SchemaDefinition<Any, PgDcpEmitContext>,
-  ) {
-    const ctx = this.ec.sqlEmitContext();
-    return pgSQLa.storedProcedure(
-      spIdentifier,
-      {},
-      (name) => pgSQLa.untypedPlPgSqlBody(name, ctx),
-      // we the same text options as prime because `create table`, and other
-      // DDL statements are likely so we don't want to process symbols
-      {
-        embeddedStsOptions: this.ec.primeSTSO,
-        sqlNS: schema ?? this.aeSchema,
-      },
+  unitTest(identity?: string) {
+    return this.ec.emptyArgsReturnsSetOfTextSF(
+      `test_${identity ?? this.subjectArea}`,
+      this.aeSchema,
     );
   }
 
-  unitTest(identity?: string) {
-    return this.untypedEmptyArgsSP(
-      `test_${identity ?? this.subjectArea}`,
-    );
+  hasFunction<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_function('${schemaName}', '${routineName}');`,
+    };
   }
 
   lint(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.emptyArgsReturnsSetOfTextSF(
       `lint_${identity ?? this.subjectArea}`,
+      this.aeSchema,
     );
   }
 
   doctor(identity?: string) {
-    return this.untypedEmptyArgsSP(
+    return this.ec.emptyArgsReturnsSetOfTextSF(
       `test_doctor_${identity ?? this.subjectArea}`,
+      this.aeSchema,
     );
   }
 
@@ -405,6 +391,51 @@ export class PgDcpAssurance<
     ns: SQLa.SqlNamespaceSupplier,
   ) {
     return new PgDcpAssurance(ec, ns);
+  }
+}
+
+export class PgDcpObservability<
+  SchemaDefns extends PgDcpSchemaDefns,
+  ExtensionDefns extends PgDcpExtensionDefns,
+  PgDomainDefns extends PgDcpPgDomainDefns,
+> {
+  readonly subjectArea: string;
+  readonly oSchema: SQLa.SchemaDefinition<
+    "dcp_observability",
+    PgDcpEmitContext
+  >;
+  protected constructor(
+    readonly ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+    readonly principalSchema: SQLa.SqlNamespaceSupplier,
+  ) {
+    this.oSchema = ec.schemaDefns.dcp_observability;
+    this.subjectArea = ec.subjectArea(principalSchema);
+  }
+
+  metrics(identity?: string) {
+    return this.ec.untypedEmptyArgsSP(
+      `observability_metrics_${identity ?? this.subjectArea}`,
+      this.oSchema,
+    );
+  }
+
+  static init<
+    SchemaDefns extends PgDcpSchemaDefns,
+    ExtensionDefns extends PgDcpExtensionDefns,
+    PgDomainDefns extends PgDcpPgDomainDefns,
+  >(
+    ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+    ns: SQLa.SqlNamespaceSupplier,
+  ) {
+    return new PgDcpObservability(ec, ns);
   }
 }
 

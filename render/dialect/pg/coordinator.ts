@@ -8,6 +8,7 @@ import {
   pgExtensionDefn,
   PgExtensionName,
 } from "./extension.ts";
+import * as sr from "./routine.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -207,6 +208,44 @@ export class EmitCoordinator<
       tokens,
       nsOptions: { quoteIdentifiers: true, qnss: this.schemaDefns[schemaName] },
     }, ...ssSuppliers);
+  }
+
+  untypedEmptyArgsSP<RoutineName extends string>(
+    routineName: RoutineName,
+    schema: SchemaDefinition<SchemaName, Context>,
+  ) {
+    const ctx = this.sqlEmitContext();
+    return sr.storedProcedure(
+      routineName,
+      {},
+      (name) => sr.untypedPlPgSqlBody(name, ctx),
+      // we use the same text options as prime because `create table`, and other
+      // DDL statements are likely so we don't want to process symbols
+      {
+        embeddedStsOptions: this.primeSTSO,
+        sqlNS: schema,
+      },
+    );
+  }
+
+  emptyArgsReturnsSetOfTextSF<RoutineName extends string>(
+    routineName: RoutineName,
+    schema: SchemaDefinition<SchemaName, Context>,
+  ) {
+    const ctx = this.sqlEmitContext();
+    return sr.storedFunction(
+      routineName,
+      {},
+      "SETOF TEXT",
+      (name) => sr.untypedPlPgSqlBody(name, ctx),
+      // we use the same text options as prime because `create table`, and other
+      // DDL statements are likely so we don't want to process symbols
+      {
+        embeddedStsOptions: this.primeSTSO,
+        isIdempotent: true,
+        sqlNS: schema,
+      },
+    );
   }
 
   static schemaDefn<

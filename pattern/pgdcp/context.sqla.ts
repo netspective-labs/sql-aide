@@ -1,6 +1,9 @@
 #!/usr/bin/env -S deno run --allow-all
 import * as g from "./governance.ts";
 
+// see https://maxgreenwald.me/blog/do-more-with-run
+// const run = <T>(fn: () => T): T => fn();
+
 export const context = () => {
   const ec = g.PgDcpEmitCoordinator.init(import.meta);
   const lc = g.PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
@@ -75,23 +78,25 @@ export const context = () => {
     DROP FUNCTION IF EXISTS ${sQR("is_active_context_sandbox")}();
     DROP FUNCTION IF EXISTS ${sQR("is_active_context_experimental")}();`;
 
+  // TODO: convert unitTest() to a stored function not a stored procedure, returns what PgTAP expects.
+  // TODO: refer to has_function directly in PgTAP and don't require search_path
   // deno-fmt-ignore
   const unitTest = ae.unitTest()`
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'exec_context_production');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'exec_context_test');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'exec_context_devl');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'exec_context_sandbox');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'exec_context_experimental');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_exec_context_production');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_exec_context_test');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_exec_context_devl');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_exec_context_sandbox');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_exec_context_experimental');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_active_context_production');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_active_context_test');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_active_context_devl');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_active_context_sandbox');
-    RETURN NEXT has_function('${lc.principalSchema.sqlNamespace}', 'is_active_context_experimental')`;
+    ${ae.hasFunction("dcp_context", 'exec_context_production')}
+    ${ae.hasFunction("dcp_context", 'exec_context_test')}
+    ${ae.hasFunction("dcp_context", 'exec_context_devl')}
+    ${ae.hasFunction("dcp_context", 'exec_context_sandbox')}
+    ${ae.hasFunction("dcp_context", 'exec_context_experimental')}
+    ${ae.hasFunction("dcp_context", 'is_exec_context_production')}
+    ${ae.hasFunction("dcp_context", 'is_exec_context_test')}
+    ${ae.hasFunction("dcp_context", 'is_exec_context_devl')}
+    ${ae.hasFunction("dcp_context", 'is_exec_context_sandbox')}
+    ${ae.hasFunction("dcp_context", 'is_exec_context_experimental')}
+    ${ae.hasFunction("dcp_context", 'is_active_context_production')}
+    ${ae.hasFunction("dcp_context", 'is_active_context_test')}
+    ${ae.hasFunction("dcp_context", 'is_active_context_devl')}
+    ${ae.hasFunction("dcp_context", 'is_active_context_sandbox')}
+    ${ae.hasFunction("dcp_context", 'is_active_context_experimental')}`;
 
   return {
     ec,
@@ -99,6 +104,8 @@ export const context = () => {
     schemas,
     lc,
     constructStorage,
+    // TODO: is search_path required? switch to fully qualified schema object names
+    // deno-fmt-ignore
     psqlText: ec.SQL()`
       ${ec.psqlHeader}
 
