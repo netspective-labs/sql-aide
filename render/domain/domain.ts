@@ -570,42 +570,39 @@ export function isSqlDomainZodDateDescr<SDZJD extends SqlDomainZodDateDescr>(
   return isSDZJD(o);
 }
 
-export function zodDateSqlDomainFactory<
-  DomainsIdentity extends string,
-  Context extends tmpl.SqlEmitContext,
->(
-  factoryInit?: {
+/**
+ * Typical date formatting strategy is UTC-first.
+ * @param init override SQL formatting
+ * @returns a strategy factory
+ */
+export function sqlDateFormatStrategy(
+  init?: {
     sqlDateFormat?: (date: Date) => string;
     sqlDateTimeFormat?: (date: Date) => string;
   },
 ) {
-  // For "YYYY-MM-DD"
-  const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const sqlDateFormat = init?.sqlDateFormat ??
+    ((date) => date.toISOString().substring(0, 10));
+  const sqlDateTimeFormat = init?.sqlDateTimeFormat ??
+    ((date) => date.toISOString());
 
-  // For "YYYY-MM-DD HH:MM"
-  const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return {
+    sqlDateFormat,
+    sqlDateTimeFormat,
+  };
+}
 
-  const sqlDateFormat = factoryInit?.sqlDateFormat ??
-    ((date) =>
-      dateFormatter.format(date).split("/").reverse().join(
-        "-",
-      ));
-  const sqlDateTimeFormat = factoryInit?.sqlDateTimeFormat ??
-    ((date) => dateTimeFormatter.format(date).replace(/\//g, "-"));
+export function zodDateSqlDomainFactory<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+>(
+  dtfStrategy: ReturnType<typeof sqlDateFormatStrategy> =
+    sqlDateFormatStrategy(),
+) {
   const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
   return {
     ...ztaSDF,
+    dateFmtStrategy: dtfStrategy,
     date: <
       ZodType extends z.ZodType<Date, z.ZodDateDef>,
       Identity extends string,
@@ -624,7 +621,7 @@ export function zodDateSqlDomainFactory<
         sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
           if (value instanceof Date) {
             return quotedLiteral(
-              (init?.formattedDate ?? sqlDateFormat)(value) as Any,
+              (init?.formattedDate ?? dtfStrategy.sqlDateFormat)(value) as Any,
             );
           }
           return quotedLiteral(value);
@@ -656,7 +653,9 @@ export function zodDateSqlDomainFactory<
         sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
           if (value instanceof Date) {
             return quotedLiteral(
-              (init?.formattedDate ?? sqlDateTimeFormat)(value) as Any,
+              (init?.formattedDate ?? dtfStrategy.sqlDateTimeFormat)(
+                value,
+              ) as Any,
             );
           }
           return quotedLiteral(value);

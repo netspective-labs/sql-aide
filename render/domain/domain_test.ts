@@ -42,6 +42,13 @@ Deno.test("SQLa domain factories", async (tc) => {
   });
 });
 
+Deno.test("SQLa date format strategy", () => {
+  const dtfStrategy = d.sqlDateFormatStrategy();
+  const date = new Date("2010-01-15");
+  ta.assert(dtfStrategy.sqlDateFormat(date), "2010-01-15T");
+  ta.assert(dtfStrategy.sqlDateTimeFormat(date), "2010-01-15T00:00:00.000Z");
+});
+
 Deno.test("SQLa domain from Zod Types", async (tc) => {
   const textSD = ztsdFactory.cacheableFrom(z.string(), {
     identity: "syntheticText",
