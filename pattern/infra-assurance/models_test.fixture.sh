@@ -230,6 +230,46 @@ CREATE TABLE IF NOT EXISTS "graph_nature" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS "risk_subject" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "risk_type" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "incident_category" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "incident_sub_category" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "severity" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "priority" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "incident_type" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "incident_status" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- content tables
 CREATE TABLE IF NOT EXISTS "graph" (
@@ -1398,6 +1438,82 @@ INSERT INTO "contract_type" ("code", "value") VALUES ('VENDOR_SLA', 'Vendor SLA'
 INSERT INTO "contract_type" ("code", "value") VALUES ('VENDOR_NDA', 'Vendor NDA');
 INSERT INTO "graph_nature" ("code", "value") VALUES ('SERVICE', 'Service');
 INSERT INTO "graph_nature" ("code", "value") VALUES ('APP', 'Application');
+INSERT INTO "risk_subject" ("code", "value") VALUES ('TECHNICAL_RISK', 'Technical Risk');
+INSERT INTO "risk_type" ("code", "value") VALUES ('BUDGET', 'Budget');
+INSERT INTO "risk_type" ("code", "value") VALUES ('QUALITY', 'Quality');
+INSERT INTO "risk_type" ("code", "value") VALUES ('SCHEDULE', 'Schedule');
+INSERT INTO "risk_type" ("code", "value") VALUES ('SCHEDULE_AND_BUDGET', 'Schedule And Budget');
+INSERT INTO "incident_category" ("code", "value") VALUES ('ACCESS', 'Access');
+INSERT INTO "incident_category" ("code", "value") VALUES ('DATA', 'Data');
+INSERT INTO "incident_category" ("code", "value") VALUES ('FACILITIES', 'Facilities');
+INSERT INTO "incident_category" ("code", "value") VALUES ('FAILURE', 'Failure');
+INSERT INTO "incident_category" ("code", "value") VALUES ('GENERAL_INFORMATION', 'General Information');
+INSERT INTO "incident_category" ("code", "value") VALUES ('HARDWARE', 'Hardware');
+INSERT INTO "incident_category" ("code", "value") VALUES ('HOW_TO', 'How To');
+INSERT INTO "incident_category" ("code", "value") VALUES ('OTHER', 'Other');
+INSERT INTO "incident_category" ("code", "value") VALUES ('PERFORMANCE', 'Performance');
+INSERT INTO "incident_category" ("code", "value") VALUES ('SECURITY', 'Security');
+INSERT INTO "incident_category" ("code", "value") VALUES ('SERVICE_DELIVERY', 'Service Delivery');
+INSERT INTO "incident_category" ("code", "value") VALUES ('SERVICE_PORTFOLIO', 'Service Portfolio');
+INSERT INTO "incident_category" ("code", "value") VALUES ('STATUS', 'Status');
+INSERT INTO "incident_category" ("code", "value") VALUES ('SUPPORT', 'Support');
+INSERT INTO "incident_category" ("code", "value") VALUES ('THRIFTY', 'Thrifty');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('AUTHORIZATION_ERROR', 'Authorization Error');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('AVAILABILITY', 'Availability');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('DATA_OR_FILE_CORRUPTED', 'Data Or File Corrupted');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('DATA_OR_FILE_INCORRECT', 'Data Or File Incorrect');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('DATA_OR_FILE_MISSING', 'Data Or File Missing');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('ERROR_MESSAGE', 'Error Message');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('FUNCTION_OR_FEATURE_NOT_WORKING', 'Function Or Feature Not Working');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('FUNCTIONALITY', 'Functionality');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('GENERAL_INFORMATION', 'General Information');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('HARDWARE_FAILURE', 'Hardware Failure');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('HOW_TO', 'How To');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('INCIDENT_RESOLUTION_QUALITY', 'Incident Resolution Quality');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('INCIDENT_RESOLUTION_TIME', 'Incident Resolution Time');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('JOB_FAILED', 'Job Failed');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('LOGIN_FAILURE', 'Login Failure');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('MISSING_OR_STOLEN', 'Missing Or Stolen');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('NEW_SERVICE', 'New Service');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('PERFORMANCE', 'Performance');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('PERFORMANCE_DEGRADATION', 'Performance Degradation');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('PERSON', 'Person');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('SECURITY_BREACH', 'Security Breach');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('SECURITY_EVENT', 'Security Event/Message');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('STATUS', 'Status');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('STORAGE_LIMIT_EXCEEDED', 'Storage Limit Exceeded');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('SYSTEM_DOWN', 'System Down');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('SYSTEM_OR_APPLICATION_HANGS', 'System Or Application Hangs');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('UPGRADE_NEW_RELEASE', 'Upgrade/New Release');
+INSERT INTO "incident_sub_category" ("code", "value") VALUES ('VIRUS_ALERT', 'Virus Alert');
+INSERT INTO "severity" ("code", "value") VALUES ('CRITICAL', 'Critical');
+INSERT INTO "severity" ("code", "value") VALUES ('MAJOR', 'Major');
+INSERT INTO "severity" ("code", "value") VALUES ('MINOR', 'Minor');
+INSERT INTO "severity" ("code", "value") VALUES ('LOW', 'Low');
+INSERT INTO "priority" ("code", "value") VALUES ('HIGH', 'High');
+INSERT INTO "priority" ("code", "value") VALUES ('MEDIUM', 'Medium');
+INSERT INTO "priority" ("code", "value") VALUES ('LOW', 'Low');
+INSERT INTO "incident_type" ("code", "value") VALUES ('COMPLAINT', 'Complaint');
+INSERT INTO "incident_type" ("code", "value") VALUES ('INCIDENT', 'Incident');
+INSERT INTO "incident_type" ("code", "value") VALUES ('REQUEST_FOR_INFORMATION', 'Request For Information');
+INSERT INTO "incident_status" ("code", "value") VALUES ('ACCEPTED', 'Accepted');
+INSERT INTO "incident_status" ("code", "value") VALUES ('ASSIGNED', 'Assigned');
+INSERT INTO "incident_status" ("code", "value") VALUES ('CANCELLED', 'Cancelled');
+INSERT INTO "incident_status" ("code", "value") VALUES ('CATEGORIZE', 'Categorize');
+INSERT INTO "incident_status" ("code", "value") VALUES ('CLOSED', 'Closed');
+INSERT INTO "incident_status" ("code", "value") VALUES ('OPEN', 'Open');
+INSERT INTO "incident_status" ("code", "value") VALUES ('PENDING_CHANGE', 'Pending Change');
+INSERT INTO "incident_status" ("code", "value") VALUES ('PENDING_CUSTOMER', 'Pending Customer');
+INSERT INTO "incident_status" ("code", "value") VALUES ('PENDING_EVIDENCE', 'Pending Evidence');
+INSERT INTO "incident_status" ("code", "value") VALUES ('PENDING_OTHER', 'Pending Other');
+INSERT INTO "incident_status" ("code", "value") VALUES ('PENDING_VENDOR', 'Pending Vendor');
+INSERT INTO "incident_status" ("code", "value") VALUES ('REFERRED', 'Referred');
+INSERT INTO "incident_status" ("code", "value") VALUES ('REJECTED', 'Rejected');
+INSERT INTO "incident_status" ("code", "value") VALUES ('REOPENED', 'Reopened');
+INSERT INTO "incident_status" ("code", "value") VALUES ('REPLACED_PROBLEM', 'Replaced Problem');
+INSERT INTO "incident_status" ("code", "value") VALUES ('RESOLVED', 'Resolved');
+INSERT INTO "incident_status" ("code", "value") VALUES ('SUSPENDED', 'Suspended');
+INSERT INTO "incident_status" ("code", "value") VALUES ('WORK_IN_PROGRESS', 'Work In Progress');
 ;
 
 -- synthetic / test data
