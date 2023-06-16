@@ -1,4 +1,11 @@
-import { path, persistContent as pc, pgSQLa, SQLa, zod as z } from "./deps.ts";
+import {
+  path,
+  persistContent as pc,
+  pgSQLa,
+  SQLa,
+  typicalPattern as tp,
+  zod as z,
+} from "./deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -92,6 +99,17 @@ export class PgDcpEmitCoordinator<
   PgDomainDefns,
   PgDcpEmitContext
 > {
+  readonly gtState = tp.governedTemplateState<
+    tp.GovernedDomain,
+    PgDcpEmitContext
+  >();
+  readonly governedModel = tp.governedModel<
+    tp.GovernedDomain,
+    PgDcpEmitContext
+  >(
+    this.gtState.ddlOptions,
+  );
+
   protected constructor(
     readonly init: pgSQLa.EmitCoordinatorInit<
       SchemaDefns,
@@ -327,6 +345,86 @@ export class PgDcpLifecycle<
     ns: SQLa.SqlNamespaceSupplier,
   ) {
     return new PgDcpLifecycle(ec, ns);
+  }
+}
+
+export enum ExecutionContext {
+  PRODUCTION = "production",
+  TEST = "test",
+  DEVELOPMENT = "devl",
+  SANDBOX = "sandbox",
+  EXPERIMENTAL = "experimental",
+}
+export const executionContexts = Object.values(ExecutionContext);
+
+export class PgDcpContext<
+  SchemaDefns extends PgDcpSchemaDefns,
+  ExtensionDefns extends PgDcpExtensionDefns,
+  PgDomainDefns extends PgDcpPgDomainDefns,
+> {
+  readonly subjectArea: string;
+  readonly cSchema: SQLa.SchemaDefinition<
+    "dcp_context",
+    PgDcpEmitContext
+  >;
+  protected constructor(
+    readonly ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+  ) {
+    this.cSchema = ec.schemaDefns.dcp_context;
+    this.subjectArea = ec.subjectArea(this.cSchema);
+  }
+
+  storage() {
+    const { governedModel: gm, governedModel: { domains: d } } = this.ec;
+
+    const execCtx = gm.textEnumTable("execution_context", ExecutionContext, {
+      sqlNS: this.cSchema,
+    });
+
+    const singletonId = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+      "singleton_id",
+      (_zodType, init) => {
+        return {
+          ...d.sdf.anySDF.defaults<Any>(
+            z.boolean().default(true).optional(),
+            { isOptional: true, ...init },
+          ),
+          sqlDataType: () => ({ SQL: () => `BOOL` }),
+          sqlDefaultValue: () => ({ SQL: () => `TRUE CHECK (singleton_id)` }),
+        };
+      },
+    );
+
+    const context = SQLa.tableDefinition(
+      "context",
+      {
+        singleton_id: gm.tcFactory.unique(
+          z.boolean(SQLa.zodSqlDomainRawCreateParams(singletonId)),
+        ),
+        active: execCtx.references.code(),
+        host: d.text(),
+      },
+      { sqlNS: this.cSchema },
+    );
+    return { execCtx, context };
+  }
+
+  static init<
+    SchemaDefns extends PgDcpSchemaDefns,
+    ExtensionDefns extends PgDcpExtensionDefns,
+    PgDomainDefns extends PgDcpPgDomainDefns,
+  >(
+    ec: PgDcpEmitCoordinator<
+      SchemaDefns,
+      ExtensionDefns,
+      PgDomainDefns
+    >,
+  ) {
+    return new PgDcpContext(ec);
   }
 }
 
