@@ -1,11 +1,11 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import * as cli from "https://deno.land/x/cliffy@v0.25.7/command/mod.ts";
-import * as ws from "../lib/universal/whitespace.ts";
-import * as SQLa from "../render/mod.ts";
-import * as dvp from "../pattern/data-vault/data-vault.ts";
-import * as sqlsp from "../render/dialect/pg/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import * as cli from "https://deno.land/x/cliffy@v0.25.7/command/mod.ts";
+import * as ws from "../../lib/universal/whitespace.ts";
+import * as SQLa from "../../render/mod.ts";
+import * as dvp from "../../pattern/data-vault/data-vault.ts";
+import * as sqlsp from "../../render/dialect/pg/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;

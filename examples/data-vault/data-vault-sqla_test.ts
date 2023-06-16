@@ -1,5 +1,5 @@
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
-import { testingAsserts as ta } from "../deps-test.ts";
+import { testingAsserts as ta } from "../../deps-test.ts";
 
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));

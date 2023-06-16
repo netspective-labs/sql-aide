@@ -3,7 +3,7 @@
 
 // IMPORTANT: when you use this outside of library use this type of import with pinned versions:
 // import * as dvp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.10/pattern/data-vault/mod.ts";
-import * as dvp from "../pattern/data-vault/mod.ts";
+import * as dvp from "../../pattern/data-vault/mod.ts";
 
 // high-modules provide convenient access to internal imports
 const { typical: typ, typical: { SQLa, ws } } = dvp;
