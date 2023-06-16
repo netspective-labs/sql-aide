@@ -1,0 +1,109 @@
+@startuml IE
+  hide circle
+  skinparam linetype ortho
+  skinparam roundcorner 20
+  skinparam class {
+    BackgroundColor White
+    ArrowColor Silver
+    BorderColor Silver
+    FontColor Black
+    FontSize 12
+  }
+
+  entity "party" as party {
+      **party_id**: INTEGER
+    --
+    * party_type_id: TEXT
+    * party_name: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "party_identifier" as party_identifier {
+      **party_identifier_id**: INTEGER
+    --
+    * identifier_number: TEXT
+    * party_identifier_type_id: TEXT
+    * party_id: INTEGER
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "person" as person {
+      **person_id**: INTEGER
+    --
+    * party_id: INTEGER
+    * person_type_id: TEXT
+    * person_first_name: TEXT
+    * person_last_name: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "party_relation" as party_relation {
+      **party_relation_id**: INTEGER
+    --
+    * party_id: INTEGER
+    * related_party_id: INTEGER
+    * relation_type_id: TEXT
+      party_role_id: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "organization" as organization {
+      **organization_id**: INTEGER
+    --
+    * party_id: INTEGER
+    * name: TEXT
+    * license: TEXT
+    * registration_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "organization_role" as organization_role {
+      **organization_role_id**: INTEGER
+    --
+    * person_id: INTEGER
+    * organization_id: INTEGER
+    * organization_role_type_id: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "contact_electronic" as contact_electronic {
+      **contact_electronic_id**: INTEGER
+    --
+    * contact_type_id: TEXT
+    * party_id: INTEGER
+    * electronics_details: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  entity "contact_land" as contact_land {
+      **contact_land_id**: INTEGER
+    --
+    * contact_type_id: TEXT
+    * party_id: INTEGER
+    * address_line1: TEXT
+    * address_line2: TEXT
+    * address_zip: TEXT
+    * address_city: TEXT
+    * address_state: TEXT
+    * address_country: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
+  party |o..o{ party_identifier
+  party |o..o{ person
+  party |o..o{ party_relation
+  party |o..o{ party_relation
+  party |o..o{ organization
+  person |o..o{ organization_role
+  organization |o..o{ organization_role
+  party |o..o{ contact_electronic
+  party |o..o{ contact_land
+@enduml

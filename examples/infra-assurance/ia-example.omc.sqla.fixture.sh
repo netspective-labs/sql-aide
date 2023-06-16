@@ -36,7 +36,7 @@ SQL=$(cat <<-EOF
 
 -- reference tables
 CREATE TABLE IF NOT EXISTS "execution_context" (
-    "code" INTEGER PRIMARY KEY NOT NULL,
+    "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -1151,9 +1151,11 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
 
 -- seed Data
-INSERT INTO "execution_context" ("code", "value") VALUES (0, 'DEVELOPMENT');
-INSERT INTO "execution_context" ("code", "value") VALUES (1, 'TEST');
-INSERT INTO "execution_context" ("code", "value") VALUES (2, 'PRODUCTION');
+INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
+INSERT INTO "execution_context" ("code", "value") VALUES ('TEST', 'test');
+INSERT INTO "execution_context" ("code", "value") VALUES ('DEVELOPMENT', 'devl');
+INSERT INTO "execution_context" ("code", "value") VALUES ('SANDBOX', 'sandbox');
+INSERT INTO "execution_context" ("code", "value") VALUES ('EXPERIMENTAL', 'experimental');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps');
@@ -1553,7 +1555,7 @@ INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "
 INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "created_by") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, 'IN_USE', '', 'Asset Name', 'Service used for asset etc', 'VIRTUAL_MACHINE', '', 'IN_USE', '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL);
 INSERT INTO "incident" ("title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by") VALUES ('Server Down - Due to CPU utilization reached 100%', '2021-04-20', '20-04-2021, 00:00', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = 'VIRTUAL_MACHINE'), 'PERFORMANCE', 'HARDWARE_FAILURE', 'MAJOR', 'HIGH', 'COMPLAINT', 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', 'CLOSED', NULL, NULL, '', '', '2021-04-20', '20-04-2021, 00:00', NULL);
 INSERT INTO "incident_root_cause" ("incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by") VALUES ((SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = 'HARDWARE_FAILURE' AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = 'COMPLAINT' AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL);
-
+  
 -- the .dump in the last line is necessary because we load into :memory:
 -- first because performance is better and then emit all the SQL for saving
 -- into the destination file, e.g. when insert DML uses (select x from y where a = b))

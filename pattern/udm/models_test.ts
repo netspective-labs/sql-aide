@@ -6,7 +6,6 @@ import * as ws from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as tp from "../typical/mod.ts";
 import * as mod from "./models.ts";
-import * as udm from "../udm/mod.ts";
 
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
@@ -22,74 +21,22 @@ type EmitContext = typeof ctx;
 const ctx = SQLa.typicalSqlEmitContext();
 const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
 
-const graphTableInsertion = mod.graph.insertDML({
-  name: "text-value",
-  graph_nature_id: "SERVICE",
-  description: "description",
-});
-
-const graphIdSelect = mod.graph.select(graphTableInsertion.insertable);
-const taxIdBoundary = mod.boundary.insertDML({
-  boundary_nature_id: "REGULATORY_TAX_ID",
-  name: "Boundery Name",
-  description: "test description",
-  graph_id: graphIdSelect,
-});
-const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
-
-const primaryBoundary = mod.boundary.insertDML({
-  boundary_nature_id: "REGULATORY_TAX_ID",
-  name: "Boundery Name Self Test",
-  description: "test description",
-  parent_boundary_id: taxIdBoundaryIdSelect,
-  graph_id: graphIdSelect,
-});
-
-const hostInsertion = mod.host.insertDML({
-  host_name: "Test Host Name",
-  description: "description test",
-});
-
-const hostID = mod.host.select(hostInsertion.insertable);
-const hostBoundaryInsertion = mod.hostBoundary.insertDML({
-  host_id: hostID,
-});
-
-const raciMatrixInsertion = mod.raciMatrix.insertDML({
-  asset: "asset test",
-  responsible: "responsible",
-  accountable: "accountable",
-  consulted: "consulted",
-  informed: "informed",
-});
-
-const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
-  .insertDML({
-    boundary_id: mod.boundary.select({ name: "Boundery Name Self Test" }),
-    raci_matrix_subject_id: "CURATION_WORKS",
-  });
-
-const raciMatrixActivityInsertion = mod.raciMatrixActivity
-  .insertDML({
-    activity: "Activity",
-  });
-
-const partyInsertion = udm.party
+const partyInsertion = mod.party
   .insertDML({
     party_type_id: "PERSON",
     party_name: "person",
   });
 
-const partyID = udm.party.select(partyInsertion.insertable);
+const partyID = mod.party.select(partyInsertion.insertable);
 
-const partyIdentifierInsertion = udm.partyIdentifier
+const partyIdentifierInsertion = mod.partyIdentifier
   .insertDML({
     identifier_number: "test identifier",
     party_identifier_type_id: "PASSPORT",
     party_id: partyID,
   });
 
-const personInsertion = udm.person
+const personInsertion = mod.person
   .insertDML({
     party_id: partyID,
     person_type_id: "PROFESSIONAL",
@@ -97,7 +44,7 @@ const personInsertion = udm.person
     person_last_name: "Test Last Name",
   });
 
-const partyRelationInsertion = udm.partyRelation
+const partyRelationInsertion = mod.partyRelation
   .insertDML({
     party_id: partyID,
     related_party_id: partyID,
@@ -105,7 +52,7 @@ const partyRelationInsertion = udm.partyRelation
     party_role_id: "VENDOR",
   });
 
-const organizationInsertion = udm.organization
+const organizationInsertion = mod.organization
   .insertDML({
     party_id: partyID,
     name: "Test Name",
@@ -113,20 +60,20 @@ const organizationInsertion = udm.organization
     registration_date: new Date("02/06/2023"),
   });
 
-const personID = udm.person.select({
+const personID = mod.person.select({
   person_first_name: "Test First Name",
   person_last_name: "Test Last Name",
 });
-const organizationID = udm.organization.select({ name: "Test Name" });
+const organizationID = mod.organization.select({ name: "Test Name" });
 
-const organizationRoleInsertion = udm.organizationRole
+const organizationRoleInsertion = mod.organizationRole
   .insertDML({
     person_id: personID,
     organization_id: organizationID,
     organization_role_type_id: "ASSOCIATE_MANAGER_TECHNOLOGY",
   });
 
-const contactElectronicInsertion = udm.contactElectronic
+const contactElectronicInsertion = mod.contactElectronic
   .insertDML({
     contact_type_id: "MOBILE_PHONE_NUMBER",
     party_id: partyID,
@@ -138,21 +85,6 @@ function sqlDDL() {
     ${mod.sqlDDL()}
 
     -- synthetic / test data
-    ${graphTableInsertion}
-
-    ${taxIdBoundary}
-
-    ${primaryBoundary}
-
-    ${hostInsertion}
-
-    ${hostBoundaryInsertion}
-
-    ${raciMatrixInsertion}
-
-    ${raciMatrixSubjectBoundaryInsertion}
-
-    ${raciMatrixActivityInsertion}
 
     ${partyInsertion}
 
@@ -253,7 +185,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "156");
+    ta.assertEquals(output, "26");
   });
 
   // deno-lint-ignore require-await

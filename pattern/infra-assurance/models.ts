@@ -4,18 +4,16 @@ import * as ws from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typ from "../typical/mod.ts";
 import * as govn from "./governance.ts";
+import * as udm from "../udm/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export const ctx = SQLa.typicalSqlEmitContext();
+const { ctx, gm, gts } = udm;
+
 type EmitContext = typeof ctx;
 
 export const tcf = SQLa.tableColumnFactory<Any, Any>();
-export const gts = typ.governedTemplateState<typ.GovernedDomain, EmitContext>();
-export const gm = typ.governedModel<typ.GovernedDomain, EmitContext>(
-  gts.ddlOptions,
-);
 const {
   text,
   textNullable,
@@ -27,29 +25,6 @@ const {
   dateTimeNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
-
-export const execCtx = gm.ordinalEnumTable(
-  "execution_context",
-  govn.ExecutionContext,
-);
-
-export const organizationRoleType = gm.textEnumTable(
-  "organization_role_type",
-  govn.OrganizationRoleType,
-  { isIdempotent: true },
-);
-
-export const partyType = gm.textEnumTable(
-  "party_type",
-  govn.PartyType,
-  { isIdempotent: true },
-);
-
-export const partyRole = gm.textEnumTable(
-  "party_role_type",
-  govn.PartyRole,
-  { isIdempotent: true },
-);
 
 export const contractStatus = gm.textEnumTable(
   "contract_status",
@@ -207,30 +182,6 @@ export const auditorStatusType = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const partyIdentifierType = gm.textEnumTable(
-  "party_identifier_type",
-  govn.PartyIdentifierType,
-  { isIdempotent: true },
-);
-
-export const partyRelationType = gm.textEnumTable(
-  "party_relation_type",
-  govn.PartyRelationType,
-  { isIdempotent: true },
-);
-
-export const personType = gm.textEnumTable(
-  "person_type",
-  govn.PersonType,
-  { isIdempotent: true },
-);
-
-export const contactType = gm.textEnumTable(
-  "contact_type",
-  govn.ContactType,
-  { isIdempotent: true },
-);
-
 export const trainingSubject = gm.textEnumTable(
   "training_subject",
   govn.TrainingSubject,
@@ -321,10 +272,10 @@ export const allReferenceTables: (
   & SQLa.TableDefinition<Any, EmitContext>
   & typ.EnumTableDefn<EmitContext>
 )[] = [
-  execCtx,
-  organizationRoleType,
-  partyType,
-  partyRole,
+  udm.execCtx,
+  udm.organizationRoleType,
+  udm.partyType,
+  udm.partyRole,
   contractStatus,
   paymentType,
   periodicity,
@@ -351,10 +302,10 @@ export const allReferenceTables: (
   auditorType,
   auditPurpose,
   auditorStatusType,
-  partyRelationType,
-  partyIdentifierType,
-  personType,
-  contactType,
+  udm.partyRelationType,
+  udm.partyIdentifierType,
+  udm.personType,
+  udm.contactType,
   trainingSubject,
   statusValues,
   ratingValue,
@@ -430,7 +381,7 @@ export const raciMatrixActivity = gm.autoIncPkTable("raci_matrix_activity", {
 
 export const party = gm.autoIncPkTable("party", {
   party_id: autoIncPK(),
-  party_type_id: partyType.references.code(),
+  party_type_id: udm.partyType.references.code(),
   party_name: text(),
   ...gm.housekeeping.columns,
 });
@@ -442,7 +393,7 @@ export const party = gm.autoIncPkTable("party", {
 export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
   party_identifier_id: autoIncPK(),
   identifier_number: text(),
-  party_identifier_type_id: partyIdentifierType.references.code(),
+  party_identifier_type_id: udm.partyIdentifierType.references.code(),
   party_id: party.references.party_id(),
   ...gm.housekeeping.columns,
 });
@@ -450,7 +401,7 @@ export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
 export const person = gm.autoIncPkTable("person", {
   person_id: autoIncPK(),
   party_id: party.references.party_id(),
-  person_type_id: personType.references.code(),
+  person_type_id: udm.personType.references.code(),
   person_first_name: text(),
   person_last_name: text(),
   ...gm.housekeeping.columns,
@@ -464,8 +415,8 @@ export const partyRelation = gm.autoIncPkTable("party_relation", {
   party_relation_id: autoIncPK(),
   party_id: party.references.party_id(),
   related_party_id: party.references.party_id(),
-  relation_type_id: partyRelationType.references.code(),
-  party_role_id: partyRole.references.code().optional(),
+  relation_type_id: udm.partyRelationType.references.code(),
+  party_role_id: udm.partyRole.references.code().optional(),
   ...gm.housekeeping.columns,
 });
 
@@ -482,13 +433,13 @@ export const organizationRole = gm.autoIncPkTable("organization_role", {
   organization_role_id: autoIncPK(),
   person_id: person.references.person_id(),
   organization_id: organization.references.organization_id(),
-  organization_role_type_id: organizationRoleType.references.code(),
+  organization_role_type_id: udm.organizationRoleType.references.code(),
   ...gm.housekeeping.columns,
 });
 
 export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
   contact_electronic_id: autoIncPK(),
-  contact_type_id: contactType.references.code(),
+  contact_type_id: udm.contactType.references.code(),
   party_id: party.references.party_id(),
   electronics_details: text(),
   ...gm.housekeeping.columns,
@@ -496,7 +447,7 @@ export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
 
 export const contactLand = gm.autoIncPkTable("contact_land", {
   contact_land_id: autoIncPK(),
-  contact_type_id: contactType.references.code(),
+  contact_type_id: udm.contactType.references.code(),
   party_id: party.references.party_id(),
   address_line1: text(),
   address_line2: text(),
@@ -513,7 +464,7 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
 
 export const asset = gm.autoIncPkTable("asset", {
   asset_id: autoIncPK(),
-  organization_id: organization.references.organization_id(),
+  organization_id: udm.organization.references.organization_id(),
   asset_retired_date: dateNullable(),
   asset_status_id: assetStatus.references.code(),
   asset_tag: text(),
@@ -607,8 +558,8 @@ export const securityImpactAnalysis = gm.autoIncPkTable(
     existing_controls: text(),
     priority_id: priority.references.code(),
     reported_date: date(),
-    reported_by_id: person.references.person_id(),
-    responsible_by_id: person.references.person_id(),
+    reported_by_id: udm.person.references.person_id(),
+    responsible_by_id: udm.person.references.person_id(),
     ...gm.housekeeping.columns,
   },
 );
@@ -699,8 +650,8 @@ export const securityIncidentResponseTeam = gm.autoIncPkTable(
   {
     security_incident_response_team_id: autoIncPK(),
     training_subject_id: trainingSubject.references.code().optional(),
-    person_id: person.references.person_id(),
-    organization_id: organization.references.organization_id(),
+    person_id: udm.person.references.person_id(),
+    organization_id: udm.organization.references.organization_id(),
     training_status_id: statusValues.references.code().optional(),
     attended_date: date().optional(),
     ...gm.housekeeping.columns,
@@ -712,8 +663,8 @@ export const awarenessTraining = gm.autoIncPkTable(
   {
     awareness_training_id: autoIncPK(),
     training_subject_id: trainingSubject.references.code(),
-    person_id: person.references.person_id(),
-    organization_id: organization.references.organization_id(),
+    person_id: udm.person.references.person_id(),
+    organization_id: udm.organization.references.organization_id(),
     training_status_id: statusValues.references.code(),
     attended_date: date(),
     ...gm.housekeeping.columns,
@@ -728,8 +679,8 @@ export const rating = gm.autoIncPkTable(
   "rating",
   {
     rating_id: autoIncPK(),
-    author_id: person.references.person_id(),
-    rating_given_to_id: organization.references.organization_id(),
+    author_id: udm.person.references.person_id(),
+    rating_given_to_id: udm.organization.references.organization_id(),
     rating_value_id: ratingValue.references.code(),
     best_rating_id: ratingValue.references.code().optional(),
     rating_explanation: text(),
@@ -743,7 +694,7 @@ export const notes = gm.autoIncPkTable(
   "note",
   {
     note_id: autoIncPK(),
-    party_id: party.references.party_id(),
+    party_id: udm.party.references.party_id(),
     note: text(),
     ...gm.housekeeping.columns,
   },
@@ -755,8 +706,8 @@ export const auditAssertion = gm.autoIncPkTable(
     audit_assertion_id: autoIncPK(),
     auditor_type_id: auditorType.references.code(),
     audit_purpose_id: auditPurpose.references.code(),
-    auditor_org_id: organization.references.organization_id(),
-    auditor_person_id: person.references.person_id(),
+    auditor_org_id: udm.organization.references.organization_id(),
+    auditor_person_id: udm.person.references.person_id(),
     auditor_status_type_id: auditorStatusType.references.code(),
     scf_identifier: text(),
     auditor_notes: text(),
@@ -775,8 +726,8 @@ export const contract = gm.autoIncPkTable(
   "contract",
   {
     contract_id: autoIncPK(),
-    contract_from_id: party.references.party_id(),
-    contract_to_id: party.references.party_id(),
+    contract_from_id: udm.party.references.party_id(),
+    contract_to_id: udm.party.references.party_id(),
     contract_status_id: contractStatus.references.code().optional(),
     document_reference: text(),
     payment_type_id: paymentType.references.code().optional(),
@@ -809,7 +760,7 @@ export const riskRegister = gm.autoIncPkTable(
     mitigation_further_actions: text(),
     control_monitor_mitigation_actions_tracking_strategy: text(),
     control_monitor_action_due_date: dateNullable(),
-    control_monitor_risk_owner_id: person.references.person_id(),
+    control_monitor_risk_owner_id: udm.person.references.person_id(),
     ...gm.housekeeping.columns,
   },
 );
@@ -835,11 +786,11 @@ export const incident = gm.autoIncPkTable(
     it_service_impacted: text(),
     impacted_modules: text(),
     impacted_dept: text(),
-    reported_by_id: person.references.person_id(),
-    reported_to_id: person.references.person_id(),
+    reported_by_id: udm.person.references.person_id(),
+    reported_to_id: udm.person.references.person_id(),
     brief_description: text(),
     detailed_description: text(),
-    assigned_to_id: person.references.person_id(),
+    assigned_to_id: udm.person.references.person_id(),
     assigned_date: dateNullable(),
     investigation_details: text(),
     containment_details: text(),
@@ -879,7 +830,7 @@ export const raciMatrixAssignment = gm.autoIncPkTable(
   "raci_matrix_assignment",
   {
     raci_matrix_assignment_id: autoIncPK(),
-    person_id: person.references.person_id(),
+    person_id: udm.person.references.person_id(),
     subject_id: raciMatrixSubject.references.code(),
     activity_id: raciMatrixActivity.references.raci_matrix_activity_id(),
     raci_matrix_assignment_nature_id: raciMatrixAssignmentNature
@@ -892,7 +843,7 @@ export const personSkill = gm.autoIncPkTable(
   "person_skill",
   {
     person_skill_id: autoIncPK(),
-    person_id: person.references.person_id(),
+    person_id: udm.person.references.person_id(),
     skill_nature_id: skillNature.references.code(),
     skill_id: skill.references.code(),
     proficiency_scale_id: proficiencyScale.references.code(),
@@ -980,7 +931,7 @@ export const attestation = gm.autoIncPkTable(
   {
     attestation_id: autoIncPK(),
     assertion_id: assertion.references.assertion_id(),
-    person_id: person.references.person_id(),
+    person_id: udm.person.references.person_id(),
     attestation: text(),
     attestation_explain: text(),
     attested_on: date(),
@@ -1014,14 +965,14 @@ export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
   raciMatrix,
   raciMatrixSubjectBoundary,
   raciMatrixActivity,
-  party,
-  partyIdentifier,
-  person,
-  partyRelation,
-  organization,
-  organizationRole,
-  contactElectronic,
-  contactLand,
+  udm.party,
+  udm.partyIdentifier,
+  udm.person,
+  udm.partyRelation,
+  udm.organization,
+  udm.organizationRole,
+  udm.contactElectronic,
+  udm.contactLand,
   asset,
   vulnerabilitySource,
   severity,

@@ -2,7 +2,7 @@ PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst perform
 
 -- reference tables
 CREATE TABLE IF NOT EXISTS "execution_context" (
-    "code" INTEGER PRIMARY KEY NOT NULL,
+    "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -1117,9 +1117,11 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
 
 -- seed Data
-INSERT INTO "execution_context" ("code", "value") VALUES (0, 'DEVELOPMENT');
-INSERT INTO "execution_context" ("code", "value") VALUES (1, 'TEST');
-INSERT INTO "execution_context" ("code", "value") VALUES (2, 'PRODUCTION');
+INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
+INSERT INTO "execution_context" ("code", "value") VALUES ('TEST', 'test');
+INSERT INTO "execution_context" ("code", "value") VALUES ('DEVELOPMENT', 'devl');
+INSERT INTO "execution_context" ("code", "value") VALUES ('SANDBOX', 'sandbox');
+INSERT INTO "execution_context" ("code", "value") VALUES ('EXPERIMENTAL', 'experimental');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality');
 INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps');

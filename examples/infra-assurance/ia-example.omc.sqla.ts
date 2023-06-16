@@ -215,9 +215,9 @@ const person = {
       }),
       ALL: () =>
         SQL`
-        ${contactElectronicDML.email}
-        ${contactElectronicDML.phoneNumber}
-        `,
+          ${contactElectronicDML.email}
+          ${contactElectronicDML.phoneNumber}
+          `,
     };
     const contactLandDML = iam.contactLand.insertDML({
       party_id: iam.party.select(partyDML.insertable),
@@ -237,10 +237,10 @@ const person = {
       contactElectronicDML,
       contactLandDML,
       seedDDL: SQL`
-      ${partyDML}
-      ${personDML}
-      ${contactElectronicDML.ALL}
-      ${contactLandDML}`,
+        ${partyDML}
+        ${personDML}
+        ${contactElectronicDML.ALL}
+        ${contactLandDML}`,
     };
   },
 };
@@ -325,10 +325,10 @@ const organization = {
       contactElectronicDML,
       contactLandDML,
       seedDDL: SQL`
-      ${partyDML}
-      ${organizationDML}
-      ${contactElectronicDML.ALL}
-      ${contactLandDML}`,
+        ${partyDML}
+        ${organizationDML}
+        ${contactElectronicDML.ALL}
+        ${contactLandDML}`,
     };
   },
 };
@@ -363,8 +363,8 @@ const personToOrganizationRelation = {
       partyRelationDML,
       oraganizationRoleDML,
       seedDDL: SQL`
-      ${partyRelationDML}
-      ${oraganizationRoleDML}`,
+        ${partyRelationDML}
+        ${oraganizationRoleDML}`,
     };
   },
 };
@@ -648,20 +648,20 @@ const serverDownIncidentRootCause = iam.incidentRootCause.insertDML({
 function sqlDDL() {
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
-  ${iam.sqlDDL()}
-  ${organizationDetails.seedDDL}
-  ${organizationAllPersons.ALL}
-  ${organizationToPersonAllRelations.ALL}
-  ${personDetailsSkill.ALL}
-  ${awarenessTraining.ALL}
-  ${personSecurityIncidentResponse}
-  ${personRatingToOrganization}
-  ${personToOrganizationGeneralContract}
-  ${personRiskRegister}
-  ${assetDetail}
-  ${serverDownIncident}
-  ${serverDownIncidentRootCause}
-`
+    ${iam.sqlDDL()}
+    ${organizationDetails.seedDDL}
+    ${organizationAllPersons.ALL}
+    ${organizationToPersonAllRelations.ALL}
+    ${personDetailsSkill.ALL}
+    ${awarenessTraining.ALL}
+    ${personSecurityIncidentResponse}
+    ${personRatingToOrganization}
+    ${personToOrganizationGeneralContract}
+    ${personRiskRegister}
+    ${assetDetail}
+    ${serverDownIncident}
+    ${serverDownIncidentRootCause}
+  `
 }
 
 if (import.meta.main) {
