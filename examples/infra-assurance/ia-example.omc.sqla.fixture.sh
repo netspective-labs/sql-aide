@@ -1,4 +1,38 @@
-PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
+#!/bin/bash
+
+destroy_first=0
+db_file=""
+
+# Parse command-line options
+for arg in "$@"
+do
+    case $arg in
+        --destroy-first)
+            destroy_first=1
+            shift # Remove --destroy-first from processing
+            ;;
+        *)
+            db_file=$1
+            shift # Remove database filename from processing
+            break # Stop processing after the filename so we can pass the rest into final SQLite DB
+            ;;
+    esac
+done
+
+# Check if the database file parameter is supplied
+if [ -z "$db_file" ]
+then
+    echo "No database file supplied. Usage: ./your_script.sh [--destroy-first] <database_file> [<sqlite3 arguments>...]"
+    exit 1
+fi
+
+# If the destroy_first flag is set, delete the database file
+if [ $destroy_first -eq 1 ] && [ -f "$db_file" ]; then
+    rm "$db_file"
+fi
+
+SQL=$(cat <<-EOF
+    PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
 
 -- reference tables
 CREATE TABLE IF NOT EXISTS "execution_context" (
@@ -1481,34 +1515,55 @@ INSERT INTO "incident_status" ("code", "value") VALUES ('RESOLVED', 'Resolved');
 INSERT INTO "incident_status" ("code", "value") VALUES ('SUSPENDED', 'Suspended');
 INSERT INTO "incident_status" ("code", "value") VALUES ('WORK_IN_PROGRESS', 'Work In Progress');
 ;
+INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('ORGANIZATION', 'Orgnization Name', NULL);
+INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'Orgnization Name', 'XXXX-XXXXX-XXXX', '2010-01-15', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('OFFICIAL_EMAIL', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'orgnization@email.com', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('LAND_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), '0523 852 9945', NULL);
+;
+INSERT INTO "contact_land" ("contact_type_id", "party_id", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country", "created_by") VALUES ('OFFICIAL_ADDRESS', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'Address line 1', 'Address line 2', '', 'City', 'State', 'Country', NULL);
+INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSON', 'First Name Last Name', NULL);
+INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'INDIVIDUAL', 'First Name', 'Last Name', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('OFFICIAL_EMAIL', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'person@org.com', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), '+911234567890', NULL);
+;
+INSERT INTO "contact_land" ("contact_type_id", "party_id", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country", "created_by") VALUES ('OFFICIAL_ADDRESS', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'Address line 1', 'Address line 2', '', 'City', 'State', 'Country', NULL);
+;
+INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
+INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'LEAD_SOFTWARE_ENGINEER', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'REACTJS', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JAVASCRIPT', 'ADVANCED', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'HUGO', 'FUNDAMENTAL_AWARENESS', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'DENO', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'ANGULAR', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'TYPESCRIPT', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'POSTGRESQL', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'MYSQL', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'PHP', 'INTERMEDIATE', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'PYTHON', 'FUNDAMENTAL_AWARENESS', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'DOT_NET', 'NA', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'ORACLE', 'NA', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JAVA', 'FUNDAMENTAL_AWARENESS', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JQUERY', 'ADVANCED', NULL);
+INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'OSQUERY', 'FUNDAMENTAL_AWARENESS', NULL);
+INSERT INTO "awareness_training" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES ('HIPAA', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'YES', '2022-02-22', NULL);
+INSERT INTO "security_incident_response_team" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES (NULL, (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, NULL, NULL);
+INSERT INTO "rating" ("author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'FOUR', 'FIVE', 'Good Service', 'Satisfied', 'THREE', NULL);
+INSERT INTO "contract" ("contract_from_id", "contract_to_id", "contract_status_id", "document_reference", "payment_type_id", "periodicity_id", "start_date", "end_date", "contract_type_id", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'FINISHED', 'google.com', 'RENTS', 'WEEKLY', '20-04-2021, 00:00', '20-04-2021, 00:00', 'GENERAL_CONTRACT_FOR_SERVICES', '20-04-2021, 00:00', '20-04-2021, 00:00', '20-04-2021, 00:00', '20-04-2021, 00:00', NULL);
+INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by") VALUES ('Risk description', 'TECHNICAL_RISK', 'QUALITY', 'Impact to the organization', 'THREE', 'THREE', 'THREE', 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-14', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL);
+INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "created_by") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, 'IN_USE', '', 'Asset Name', 'Service used for asset etc', 'VIRTUAL_MACHINE', '', 'IN_USE', '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL);
+INSERT INTO "incident" ("title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by") VALUES ('Server Down - Due to CPU utilization reached 100%', '2021-04-20', '20-04-2021, 00:00', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = 'VIRTUAL_MACHINE'), 'PERFORMANCE', 'HARDWARE_FAILURE', 'MAJOR', 'HIGH', 'COMPLAINT', 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', 'CLOSED', NULL, NULL, '', '', '2021-04-20', '20-04-2021, 00:00', NULL);
+INSERT INTO "incident_root_cause" ("incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by") VALUES ((SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = 'HARDWARE_FAILURE' AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = 'COMPLAINT' AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL);
 
--- synthetic / test data
-INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
+-- the .dump in the last line is necessary because we load into :memory:
+-- first because performance is better and then emit all the SQL for saving
+-- into the destination file, e.g. when insert DML uses (select x from y where a = b))
+.dump
+EOF
+)
 
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES (NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL);
-
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name Self Test', 'test description', NULL);
-
-INSERT INTO "host" ("host_name", "description", "created_by") VALUES ('Test Host Name', 'description test', NULL);
-
-INSERT INTO "host_boundary" ("host_id", "created_by") VALUES ((SELECT "host_id" FROM "host" WHERE "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL);
-
-INSERT INTO "raci_matrix" ("asset", "responsible", "accountable", "consulted", "informed", "created_by") VALUES ('asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL);
-
-INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), 'CURATION_WORKS', NULL);
-
-INSERT INTO "raci_matrix_activity" ("activity", "created_by") VALUES ('Activity', NULL);
-
-INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSON', 'person', NULL);
-
-INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL);
-
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL);
-
-INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
-
-INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL);
-
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), 'ASSOCIATE_MANAGER_TECHNOLOGY', NULL);
-
-INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL);
+# Create an in-memory SQLite database, load the first pass for optimal
+# performance then export the in-memory database to the given file; this
+# two phase approach works because the last line in the SQL is '.dump'.
+# All arguments after <database_file> will be passed into the final DB.
+sqlite3 "$db_file" "$(echo "$SQL" | sqlite3 ":memory:")" "${@}"
+  

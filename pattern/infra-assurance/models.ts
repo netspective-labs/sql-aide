@@ -360,6 +360,14 @@ export const allReferenceTables: (
   ratingValue,
   contractType,
   graphNature,
+  riskSubject,
+  riskType,
+  incidentCategory,
+  incidentSubCategory,
+  severity,
+  priority,
+  incidentType,
+  incidentStatus,
 ];
 
 export const graph = gm.autoIncPkTable("graph", {
