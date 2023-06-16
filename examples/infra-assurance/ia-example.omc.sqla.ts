@@ -531,13 +531,13 @@ const personToOrganizationGeneralContract = iam.contract.insertDML({
   document_reference: "google.com",
   payment_type_id: "RENTS",
   periodicity_id: "WEEKLY",
-  start_date: new Date("04/20/2021 00:00 AM"),
-  end_date: new Date("04/20/2021 00:00 AM"),
+  start_date: new Date("2021-04-20T00:00:00.000Z"),
+  end_date: new Date("2021-04-20T00:00:00.000Z"),
   contract_type_id: "GENERAL_CONTRACT_FOR_SERVICES",
-  date_of_last_review: new Date("04/20/2021 00:00 AM"),
-  date_of_next_review: new Date("04/20/2021 00:00 AM"),
-  date_of_contract_review: new Date("04/20/2021 00:00 AM"),
-  date_of_contract_approval: new Date("04/20/2021 00:00 AM"),
+  date_of_last_review: new Date("2021-04-20T00:00:00.000Z"),
+  date_of_next_review: new Date("2021-04-20T00:00:00.000Z"),
+  date_of_contract_review: new Date("2021-04-20T00:00:00.000Z"),
+  date_of_contract_approval: new Date("2021-04-20T00:00:00.000Z"),
 });
 
 const personRiskRegister = iam.riskRegister.insertDML({
@@ -568,11 +568,11 @@ const assetDetail = iam.asset.insertDML({
   asset_workload_category: "",
   assignment_id: "IN_USE",
   barcode_or_rfid_tag: "",
-  installed_date: new Date("04/20/2021 00:00 AM"),
+  installed_date: new Date("2021-04-20T00:00:00.000Z"),
   planned_retirement_date: undefined,
-  purchase_delivery_date: new Date("04/20/2021 00:00 AM"),
-  purchase_order_date: new Date("04/20/2021 00:00 AM"),
-  purchase_request_date: new Date("04/20/2021 00:00 AM"),
+  purchase_delivery_date: new Date("2021-04-20T00:00:00.000Z"),
+  purchase_order_date: new Date("2021-04-20T00:00:00.000Z"),
+  purchase_request_date: new Date("2021-04-20T00:00:00.000Z"),
   serial_number: "",
   tco_amount: "100",
   tco_currency: "dollar",
@@ -588,8 +588,8 @@ const assetDetailAssetId = iam.asset.select(
 
 const serverDownIncident = iam.incident.insertDML({
   title: "Server Down - Due to CPU utilization reached 100%",
-  incident_date: new Date("04/20/2021 00:00 AM"),
-  time_and_time_zone: new Date("04/20/2021 00:00 AM"),
+  incident_date: new Date("2021-04-20T00:00:00.000Z"),
+  time_and_time_zone: new Date("2021-04-20T00:00:00.000Z"),
   asset_id: assetDetailAssetId,
   category_id: "PERFORMANCE",
   sub_category_id: "HARDWARE_FAILURE",
@@ -606,7 +606,7 @@ const serverDownIncident = iam.incident.insertDML({
   detailed_description:
     "We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM",
   assigned_to_id: personDetails.personIdSS,
-  assigned_date: new Date("04/20/2021 00:00 AM"),
+  assigned_date: new Date("2021-04-20T00:00:00.000Z"),
   investigation_details:
     "Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application",
   containment_details:
@@ -621,8 +621,8 @@ const serverDownIncident = iam.incident.insertDML({
   reopened_time: undefined,
   feedback_from_business: "",
   reported_to_regulatory: "",
-  report_date: new Date("04/20/2021 00:00 AM"),
-  report_time: new Date("04/20/2021 00:00 AM"),
+  report_date: new Date("2021-04-20T00:00:00.000Z"),
+  report_time: new Date("2021-04-20T00:00:00.000Z"),
 });
 
 const serverDownIncidentRootCause = iam.incidentRootCause.insertDML({
@@ -660,8 +660,7 @@ function sqlDDL() {
     ${personRiskRegister}
     ${assetDetail}
     ${serverDownIncident}
-    ${serverDownIncidentRootCause}
-  `
+    ${serverDownIncidentRootCause}`
 }
 
 if (import.meta.main) {
