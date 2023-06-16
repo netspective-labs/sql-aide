@@ -1,4 +1,6 @@
 #!/bin/bash
-set -e    # cancels commit if Taskfile.ts git-hook-pre-commit returns non-zero
-GITHOOK_CWD=`pwd` GITHOOK_SCRIPT=$0 \
-  deno task git-hook-pre-commit
+set -e    # cancel if Taskfile.ts git-hook-pre-push returns non-zero
+
+if [ -z "$GITHOOK_BYPASS" ]; then
+  GITHOOK_CWD=`pwd` GITHOOK_SCRIPT=$0 deno task git-hook-pre-commit
+fi
