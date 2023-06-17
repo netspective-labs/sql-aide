@@ -68,6 +68,26 @@ export interface EmitCoordinatorInit<
   readonly provenance?: Partial<TemplateProvenance>;
 }
 
+export type SchemaDefns<
+  SchemaName extends string,
+  Context extends emit.SqlEmitContext,
+> = {
+  readonly [K in SchemaName]: SchemaDefinition<K, Context>;
+};
+
+export type ExtensionDefns<
+  ExtensionName extends string,
+  Context extends emit.SqlEmitContext,
+> = {
+  readonly [EN in ExtensionName]: ExtensionDefinition<Any, EN, Context>;
+};
+
+export type PrefixedSchemaDefns<
+  Prefix extends string,
+  SchemaName extends string,
+  Context extends emit.SqlEmitContext,
+> = SchemaDefns<`${Prefix}${SchemaName}`, Context>;
+
 export class EmitCoordinator<
   SchemaDefns extends Record<string, SchemaDefinition<string, Context>>,
   ExtensionDefns extends Record<

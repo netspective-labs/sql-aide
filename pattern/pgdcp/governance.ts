@@ -14,38 +14,20 @@ export interface PgDcpEmitContext extends SQLa.SqlEmitContext {
   readonly isPgDcpEmitContext: true;
 }
 
-export type PgDcpSchemaDefns = {
-  readonly dcp_context: SQLa.SchemaDefinition<"dcp_context", PgDcpEmitContext>;
-  readonly dcp_extensions: SQLa.SchemaDefinition<
-    "dcp_extensions",
-    PgDcpEmitContext
-  >;
-  readonly dcp_lifecycle: SQLa.SchemaDefinition<
-    "dcp_lifecycle",
-    PgDcpEmitContext
-  >;
-  readonly dcp_lifecycle_destroy: SQLa.SchemaDefinition<
-    "dcp_lifecycle_destroy",
-    PgDcpEmitContext
-  >;
-  readonly dcp_lib: SQLa.SchemaDefinition<"dcp_lib", PgDcpEmitContext>;
-  readonly dcp_confidential: SQLa.SchemaDefinition<
-    "dcp_confidential",
-    PgDcpEmitContext
-  >;
-  readonly dcp_assurance: SQLa.SchemaDefinition<
-    "dcp_assurance",
-    PgDcpEmitContext
-  >;
-  readonly dcp_experimental: SQLa.SchemaDefinition<
-    "dcp_experimental",
-    PgDcpEmitContext
-  >;
-  readonly dcp_observability: SQLa.SchemaDefinition<
-    "dcp_observability",
-    PgDcpEmitContext
-  >;
-};
+export const pgDcpSchemasPrefix = "dcp_" as const;
+export type PgDcpSchemaDefns = pgSQLa.PrefixedSchemaDefns<
+  typeof pgDcpSchemasPrefix,
+  | "context"
+  | "extensions"
+  | "lifecycle"
+  | "lifecycle_destroy"
+  | "lib"
+  | "confidential"
+  | "assurance"
+  | "experimental"
+  | "observability",
+  PgDcpEmitContext
+>;
 
 export type PgDcpExtensionDefns = {
   readonly ltree: pgSQLa.ExtensionDefinition<
@@ -140,8 +122,8 @@ export class PgDcpEmitCoordinator<
     // schemas also represent "subject areas" but in those cases the dcp_ prefix
     // in front of all of our lifecycle methods looks ugly so we strip it
     return typeof target === "string"
-      ? (target.startsWith("dcp_") ? target.slice(4) : target)
-      : (target.sqlNamespace.startsWith("dcp_")
+      ? (target.startsWith(pgDcpSchemasPrefix) ? target.slice(4) : target)
+      : (target.sqlNamespace.startsWith(pgDcpSchemasPrefix)
         ? target.sqlNamespace.slice(4)
         : target.sqlNamespace);
   }
