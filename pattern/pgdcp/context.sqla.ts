@@ -10,21 +10,8 @@ export const context = () => {
   const ae = g.PgDcpAssurance.init(ec, ec.schemaDefns.dcp_context);
   const c = g.PgDcpContext.init(ec);
 
-  const [[sQN, sQR], [_, exQR]] = ec.schemaQNI("dcp_context", "dcp_extensions");
+  const [sQR] = ec.schemaQualifier("dcp_context");
   const { pgDomains: pgd } = ec;
-  const extns = ec.extensions("ltree");
-  const schemas = ec.schemas(
-    ...extns.extnSchemaNames,
-    "dcp_lifecycle",
-    "dcp_lifecycle_destroy",
-    "dcp_context",
-  );
-  const [execCtx, execHostID] = ec.qualifiedTokens(
-    "dcp_context",
-    (value, son) => ({ sqlInjection: son.injectable(value) }),
-    pgd.execution_context,
-    pgd.execution_host_identity,
-  );
 
   const cStorage = c.storage();
   // deno-fmt-ignore
@@ -32,18 +19,10 @@ export const context = () => {
     ${pgd.execution_host_identity}
 
     ${cStorage.execCtx}
-    ${cStorage.execCtx.seedDML}
 
+    -- TODO: the host column in context table should be \`execution_host_identity\` not TEXT
+    -- TODO: see ticket #87 - REFERENCES "execution_context"("code") should be schema-qualified
     ${cStorage.context}
-
-    -- a single-row table which contains the global context (prod/test/devl/sandbox/etc.)
-    -- TODO: convert this to a SQLa tableDefinition instance (kept same as PgDCP during migration)
-    -- CREATE TABLE IF NOT EXISTS ${sQN.tableName('context')} (
-    --   singleton_id bool PRIMARY KEY DEFAULT TRUE,
-    --   active ${execCtx} NOT NULL,
-    --   host ${execHostID} NOT NULL,
-    --   CONSTRAINT context_unq CHECK (singleton_id)
-    -- );
 
     -- TODO: add trigger to ensure that no improper values can be added into context`;
 
@@ -54,12 +33,12 @@ export const context = () => {
 
   // deno-fmt-ignore
   const isCompareExecCtxFn = (ec: g.ExecutionContext) => ({
-    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
+    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 = ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
   });
 
   // deno-fmt-ignore
   const isActiveExecCtxFn = (ec: g.ExecutionContext) => ({
-    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active OPERATOR(${exQR("=")}) ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
+    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active = ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
   });
 
   const dropExecCtxFns = (
@@ -85,8 +64,9 @@ export const context = () => {
     -- TODO: DROP FUNCTION IF EXISTS {lcf.unitTest(state).qName}();
     ${g.executionContexts.map(ec => dropExecCtxFns(ec)).flat()}`;
 
-  // TODO: convert unitTest() to a stored function not a stored procedure, returns what PgTAP expects.
-  // TODO: refer to has_function directly in PgTAP and don't require search_path
+  const populateSeedData = lc.populateSeedData()`
+    ${cStorage.execCtx.seedDML}`;
+
   // deno-fmt-ignore
   const unitTest = ae.unitTest()`
     ${g.executionContexts.map(ec => [
@@ -94,11 +74,15 @@ export const context = () => {
       ae.hasFunction("dcp_context", `is_exec_context_${ec}`),
       ae.hasFunction("dcp_context", `is_active_context_${ec}`)]).flat()}`;
 
+  const schemas = ec.schemas(
+    "dcp_lifecycle",
+    "dcp_lifecycle_destroy",
+    "dcp_context",
+  );
   return {
     ec,
-    extns,
-    schemas,
     lc,
+    schemas,
     constructStorage,
     // TODO: is search_path required? switch to fully qualified schema object names
     // deno-fmt-ignore
@@ -107,15 +91,13 @@ export const context = () => {
 
       ${schemas}
 
-      ${extns.uniqueExtns}
-
-      ${pgd.execution_context}
-
       ${constructStorage}
 
       ${constructIdempotent}
 
       ${destroyIdempotent}
+
+      ${populateSeedData}
 
       ${unitTest}`,
   };

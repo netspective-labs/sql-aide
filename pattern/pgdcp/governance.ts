@@ -76,11 +76,6 @@ export type PgDcpExtensionDefns = {
 };
 
 export type PgDcpPgDomainDefns = {
-  readonly execution_context: SQLa.SqlDomain<
-    Any,
-    PgDcpEmitContext,
-    "execution_context"
-  >;
   readonly execution_host_identity: SQLa.SqlDomain<
     Any,
     PgDcpEmitContext,
@@ -175,25 +170,6 @@ export class PgDcpEmitCoordinator<
         ltree: define(schemas.dcp_extensions, "ltree"),
       }),
       pgDomainDefns: (pgdf, schemas) => ({
-        execution_context: pgdf.pgDomainDefn(
-          // we type-cast because it's a reference ... "execution_context" as "ltree" in SQL
-          pgdf.pgDomainRef(
-            schemas.dcp_extensions,
-            "ltree",
-          ) as unknown as SQLa.SqlDomain<
-            Any,
-            PgDcpEmitContext,
-            "execution_context"
-          >,
-          "execution_context",
-          {
-            isIdempotent: true,
-            nsOptions: {
-              quoteIdentifiers: true,
-              qnss: schemas.dcp_context,
-            },
-          },
-        ),
         execution_host_identity: pgdf.pgDomainDefn(
           pgdf.stringSDF.string<z.ZodString, "execution_host_identity">(
             z.string(),
