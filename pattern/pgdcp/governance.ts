@@ -100,7 +100,7 @@ export class PgDcpEmitCoordinator<
 
   get psqlHeader() {
     const p = this.provenance;
-    return `-- ${this.psqlBasename()} from ${p.identity} version ${p.version}`;
+    return `-- generated from ${p.identity} version ${p.version} (basename: ${this.psqlBasename()})`;
   }
 
   psqlBasename(forceExtn = ".psql") {
@@ -495,13 +495,21 @@ export class PgDcpObservability<
   }
 }
 
-export function pgDcpState(importMeta: ImportMeta, init?: {
-  readonly schemas?: (keyof PgDcpSchemaDefns)[];
-  readonly extensions?: (keyof PgDcpExtensionDefns)[];
+export function pgDcpState<
+  SchemaName extends keyof PgDcpSchemaDefns = keyof PgDcpSchemaDefns,
+  ExtensionName extends keyof PgDcpExtensionDefns = keyof PgDcpExtensionDefns,
+>(importMeta: ImportMeta, init?: {
+  readonly principal?: SchemaName;
+  readonly schemas?: SchemaName[];
+  readonly extensions?: ExtensionName[];
 }) {
   const ec = PgDcpEmitCoordinator.init(importMeta);
-  const lc = PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
-  const ae = PgDcpAssurance.init(ec, ec.schemaDefns.dcp_context);
+  const principalSchema = init?.principal
+    ? ec.schemaDefns[init.principal]
+    : ec.schemaDefns.dcp_lib;
+
+  const lc = PgDcpLifecycle.init(ec, principalSchema);
+  const ae = PgDcpAssurance.init(ec, principalSchema);
   const c = PgDcpContext.init(ec);
 
   const schemasRef = init?.schemas ?? [];
@@ -509,14 +517,19 @@ export function pgDcpState(importMeta: ImportMeta, init?: {
     ? ec.extensions(...init.extensions)
     : undefined;
   const schemas = extensions
-    ? ec.schemas(...extensions.extnSchemaNames, ...schemasRef)
-    : ec.schemas(...schemasRef);
+    ? ec.uniqueSchemas(
+      principalSchema.sqlNamespace,
+      ...extensions.extnSchemaNames,
+      ...schemasRef,
+    )
+    : ec.uniqueSchemas(principalSchema.sqlNamespace, ...schemasRef);
 
   return { ec, lc, ae, c, schemas };
 }
 
 export interface SqlFilePersistProvenance extends pc.PersistProvenance {
-  readonly isConfidential: boolean;
+  readonly index?: number;
+  readonly confidentiality: "non-sensitive" | "contains-secrets";
 }
 
 export function pgDcpPersister({ importMeta, sources }: {
@@ -524,6 +537,7 @@ export function pgDcpPersister({ importMeta, sources }: {
   readonly sources: SqlFilePersistProvenance[];
 }) {
   const relativeToCWD = (fsPath: string) => path.relative(Deno.cwd(), fsPath);
+  let persistIndex = 0;
   return pc.textFilesPersister<SqlFilePersistProvenance>({
     destPath: (file) =>
       path.isAbsolute(file)
@@ -535,10 +549,14 @@ export function pgDcpPersister({ importMeta, sources }: {
       // return its `psl` content which needs to be saved to `X.auto.psql`.
       for (const s of sources) {
         const source = path.fromFileUrl(importMeta.resolve(s.source));
+        persistIndex = s.index ?? persistIndex + 1;
         yield pc.persistCmdOutput({
           // deno-fmt-ignore
           provenance: () => ({ ...s, source }),
-          basename: () => path.basename(source, ".sqla.ts") + ".auto.psql",
+          basename: () =>
+            `${persistIndex.toString().padStart(3, "0")}_${
+              path.basename(source, ".sqla.ts") + ".auto.psql"
+            }`,
         });
       }
     },

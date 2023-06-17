@@ -6,7 +6,8 @@ import * as g from "./governance.ts";
 
 export const context = () => {
   const state = g.pgDcpState(import.meta, {
-    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy", "dcp_context"],
+    principal: "dcp_context",
+    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy"],
   });
   const { ec, lc, ae, c, schemas, ec: { pgDomains: pgd } } = state;
   const [sQR] = ec.schemaQualifier("dcp_context");
