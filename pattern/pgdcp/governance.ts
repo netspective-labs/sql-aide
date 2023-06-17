@@ -515,12 +515,16 @@ export function pgDcpState(importMeta: ImportMeta, init?: {
   return { ec, lc, ae, c, schemas };
 }
 
+export interface SqlFilePersistProvenance extends pc.PersistProvenance {
+  readonly isConfidential: boolean;
+}
+
 export function pgDcpPersister({ importMeta, sources }: {
   readonly importMeta: ImportMeta;
-  readonly sources: pc.PersistProvenance[];
+  readonly sources: SqlFilePersistProvenance[];
 }) {
   const relativeToCWD = (fsPath: string) => path.relative(Deno.cwd(), fsPath);
-  return pc.textFilesPersister({
+  return pc.textFilesPersister<SqlFilePersistProvenance>({
     destPath: (file) =>
       path.isAbsolute(file)
         ? file
@@ -533,7 +537,7 @@ export function pgDcpPersister({ importMeta, sources }: {
         const source = path.fromFileUrl(importMeta.resolve(s.source));
         yield pc.persistCmdOutput({
           // deno-fmt-ignore
-          provenance: () => ({ source }),
+          provenance: () => ({ ...s, source }),
           basename: () => path.basename(source, ".sqla.ts") + ".auto.psql",
         });
       }

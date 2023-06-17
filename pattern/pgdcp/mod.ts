@@ -18,7 +18,7 @@ import * as g from "./governance.ts";
 if (import.meta.main) {
   const persister = g.pgDcpPersister({
     importMeta: import.meta,
-    sources: [{ source: "./context.sqla.ts" }],
+    sources: [{ source: "./context.sqla.ts", isConfidential: false }],
   });
   await persister.emitAll();
 }
