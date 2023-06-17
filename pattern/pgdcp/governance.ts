@@ -513,6 +513,26 @@ export class PgDcpObservability<
   }
 }
 
+export function pgDcpState(importMeta: ImportMeta, init?: {
+  readonly schemas?: (keyof PgDcpSchemaDefns)[];
+  readonly extensions?: (keyof PgDcpExtensionDefns)[];
+}) {
+  const ec = PgDcpEmitCoordinator.init(importMeta);
+  const lc = PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
+  const ae = PgDcpAssurance.init(ec, ec.schemaDefns.dcp_context);
+  const c = PgDcpContext.init(ec);
+
+  const schemasRef = init?.schemas ?? [];
+  const extensions = init?.extensions
+    ? ec.extensions(...init.extensions)
+    : undefined;
+  const schemas = extensions
+    ? ec.schemas(...extensions.extnSchemaNames, ...schemasRef)
+    : ec.schemas(...schemasRef);
+
+  return { ec, lc, ae, c, schemas };
+}
+
 export function pgDcpPersister({ importMeta, sources }: {
   readonly importMeta: ImportMeta;
   readonly sources: pc.PersistProvenance[];

@@ -5,13 +5,11 @@ import * as g from "./governance.ts";
 // const run = <T>(fn: () => T): T => fn();
 
 export const context = () => {
-  const ec = g.PgDcpEmitCoordinator.init(import.meta);
-  const lc = g.PgDcpLifecycle.init(ec, ec.schemaDefns.dcp_context);
-  const ae = g.PgDcpAssurance.init(ec, ec.schemaDefns.dcp_context);
-  const c = g.PgDcpContext.init(ec);
-
+  const state = g.pgDcpState(import.meta, {
+    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy", "dcp_context"],
+  });
+  const { ec, lc, ae, c, schemas, ec: { pgDomains: pgd } } = state;
   const [sQR] = ec.schemaQualifier("dcp_context");
-  const { pgDomains: pgd } = ec;
 
   const cStorage = c.storage();
   // deno-fmt-ignore
@@ -74,15 +72,8 @@ export const context = () => {
       ae.hasFunction("dcp_context", `is_exec_context_${ec}`),
       ae.hasFunction("dcp_context", `is_active_context_${ec}`)]).flat()}`;
 
-  const schemas = ec.schemas(
-    "dcp_lifecycle",
-    "dcp_lifecycle_destroy",
-    "dcp_context",
-  );
   return {
-    ec,
-    lc,
-    schemas,
+    ...state,
     constructStorage,
     // TODO: is search_path required? switch to fully qualified schema object names
     // deno-fmt-ignore
