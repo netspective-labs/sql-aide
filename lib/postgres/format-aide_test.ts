@@ -53,24 +53,24 @@ Deno.test("psql format aide resolve", () => {
     },
     ({ args: { arg1, arg2, arg3 } }, template) =>
       template`
-        this is a test of arg1: ${arg1.L}
-        this is a test of arg2: ${arg2.s}
-        this is a test of arg3: ${arg3.I}`,
+        this is a test of arg1: ${arg1.L} (literal)
+        this is a test of arg2: ${arg2.s} (quoted value)
+        this is a test of arg3: ${arg3.I} (quoted identifier)`,
   );
   ta.assertEquals(
     transformed.body,
     ws.unindentWhitespace(`
-      this is a test of arg1: %1$L
-      this is a test of arg2: %2$s
-      this is a test of arg3: %3$I`),
+      this is a test of arg1: %1$L (literal)
+      this is a test of arg2: %2$s (quoted value)
+      this is a test of arg3: %3$I (quoted identifier)`),
   );
   ta.assertEquals(
     transformed.format(),
     ws.unindentWhitespace(`
     format($fmtBody$
-      this is a test of arg1: %1$L
-      this is a test of arg2: %2$s
-      this is a test of arg3: %3$I
+      this is a test of arg1: %1$L (literal)
+      this is a test of arg2: %2$s (quoted value)
+      this is a test of arg3: %3$I (quoted identifier)
     $fmtBody$, arg1, arg2, arg3)`),
   );
 });

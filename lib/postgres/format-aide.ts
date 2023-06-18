@@ -9,7 +9,6 @@
  * to be used by PostgreSQL to generate SQL inside the database.
  */
 import { zod as z } from "../../deps.ts";
-import * as safety from "../universal/safety.ts";
 import * as ws from "../universal/whitespace.ts";
 
 export { zod } from "../../deps.ts";
@@ -33,15 +32,6 @@ export type FormatArgument<ArgName, ArgType extends z.ZodTypeAny> = {
   readonly L: () => string;
   readonly I: () => string;
 };
-
-export const isFormatArgument = safety.typeGuard<FormatArgument<Any, Any>>(
-  "name",
-  "index",
-  "type",
-  "s",
-  "L",
-  "I",
-);
 
 /**
  * The `FormatArguments` type represents a map of argument names to
@@ -101,7 +91,7 @@ export type FormatAideExpr =
 
 /**
  * The `formatAide` function is a factory function that creates an instance of the
- * `FormatAideExpr` system. It takes a `ZodRawShape`, a `resolve` function that
+ * psql formatting system. It takes a `ZodRawShape`, a `resolve` function that
  * uses the `FormatArguments` and a template function to generate a SQL format
  * string, and an optional `faOptions` argument that provides a custom literal
  * supplier for the `resolve` function's template function.
