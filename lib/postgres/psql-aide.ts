@@ -363,11 +363,19 @@ export function formatAideCustom<ArgsShape extends InjectablesArgsShape>(
     ...pa,
     args: pa.injectables,
     argNames: Object.values(pa.injectables).map((i) => i.name),
-    format: (args: (par: typeof pa) => string[], bodyDelim = "$fmtBody$") =>
-      ws.unindentWhitespace(`
+    format: (
+      argsSupplier?: (par: typeof pa) => string[],
+      bodyDelim = "$fmtBody$",
+    ) => {
+      const args = argsSupplier?.(pa) ??
+        (Object.values(pa.injectables).map((i) =>
+          isSetable(i.type) ? i.type.s() : i.name
+        ));
+      return ws.unindentWhitespace(`
         format(${bodyDelim}
           ${pa.indentedBody("          ")}
-        ${bodyDelim}, ${args(pa).join(", ")})`),
+        ${bodyDelim}, ${args.join(", ")})`);
+    },
     faOptions,
   };
 }

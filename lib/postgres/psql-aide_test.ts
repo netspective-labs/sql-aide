@@ -216,13 +216,7 @@ Deno.test("psql aide resolve with embedded formats", () => {
         this is a test of setZ (outer): ${setZ.I} (quoted identifier)
 
         -- formatted
-        ${
-        fa1.format((par) =>
-          Object.values(par.injectables).map((i) =>
-            mod.isSetable(i.type) ? i.type.s() : i.name
-          )
-        )
-      }`;
+        ${fa1.format()}`;
     },
   );
   ta.assertEquals(
