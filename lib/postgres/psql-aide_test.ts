@@ -10,17 +10,22 @@ const expectType = <T>(_value: T) => {
 };
 
 Deno.test("psql format aide arguments", () => {
+  const i = mod.injectables({
+    set4: z.date(),
+  });
+  const { setables: { set4: arg4set4 } } = i;
   const fa = mod.formatArgs({
     arg1: z.string(),
     arg2: z.number(),
     arg3: z.date(),
-    arg4: mod.setable("arg4", z.string(), -1),
+    arg4: i.setables.set4,
+    arg4set4,
   });
   expectType<string[]>(fa.argNames);
   expectType<{ [k: string]: mod.Injectable<string, mod.zod.ZodTypeAny> }>(
     fa.args,
   );
-  ta.assertEquals(fa.argNames, ["arg1", "arg2", "arg3", "arg4"]);
+  ta.assertEquals(fa.argNames, ["arg1", "arg2", "arg3", "arg4", "arg4set4"]);
   ta.assertEquals(
     Object.entries(fa.args).map(([k, v]) => ({
       key: k,
@@ -63,6 +68,14 @@ Deno.test("psql format aide arguments", () => {
         type: "Object",
         isSetable: true,
       },
+      {
+        index: 4,
+        key: "arg4set4",
+        name: "arg4set4",
+        specs: ["%5$s", "%5$L", "%5$I"],
+        type: "Object",
+        isSetable: true,
+      },
     ],
   );
 });
@@ -77,14 +90,14 @@ Deno.test("psql format aide resolve", () => {
     ({ injectables: { arg1, arg2, arg3 } }, template) =>
       template`
         this is a test of arg1: ${arg1.L} (literal)
-        this is a test of arg2: ${arg2.s} (quoted value)
+        this is a test of arg2: ${arg2.s} (simple value)
         this is a test of arg3: ${arg3.I} (quoted identifier)`,
   );
   ta.assertEquals(
     transformed.body,
     ws.unindentWhitespace(`
       this is a test of arg1: %1$L (literal)
-      this is a test of arg2: %2$s (quoted value)
+      this is a test of arg2: %2$s (simple value)
       this is a test of arg3: %3$I (quoted identifier)`),
   );
   ta.assertEquals(
@@ -94,7 +107,7 @@ Deno.test("psql format aide resolve", () => {
     ws.unindentWhitespace(`
     format($fmtBody$
       this is a test of arg1: %1$L (literal)
-      this is a test of arg2: %2$s (quoted value)
+      this is a test of arg2: %2$s (simple value)
       this is a test of arg3: %3$I (quoted identifier)
     $fmtBody$, arg1, arg2, arg3)`),
   );
@@ -150,7 +163,7 @@ Deno.test("psql aide resolve", () => {
         ${arg3.set}
 
         this is a test of arg1: ${arg1.L} (literal)
-        this is a test of arg2: ${arg2.s} (quoted value)
+        this is a test of arg2: ${arg2.s} (simple value)
         this is a test of arg3: ${arg3.I} (quoted identifier)`,
   );
   ta.assertEquals(
@@ -161,7 +174,76 @@ Deno.test("psql aide resolve", () => {
       \\set arg3
 
       this is a test of arg1: arg1 (literal)
-      this is a test of arg2: :'arg2' (quoted value)
+      this is a test of arg2: :'arg2' (simple value)
       this is a test of arg3: :"arg3" (quoted identifier)`),
+  );
+});
+
+Deno.test("psql aide resolve with embedded formats", () => {
+  const transformed = mod.psqlAide(
+    {
+      setX: z.string(),
+      setY: z.number(),
+      setZ: z.date(),
+    },
+    ({ setables: { setX, setY, setZ } }, template) => {
+      const fa1 = mod.formatAide(
+        {
+          setX,
+          setY,
+          setZ,
+          arg1: z.string(),
+          arg2: z.number(),
+          arg3: z.date(),
+        },
+        ({ injectables: { setX, setY, setZ, arg1, arg2, arg3 } }, template) =>
+          template`
+            this is a test of arg1: ${arg1.L} (literal)
+            this is a test of arg2: ${arg2.s} (simple value)
+            this is a test of arg3: ${arg3.I} (quoted identifier)
+            this is a test of setX inside format: ${setX.L} (literal)
+            this is a test of setY inside format: ${setY.s} (simple value)
+            this is a test of setZ inside format: ${setZ.I} (quoted identifier)`,
+      );
+
+      template`
+        ${setX.set}
+        ${setY.set}
+        ${setZ.set}
+
+        this is a test of setX (outer): ${setX.L} (literal)
+        this is a test of setY (outer): ${setY.s} (simple value)
+        this is a test of setZ (outer): ${setZ.I} (quoted identifier)
+
+        -- formatted
+        ${
+        fa1.format((par) =>
+          Object.values(par.injectables).map((i) =>
+            mod.isSetable(i.type) ? i.type.s() : i.name
+          )
+        )
+      }`;
+    },
+  );
+  ta.assertEquals(
+    transformed.body,
+    ws.unindentWhitespace(`
+      \\set setX
+      \\set setY
+      \\set setZ
+
+      this is a test of setX (outer): setX (literal)
+      this is a test of setY (outer): :'setY' (simple value)
+      this is a test of setZ (outer): :"setZ" (quoted identifier)
+
+      -- formatted
+      format($fmtBody$
+        this is a test of arg1: %4$L (literal)
+        this is a test of arg2: %5$s (simple value)
+        this is a test of arg3: %6$I (quoted identifier)
+        this is a test of setX inside format: %1$L (literal)
+        this is a test of setY inside format: %2$s (simple value)
+        this is a test of setZ inside format: %3$I (quoted identifier)
+      $fmtBody$, :'setX', :'setY', :'setZ', arg1, arg2, arg3)`),
   );
 });

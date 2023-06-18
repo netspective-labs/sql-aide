@@ -22,7 +22,10 @@ type Any = any;
  * argument in different PostgreSQL format modes: normal, literal, and
  * identifier.
  */
-export type Setable<Name, Type extends z.ZodTypeAny> = {
+export type Setable<
+  Name,
+  Type extends Setable<Name, z.ZodTypeAny> | z.ZodTypeAny,
+> = {
   readonly name: Name;
   readonly index: number;
   readonly type: Type;
@@ -32,7 +35,10 @@ export type Setable<Name, Type extends z.ZodTypeAny> = {
   readonly I: () => string;
 };
 
-export function isSetable<Name, Type extends z.ZodTypeAny>(
+export function isSetable<
+  Name,
+  Type extends Setable<Name, z.ZodTypeAny> | z.ZodTypeAny,
+>(
   o: unknown,
 ): o is Setable<Name, Type> {
   const iss = safety.typeGuard<Setable<Name, Type>>(
@@ -46,7 +52,10 @@ export function isSetable<Name, Type extends z.ZodTypeAny>(
   return iss(o);
 }
 
-export const setable = <Name, Type extends z.ZodTypeAny>(
+export const setable = <
+  Name,
+  Type extends Setable<Name, z.ZodTypeAny> | z.ZodTypeAny,
+>(
   name: Name,
   type: Type,
   index: number,
@@ -59,6 +68,10 @@ export const setable = <Name, Type extends z.ZodTypeAny>(
   L: () => `${name}`,
   I: () => `:"${name}"`,
 });
+
+export const clonedSetable = <Name, Type extends z.ZodTypeAny>(
+  s: Setable<Name, Type>,
+): Setable<Name, Type> => setable(s.name, s.type, s.index);
 
 /**
  * The `FormatArgument` type represents a named argument that should be included in
@@ -103,20 +116,24 @@ export const injectable = <Name, Type extends z.ZodTypeAny>(
   i: Injectable<Name, Type>,
 ) => i;
 
+export type InjectablesArgsShape = {
+  [k in string]: z.ZodTypeAny | Setable<k, z.ZodTypeAny>;
+};
+
 export function injectables<
-  InjectablesShape extends z.ZodRawShape,
+  InjectablesShape extends InjectablesArgsShape,
   InjectableName extends keyof InjectablesShape = keyof InjectablesShape,
 >(shape: InjectablesShape) {
   type Setables = {
     [Property in keyof InjectablesShape]: InjectablesShape[Property] extends
-      z.ZodType<infer T, infer D, infer I>
-      ? Setable<Property, z.ZodType<T, D, I>>
+      z.ZodType<infer O, infer D, infer I>
+      ? Setable<Property, z.ZodType<O, D, I>>
       : Setable<Property, z.ZodNever>;
   };
   type Injectables = {
     [Property in keyof InjectablesShape]: InjectablesShape[Property] extends
-      z.ZodType<infer T, infer D, infer I>
-      ? Injectable<Property, z.ZodType<T, D, I>>
+      z.ZodType<infer O, infer D, infer I>
+      ? Injectable<Property, z.ZodType<O, D, I>>
       : Injectable<Property, z.ZodNever>;
   };
 
@@ -133,19 +150,19 @@ export function injectables<
 }
 
 export function formatArgs<
-  ArgsShape extends { [k in string]: z.ZodTypeAny | Setable<k, z.ZodTypeAny> },
+  ArgsShape extends InjectablesArgsShape,
   ArgName extends keyof ArgsShape = keyof ArgsShape,
 >(argsShape: ArgsShape) {
   type SetableArgs = {
     [Property in keyof ArgsShape]: ArgsShape[Property] extends
-      z.ZodType<infer T, infer D, infer I>
-      ? Setable<Property, z.ZodType<T, D, I>>
+      z.ZodType<infer O, infer D, infer I>
+      ? Setable<Property, z.ZodType<O, D, I>>
       : Setable<Property, z.ZodNever>;
   };
   type Injectables = {
     [Property in keyof ArgsShape]: ArgsShape[Property] extends
-      z.ZodType<infer T, infer D, infer I>
-      ? Injectable<Property, z.ZodType<T, D, I>>
+      z.ZodType<infer O, infer D, infer I>
+      ? Injectable<Property, z.ZodType<O, D, I>>
       : Injectable<Property, z.ZodNever>;
   };
 
@@ -204,7 +221,7 @@ export type InjectableExpr =
  * @param paOptions options
  * @returns the body of the `resolve` result along with utility properties
  */
-export function psqlAideCustom<InjectablesShape extends z.ZodRawShape>(
+export function psqlAideCustom<InjectablesShape extends InjectablesArgsShape>(
   injShape: InjectablesShape,
   resolve: (
     injs: ReturnType<typeof injectables<InjectablesShape>>,
@@ -307,7 +324,7 @@ export function psqlAideCustom<InjectablesShape extends z.ZodRawShape>(
   };
 }
 
-export function psqlAide<ArgsShape extends z.ZodRawShape>(
+export function psqlAide<ArgsShape extends InjectablesArgsShape>(
   argsShape: ArgsShape,
   resolve: (
     injs: ReturnType<typeof injectables<ArgsShape>>,
@@ -322,7 +339,7 @@ export function psqlAide<ArgsShape extends z.ZodRawShape>(
   });
 }
 
-export function formatAideCustom<ArgsShape extends z.ZodRawShape>(
+export function formatAideCustom<ArgsShape extends InjectablesArgsShape>(
   argsShape: ArgsShape,
   resolve: (
     fa: ReturnType<typeof injectables<ArgsShape>>,
@@ -355,7 +372,7 @@ export function formatAideCustom<ArgsShape extends z.ZodRawShape>(
   };
 }
 
-export function formatAide<ArgsShape extends z.ZodRawShape>(
+export function formatAide<ArgsShape extends InjectablesArgsShape>(
   argsShape: ArgsShape,
   resolve: (
     fa: ReturnType<typeof injectables<ArgsShape>>,
