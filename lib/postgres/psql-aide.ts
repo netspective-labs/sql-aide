@@ -22,12 +22,51 @@ type Any = any;
  */
 export type Setable<Name, Type extends z.ZodTypeAny> = {
   readonly name: Name;
+  readonly index: number;
   readonly type: Type;
   readonly set: () => string;
   readonly s: () => string;
   readonly L: () => string;
   readonly I: () => string;
 };
+
+export const setable = <Name, Type extends z.ZodTypeAny>(
+  s: Setable<Name, Type>,
+) => s;
+
+/**
+ * The `FormatArgument` type represents a named argument that should be included in
+ * a SQL format string. It includes a name, a type (represented by a Zod type), an
+ * index (indicating the argument's position), and three methods (`s`, `L`, `I`)
+ * that return the format string for the argument in different PostgreSQL format
+ * modes: normal, literal, and identifier.
+ */
+export type FormatArgument<
+  ArgName,
+  ArgType extends Setable<ArgName, z.ZodTypeAny> | z.ZodTypeAny,
+> = {
+  readonly name: ArgName;
+  readonly index: number;
+  readonly type: ArgType;
+  readonly s: () => string;
+  readonly L: () => string;
+  readonly I: () => string;
+};
+
+export const formatArg = <
+  ArgName,
+  ArgType extends Setable<ArgName, z.ZodTypeAny> | z.ZodTypeAny,
+>(
+  fa: FormatArgument<ArgName, ArgType>,
+) => fa;
+
+export type Injectable<Name, Type extends z.ZodTypeAny> =
+  | Setable<Name, Type>
+  | FormatArgument<Name, Setable<Name, Type> | Type>;
+
+export const injectable = <Name, Type extends z.ZodTypeAny>(
+  i: Injectable<Name, Type>,
+) => i;
 
 /**
  * The `Injectables` type represents a map of injection names to
@@ -39,34 +78,67 @@ export type Injectables<
   Shape extends z.ZodRawShape,
   Name extends keyof Shape = keyof Shape,
 > = {
-  [A in Name]: Setable<A, Shape[A]>;
+  [A in Name]: Injectable<A, Shape[A]>;
 };
 
 export function injectables<
-  Shape extends z.ZodRawShape,
-  Name extends keyof Shape = keyof Shape,
->(shape: Shape) {
-  const argNames: Name[] = [];
-  const injectables = Object.fromEntries(
-    Object.entries(shape).map(([name, type]) => {
-      const fa: Setable<Name, Any> = {
-        name: name as Name,
-        type,
-        set: () => `\\set ${name}`,
-        s: () => `:'${name}'`,
-        L: () => name,
-        I: () => `:"${name}"`,
-      };
+  InjectablesShape extends z.ZodRawShape,
+  InjectableName extends keyof InjectablesShape = keyof InjectablesShape,
+>(shape: InjectablesShape) {
+  const argNames: InjectableName[] = [];
+  const setables: {
+    [Name in InjectableName]: Setable<Name, InjectablesShape[Name]>;
+  } = {} as Any;
+  const injectables = Object
+    .fromEntries(
+      Object.entries(shape).map(([name, type], index) => {
+        const setable = injectable({
+          name: name as InjectableName,
+          type,
+          index,
+          set: () => `\\set ${name}`,
+          s: () => `:'${name}'`,
+          L: () => name,
+          I: () => `:"${name}"`,
+        });
 
-      argNames.push(name as Name);
-      return [name as Name, fa];
+        argNames.push(name as InjectableName);
+        (setables[name as InjectableName] as Any) = setable;
+        return [name as InjectableName, setable];
+      }),
+    );
+  return { shape, injectables, setables };
+}
+
+export function formatArgs<
+  ArgsShape extends z.ZodRawShape,
+  ArgName extends keyof ArgsShape = keyof ArgsShape,
+>(argsShape: ArgsShape) {
+  const setables: {
+    [Name in ArgName]: Setable<Name, ArgsShape[Name]>;
+  } = {} as Any;
+  const argNames: ArgName[] = [];
+  const args = Object.fromEntries(
+    Object.entries(argsShape).map(([name, type], index) => {
+      const fa = injectable({
+        name: name as ArgName,
+        type,
+        index,
+        s: () => `%${index + 1}$s`,
+        L: () => `%${index + 1}$L`,
+        I: () => `%${index + 1}$I`,
+      });
+
+      argNames.push(name as ArgName);
+      return [name as ArgName, fa];
     }),
   );
-  return { shape, injectables };
+  return { shape: argsShape, args, injectables: args, argNames, setables };
 }
 
 export type InjectableExprScalar =
   | Setable<Any, Any>
+  | FormatArgument<Any, Any>
   | string
   | number
   | bigint;
@@ -99,21 +171,24 @@ export type InjectableExpr =
  * The `psql` function of the returned object creates a PostgreSQL format string
  * using the `body` and `injectables` properties.
  *
- * @param argsShape the names and types of the arguments
+ * @param injShape the names and types of the arguments
  * @param resolve a string template literal that the caller should use to provide their psql body
  * @param paOptions options
  * @returns the body of the `resolve` result along with utility properties
  */
-export function psqlAideCustom<ArgsShape extends z.ZodRawShape>(
-  argsShape: ArgsShape,
+export function psqlAideCustom<InjectablesShape extends z.ZodRawShape>(
+  injShape: InjectablesShape,
   resolve: (
-    fa: ReturnType<typeof injectables<ArgsShape>>,
+    injs: ReturnType<typeof injectables<InjectablesShape>>,
     template: (
       literals: TemplateStringsArray,
       ...suppliedExprs: InjectableExpr[]
     ) => { readonly body: string },
   ) => void,
   paOptions?: {
+    readonly injectables?: (injShape: InjectablesShape) => ReturnType<
+      typeof injectables<InjectablesShape>
+    >;
     readonly literalSupplier?: (
       literals: TemplateStringsArray,
       suppliedExprs: unknown[],
@@ -177,14 +252,14 @@ export function psqlAideCustom<ArgsShape extends z.ZodRawShape>(
     return interpolated;
   };
 
-  const args = injectables(argsShape);
+  const injs = paOptions?.injectables?.(injShape) ?? injectables(injShape);
   let body: string;
-  resolve(args, (literals, ...suppliedExprs) => {
+  resolve(injs, (literals, ...suppliedExprs) => {
     body = interpolate(literals, ...suppliedExprs);
     return { body };
   });
 
-  const indented = (text: string, indentation: string | number) => {
+  const indentedText = (text: string, indentation: string | number) => {
     const indent = typeof indentation === "string"
       ? indentation
       : " ".repeat(indentation);
@@ -195,15 +270,64 @@ export function psqlAideCustom<ArgsShape extends z.ZodRawShape>(
       .join("\n");
   };
   return {
-    argsShape,
-    args,
+    ...injs,
     body: body!,
-    indented,
+    indentedText,
+    indentedBody: (indentation: string | number) =>
+      indentedText(body!, indentation),
     paOptions,
   };
 }
 
 export function psqlAide<ArgsShape extends z.ZodRawShape>(
+  argsShape: ArgsShape,
+  resolve: (
+    injs: ReturnType<typeof injectables<ArgsShape>>,
+    template: (
+      literals: TemplateStringsArray,
+      ...suppliedExprs: InjectableExpr[]
+    ) => { readonly body: string },
+  ) => void,
+) {
+  return psqlAideCustom(argsShape, resolve, {
+    literalSupplier: ws.whitespaceSensitiveTemplateLiteralSupplier,
+  });
+}
+
+export function formatAideCustom<ArgsShape extends z.ZodRawShape>(
+  argsShape: ArgsShape,
+  resolve: (
+    fa: ReturnType<typeof injectables<ArgsShape>>,
+    template: (
+      literals: TemplateStringsArray,
+      ...suppliedExprs: InjectableExpr[]
+    ) => { readonly body: string },
+  ) => void,
+  faOptions?: {
+    readonly literalSupplier?: (
+      literals: TemplateStringsArray,
+      suppliedExprs: unknown[],
+    ) => ws.TemplateLiteralIndexedTextSupplier;
+  },
+) {
+  const pa = psqlAideCustom(argsShape, resolve, {
+    ...faOptions,
+    injectables: (shape) => formatArgs(shape),
+  });
+  return {
+    ...pa,
+    args: pa.injectables,
+    argNames: Object.values(pa.injectables).map((i) => i.name),
+    format: (args: (par: typeof pa) => string[], bodyDelim = "$fmtBody$") =>
+      ws.unindentWhitespace(`
+        format(${bodyDelim}
+          ${pa.indentedBody("          ")}
+        ${bodyDelim}, ${args(pa).join(", ")})`),
+    faOptions,
+  };
+}
+
+export function formatAide<ArgsShape extends z.ZodRawShape>(
   argsShape: ArgsShape,
   resolve: (
     fa: ReturnType<typeof injectables<ArgsShape>>,
@@ -213,7 +337,7 @@ export function psqlAide<ArgsShape extends z.ZodRawShape>(
     ) => { readonly body: string },
   ) => void,
 ) {
-  return psqlAideCustom(argsShape, resolve, {
+  return formatAideCustom(argsShape, resolve, {
     literalSupplier: ws.whitespaceSensitiveTemplateLiteralSupplier,
   });
 }
