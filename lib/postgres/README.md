@@ -8,5 +8,6 @@ databases.
   credentials by using typical `$HOME/.pgpass` file. The module supports adding
   custom "descriptors" as comments before the connection information. See
   [README.md](./pgpass/README.md) for usage instructions.
-- `format-aide.ts` module provide helpers for generating complex PostgreSQL
-  `format` functions using named arguments and string template literals
+- `psql-aide.ts` module provide helpers for generating complex PostgreSQL
+  `psql`-ready SQL source code using `format` functions using named arguments
+  and string template literals
