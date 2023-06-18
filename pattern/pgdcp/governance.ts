@@ -175,7 +175,6 @@ export class PgDcpLifecycle<
   ExtensionDefns extends PgDcpExtensionDefns,
   PgDomainDefns extends PgDcpPgDomainDefns,
 > {
-  readonly subjectArea: string;
   readonly lcSchema: SQLa.SchemaDefinition<"dcp_lifecycle", PgDcpEmitContext>;
   readonly lcDestroySchema: SQLa.SchemaDefinition<
     "dcp_lifecycle_destroy",
@@ -187,11 +186,10 @@ export class PgDcpLifecycle<
       ExtensionDefns,
       PgDomainDefns
     >,
-    readonly principalSchema: SQLa.SqlNamespaceSupplier,
+    readonly subjectArea: string,
   ) {
     this.lcSchema = ec.schemaDefns.dcp_lifecycle;
     this.lcDestroySchema = ec.schemaDefns.dcp_lifecycle_destroy;
-    this.subjectArea = ec.subjectArea(principalSchema);
   }
 
   // TODO: remove these PgDCP -> SQLa migration notes
@@ -300,9 +298,9 @@ export class PgDcpLifecycle<
       ExtensionDefns,
       PgDomainDefns
     >,
-    ns: SQLa.SqlNamespaceSupplier,
+    subjectArea: string,
   ) {
-    return new PgDcpLifecycle(ec, ns);
+    return new PgDcpLifecycle(ec, subjectArea);
   }
 }
 
@@ -392,7 +390,6 @@ export class PgDcpAssurance<
   PgDomainDefns extends PgDcpPgDomainDefns,
   SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
 > {
-  readonly subjectArea: string;
   readonly aeSchema: SQLa.SchemaDefinition<"dcp_assurance", PgDcpEmitContext>;
   protected constructor(
     readonly ec: PgDcpEmitCoordinator<
@@ -400,10 +397,9 @@ export class PgDcpAssurance<
       ExtensionDefns,
       PgDomainDefns
     >,
-    readonly principalSchema: SQLa.SqlNamespaceSupplier,
+    readonly subjectArea: string,
   ) {
     this.aeSchema = ec.schemaDefns.dcp_assurance;
-    this.subjectArea = ec.subjectArea(principalSchema);
   }
 
   unitTest(identity?: string) {
@@ -444,9 +440,9 @@ export class PgDcpAssurance<
       ExtensionDefns,
       PgDomainDefns
     >,
-    ns: SQLa.SqlNamespaceSupplier,
+    subjectArea: string,
   ) {
-    return new PgDcpAssurance(ec, ns);
+    return new PgDcpAssurance(ec, subjectArea);
   }
 }
 
@@ -495,36 +491,71 @@ export class PgDcpObservability<
   }
 }
 
-export function pgDcpState<
+/**
+ * Prepare PgDCP state management for schemas and extensions.
+ * @param importMeta
+ * @param init
+ * @returns
+ */
+export function pgDcpStateSE<
   SchemaName extends keyof PgDcpSchemaDefns = keyof PgDcpSchemaDefns,
   ExtensionName extends keyof PgDcpExtensionDefns = keyof PgDcpExtensionDefns,
 >(importMeta: ImportMeta, init?: {
   readonly principal?: SchemaName;
+  readonly subjectArea?: string;
   readonly schemas?: SchemaName[];
   readonly extensions?: ExtensionName[];
 }) {
   const ec = PgDcpEmitCoordinator.init(importMeta);
   const principalSchema = init?.principal
     ? ec.schemaDefns[init.principal]
-    : ec.schemaDefns.dcp_lib;
-
-  const lc = PgDcpLifecycle.init(ec, principalSchema);
-  const ae = PgDcpAssurance.init(ec, principalSchema);
-  const c = PgDcpContext.init(ec);
+    : undefined;
+  const subjectArea = init?.subjectArea ??
+    (principalSchema
+      ? ec.subjectArea(principalSchema.sqlNamespace)
+      : undefined);
 
   const schemasRef = init?.schemas ?? [];
   const extensions = init?.extensions
     ? ec.extensions(...init.extensions)
     : undefined;
+  const principal = principalSchema ? [principalSchema.sqlNamespace] : [];
   const schemas = extensions
     ? ec.uniqueSchemas(
-      principalSchema.sqlNamespace,
+      ...principal,
       ...extensions.extnSchemaNames,
       ...schemasRef,
     )
-    : ec.uniqueSchemas(principalSchema.sqlNamespace, ...schemasRef);
+    : ec.uniqueSchemas(...principal, ...schemasRef);
 
-  return { ec, lc, ae, c, schemas };
+  return { ec, subjectArea, schemas, extensions };
+}
+
+export function pgDcpState<
+  SchemaName extends keyof PgDcpSchemaDefns = keyof PgDcpSchemaDefns,
+  ExtensionName extends keyof PgDcpExtensionDefns = keyof PgDcpExtensionDefns,
+>(
+  importMeta: ImportMeta,
+  init:
+    & {
+      readonly schemas?: SchemaName[];
+      readonly extensions?: ExtensionName[];
+    }
+    // either a principal schema or subject area (or both) are required
+    & (
+      | { readonly principal: SchemaName; readonly subjectArea?: string }
+      | { readonly principal?: SchemaName; readonly subjectArea: string }
+      | { readonly principal: SchemaName; readonly subjectArea: string }
+    ),
+) {
+  const stateSE = pgDcpStateSE(importMeta, init);
+  const { ec, subjectArea = "assert_SHOULD_NEVER_HAPPEN" } = stateSE;
+
+  const lc = PgDcpLifecycle.init(ec, subjectArea);
+  const ae = PgDcpAssurance.init(ec, subjectArea);
+  const c = PgDcpContext.init(ec);
+
+  return { ...stateSE, lc, ae, c };
 }
 
 export interface SqlFilePersistProvenance extends pc.PersistProvenance {
@@ -537,7 +568,7 @@ export function pgDcpPersister({ importMeta, sources }: {
   readonly sources: SqlFilePersistProvenance[];
 }) {
   const relativeToCWD = (fsPath: string) => path.relative(Deno.cwd(), fsPath);
-  let persistIndex = 0;
+  let persistIndex = -1;
   return pc.textFilesPersister<SqlFilePersistProvenance>({
     destPath: (file) =>
       path.isAbsolute(file)

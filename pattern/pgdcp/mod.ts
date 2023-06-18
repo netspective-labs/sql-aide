@@ -21,6 +21,9 @@ if (import.meta.main) {
     sources: [{
       source: "./context.sqla.ts",
       confidentiality: "non-sensitive",
+    }, {
+      source: "./engine.sqla.ts",
+      confidentiality: "non-sensitive",
     }],
   });
   await persister.emitAll();
