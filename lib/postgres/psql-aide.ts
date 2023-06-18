@@ -5,9 +5,11 @@
  * without SQLa dependencies.
  */
 import { zod as z } from "../../deps.ts";
+import * as safety from "../universal/safety.ts";
 import * as ws from "../universal/whitespace.ts";
 
 export { zod } from "../../deps.ts";
+export * as safety from "../universal/safety.ts";
 export * as ws from "../universal/whitespace.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -30,9 +32,33 @@ export type Setable<Name, Type extends z.ZodTypeAny> = {
   readonly I: () => string;
 };
 
+export function isSetable<Name, Type extends z.ZodTypeAny>(
+  o: unknown,
+): o is Setable<Name, Type> {
+  const iss = safety.typeGuard<Setable<Name, Type>>(
+    "name",
+    "type",
+    "set",
+    "s",
+    "L",
+    "I",
+  );
+  return iss(o);
+}
+
 export const setable = <Name, Type extends z.ZodTypeAny>(
-  s: Setable<Name, Type>,
-) => s;
+  name: Name,
+  type: Type,
+  index: number,
+): Setable<Name, Type> => ({
+  name,
+  type,
+  index,
+  set: () => `\\set ${name}`,
+  s: () => `:'${name}'`,
+  L: () => `${name}`,
+  I: () => `:"${name}"`,
+});
 
 /**
  * The `FormatArgument` type represents a named argument that should be included in
@@ -57,8 +83,17 @@ export const formatArg = <
   ArgName,
   ArgType extends Setable<ArgName, z.ZodTypeAny> | z.ZodTypeAny,
 >(
-  fa: FormatArgument<ArgName, ArgType>,
-) => fa;
+  name: ArgName,
+  type: ArgType,
+  index: number,
+): FormatArgument<ArgName, ArgType> => ({
+  name: name as ArgName,
+  type,
+  index,
+  s: () => `%${index + 1}$s`,
+  L: () => `%${index + 1}$L`,
+  I: () => `%${index + 1}$I`,
+});
 
 export type Injectable<Name, Type extends z.ZodTypeAny> =
   | Setable<Name, Type>
@@ -68,71 +103,64 @@ export const injectable = <Name, Type extends z.ZodTypeAny>(
   i: Injectable<Name, Type>,
 ) => i;
 
-/**
- * The `Injectables` type represents a map of injection names to
- * `Setable` instances. It's created by the `injectables` function, which
- * takes a `ZodRawShape` (which is a map of argument names to Zod types) and
- * creates a `Setable` for each entry.
- */
-export type Injectables<
-  Shape extends z.ZodRawShape,
-  Name extends keyof Shape = keyof Shape,
-> = {
-  [A in Name]: Injectable<A, Shape[A]>;
-};
-
 export function injectables<
   InjectablesShape extends z.ZodRawShape,
   InjectableName extends keyof InjectablesShape = keyof InjectablesShape,
 >(shape: InjectablesShape) {
-  const argNames: InjectableName[] = [];
-  const setables: {
-    [Name in InjectableName]: Setable<Name, InjectablesShape[Name]>;
-  } = {} as Any;
-  const injectables = Object
+  type Setables = {
+    [Property in keyof InjectablesShape]: InjectablesShape[Property] extends
+      z.ZodType<infer T, infer D, infer I>
+      ? Setable<Property, z.ZodType<T, D, I>>
+      : Setable<Property, z.ZodNever>;
+  };
+  type Injectables = {
+    [Property in keyof InjectablesShape]: InjectablesShape[Property] extends
+      z.ZodType<infer T, infer D, infer I>
+      ? Injectable<Property, z.ZodType<T, D, I>>
+      : Injectable<Property, z.ZodNever>;
+  };
+
+  const setables: Setables = {} as Any;
+  const injectables: Injectables = Object
     .fromEntries(
       Object.entries(shape).map(([name, type], index) => {
-        const setable = injectable({
-          name: name as InjectableName,
-          type,
-          index,
-          set: () => `\\set ${name}`,
-          s: () => `:'${name}'`,
-          L: () => name,
-          I: () => `:"${name}"`,
-        });
-
-        argNames.push(name as InjectableName);
-        (setables[name as InjectableName] as Any) = setable;
-        return [name as InjectableName, setable];
+        const instance = injectable(setable(name, type, index));
+        (setables[name as InjectableName] as Any) = instance;
+        return [name as InjectableName, instance];
       }),
-    );
+    ) as Injectables;
   return { shape, injectables, setables };
 }
 
 export function formatArgs<
-  ArgsShape extends z.ZodRawShape,
+  ArgsShape extends { [k in string]: z.ZodTypeAny | Setable<k, z.ZodTypeAny> },
   ArgName extends keyof ArgsShape = keyof ArgsShape,
 >(argsShape: ArgsShape) {
-  const setables: {
-    [Name in ArgName]: Setable<Name, ArgsShape[Name]>;
-  } = {} as Any;
-  const argNames: ArgName[] = [];
-  const args = Object.fromEntries(
-    Object.entries(argsShape).map(([name, type], index) => {
-      const fa = injectable({
-        name: name as ArgName,
-        type,
-        index,
-        s: () => `%${index + 1}$s`,
-        L: () => `%${index + 1}$L`,
-        I: () => `%${index + 1}$I`,
-      });
+  type SetableArgs = {
+    [Property in keyof ArgsShape]: ArgsShape[Property] extends
+      z.ZodType<infer T, infer D, infer I>
+      ? Setable<Property, z.ZodType<T, D, I>>
+      : Setable<Property, z.ZodNever>;
+  };
+  type Injectables = {
+    [Property in keyof ArgsShape]: ArgsShape[Property] extends
+      z.ZodType<infer T, infer D, infer I>
+      ? Injectable<Property, z.ZodType<T, D, I>>
+      : Injectable<Property, z.ZodNever>;
+  };
 
+  const setables: SetableArgs = {} as Any;
+  const argNames: ArgName[] = [];
+  const args: Injectables = Object.fromEntries(
+    Object.entries(argsShape).map(([name, type], index) => {
+      const fa = injectable(formatArg(name, type, index));
       argNames.push(name as ArgName);
+      if ("set" in type) {
+        (setables[name as ArgName] as Any) = type;
+      }
       return [name as ArgName, fa];
     }),
-  );
+  ) as Injectables;
   return { shape: argsShape, args, injectables: args, argNames, setables };
 }
 

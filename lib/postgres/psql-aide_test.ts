@@ -1,15 +1,26 @@
 import { testingAsserts as ta } from "./deps-test.ts";
 import * as mod from "./psql-aide.ts";
 
+// deno-lint-ignore no-explicit-any
+type Any = any;
 const { zod: z, ws } = mod;
+
+const expectType = <T>(_value: T) => {
+  // Do nothing, the TypeScript compiler handles this for us
+};
 
 Deno.test("psql format aide arguments", () => {
   const fa = mod.formatArgs({
     arg1: z.string(),
     arg2: z.number(),
     arg3: z.date(),
+    arg4: mod.setable("arg4", z.string(), -1),
   });
-  ta.assertEquals(fa.argNames, ["arg1", "arg2", "arg3"]);
+  expectType<string[]>(fa.argNames);
+  expectType<{ [k: string]: mod.Injectable<string, mod.zod.ZodTypeAny> }>(
+    fa.args,
+  );
+  ta.assertEquals(fa.argNames, ["arg1", "arg2", "arg3", "arg4"]);
   ta.assertEquals(
     Object.entries(fa.args).map(([k, v]) => ({
       key: k,
@@ -17,6 +28,7 @@ Deno.test("psql format aide arguments", () => {
       name: v.name,
       type: v.type.constructor.name,
       specs: [v.s(), v.L(), v.I()],
+      isSetable: mod.isSetable(v.type),
     })),
     [
       {
@@ -25,6 +37,7 @@ Deno.test("psql format aide arguments", () => {
         name: "arg1",
         type: "ZodString",
         specs: ["%1$s", "%1$L", "%1$I"],
+        isSetable: false,
       },
       {
         key: "arg2",
@@ -32,6 +45,7 @@ Deno.test("psql format aide arguments", () => {
         name: "arg2",
         type: "ZodNumber",
         specs: ["%2$s", "%2$L", "%2$I"],
+        isSetable: false,
       },
       {
         key: "arg3",
@@ -39,6 +53,15 @@ Deno.test("psql format aide arguments", () => {
         name: "arg3",
         type: "ZodDate",
         specs: ["%3$s", "%3$L", "%3$I"],
+        isSetable: false,
+      },
+      {
+        key: "arg4",
+        index: 3,
+        name: "arg4",
+        specs: ["%4$s", "%4$L", "%4$I"],
+        type: "Object",
+        isSetable: true,
       },
     ],
   );
