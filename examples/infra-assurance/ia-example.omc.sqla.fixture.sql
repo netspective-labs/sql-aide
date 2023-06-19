@@ -6,11 +6,6 @@ CREATE TABLE IF NOT EXISTS "execution_context" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS "organization_role_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "party_type" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
@@ -236,8 +231,20 @@ CREATE TABLE IF NOT EXISTS "incident_status" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS "asset_risk_type" (
+    "code" TEXT PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- content tables
+CREATE TABLE IF NOT EXISTS "organization_role_type" (
+    "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "code" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN'
+);
 CREATE TABLE IF NOT EXISTS "graph" (
     "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "graph_nature_id" TEXT NOT NULL,
@@ -1122,24 +1129,6 @@ INSERT INTO "execution_context" ("code", "value") VALUES ('TEST', 'test');
 INSERT INTO "execution_context" ("code", "value") VALUES ('DEVELOPMENT', 'devl');
 INSERT INTO "execution_context" ("code", "value") VALUES ('SANDBOX', 'sandbox');
 INSERT INTO "execution_context" ("code", "value") VALUES ('EXPERIMENTAL', 'experimental');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Senior Lead Software DevOps Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SECURITY_ENGINEER', 'Security Engineer');
 INSERT INTO "party_type" ("code", "value") VALUES ('PERSON', 'Person');
 INSERT INTO "party_type" ("code", "value") VALUES ('ORGANIZATION', 'Organization');
 INSERT INTO "party_role_type" ("code", "value") VALUES ('CUSTOMER', 'Customer');
@@ -1482,6 +1471,11 @@ INSERT INTO "incident_status" ("code", "value") VALUES ('REPLACED_PROBLEM', 'Rep
 INSERT INTO "incident_status" ("code", "value") VALUES ('RESOLVED', 'Resolved');
 INSERT INTO "incident_status" ("code", "value") VALUES ('SUSPENDED', 'Suspended');
 INSERT INTO "incident_status" ("code", "value") VALUES ('WORK_IN_PROGRESS', 'Work In Progress');
+INSERT INTO "asset_risk_type" ("code", "value") VALUES ('SECURITY', 'Security');
+
+INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL);
+
+INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL);
 ;
 INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('ORGANIZATION', 'Orgnization Name', NULL);
 INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'Orgnization Name', 'XXXX-XXXXX-XXXX', '2010-01-15', NULL);
@@ -1513,11 +1507,11 @@ INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "profici
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JAVA', 'FUNDAMENTAL_AWARENESS', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JQUERY', 'ADVANCED', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'OSQUERY', 'FUNDAMENTAL_AWARENESS', NULL);
-INSERT INTO "awareness_training" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES ('HIPAA', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'YES', '2022-02-22', NULL);
+INSERT INTO "awareness_training" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES ('HIPAA', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'YES', '2022-02-21', NULL);
 INSERT INTO "security_incident_response_team" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES (NULL, (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, NULL, NULL);
 INSERT INTO "rating" ("author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'FOUR', 'FIVE', 'Good Service', 'Satisfied', 'THREE', NULL);
 INSERT INTO "contract" ("contract_from_id", "contract_to_id", "contract_status_id", "document_reference", "payment_type_id", "periodicity_id", "start_date", "end_date", "contract_type_id", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'FINISHED', 'google.com', 'RENTS', 'WEEKLY', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', 'GENERAL_CONTRACT_FOR_SERVICES', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', NULL);
-INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by") VALUES ('Risk description', 'TECHNICAL_RISK', 'QUALITY', 'Impact to the organization', 'THREE', 'THREE', 'THREE', 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-14', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL);
+INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by") VALUES ('Risk description', 'TECHNICAL_RISK', 'QUALITY', 'Impact to the organization', 'THREE', 'THREE', 'THREE', 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-13', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL);
 INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "created_by") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, 'IN_USE', '', 'Asset Name', 'Service used for asset etc', 'VIRTUAL_MACHINE', '', 'IN_USE', '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL);
 INSERT INTO "incident" ("title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by") VALUES ('Server Down - Due to CPU utilization reached 100%', '2021-04-20', '2021-04-20T00:00:00.000Z', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = 'VIRTUAL_MACHINE'), 'PERFORMANCE', 'HARDWARE_FAILURE', 'MAJOR', 'HIGH', 'COMPLAINT', 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', 'CLOSED', NULL, NULL, '', '', '2021-04-20', '2021-04-20T00:00:00.000Z', NULL);
 INSERT INTO "incident_root_cause" ("incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by") VALUES ((SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = 'HARDWARE_FAILURE' AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = 'COMPLAINT' AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL);

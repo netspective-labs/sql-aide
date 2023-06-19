@@ -18,9 +18,7 @@ const relativeFileContent = (name: string) => {
   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
 };
 
-type EmitContext = typeof ctx;
-const ctx = SQLa.typicalSqlEmitContext();
-const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const { ctx, gts } = udm;
 
 const graphTableInsertion = mod.graph.insertDML({
   name: "text-value",
@@ -134,7 +132,7 @@ const contactElectronicInsertion = udm.contactElectronic
   });
 
 function sqlDDL() {
-  return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+  return SQLa.SQL<udm.EmitContext>(gts.ddlOptions)`
     ${mod.sqlDDL()}
 
     -- synthetic / test data
@@ -253,7 +251,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "156");
+    ta.assertEquals(output, "155");
   });
 
   // deno-lint-ignore require-await

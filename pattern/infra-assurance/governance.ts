@@ -1,11 +1,5 @@
 #!/usr/bin/env -S deno run --allow-all
 
-export enum ExecutionContext {
-  DEVELOPMENT, // code is text, value is a number
-  TEST,
-  PRODUCTION,
-}
-
 export enum OrganizationRoleType {
   PROJECT_MANAGER_TECHNOLOGY = "Project Manager Technology",
   PROJECT_MANAGER_QUALITY = "Project Manager Quality",
