@@ -9,7 +9,7 @@ import * as govn from "./governance.ts";
 type Any = any;
 
 export const ctx = SQLa.typicalSqlEmitContext();
-type EmitContext = typeof ctx;
+export type EmitContext = typeof ctx;
 
 export const tcf = SQLa.tableColumnFactory<Any, Any>();
 export const gts = typ.governedTemplateState<typ.GovernedDomain, EmitContext>();
@@ -34,10 +34,24 @@ export const execCtx = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const organizationRoleType = gm.textEnumTable(
+export const organizationRoleType = gm.autoIncPkTable(
   "organization_role_type",
-  govn.OrganizationRoleType,
-  { isIdempotent: true },
+  {
+    organization_role_type_id: autoIncPK(),
+    code: text(),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+);
+
+export const partyRoleType = gm.autoIncPkTable(
+  "party_role_type",
+  {
+    party_role_type_id: autoIncPK(),
+    code: text(),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
 );
 
 export const partyType = gm.textEnumTable(
@@ -83,7 +97,6 @@ export const allReferenceTables: (
   & typ.EnumTableDefn<EmitContext>
 )[] = [
   execCtx,
-  organizationRoleType,
   partyType,
   partyRole,
   partyRelationType,
@@ -190,6 +203,7 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
+  organizationRoleType,
   party,
   partyIdentifier,
   person,

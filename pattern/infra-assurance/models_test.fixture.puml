@@ -10,6 +10,15 @@
     FontSize 12
   }
 
+  entity "organization_role_type" as organization_role_type {
+      **organization_role_type_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+  }
+
   entity "graph" as graph {
       **graph_id**: INTEGER
     --
@@ -717,6 +726,7 @@
   party |o..o{ organization
   person |o..o{ organization_role
   organization |o..o{ organization_role
+  organization_role_type |o..o{ organization_role
   party |o..o{ contact_electronic
   party |o..o{ contact_land
   organization |o..o{ asset

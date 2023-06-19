@@ -9,22 +9,7 @@ import * as udm from "../udm/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-const { ctx, gm, gts } = udm;
-
-type EmitContext = typeof ctx;
-
-export const tcf = SQLa.tableColumnFactory<Any, Any>();
-const {
-  text,
-  textNullable,
-  integer,
-  date,
-  dateNullable,
-  dateTime,
-  selfRef,
-  dateTimeNullable,
-} = gm.domains;
-export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+const { ctx, gm, gts, tcf } = udm;
 
 export const contractStatus = gm.textEnumTable(
   "contract_status",
@@ -269,11 +254,10 @@ export const incidentStatus = gm.textEnumTable(
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allReferenceTables: (
-  & SQLa.TableDefinition<Any, EmitContext>
-  & typ.EnumTableDefn<EmitContext>
+  & SQLa.TableDefinition<Any, udm.EmitContext>
+  & typ.EnumTableDefn<udm.EmitContext>
 )[] = [
   udm.execCtx,
-  udm.organizationRoleType,
   udm.partyType,
   udm.partyRole,
   contractStatus,
@@ -319,54 +303,55 @@ export const allReferenceTables: (
   priority,
   incidentType,
   incidentStatus,
+  assetRiskType,
 ];
 
 export const graph = gm.autoIncPkTable("graph", {
-  graph_id: autoIncPK(),
+  graph_id: udm.autoIncPK(),
   graph_nature_id: graphNature.references.code(),
-  name: text(),
-  description: textNullable(),
+  name: udm.text(),
+  description: udm.textNullable(),
   ...gm.housekeeping.columns,
 });
 
-export const boundary_id = autoIncPK();
+export const boundary_id = udm.autoIncPK();
 export const boundary = gm.autoIncPkTable("boundary", {
   boundary_id,
-  parent_boundary_id: selfRef(boundary_id).optional(),
+  parent_boundary_id: udm.selfRef(boundary_id).optional(),
   graph_id: graph.references.graph_id(),
   boundary_nature_id: boundaryNature.references.code(),
-  name: text(),
-  description: textNullable(),
+  name: udm.text(),
+  description: udm.textNullable(),
   ...gm.housekeeping.columns,
 });
 
 export const host = gm.autoIncPkTable("host", {
-  host_id: autoIncPK(),
-  host_name: tcf.unique(text()),
-  description: textNullable(),
+  host_id: udm.autoIncPK(),
+  host_name: tcf.unique(udm.text()),
+  description: udm.textNullable(),
   ...gm.housekeeping.columns,
 });
 
 export const hostBoundary = gm.autoIncPkTable("host_boundary", {
-  host_boundary_id: autoIncPK(),
+  host_boundary_id: udm.autoIncPK(),
   host_id: host.references.host_id(),
   ...gm.housekeeping.columns,
 });
 
 export const raciMatrix = gm.autoIncPkTable("raci_matrix", {
-  raci_matrix_id: autoIncPK(),
-  asset: text(),
-  responsible: text(),
-  accountable: text(),
-  consulted: text(),
-  informed: text(),
+  raci_matrix_id: udm.autoIncPK(),
+  asset: udm.text(),
+  responsible: udm.text(),
+  accountable: udm.text(),
+  consulted: udm.text(),
+  informed: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const raciMatrixSubjectBoundary = gm.autoIncPkTable(
   "raci_matrix_subject_boundary",
   {
-    raci_matrix_subject_boundary_id: autoIncPK(),
+    raci_matrix_subject_boundary_id: udm.autoIncPK(),
     boundary_id: boundary.references.boundary_id(),
     raci_matrix_subject_id: raciMatrixSubject.references.code(),
     ...gm.housekeeping.columns,
@@ -374,15 +359,15 @@ export const raciMatrixSubjectBoundary = gm.autoIncPkTable(
 );
 
 export const raciMatrixActivity = gm.autoIncPkTable("raci_matrix_activity", {
-  raci_matrix_activity_id: autoIncPK(),
-  activity: text(),
+  raci_matrix_activity_id: udm.autoIncPK(),
+  activity: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const party = gm.autoIncPkTable("party", {
-  party_id: autoIncPK(),
+  party_id: udm.autoIncPK(),
   party_type_id: udm.partyType.references.code(),
-  party_name: text(),
+  party_name: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -391,19 +376,19 @@ export const party = gm.autoIncPkTable("party", {
  */
 
 export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
-  party_identifier_id: autoIncPK(),
-  identifier_number: text(),
+  party_identifier_id: udm.autoIncPK(),
+  identifier_number: udm.text(),
   party_identifier_type_id: udm.partyIdentifierType.references.code(),
   party_id: party.references.party_id(),
   ...gm.housekeeping.columns,
 });
 
 export const person = gm.autoIncPkTable("person", {
-  person_id: autoIncPK(),
+  person_id: udm.autoIncPK(),
   party_id: party.references.party_id(),
   person_type_id: udm.personType.references.code(),
-  person_first_name: text(),
-  person_last_name: text(),
+  person_first_name: udm.text(),
+  person_last_name: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -412,7 +397,7 @@ export const person = gm.autoIncPkTable("person", {
  */
 
 export const partyRelation = gm.autoIncPkTable("party_relation", {
-  party_relation_id: autoIncPK(),
+  party_relation_id: udm.autoIncPK(),
   party_id: party.references.party_id(),
   related_party_id: party.references.party_id(),
   relation_type_id: udm.partyRelationType.references.code(),
@@ -421,16 +406,16 @@ export const partyRelation = gm.autoIncPkTable("party_relation", {
 });
 
 export const organization = gm.autoIncPkTable("organization", {
-  organization_id: autoIncPK(),
+  organization_id: udm.autoIncPK(),
   party_id: party.references.party_id(),
-  name: text(),
-  license: text(),
-  registration_date: date(),
+  name: udm.text(),
+  license: udm.text(),
+  registration_date: udm.date(),
   ...gm.housekeeping.columns,
 });
 
 export const organizationRole = gm.autoIncPkTable("organization_role", {
-  organization_role_id: autoIncPK(),
+  organization_role_id: udm.autoIncPK(),
   person_id: person.references.person_id(),
   organization_id: organization.references.organization_id(),
   organization_role_type_id: udm.organizationRoleType.references.code(),
@@ -438,23 +423,23 @@ export const organizationRole = gm.autoIncPkTable("organization_role", {
 });
 
 export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
-  contact_electronic_id: autoIncPK(),
+  contact_electronic_id: udm.autoIncPK(),
   contact_type_id: udm.contactType.references.code(),
   party_id: party.references.party_id(),
-  electronics_details: text(),
+  electronics_details: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const contactLand = gm.autoIncPkTable("contact_land", {
-  contact_land_id: autoIncPK(),
+  contact_land_id: udm.autoIncPK(),
   contact_type_id: udm.contactType.references.code(),
   party_id: party.references.party_id(),
-  address_line1: text(),
-  address_line2: text(),
-  address_zip: text(),
-  address_city: text(),
-  address_state: text(),
-  address_country: text(),
+  address_line1: udm.text(),
+  address_line2: udm.text(),
+  address_zip: udm.text(),
+  address_city: udm.text(),
+  address_state: udm.text(),
+  address_country: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -463,33 +448,33 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
  */
 
 export const asset = gm.autoIncPkTable("asset", {
-  asset_id: autoIncPK(),
+  asset_id: udm.autoIncPK(),
   organization_id: udm.organization.references.organization_id(),
-  asset_retired_date: dateNullable(),
+  asset_retired_date: udm.dateNullable(),
   asset_status_id: assetStatus.references.code(),
-  asset_tag: text(),
-  name: text(),
-  description: text(),
+  asset_tag: udm.text(),
+  name: udm.text(),
+  description: udm.text(),
   asset_type_id: assetType.references.code(),
-  asset_workload_category: text(),
+  asset_workload_category: udm.text(),
   assignment_id: assignment.references.code(),
-  barcode_or_rfid_tag: text(),
-  installed_date: dateNullable(),
-  planned_retirement_date: dateNullable(),
-  purchase_delivery_date: dateNullable(),
-  purchase_order_date: dateNullable(),
-  purchase_request_date: dateNullable(),
-  serial_number: text(),
-  tco_amount: text(),
-  tco_currency: text(),
+  barcode_or_rfid_tag: udm.text(),
+  installed_date: udm.dateNullable(),
+  planned_retirement_date: udm.dateNullable(),
+  purchase_delivery_date: udm.dateNullable(),
+  purchase_order_date: udm.dateNullable(),
+  purchase_request_date: udm.dateNullable(),
+  serial_number: udm.text(),
+  tco_amount: udm.text(),
+  tco_currency: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const vulnerabilitySource = gm.autoIncPkTable("vulnerability_source", {
-  vulnerability_source_id: autoIncPK(),
-  short_code: text(), // For example cve code like CVE-2019-0708 (corresponds to a flaw in Microsoft’s Remote Desktop Protocol (RDP))
-  source_url: text(),
-  description: text(),
+  vulnerability_source_id: udm.autoIncPK(),
+  short_code: udm.text(), // For example cve code like CVE-2019-0708 (corresponds to a flaw in Microsoft’s Remote Desktop Protocol (RDP))
+  source_url: udm.text(),
+  description: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -497,67 +482,67 @@ export const vulnerabilitySource = gm.autoIncPkTable("vulnerability_source", {
 // - [ ] Need add field tag if needed in future
 
 export const vulnerability = gm.autoIncPkTable("vulnerability", {
-  vulnerability_id: autoIncPK(),
-  short_name: text(),
+  vulnerability_id: udm.autoIncPK(),
+  short_name: udm.text(),
   source_id: vulnerabilitySource.references.vulnerability_source_id(),
-  affected_software: text(),
-  reference: text(),
+  affected_software: udm.text(),
+  reference: udm.text(),
   status_id: vulnerabilityStatus.references.code(),
-  patch_availability: text(),
+  patch_availability: udm.text(),
   severity_id: severity.references.code(),
-  solutions: text(),
-  description: text(),
+  solutions: udm.text(),
+  description: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const threatSource = gm.autoIncPkTable("threat_source", {
-  threat_source_id: autoIncPK(),
-  title: text(),
-  identifier: text(),
+  threat_source_id: udm.autoIncPK(),
+  title: udm.text(),
+  identifier: udm.text(),
   threat_source_type_id: threatSourceType.references.code(),
-  source_of_information: text(),
-  capability: text(),
-  intent: text(),
-  targeting: text(),
-  description: text(),
+  source_of_information: udm.text(),
+  capability: udm.text(),
+  intent: udm.text(),
+  targeting: udm.text(),
+  description: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const threatEvent = gm.autoIncPkTable("threat_event", {
-  threat_event_id: autoIncPK(),
-  title: text(),
+  threat_event_id: udm.autoIncPK(),
+  title: udm.text(),
   threat_source_id: threatSource.references.threat_source_id(),
   asset_id: asset.references.asset_id(),
-  identifier: text(),
+  identifier: udm.text(),
   threat_event_type_id: threatEventType.references.code(),
-  event_classification: text(),
-  source_of_information: text(),
-  description: text(),
+  event_classification: udm.text(),
+  source_of_information: udm.text(),
+  description: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const assetRisk = gm.autoIncPkTable("asset_risk", {
-  asset_risk_id: autoIncPK(),
+  asset_risk_id: udm.autoIncPK(),
   asset_risk_type_id: assetRiskType.references.code(),
   asset_id: asset.references.asset_id(),
   threat_event_id: threatEvent.references.threat_event_id(),
   relevance_id: severity.references.code().optional(),
   likelihood_id: probability.references.code().optional(),
-  impact: text(),
+  impact: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const securityImpactAnalysis = gm.autoIncPkTable(
   "security_impact_analysis",
   {
-    security_impact_analysis_id: autoIncPK(),
+    security_impact_analysis_id: udm.autoIncPK(),
     vulnerability_id: vulnerability.references.vulnerability_id(),
     asset_risk_id: assetRisk.references.asset_risk_id(),
     risk_level_id: probability.references.code(),
     impact_level_id: probability.references.code(),
-    existing_controls: text(),
+    existing_controls: udm.text(),
     priority_id: priority.references.code(),
-    reported_date: date(),
+    reported_date: udm.date(),
     reported_by_id: udm.person.references.person_id(),
     responsible_by_id: udm.person.references.person_id(),
     ...gm.housekeeping.columns,
@@ -565,39 +550,39 @@ export const securityImpactAnalysis = gm.autoIncPkTable(
 );
 
 export const impactOfRisk = gm.autoIncPkTable("impact_of_risk", {
-  impact_of_risk_id: autoIncPK(),
+  impact_of_risk_id: udm.autoIncPK(),
   security_impact_analysis_id: securityImpactAnalysis.references
     .security_impact_analysis_id(),
-  impact: text(),
+  impact: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const proposedControls = gm.autoIncPkTable("proposed_controls", {
-  proposed_controls_id: autoIncPK(),
+  proposed_controls_id: udm.autoIncPK(),
   security_impact_analysis_id: securityImpactAnalysis.references
     .security_impact_analysis_id(),
-  controls: text(),
+  controls: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const billing = gm.autoIncPkTable("billing", {
-  billing_id: autoIncPK(),
-  purpose: text(),
-  bill_rate: text(),
-  period: text(),
-  effective_from_date: dateTime(),
-  effective_to_date: text(),
-  prorate: integer(),
+  billing_id: udm.autoIncPK(),
+  purpose: udm.text(),
+  bill_rate: udm.text(),
+  period: udm.text(),
+  effective_from_date: udm.dateTime(),
+  effective_to_date: udm.text(),
+  prorate: udm.integer(),
   ...gm.housekeeping.columns,
 });
 
 export const scheduledTask = gm.autoIncPkTable("scheduled_task", {
-  scheduled_task_id: autoIncPK(),
-  description: text(),
-  task_date: dateTime(),
-  reminder_date: dateTime(),
-  assigned_to: text(),
-  reminder_to: text(),
+  scheduled_task_id: udm.autoIncPK(),
+  description: udm.text(),
+  task_date: udm.dateTime(),
+  reminder_date: udm.dateTime(),
+  assigned_to: udm.text(),
+  reminder_to: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -606,54 +591,54 @@ export const scheduledTask = gm.autoIncPkTable("scheduled_task", {
  */
 
 export const timesheet = gm.autoIncPkTable("timesheet", {
-  timesheet_id: autoIncPK(),
-  date_of_work: dateTime(),
+  timesheet_id: udm.autoIncPK(),
+  date_of_work: udm.dateTime(),
   is_billable_id: statusValues.references.code(),
-  number_of_hours: integer(),
+  number_of_hours: udm.integer(),
   time_entry_category_id: timeEntryCategory.references.code(),
-  timesheet_summary: text(),
+  timesheet_summary: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const certificate = gm.autoIncPkTable("certificate", {
-  certificate_id: autoIncPK(),
-  certificate_name: text(),
-  short_name: text(),
-  certificate_category: text(),
-  certificate_type: text(),
-  certificate_authority: text(),
-  validity: text(),
-  expiration_date: dateTimeNullable(),
-  domain_name: text(),
-  key_size: integer(),
-  path: text(),
+  certificate_id: udm.autoIncPK(),
+  certificate_name: udm.text(),
+  short_name: udm.text(),
+  certificate_category: udm.text(),
+  certificate_type: udm.text(),
+  certificate_authority: udm.text(),
+  validity: udm.text(),
+  expiration_date: udm.dateTimeNullable(),
+  domain_name: udm.text(),
+  key_size: udm.integer(),
+  path: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const device = gm.autoIncPkTable("device", {
-  device_id: autoIncPK(),
-  device_name: text(),
-  short_name: text(),
-  barcode: text(),
-  model: text(),
-  serial_number: text(),
-  firmware: text(),
-  data_center: text(),
-  location: text(),
-  purpose: text(),
-  description: text(),
+  device_id: udm.autoIncPK(),
+  device_name: udm.text(),
+  short_name: udm.text(),
+  barcode: udm.text(),
+  model: udm.text(),
+  serial_number: udm.text(),
+  firmware: udm.text(),
+  data_center: udm.text(),
+  location: udm.text(),
+  purpose: udm.text(),
+  description: udm.text(),
   ...gm.housekeeping.columns,
 });
 
 export const securityIncidentResponseTeam = gm.autoIncPkTable(
   "security_incident_response_team",
   {
-    security_incident_response_team_id: autoIncPK(),
+    security_incident_response_team_id: udm.autoIncPK(),
     training_subject_id: trainingSubject.references.code().optional(),
     person_id: udm.person.references.person_id(),
     organization_id: udm.organization.references.organization_id(),
     training_status_id: statusValues.references.code().optional(),
-    attended_date: date().optional(),
+    attended_date: udm.date().optional(),
     ...gm.housekeeping.columns,
   },
 );
@@ -661,12 +646,12 @@ export const securityIncidentResponseTeam = gm.autoIncPkTable(
 export const awarenessTraining = gm.autoIncPkTable(
   "awareness_training",
   {
-    awareness_training_id: autoIncPK(),
+    awareness_training_id: udm.autoIncPK(),
     training_subject_id: trainingSubject.references.code(),
     person_id: udm.person.references.person_id(),
     organization_id: udm.organization.references.organization_id(),
     training_status_id: statusValues.references.code(),
-    attended_date: date(),
+    attended_date: udm.date(),
     ...gm.housekeeping.columns,
   },
 );
@@ -678,13 +663,13 @@ export const awarenessTraining = gm.autoIncPkTable(
 export const rating = gm.autoIncPkTable(
   "rating",
   {
-    rating_id: autoIncPK(),
+    rating_id: udm.autoIncPK(),
     author_id: udm.person.references.person_id(),
     rating_given_to_id: udm.organization.references.organization_id(),
     rating_value_id: ratingValue.references.code(),
     best_rating_id: ratingValue.references.code().optional(),
-    rating_explanation: text(),
-    review_aspect: text(),
+    rating_explanation: udm.text(),
+    review_aspect: udm.text(),
     worst_rating_id: ratingValue.references.code().optional(),
     ...gm.housekeeping.columns,
   },
@@ -693,9 +678,9 @@ export const rating = gm.autoIncPkTable(
 export const notes = gm.autoIncPkTable(
   "note",
   {
-    note_id: autoIncPK(),
+    note_id: udm.autoIncPK(),
     party_id: udm.party.references.party_id(),
-    note: text(),
+    note: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
@@ -703,17 +688,17 @@ export const notes = gm.autoIncPkTable(
 export const auditAssertion = gm.autoIncPkTable(
   "audit_assertion",
   {
-    audit_assertion_id: autoIncPK(),
+    audit_assertion_id: udm.autoIncPK(),
     auditor_type_id: auditorType.references.code(),
     audit_purpose_id: auditPurpose.references.code(),
     auditor_org_id: udm.organization.references.organization_id(),
     auditor_person_id: udm.person.references.person_id(),
     auditor_status_type_id: auditorStatusType.references.code(),
-    scf_identifier: text(),
-    auditor_notes: text(),
-    auditor_artifacts: text(),
-    assertion_name: text(),
-    assertion_description: text(),
+    scf_identifier: udm.text(),
+    auditor_notes: udm.text(),
+    auditor_artifacts: udm.text(),
+    assertion_name: udm.text(),
+    assertion_description: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
@@ -725,20 +710,20 @@ export const auditAssertion = gm.autoIncPkTable(
 export const contract = gm.autoIncPkTable(
   "contract",
   {
-    contract_id: autoIncPK(),
+    contract_id: udm.autoIncPK(),
     contract_from_id: udm.party.references.party_id(),
     contract_to_id: udm.party.references.party_id(),
     contract_status_id: contractStatus.references.code().optional(),
-    document_reference: text(),
+    document_reference: udm.text(),
     payment_type_id: paymentType.references.code().optional(),
     periodicity_id: periodicity.references.code().optional(),
-    start_date: dateTime(),
-    end_date: dateTimeNullable(),
+    start_date: udm.dateTime(),
+    end_date: udm.dateTimeNullable(),
     contract_type_id: contractType.references.code().optional(),
-    date_of_last_review: dateTimeNullable(),
-    date_of_next_review: dateTimeNullable(),
-    date_of_contract_review: dateTimeNullable(),
-    date_of_contract_approval: dateTimeNullable(),
+    date_of_last_review: udm.dateTimeNullable(),
+    date_of_next_review: udm.dateTimeNullable(),
+    date_of_contract_review: udm.dateTimeNullable(),
+    date_of_contract_approval: udm.dateTimeNullable(),
     ...gm.housekeeping.columns,
   },
 );
@@ -746,20 +731,20 @@ export const contract = gm.autoIncPkTable(
 export const riskRegister = gm.autoIncPkTable(
   "risk_register",
   {
-    risk_register_id: autoIncPK(),
-    description: text(),
+    risk_register_id: udm.autoIncPK(),
+    description: udm.text(),
     risk_subject_id: riskSubject.references.code(),
     risk_type_id: riskType.references.code(),
-    impact_to_the_organization: text(),
+    impact_to_the_organization: udm.text(),
     rating_likelihood_id: ratingValue.references.code().optional(),
     rating_impact_id: ratingValue.references.code().optional(),
     rating_overall_risk_id: ratingValue.references.code().optional(),
-    controls_in_place: text(),
-    control_effectivenes: integer(),
+    controls_in_place: udm.text(),
+    control_effectivenes: udm.integer(),
     over_all_residual_risk_rating_id: ratingValue.references.code().optional(),
-    mitigation_further_actions: text(),
-    control_monitor_mitigation_actions_tracking_strategy: text(),
-    control_monitor_action_due_date: dateNullable(),
+    mitigation_further_actions: udm.text(),
+    control_monitor_mitigation_actions_tracking_strategy: udm.text(),
+    control_monitor_action_due_date: udm.dateNullable(),
     control_monitor_risk_owner_id: udm.person.references.person_id(),
     ...gm.housekeeping.columns,
   },
@@ -772,38 +757,38 @@ export const riskRegister = gm.autoIncPkTable(
 export const incident = gm.autoIncPkTable(
   "incident",
   {
-    incident_id: autoIncPK(),
-    title: text(),
-    incident_date: date(),
-    time_and_time_zone: dateTime(),
+    incident_id: udm.autoIncPK(),
+    title: udm.text(),
+    incident_date: udm.date(),
+    time_and_time_zone: udm.dateTime(),
     asset_id: asset.references.asset_id(),
     category_id: incidentCategory.references.code(),
     sub_category_id: incidentSubCategory.references.code(),
     severity_id: severity.references.code(),
     priority_id: priority.references.code().optional(),
     internal_or_external_id: incidentType.references.code().optional(),
-    location: text(),
-    it_service_impacted: text(),
-    impacted_modules: text(),
-    impacted_dept: text(),
+    location: udm.text(),
+    it_service_impacted: udm.text(),
+    impacted_modules: udm.text(),
+    impacted_dept: udm.text(),
     reported_by_id: udm.person.references.person_id(),
     reported_to_id: udm.person.references.person_id(),
-    brief_description: text(),
-    detailed_description: text(),
+    brief_description: udm.text(),
+    detailed_description: udm.text(),
     assigned_to_id: udm.person.references.person_id(),
-    assigned_date: dateNullable(),
-    investigation_details: text(),
-    containment_details: text(),
-    eradication_details: text(),
-    business_impact: text(),
-    lessons_learned: text(),
+    assigned_date: udm.dateNullable(),
+    investigation_details: udm.text(),
+    containment_details: udm.text(),
+    eradication_details: udm.text(),
+    business_impact: udm.text(),
+    lessons_learned: udm.text(),
     status_id: incidentStatus.references.code().optional(),
-    closed_date: dateNullable(),
-    reopened_time: dateTimeNullable(),
-    feedback_from_business: text(),
-    reported_to_regulatory: text(),
-    report_date: dateNullable(),
-    report_time: dateTimeNullable(),
+    closed_date: udm.dateNullable(),
+    reopened_time: udm.dateTimeNullable(),
+    feedback_from_business: udm.text(),
+    reported_to_regulatory: udm.text(),
+    report_date: udm.dateNullable(),
+    report_time: udm.dateTimeNullable(),
     ...gm.housekeeping.columns,
   },
 );
@@ -811,17 +796,17 @@ export const incident = gm.autoIncPkTable(
 export const incidentRootCause = gm.autoIncPkTable(
   "incident_root_cause",
   {
-    incident_root_cause_id: autoIncPK(),
+    incident_root_cause_id: udm.autoIncPK(),
     incident_id: incident.references.incident_id().optional(),
-    source: text(),
-    description: text(),
+    source: udm.text(),
+    description: udm.text(),
     probability_id: priority.references.code().optional(),
-    testing_analysis: text(),
-    solution: text(),
+    testing_analysis: udm.text(),
+    solution: udm.text(),
     likelihood_of_risk_id: priority.references.code().optional(),
-    modification_of_the_reported_issue: text(),
-    testing_for_modified_issue: text(),
-    test_results: text(),
+    modification_of_the_reported_issue: udm.text(),
+    testing_for_modified_issue: udm.text(),
+    test_results: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
@@ -829,7 +814,7 @@ export const incidentRootCause = gm.autoIncPkTable(
 export const raciMatrixAssignment = gm.autoIncPkTable(
   "raci_matrix_assignment",
   {
-    raci_matrix_assignment_id: autoIncPK(),
+    raci_matrix_assignment_id: udm.autoIncPK(),
     person_id: udm.person.references.person_id(),
     subject_id: raciMatrixSubject.references.code(),
     activity_id: raciMatrixActivity.references.raci_matrix_activity_id(),
@@ -842,7 +827,7 @@ export const raciMatrixAssignment = gm.autoIncPkTable(
 export const personSkill = gm.autoIncPkTable(
   "person_skill",
   {
-    person_skill_id: autoIncPK(),
+    person_skill_id: udm.autoIncPK(),
     person_id: udm.person.references.person_id(),
     skill_nature_id: skillNature.references.code(),
     skill_id: skill.references.code(),
@@ -854,9 +839,9 @@ export const personSkill = gm.autoIncPkTable(
 export const keyPerformance = gm.autoIncPkTable(
   "key_performance",
   {
-    key_performance_id: autoIncPK(),
-    title: text(),
-    description: text(),
+    key_performance_id: udm.autoIncPK(),
+    title: udm.text(),
+    description: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
@@ -864,27 +849,27 @@ export const keyPerformance = gm.autoIncPkTable(
 export const keyPerformanceIndicator = gm.autoIncPkTable(
   "key_performance_indicator",
   {
-    key_performance_indicator_id: autoIncPK(),
+    key_performance_indicator_id: udm.autoIncPK(),
     key_performance_id: keyPerformance.references.key_performance_id(),
     asset_id: asset.references.asset_id(),
     calendar_period_id: calendarPeriod.references.code(),
     kpi_comparison_operator_id: comparisonOperator.references.code(),
-    kpi_context: text(),
-    kpi_lower_threshold_critical: text(),
-    kpi_lower_threshold_major: text(),
-    kpi_lower_threshold_minor: text(),
-    kpi_lower_threshold_ok: text(),
-    kpi_lower_threshold_warning: text(),
+    kpi_context: udm.text(),
+    kpi_lower_threshold_critical: udm.text(),
+    kpi_lower_threshold_major: udm.text(),
+    kpi_lower_threshold_minor: udm.text(),
+    kpi_lower_threshold_ok: udm.text(),
+    kpi_lower_threshold_warning: udm.text(),
     kpi_measurement_type_id: kpiMeasurementType.references.code(),
     kpi_status_id: kpiStatus.references.code(),
-    kpi_threshold_critical: text(),
-    kpi_threshold_major: text(),
-    kpi_threshold_minor: text(),
-    kpi_threshold_ok: text(),
-    kpi_threshold_warning: text(),
-    kpi_unit_of_measure: text(),
-    kpi_value: text(),
-    score: text(),
+    kpi_threshold_critical: udm.text(),
+    kpi_threshold_major: udm.text(),
+    kpi_threshold_minor: udm.text(),
+    kpi_threshold_ok: udm.text(),
+    kpi_threshold_warning: udm.text(),
+    kpi_unit_of_measure: udm.text(),
+    kpi_value: udm.text(),
+    score: udm.text(),
     tracking_period_id: trackingPeriod.references.code(),
     trend_id: trend.references.code(),
     ...gm.housekeeping.columns,
@@ -894,10 +879,10 @@ export const keyPerformanceIndicator = gm.autoIncPkTable(
 export const keyRisk = gm.autoIncPkTable(
   "key_risk",
   {
-    key_risk_id: autoIncPK(),
-    title: text(),
-    description: text(),
-    base_value: textNullable(),
+    key_risk_id: udm.autoIncPK(),
+    title: udm.text(),
+    description: udm.text(),
+    base_value: udm.textNullable(),
     ...gm.housekeeping.columns,
   },
 );
@@ -905,10 +890,10 @@ export const keyRisk = gm.autoIncPkTable(
 export const keyRiskIndicator = gm.autoIncPkTable(
   "key_risk_indicator",
   {
-    key_risk_indicator_id: autoIncPK(),
+    key_risk_indicator_id: udm.autoIncPK(),
     key_risk_id: keyRisk.references.key_risk_id(),
-    entry_date: date(),
-    entry_value: textNullable(),
+    entry_date: udm.date(),
+    entry_value: udm.textNullable(),
     ...gm.housekeeping.columns,
   },
 );
@@ -916,12 +901,12 @@ export const keyRiskIndicator = gm.autoIncPkTable(
 export const assertion = gm.autoIncPkTable(
   "assertion",
   {
-    assertion_id: autoIncPK(),
-    foreign_integration: text(),
-    assertion: text(),
-    assertion_explain: text(),
-    assertion_expires_on: dateNullable(),
-    assertion_expires_poam: text(),
+    assertion_id: udm.autoIncPK(),
+    foreign_integration: udm.text(),
+    assertion: udm.text(),
+    assertion_explain: udm.text(),
+    assertion_expires_on: udm.dateNullable(),
+    assertion_expires_poam: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
@@ -929,13 +914,13 @@ export const assertion = gm.autoIncPkTable(
 export const attestation = gm.autoIncPkTable(
   "attestation",
   {
-    attestation_id: autoIncPK(),
+    attestation_id: udm.autoIncPK(),
     assertion_id: assertion.references.assertion_id(),
     person_id: udm.person.references.person_id(),
-    attestation: text(),
-    attestation_explain: text(),
-    attested_on: date(),
-    expires_on: dateNullable(),
+    attestation: udm.text(),
+    attestation_explain: udm.text(),
+    attested_on: udm.date(),
+    expires_on: udm.dateNullable(),
     boundary_id: boundary.references.boundary_id().optional(),
     ...gm.housekeeping.columns,
   },
@@ -944,20 +929,21 @@ export const attestation = gm.autoIncPkTable(
 export const attestationEvidence = gm.autoIncPkTable(
   "attestation_evidence",
   {
-    attestation_evidence_id: autoIncPK(),
+    attestation_evidence_id: udm.autoIncPK(),
     attestation_id: attestation.references.attestation_id(),
-    evidence_nature: text(),
-    evidence_summary_markdown: text(),
-    url: text(),
-    content: text(),
-    attachment: text(),
+    evidence_nature: udm.text(),
+    evidence_summary_markdown: udm.text(),
+    url: udm.text(),
+    content: udm.text(),
+    attachment: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
 
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
-export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
+export const allContentTables: SQLa.TableDefinition<Any, udm.EmitContext>[] = [
+  udm.organizationRoleType,
   graph,
   boundary,
   host,
@@ -1019,10 +1005,10 @@ export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
 const securityResponseTeamView = SQLa.safeViewDefinition(
   "security_incident_response_team_view",
   {
-    person_name: text(),
-    organization_name: text(),
-    team_role: text(),
-    email: text(),
+    person_name: udm.text(),
+    organization_name: udm.text(),
+    team_role: udm.text(),
+    email: udm.text(),
   },
 )`
   SELECT p.person_first_name || ' ' || p.person_last_name AS person_name, o.name AS organization_name, ort.value AS team_role,e.electronics_details AS email
@@ -1037,11 +1023,11 @@ const securityResponseTeamView = SQLa.safeViewDefinition(
 const awarenessTrainingView = SQLa.safeViewDefinition(
   "awareness_training_view",
   {
-    person_name: text(),
-    person_role: text(),
-    trainigng_subject: text(),
-    training_status_id: text(),
-    attended_date: date(),
+    person_name: udm.text(),
+    person_role: udm.text(),
+    trainigng_subject: udm.text(),
+    training_status_id: udm.text(),
+    attended_date: udm.date(),
   },
 )`
   SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,ort.value AS person_role,sub.value AS trainigng_subject,at.training_status_id,at.attended_date
@@ -1054,9 +1040,9 @@ const awarenessTrainingView = SQLa.safeViewDefinition(
 const personSkillView = SQLa.safeViewDefinition(
   "person_skill_view",
   {
-    person_name: text(),
-    skill: text(),
-    proficiency: text(),
+    person_name: udm.text(),
+    skill: udm.text(),
+    proficiency: udm.text(),
   },
 )`
   SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
@@ -1068,42 +1054,42 @@ const personSkillView = SQLa.safeViewDefinition(
 const securityIncidentResponseView = SQLa.safeViewDefinition(
   "security_incident_response_view",
   {
-    incident: text(),
-    incident_date: date(),
-    asset_name: text(),
-    category: text(),
-    severity: text(),
-    priority: text(),
-    internal_or_external: text(),
-    location: text(),
-    it_service_impacted: text(),
-    impacted_modules: text(),
-    impacted_dept: text(),
-    reported_by: text(),
-    reported_to: text(),
-    brief_description: text(),
-    detailed_description: text(),
-    assigned_to: text(),
-    assigned_date: date(),
-    investigation_details: text(),
-    containment_details: text(),
-    eradication_details: text(),
-    business_impact: text(),
-    lessons_learned: text(),
-    status: text(),
-    closed_date: text(),
-    feedback_from_business: text(),
-    reported_to_regulatory: date(),
-    report_date: date(),
-    report_time: date(),
-    root_cause_of_the_issue: text(),
-    probability_of_issue: text(),
-    testing_for_possible_root_cause_analysis: text(),
-    solution: text(),
-    likelihood_of_risk: text(),
-    modification_of_the_reported_issue: text(),
-    testing_for_modified_issue: text(),
-    test_results: text(),
+    incident: udm.text(),
+    incident_date: udm.date(),
+    asset_name: udm.text(),
+    category: udm.text(),
+    severity: udm.text(),
+    priority: udm.text(),
+    internal_or_external: udm.text(),
+    location: udm.text(),
+    it_service_impacted: udm.text(),
+    impacted_modules: udm.text(),
+    impacted_dept: udm.text(),
+    reported_by: udm.text(),
+    reported_to: udm.text(),
+    brief_description: udm.text(),
+    detailed_description: udm.text(),
+    assigned_to: udm.text(),
+    assigned_date: udm.date(),
+    investigation_details: udm.text(),
+    containment_details: udm.text(),
+    eradication_details: udm.text(),
+    business_impact: udm.text(),
+    lessons_learned: udm.text(),
+    status: udm.text(),
+    closed_date: udm.text(),
+    feedback_from_business: udm.text(),
+    reported_to_regulatory: udm.date(),
+    report_date: udm.date(),
+    report_time: udm.date(),
+    root_cause_of_the_issue: udm.text(),
+    probability_of_issue: udm.text(),
+    testing_for_possible_root_cause_analysis: udm.text(),
+    solution: udm.text(),
+    likelihood_of_risk: udm.text(),
+    modification_of_the_reported_issue: udm.text(),
+    testing_for_modified_issue: udm.text(),
+    test_results: udm.text(),
   },
 )`
   SELECT i.title AS incident,i.incident_date,ast.name as asset_name,ic.value AS category,s.value AS severity,
@@ -1132,10 +1118,10 @@ const securityIncidentResponseView = SQLa.safeViewDefinition(
 const raciMatrixAssignmentView = SQLa.safeViewDefinition(
   "raci_matrix_assignment_view",
   {
-    person_name: text(),
-    subject: text(),
-    activity: text(),
-    assignment_nature: text(),
+    person_name: udm.text(),
+    subject: udm.text(),
+    activity: udm.text(),
+    assignment_nature: udm.text(),
   },
 )`
   SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rma.activity,
@@ -1149,18 +1135,18 @@ const raciMatrixAssignmentView = SQLa.safeViewDefinition(
 const securityImpactAnalysisView = SQLa.safeViewDefinition(
   "security_impact_analysis_view",
   {
-    vulnerability: text(),
-    security_risk: text(),
-    security_threat: text(),
-    impact_of_risk: text(),
-    proposed_controls: text(),
-    impact_level: text(),
-    risk_level: text(),
-    existing_controls: text(),
-    priority: text(),
-    reported_date: date(),
-    reported_by: date(),
-    responsible_by: date(),
+    vulnerability: udm.text(),
+    security_risk: udm.text(),
+    security_threat: udm.text(),
+    impact_of_risk: udm.text(),
+    proposed_controls: udm.text(),
+    impact_level: udm.text(),
+    risk_level: udm.text(),
+    existing_controls: udm.text(),
+    priority: udm.text(),
+    reported_date: udm.date(),
+    reported_by: udm.date(),
+    responsible_by: udm.date(),
   },
 )`
   SELECT v.short_name as vulnerability, ast.name as security_risk,te.title as security_threat,
@@ -1184,28 +1170,28 @@ const securityImpactAnalysisView = SQLa.safeViewDefinition(
 const keyPerformanceIndicatorView = SQLa.safeViewDefinition(
   "key_performance_indicator_view",
   {
-    kpi_lower_threshold_critical: text(),
-    kpi_lower_threshold_major: text(),
-    kpi_lower_threshold_minor: text(),
-    kpi_lower_threshold_ok: text(),
-    kpi_lower_threshold_warning: text(),
-    kpi_threshold_critical: text(),
-    kpi_threshold_major: text(),
-    kpi_threshold_minor: text(),
-    kpi_threshold_ok: text(),
-    kpi_threshold_warning: text(),
-    kpi_value: text(),
-    score: text(),
-    kpi_unit_of_measure: text(),
-    key_performance: text(),
-    calendar_period: text(),
-    asset_name: text(),
-    asset_type: text(),
-    kpi_comparison_operator: text(),
-    kpi_measurement_type: text(),
-    kpi_status: text(),
-    tracking_period: text(),
-    trend: text(),
+    kpi_lower_threshold_critical: udm.text(),
+    kpi_lower_threshold_major: udm.text(),
+    kpi_lower_threshold_minor: udm.text(),
+    kpi_lower_threshold_ok: udm.text(),
+    kpi_lower_threshold_warning: udm.text(),
+    kpi_threshold_critical: udm.text(),
+    kpi_threshold_major: udm.text(),
+    kpi_threshold_minor: udm.text(),
+    kpi_threshold_ok: udm.text(),
+    kpi_threshold_warning: udm.text(),
+    kpi_value: udm.text(),
+    score: udm.text(),
+    kpi_unit_of_measure: udm.text(),
+    key_performance: udm.text(),
+    calendar_period: udm.text(),
+    asset_name: udm.text(),
+    asset_type: udm.text(),
+    kpi_comparison_operator: udm.text(),
+    kpi_measurement_type: udm.text(),
+    kpi_status: udm.text(),
+    tracking_period: udm.text(),
+    trend: udm.text(),
   },
 )`
   SELECT
@@ -1245,17 +1231,17 @@ const keyPerformanceIndicatorView = SQLa.safeViewDefinition(
 const attestationView = SQLa.safeViewDefinition(
   "attestation_view",
   {
-    attestation: text(),
-    attestation_explain: text(),
-    attested_on: date(),
-    expires_on: dateNullable(),
-    person_name: text(),
-    foreign_integration: text(),
-    assertion: text(),
-    assertion_explain: text(),
-    assertion_expires_on: dateNullable(),
-    assertion_expires_poam: text(),
-    boundary: text(),
+    attestation: udm.text(),
+    attestation_explain: udm.text(),
+    attested_on: udm.date(),
+    expires_on: udm.dateNullable(),
+    person_name: udm.text(),
+    foreign_integration: udm.text(),
+    assertion: udm.text(),
+    assertion_explain: udm.text(),
+    assertion_expires_on: udm.dateNullable(),
+    assertion_expires_poam: udm.text(),
+    boundary: udm.text(),
   },
 )`
   SELECT
@@ -1278,16 +1264,16 @@ const attestationView = SQLa.safeViewDefinition(
 const rootCauseAnalysisView = SQLa.safeViewDefinition(
   "root_cause_analysis_view",
   {
-    issue: text(),
-    source: text(),
-    cause_of_the_issue: text(),
-    testing_analysis: text(),
-    solution: text(),
-    modification_of_the_reported_issue: text(),
-    testing_for_modified_issue: text(),
-    test_results: text(),
-    probability_of_issue: dateNullable(),
-    likelihood_of_risk: text(),
+    issue: udm.text(),
+    source: udm.text(),
+    cause_of_the_issue: udm.text(),
+    testing_analysis: udm.text(),
+    solution: udm.text(),
+    modification_of_the_reported_issue: udm.text(),
+    testing_for_modified_issue: udm.text(),
+    test_results: udm.text(),
+    probability_of_issue: udm.dateNullable(),
+    likelihood_of_risk: udm.text(),
   },
 )`
   SELECT
@@ -1309,13 +1295,13 @@ const rootCauseAnalysisView = SQLa.safeViewDefinition(
 const vendorView = SQLa.safeViewDefinition(
   "vender_view",
   {
-    name: text(),
-    email: text(),
-    address: text(),
-    state: text(),
-    city: text(),
-    zip: text(),
-    country: text(),
+    name: udm.text(),
+    email: udm.text(),
+    address: udm.text(),
+    state: udm.text(),
+    city: udm.text(),
+    zip: udm.text(),
+    country: udm.text(),
   },
 )`
   SELECT pr.party_name as name,
@@ -1331,22 +1317,34 @@ const vendorView = SQLa.safeViewDefinition(
   INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
 
+const organizationRoleTypeProjectManagerTechnologyInsertion = udm
+  .organizationRoleType.insertDML({
+    code: "PROJECT_MANAGER_TECHNOLOGY",
+    value: "Project Manager Technology",
+  });
+
+const organizationRoleTypeProjectManagerQualityInsertion = udm
+  .organizationRoleType.insertDML({
+    code: "PROJECT_MANAGER_QUALITY",
+    value: "Project Manager Quality",
+  });
+
 const contractView = SQLa.safeViewDefinition(
   "contract_view",
   {
-    contract_by: text(),
-    contract_to: text(),
-    payment_type: text(),
-    contract_status: text(),
-    contract_type: text(),
-    document_reference: text(),
-    periodicity: text(),
-    start_date: date(),
-    end_date: dateNullable(),
-    date_of_last_review: dateNullable(),
-    date_of_next_review: dateNullable(),
-    date_of_contract_review: dateNullable(),
-    date_of_contract_approval: dateNullable(),
+    contract_by: udm.text(),
+    contract_to: udm.text(),
+    payment_type: udm.text(),
+    contract_status: udm.text(),
+    contract_type: udm.text(),
+    document_reference: udm.text(),
+    periodicity: udm.text(),
+    start_date: udm.date(),
+    end_date: udm.dateNullable(),
+    date_of_last_review: udm.dateNullable(),
+    date_of_next_review: udm.dateNullable(),
+    date_of_contract_review: udm.dateNullable(),
+    date_of_contract_approval: udm.dateNullable(),
   },
 )`
   SELECT
@@ -1371,7 +1369,7 @@ const contractView = SQLa.safeViewDefinition(
   INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
   INNER JOIN periodicity p on p.code = ct.periodicity_id`;
 
-export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
+export const allContentViews: SQLa.ViewDefinition<Any, udm.EmitContext>[] = [
   securityResponseTeamView,
   awarenessTrainingView,
   personSkillView,
@@ -1389,7 +1387,7 @@ export function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
   //       in gm.tablesDeclared, etc.
   // deno-fmt-ignore
-  return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+  return SQLa.SQL<udm.EmitContext>(gts.ddlOptions)`
     PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
 
     -- reference tables
@@ -1403,6 +1401,10 @@ export function sqlDDL() {
 
     -- seed Data
     ${allReferenceTables.map(e => e.seedDML).flat()}
+
+    ${organizationRoleTypeProjectManagerTechnologyInsertion}
+
+    ${organizationRoleTypeProjectManagerQualityInsertion}
     `;
 }
 

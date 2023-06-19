@@ -40,11 +40,6 @@ CREATE TABLE IF NOT EXISTS "execution_context" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS "organization_role_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "party_type" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
@@ -77,6 +72,13 @@ CREATE TABLE IF NOT EXISTS "contact_type" (
 );
 
 -- content tables
+CREATE TABLE IF NOT EXISTS "organization_role_type" (
+    "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "code" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN'
+);
 CREATE TABLE IF NOT EXISTS "party" (
     "party_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "party_type_id" TEXT NOT NULL,
@@ -187,24 +189,6 @@ INSERT INTO "execution_context" ("code", "value") VALUES ('TEST', 'test');
 INSERT INTO "execution_context" ("code", "value") VALUES ('DEVELOPMENT', 'devl');
 INSERT INTO "execution_context" ("code", "value") VALUES ('SANDBOX', 'sandbox');
 INSERT INTO "execution_context" ("code", "value") VALUES ('EXPERIMENTAL', 'experimental');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Senior Lead Software DevOps Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer');
-INSERT INTO "organization_role_type" ("code", "value") VALUES ('SECURITY_ENGINEER', 'Security Engineer');
 INSERT INTO "party_type" ("code", "value") VALUES ('PERSON', 'Person');
 INSERT INTO "party_type" ("code", "value") VALUES ('ORGANIZATION', 'Organization');
 INSERT INTO "party_role_type" ("code", "value") VALUES ('CUSTOMER', 'Customer');
@@ -235,7 +219,7 @@ INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person
 
 INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
 
-INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL);
+INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-05', NULL);
 
 INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), 'ASSOCIATE_MANAGER_TECHNOLOGY', NULL);
 
