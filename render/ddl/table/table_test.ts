@@ -634,6 +634,20 @@ Deno.test("SQL Aide (SQLa) Table DML Insert Statement", async (tc) => {
         );
       });
 
+      await innerTC.step("SQL DML basic with multiple rows", () => {
+        const { ctx } = sqlGen();
+        ta.assertEquals(
+          tableRF.insertDML([{ text: "text", int: 423 }, {
+            text: "text2",
+            int: 455,
+          }]).SQL(ctx),
+          uws(`
+            INSERT INTO "synthetic_table_with_auto_inc_pk" ("text", "text_nullable", "int", "int_nullable")
+                   VALUES ('text', NULL, 423, NULL),
+                          ('text2', NULL, 455, NULL)`),
+        );
+      });
+
       await innerTC.step("SQL DML with SQL text supplier property", () => {
         const { ctx } = sqlGen();
         ta.assertEquals(

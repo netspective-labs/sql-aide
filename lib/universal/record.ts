@@ -226,3 +226,52 @@ export function transformTabularRecords<
   }
   return result;
 }
+
+/**
+ * See if all the items in the array of table records are the same "shape"
+ * (have the same properties) as the first row in the array.
+ * @param rows the records to check
+ * @returns `{ success: true }` if successful, `{ success: false, issues: [] }` on failure
+ */
+// deno-lint-ignore ban-types
+export function isIdenticallyShaped<TableRecord extends object>(
+  rows: TableRecord[],
+) {
+  if (rows.length <= 1) {
+    return { success: true }; // empty array, no objects to check or single object array
+  }
+
+  const issues: { row: number; issue: string }[] = [];
+
+  // Get keys of the first object and sort them
+  const firstObjectKeys = Object.keys(rows[0]).sort();
+
+  // Iterate over the array starting from the second object
+  for (let i = 1; i < rows.length; i++) {
+    const currentObjectKeys = Object.keys(rows[i]).sort();
+
+    // Check if lengths of keys are same
+    if (firstObjectKeys.length !== currentObjectKeys.length) {
+      issues.push({
+        row: i,
+        issue:
+          `different number of members, expected ${firstObjectKeys.length} got ${currentObjectKeys.length}`,
+      });
+      continue;
+    }
+
+    // Check if all keys are the same
+    for (let j = 0; j < firstObjectKeys.length; j++) {
+      if (firstObjectKeys[j] !== currentObjectKeys[j]) {
+        issues.push({
+          row: i,
+          issue: `unexpected member ${currentObjectKeys[j]}`,
+        });
+        continue;
+      }
+    }
+  }
+
+  // If it gets through the whole array without returning false, then all objects have the same shape
+  return { success: issues.length == 0 ? true : false, issues };
+}
