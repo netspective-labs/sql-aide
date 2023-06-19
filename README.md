@@ -87,7 +87,7 @@ We use [Nextra](https://nextra.site/) as document publishing framework.
 ## Unit Testing
 
 ```bash
-deno test
+deno test -A --unstable
 ```
 
 ## Tagging and pushing commits
