@@ -158,9 +158,11 @@ Deno.test("psql aide resolve", () => {
     },
     ({ setables: { arg1, arg2, arg3 } }, template) =>
       template`
-        ${arg1.set}
-        ${arg2.set}
-        ${arg3.set}
+        ${arg1.set({ value: "arg1_default" })}
+
+        ${arg2.set({ value: "arg2_default" })}
+
+        ${arg3.set({ value: "arg3_default" })}
 
         this is a test of arg1: ${arg1.L} (literal)
         this is a test of arg2: ${arg2.s} (simple value)
@@ -169,9 +171,20 @@ Deno.test("psql aide resolve", () => {
   ta.assertEquals(
     transformed.body,
     ws.unindentWhitespace(`
-      \\set arg1
-      \\set arg2
-      \\set arg3
+      \\if :{?arg1}
+      \\else
+        \\set arg1 arg1_default
+      \\endif
+
+      \\if :{?arg2}
+      \\else
+        \\set arg2 arg2_default
+      \\endif
+
+      \\if :{?arg3}
+      \\else
+        \\set arg3 arg3_default
+      \\endif
 
       this is a test of arg1: arg1 (literal)
       this is a test of arg2: :'arg2' (simple value)
@@ -182,7 +195,7 @@ Deno.test("psql aide resolve", () => {
 Deno.test("psql aide resolve with embedded formats", () => {
   const transformed = mod.psqlAide(
     {
-      setX: z.string(),
+      setX: z.string().default("default_from_zod"),
       setY: z.number(),
       setZ: z.date(),
     },
@@ -207,9 +220,11 @@ Deno.test("psql aide resolve with embedded formats", () => {
       );
 
       template`
-        ${setX.set}
-        ${setY.set}
-        ${setZ.set}
+        ${setX.set()}
+
+        ${setY.set({ value: "setY_default" })}
+
+        ${setZ.set({ value: "setZ_default" })}
 
         this is a test of setX (outer): ${setX.L} (literal)
         this is a test of setY (outer): ${setY.s} (simple value)
@@ -219,12 +234,24 @@ Deno.test("psql aide resolve with embedded formats", () => {
         ${fa1.format()}`;
     },
   );
+
   ta.assertEquals(
     transformed.body,
     ws.unindentWhitespace(`
-      \\set setX
-      \\set setY
-      \\set setZ
+      \\if :{?setX}
+      \\else
+        \\set setX default_from_zod
+      \\endif
+
+      \\if :{?setY}
+      \\else
+        \\set setY setY_default
+      \\endif
+
+      \\if :{?setZ}
+      \\else
+        \\set setZ setZ_default
+      \\endif
 
       this is a test of setX (outer): setX (literal)
       this is a test of setY (outer): :'setY' (simple value)

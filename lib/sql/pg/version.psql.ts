@@ -138,9 +138,9 @@ export const psql = () => {
         },
       );
       SQL`
-        ${lifecycleSchema.set}
-        ${ltreeSchema.set}
-        ${semverSchema.set}
+        ${lifecycleSchema.set()}
+        ${ltreeSchema.set()}
+        ${semverSchema.set()}
         -- TODO: {unitTestSchema.set}
 
         CREATE OR REPLACE FUNCTION ${lifecycleSchema.I}.version_sql(schemaName text, versionTableName text, versionedItemColName text, defaultCtx text, initVersion semver) RETURNS text AS $$

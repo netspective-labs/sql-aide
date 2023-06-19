@@ -29,7 +29,12 @@ export type Setable<
   readonly name: Name;
   readonly index: number;
   readonly type: Type;
-  readonly set: () => string;
+  readonly set: (
+    options?: {
+      value?: string;
+      echo?: (supplied: string, setable: Setable<Name, Type>) => string;
+    },
+  ) => string;
   readonly s: () => string;
   readonly L: () => string;
   readonly I: () => string;
@@ -59,15 +64,35 @@ export const setable = <
   name: Name,
   type: Type,
   index: number,
-): Setable<Name, Type> => ({
-  name,
-  type,
-  index,
-  set: () => `\\set ${name}`,
-  s: () => `:'${name}'`,
-  L: () => `${name}`,
-  I: () => `:"${name}"`,
-});
+): Setable<Name, Type> => {
+  const defaultValue = ("safeParse" in type)
+    ? type.safeParse(undefined)
+    : undefined;
+  const instance: Setable<Name, Type> = {
+    name,
+    type,
+    index,
+    set: (options) =>
+      ws.unindentWhitespace(`
+        \\if :{?${name}}
+        \\else
+          \\set ${name} ${
+        options?.value ?? (defaultValue
+          ? ("data" in defaultValue ? defaultValue.data : "??value-no-data")
+          : "??value-undefined")
+      }
+        \\endif${
+        options?.echo?.(
+          `\n        \\echo ${name} is :'${name}'`,
+          instance,
+        ) ?? ""
+      }`),
+    s: () => `:'${name}'`,
+    L: () => `${name}`,
+    I: () => `:"${name}"`,
+  };
+  return instance;
+};
 
 export const clonedSetable = <Name, Type extends z.ZodTypeAny>(
   s: Setable<Name, Type>,
