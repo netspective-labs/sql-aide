@@ -15,6 +15,10 @@ export * as ws from "../universal/whitespace.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+// `use` helps with complex decisions in string template literals;
+// see: https://maxgreenwald.me/blog/do-more-with-run
+export const use = <T>(fn: () => T): T => fn();
+
 /**
  * The `Setable` type represents a named `set` expr that should be included
  * in a SQL format string. It includes a name, a type (represented by a Zod

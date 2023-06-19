@@ -230,6 +230,10 @@ Deno.test("psql aide resolve with embedded formats", () => {
         this is a test of setY (outer): ${setY.s} (simple value)
         this is a test of setZ (outer): ${setZ.I} (quoted identifier)
 
+        -- show how a complex function, which can return a string with lots of
+        -- decision-making can be \`use\`d
+        ${mod.use(() => `test`)}
+
         -- formatted
         ${fa1.format()}`;
     },
@@ -256,6 +260,10 @@ Deno.test("psql aide resolve with embedded formats", () => {
       this is a test of setX (outer): setX (literal)
       this is a test of setY (outer): :'setY' (simple value)
       this is a test of setZ (outer): :"setZ" (quoted identifier)
+
+      -- show how a complex function, which can return a string with lots of
+      -- decision-making can be \`use\`d
+      test
 
       -- formatted
       format($fmtBody$

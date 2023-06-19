@@ -7,6 +7,10 @@ import * as l from "./lint.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+// `use` helps with complex decisions in string template literals;
+// see: https://maxgreenwald.me/blog/do-more-with-run
+export const use = <T>(fn: () => T): T => fn();
+
 export interface SqlSymbolSupplier<Context extends SqlEmitContext> {
   readonly sqlSymbol: (
     ctx:
