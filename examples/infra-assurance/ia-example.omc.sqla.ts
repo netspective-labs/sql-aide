@@ -336,7 +336,7 @@ const organization = {
 const organizationDetails = organization.insertDML({
   name: "Orgnization Name",
   license: "XXXX-XXXXX-XXXX",
-  registration_date: new Date("2010-01-15"),
+  registration_date: new Date("2010-01-15T00:00:00.000Z"),
   email_address: "orgnization@email.com",
   phone_number: "0523 852 9945",
   ...organizationContact,
@@ -500,7 +500,7 @@ const awarenessTraining = {
       person_id: personDetails.personIdSS,
       organization_id: organizationDetails.organizationIdSS,
       training_status_id: "YES",
-      attended_date: new Date("02/22/2022"),
+      attended_date: new Date("2022-02-21T00:00:00.000Z"),
     }),
 
   ALL: () =>
@@ -553,7 +553,7 @@ const personRiskRegister = iam.riskRegister.insertDML({
   mitigation_further_actions: "Mitigation further actions",
   control_monitor_mitigation_actions_tracking_strategy:
     "Control monitor mitigation actions tracking strategy",
-  control_monitor_action_due_date: new Date("06/14/2022 00:00 AM"),
+  control_monitor_action_due_date: new Date("2022-06-13T00:00:00.000Z"),
   control_monitor_risk_owner_id: personDetails.personIdSS,
 });
 
