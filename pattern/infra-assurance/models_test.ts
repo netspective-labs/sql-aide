@@ -108,7 +108,7 @@ const organizationInsertion = udm.organization
     party_id: partyID,
     name: "Test Name",
     license: "Test License",
-    registration_date: new Date("02/06/2023"),
+    registration_date: new Date("2023-02-06T00:00:00.000Z"),
   });
 
 const personID = udm.person.select({
