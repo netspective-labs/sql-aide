@@ -159,7 +159,8 @@ export const organizationRole = gm.autoIncPkTable("organization_role", {
   organization_role_id: autoIncPK(),
   person_id: person.references.person_id(),
   organization_id: organization.references.organization_id(),
-  organization_role_type_id: organizationRoleType.references.code(),
+  organization_role_type_id: organizationRoleType.references
+    .organization_role_type_id(),
   ...gm.housekeeping.columns,
 });
 

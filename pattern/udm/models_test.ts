@@ -66,11 +66,21 @@ const personID = mod.person.select({
 });
 const organizationID = mod.organization.select({ name: "Test Name" });
 
+const organizationRoleTypeInsertion = mod.organizationRoleType
+  .insertDML({
+    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    value: "Associate Manager Technology",
+  });
+
+const organizationRoleTypeCode = mod.organizationRoleType.select({
+  code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+});
+
 const organizationRoleInsertion = mod.organizationRole
   .insertDML({
     person_id: personID,
     organization_id: organizationID,
-    organization_role_type_id: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    organization_role_type_id: organizationRoleTypeCode,
   });
 
 const contactElectronicInsertion = mod.contactElectronic
@@ -95,6 +105,8 @@ function sqlDDL() {
     ${partyRelationInsertion}
 
     ${organizationInsertion}
+
+    ${organizationRoleTypeInsertion}
 
     ${organizationRoleInsertion}
 

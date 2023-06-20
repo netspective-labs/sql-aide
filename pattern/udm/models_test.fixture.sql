@@ -101,12 +101,12 @@ CREATE TABLE IF NOT EXISTS "organization_role" (
     "organization_role_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
-    "organization_role_type_id" TEXT NOT NULL,
+    "organization_role_type_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
-    FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("code")
+    FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("organization_role_type_id")
 );
 CREATE TABLE IF NOT EXISTS "contact_electronic" (
     "contact_electronic_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -187,6 +187,8 @@ INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id"
 
 INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL);
 
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), 'ASSOCIATE_MANAGER_TECHNOLOGY', NULL);
+INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associate Manager Technology', NULL);
+
+INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL);
 
 INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL);
