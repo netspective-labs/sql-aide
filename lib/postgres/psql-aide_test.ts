@@ -9,6 +9,124 @@ const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
 };
 
+Deno.test("psql aide injectables", () => {
+  const i = mod.injectables({
+    arg1: z.string(),
+    arg2: z.number(),
+    arg3: z.date(),
+  });
+  ta.assertEquals(
+    Object.entries(i.injectables).map(([k, v]) => ({
+      key: k,
+      name: v.name,
+      type: v.type.constructor.name,
+      specs: [v.s(), v.L(), v.I()],
+    })),
+    [
+      {
+        key: "arg1",
+        name: "arg1",
+        type: "ZodString",
+        specs: [":'arg1'", "arg1", ':"arg1"'],
+      },
+      {
+        key: "arg2",
+        name: "arg2",
+        type: "ZodNumber",
+        specs: [":'arg2'", "arg2", ':"arg2"'],
+      },
+      {
+        key: "arg3",
+        name: "arg3",
+        type: "ZodDate",
+        specs: [":'arg3'", "arg3", ':"arg3"'],
+      },
+    ],
+  );
+});
+
+Deno.test("psql aide resolve", () => {
+  const transformed = mod.psqlAide(
+    {
+      arg1: z.string(),
+      arg2: z.number(),
+      arg3: z.date(),
+    },
+    ({ setables: { arg1, arg2, arg3 } }, template) =>
+      template`
+        ${arg1.set({ value: "arg1_default" })}
+
+        ${arg2.set({ value: "arg2_default" })}
+
+        ${arg3.set({ value: "arg3_default" })}
+
+        this is a test of arg1: ${arg1.L} (literal)
+        this is a test of arg2: ${arg2.s} (simple value)
+        this is a test of arg3: ${arg3.I} (quoted identifier)`,
+  );
+  ta.assertEquals(
+    transformed.body,
+    ws.unindentWhitespace(`
+      \\if :{?arg1}
+      \\else
+        \\set arg1 arg1_default
+      \\endif
+
+      \\if :{?arg2}
+      \\else
+        \\set arg2 arg2_default
+      \\endif
+
+      \\if :{?arg3}
+      \\else
+        \\set arg3 arg3_default
+      \\endif
+
+      this is a test of arg1: arg1 (literal)
+      this is a test of arg2: :'arg2' (simple value)
+      this is a test of arg3: :"arg3" (quoted identifier)`),
+  );
+});
+
+Deno.test("psql aide resolve with diagnostics", () => {
+  let diag = 0;
+  const ds: mod.DiagnosticsSupplier = {
+    diagnostics: (_defaultValue) => `DIAGNOSTIC_${++diag}`,
+  };
+  const transformed = mod.psqlAide(
+    {
+      arg1: z.string(),
+      arg2: z.number(),
+      arg3: z.date(),
+    },
+    ({ setables: { arg1, arg2, arg3 } }, template) =>
+      template`
+        ${arg1.set({ value: "arg1_default", ...ds })}
+
+        ${arg2.set({ value: "arg2_default", ...ds })}
+
+        ${arg3.set({ value: "arg3_default", ...ds })}
+
+        this is a test of arg1: ${arg1.L} (literal)
+        this is a test of arg2: ${arg2.s} (simple value)
+        this is a test of arg3: ${arg3.I} (quoted identifier)`,
+    ds,
+  );
+  ta.assertEquals(
+    transformed.body,
+    ws.unindentWhitespace(`
+      -- set arg1 arg1_default
+
+      -- set arg2 arg2_default
+
+      -- set arg3 arg3_default
+
+      this is a test of arg1: DIAGNOSTIC_1 (literal)
+      this is a test of arg2: DIAGNOSTIC_2 (simple value)
+      this is a test of arg3: DIAGNOSTIC_3 (quoted identifier)`),
+  );
+});
+
 Deno.test("psql format aide arguments", () => {
   const i = mod.injectables({
     set4: z.date(),
@@ -113,82 +231,41 @@ Deno.test("psql format aide resolve", () => {
   );
 });
 
-Deno.test("psql aide injectables", () => {
-  const i = mod.injectables({
-    arg1: z.string(),
-    arg2: z.number(),
-    arg3: z.date(),
-  });
-  ta.assertEquals(
-    Object.entries(i.injectables).map(([k, v]) => ({
-      key: k,
-      name: v.name,
-      type: v.type.constructor.name,
-      specs: [v.s(), v.L(), v.I()],
-    })),
-    [
-      {
-        key: "arg1",
-        name: "arg1",
-        type: "ZodString",
-        specs: [":'arg1'", "arg1", ':"arg1"'],
-      },
-      {
-        key: "arg2",
-        name: "arg2",
-        type: "ZodNumber",
-        specs: [":'arg2'", "arg2", ':"arg2"'],
-      },
-      {
-        key: "arg3",
-        name: "arg3",
-        type: "ZodDate",
-        specs: [":'arg3'", "arg3", ':"arg3"'],
-      },
-    ],
-  );
-});
-
-Deno.test("psql aide resolve", () => {
-  const transformed = mod.psqlAide(
+Deno.test("psql format aide resolve with diagnostics", () => {
+  let diag = 0;
+  const ds: mod.DiagnosticsSupplier = {
+    diagnostics: (_defaultValue) => `DIAGNOSTIC_${++diag}`,
+  };
+  const transformed = mod.formatAide(
     {
       arg1: z.string(),
       arg2: z.number(),
       arg3: z.date(),
     },
-    ({ setables: { arg1, arg2, arg3 } }, template) =>
+    ({ injectables: { arg1, arg2, arg3 } }, template) =>
       template`
-        ${arg1.set({ value: "arg1_default" })}
-
-        ${arg2.set({ value: "arg2_default" })}
-
-        ${arg3.set({ value: "arg3_default" })}
-
         this is a test of arg1: ${arg1.L} (literal)
         this is a test of arg2: ${arg2.s} (simple value)
         this is a test of arg3: ${arg3.I} (quoted identifier)`,
+    ds,
   );
   ta.assertEquals(
     transformed.body,
     ws.unindentWhitespace(`
-      \\if :{?arg1}
-      \\else
-        \\set arg1 arg1_default
-      \\endif
-
-      \\if :{?arg2}
-      \\else
-        \\set arg2 arg2_default
-      \\endif
-
-      \\if :{?arg3}
-      \\else
-        \\set arg3 arg3_default
-      \\endif
-
-      this is a test of arg1: arg1 (literal)
-      this is a test of arg2: :'arg2' (simple value)
-      this is a test of arg3: :"arg3" (quoted identifier)`),
+      this is a test of arg1: DIAGNOSTIC_1 (literal)
+      this is a test of arg2: DIAGNOSTIC_2 (simple value)
+      this is a test of arg3: DIAGNOSTIC_3 (quoted identifier)`),
+  );
+  ta.assertEquals(
+    transformed.format((par) =>
+      Object.values(par.injectables).map((i) => i.name)
+    ),
+    ws.unindentWhitespace(`
+    format($fmtBody$
+      this is a test of arg1: DIAGNOSTIC_1 (literal)
+      this is a test of arg2: DIAGNOSTIC_2 (simple value)
+      this is a test of arg3: DIAGNOSTIC_3 (quoted identifier)
+    $fmtBody$, arg1, arg2, arg3)`),
   );
 });
 

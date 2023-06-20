@@ -19,6 +19,13 @@ type Any = any;
 // see: https://maxgreenwald.me/blog/do-more-with-run
 export const use = <T>(fn: () => T): T => fn();
 
+export type DiagnosticsSupplier = {
+  readonly diagnostics: (defaultV: (() => string) | Any) => string;
+};
+export const isDiagnosticsSupplier = safety.typeGuard<DiagnosticsSupplier>(
+  "diagnostics",
+);
+
 /**
  * The `Setable` type represents a named `set` expr that should be included
  * in a SQL format string. It includes a name, a type (represented by a Zod
@@ -72,12 +79,26 @@ export const setable = <
   const defaultValue = ("safeParse" in type)
     ? type.safeParse(undefined)
     : undefined;
+  function wrapDiagnostics(defaultFn: () => string) {
+    return function () {
+      if (
+        arguments.length > 0 && isDiagnosticsSupplier(arguments[0]) &&
+        arguments[0].diagnostics != undefined
+      ) {
+        return arguments[0].diagnostics(defaultValue ?? defaultFn);
+      }
+      return defaultFn();
+    };
+  }
   const instance: Setable<Name, Type> = {
     name,
     type,
     index,
-    set: (options) =>
-      ws.unindentWhitespace(`
+    set: function (options) {
+      if (isDiagnosticsSupplier(options)) {
+        return `-- \set ${name} ${options?.value ?? defaultValue ?? "??"}`;
+      }
+      return ws.unindentWhitespace(`
         \\if :{?${name}}
         \\else
           \\set ${name} ${
@@ -90,10 +111,11 @@ export const setable = <
           `\n        \\echo ${name} is :'${name}'`,
           instance,
         ) ?? ""
-      }`),
-    s: () => `:'${name}'`,
-    L: () => `${name}`,
-    I: () => `:"${name}"`,
+      }`);
+    },
+    s: wrapDiagnostics(() => `:'${name}'`),
+    L: wrapDiagnostics(() => `${name}`),
+    I: wrapDiagnostics(() => `:"${name}"`),
   };
   return instance;
 };
@@ -128,14 +150,30 @@ export const formatArg = <
   name: ArgName,
   type: ArgType,
   index: number,
-): FormatArgument<ArgName, ArgType> => ({
-  name: name as ArgName,
-  type,
-  index,
-  s: () => `%${index + 1}$s`,
-  L: () => `%${index + 1}$L`,
-  I: () => `%${index + 1}$I`,
-});
+): FormatArgument<ArgName, ArgType> => {
+  const defaultValue = ("safeParse" in type)
+    ? type.safeParse(undefined)
+    : undefined;
+  function wrapDiagnostics(defaultFn: () => string) {
+    return function () {
+      if (
+        arguments.length > 0 && isDiagnosticsSupplier(arguments[0]) &&
+        arguments[0].diagnostics != undefined
+      ) {
+        return arguments[0].diagnostics(defaultValue ?? defaultFn);
+      }
+      return defaultFn();
+    };
+  }
+  return {
+    name: name as ArgName,
+    type,
+    index,
+    s: wrapDiagnostics(() => `%${index + 1}$s`),
+    L: wrapDiagnostics(() => `%${index + 1}$L`),
+    I: wrapDiagnostics(() => `%${index + 1}$I`),
+  };
+};
 
 export type Injectable<Name, Type extends z.ZodTypeAny> =
   | Setable<Name, Type>
@@ -225,7 +263,13 @@ export type InjectableExprScalar =
  */
 export type InjectableExpr =
   | InjectableExprScalar
-  | ((index: number, expressions: InjectableExpr[]) => InjectableExprScalar);
+  | ((
+    options?: {
+      readonly expr: InjectableExpr;
+      readonly exprIndex: number;
+      readonly expressions: InjectableExpr[];
+    } & Partial<DiagnosticsSupplier>,
+  ) => InjectableExprScalar);
 
 /**
  * The `psqlAide` function is a factory function that creates an instance of the
@@ -267,7 +311,7 @@ export function psqlAideCustom<InjectablesShape extends InjectablesArgsShape>(
       literals: TemplateStringsArray,
       suppliedExprs: unknown[],
     ) => ws.TemplateLiteralIndexedTextSupplier;
-  },
+  } & Partial<DiagnosticsSupplier>,
 ) {
   const interpolate: (
     literals: TemplateStringsArray,
@@ -278,11 +322,20 @@ export function psqlAideCustom<InjectablesShape extends InjectablesArgsShape>(
       : (index: number) => literals[index];
 
     // if any expressions are functions, resolve them so that the preprocessor
-    // can see them as values
-    const expressions = suppliedExprs.map((e, exprIndex, expressions) =>
-      typeof e === "function" ? e(exprIndex, expressions) : e
+    // can see them as values; when you see ${Setable.s} or Setable.I or .L
+    // or ${FormatArgument.s} or FormatArgument.I or .L those will all be
+    // handled in here because they're functions. Each function will be passed
+    // in an optional "context" of the expression details so it can return
+    // whatever makes sense.
+    const diagnostics = paOptions?.diagnostics;
+    const expressions = suppliedExprs.map((expr, exprIndex, expressions) =>
+      typeof expr === "function"
+        ? expr({ expr, exprIndex, expressions, diagnostics })
+        : expr
     );
 
+    // after all expressions are handled then their final results will be
+    // appended to the interpolated text
     let interpolated = "";
     const interpolateSingleExpr = (
       expr: InjectableExprScalar,
@@ -362,8 +415,10 @@ export function psqlAide<ArgsShape extends InjectablesArgsShape>(
       ...suppliedExprs: InjectableExpr[]
     ) => { readonly body: string },
   ) => void,
+  paOptions?: Partial<DiagnosticsSupplier>,
 ) {
   return psqlAideCustom(argsShape, resolve, {
+    ...paOptions,
     literalSupplier: ws.whitespaceSensitiveTemplateLiteralSupplier,
   });
 }
@@ -382,7 +437,7 @@ export function formatAideCustom<ArgsShape extends InjectablesArgsShape>(
       literals: TemplateStringsArray,
       suppliedExprs: unknown[],
     ) => ws.TemplateLiteralIndexedTextSupplier;
-  },
+  } & Partial<DiagnosticsSupplier>,
 ) {
   const pa = psqlAideCustom(argsShape, resolve, {
     ...faOptions,
@@ -418,8 +473,10 @@ export function formatAide<ArgsShape extends InjectablesArgsShape>(
       ...suppliedExprs: InjectableExpr[]
     ) => { readonly body: string },
   ) => void,
+  faOptions?: Partial<DiagnosticsSupplier>,
 ) {
   return formatAideCustom(argsShape, resolve, {
+    ...faOptions,
     literalSupplier: ws.whitespaceSensitiveTemplateLiteralSupplier,
   });
 }
