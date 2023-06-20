@@ -363,12 +363,12 @@ CREATE TABLE IF NOT EXISTS "organization_role" (
     "organization_role_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
-    "organization_role_type_id" TEXT NOT NULL,
+    "organization_role_type_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
-    FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("code")
+    FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("organization_role_type_id")
 );
 CREATE TABLE IF NOT EXISTS "contact_electronic" (
     "contact_electronic_id" INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -117,11 +117,21 @@ const personID = udm.person.select({
 });
 const organizationID = udm.organization.select({ name: "Test Name" });
 
+const organizationRoleTypeInsertion = udm.organizationRoleType
+  .insertDML({
+    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    value: "Associate Manager Technology",
+  });
+
+const organizationRoleTypeCode = udm.organizationRoleType.select({
+  code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+});
+
 const organizationRoleInsertion = udm.organizationRole
   .insertDML({
     person_id: personID,
     organization_id: organizationID,
-    organization_role_type_id: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    organization_role_type_id: organizationRoleTypeCode,
   });
 
 const contactElectronicInsertion = udm.contactElectronic
@@ -161,6 +171,8 @@ function sqlDDL() {
     ${partyRelationInsertion}
 
     ${organizationInsertion}
+
+    ${organizationRoleTypeInsertion}
 
     ${organizationRoleInsertion}
 

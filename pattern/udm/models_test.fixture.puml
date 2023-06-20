@@ -76,7 +76,7 @@
     --
     * person_id: INTEGER
     * organization_id: INTEGER
-    * organization_role_type_id: TEXT
+    * organization_role_type_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
   }
