@@ -1,5 +1,5 @@
 #!/usr/bin/env -S deno run --allow-all
-import * as g from "./governance.ts";
+import * as g from "./pgdcp.ts";
 
 // see https://maxgreenwald.me/blog/do-more-with-run
 // const run = <T>(fn: () => T): T => fn();

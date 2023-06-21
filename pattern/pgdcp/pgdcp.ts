@@ -1,16 +1,17 @@
 import {
+  govnPattern as gp,
   path,
   persistContent as pc,
+  pgGovnPattern as pggp,
   pgSQLa,
   SQLa,
-  typicalPattern as tp,
   zod as z,
 } from "./deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export interface PgDcpEmitContext extends SQLa.SqlEmitContext {
+export interface PgDcpEmitContext extends gp.GovernedEmitContext {
   readonly isPgDcpEmitContext: true;
 }
 
@@ -76,16 +77,10 @@ export class PgDcpEmitCoordinator<
   PgDomainDefns,
   PgDcpEmitContext
 > {
-  readonly gtState = tp.governedTemplateState<
-    tp.GovernedDomain,
+  readonly governedModel = pggp.PgDcpIM.prime<
+    gp.GovernedDomain,
     PgDcpEmitContext
   >();
-  readonly governedModel = tp.governedModel<
-    tp.GovernedDomain,
-    PgDcpEmitContext
-  >(
-    this.gtState.ddlOptions,
-  );
 
   protected constructor(
     readonly init: pgSQLa.EmitCoordinatorInit<
@@ -110,12 +105,7 @@ export class PgDcpEmitCoordinator<
   }
 
   sqlEmitContext(): PgDcpEmitContext {
-    return {
-      isPgDcpEmitContext: true,
-      ...SQLa.typicalSqlEmitContext({
-        sqlDialect: SQLa.postgreSqlDialect(),
-      }),
-    };
+    return this.governedModel.templateState.context();
   }
 
   subjectArea(target: SchemaName | SQLa.SqlNamespaceSupplier) {
