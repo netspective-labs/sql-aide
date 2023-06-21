@@ -548,9 +548,11 @@ export function pgDcpState<
   return { ...stateSE, lc, ae, c };
 }
 
+export type SqlFileConfidentiality = "non-sensitive" | "contains-secrets";
+
 export interface SqlFilePersistProvenance extends pc.PersistProvenance {
   readonly index?: number;
-  readonly confidentiality: "non-sensitive" | "contains-secrets";
+  readonly confidentiality: SqlFileConfidentiality;
 }
 
 export function pgDcpPersister({ importMeta, sources }: {
@@ -565,19 +567,31 @@ export function pgDcpPersister({ importMeta, sources }: {
         ? file
         : path.fromFileUrl(importMeta.resolve(`./${file}`)),
     content: async function* () {
-      // in our case we assume that each `psql` file X is in a `X.sqla.ts`
-      // source file and that it's executable and that executing it will
-      // return its `psl` content which needs to be saved to `X.auto.psql`.
       for (const s of sources) {
+        // a source can either supply its content or be a file that, when
+        // executed, will supply content in STDOUT.
         const source = path.fromFileUrl(importMeta.resolve(s.source));
         persistIndex = s.index ?? persistIndex + 1;
+        const basename = () =>
+          `${persistIndex.toString().padStart(3, "0")}_${
+            path.basename(source, ".sqla.ts") + ".auto.psql"
+          }`;
+
+        // if the source implements PersistableContent then it means it's
+        // computing its content in Deno (or some other way) so we just
+        // use the content as-is with our filenaming convention.
+        if (pc.isPersistableContent<SqlFilePersistProvenance>(s)) {
+          yield { ...s, provenance: () => ({ ...s, source }), basename };
+          continue;
+        }
+
+        // if we get to here then we assume a `psql` file X is in a `X.sqla.ts`
+        // source file and that it's executable and that executing it will
+        // return its `psl` content which needs to be saved to `X.auto.psql`.
         yield pc.persistCmdOutput({
           // deno-fmt-ignore
           provenance: () => ({ ...s, source }),
-          basename: () =>
-            `${persistIndex.toString().padStart(3, "0")}_${
-              path.basename(source, ".sqla.ts") + ".auto.psql"
-            }`,
+          basename,
         });
       }
     },
