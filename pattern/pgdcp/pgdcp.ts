@@ -58,6 +58,15 @@ export type PgDcpExtensionDefns = {
   // this.supa_audit = this.extension("supa_audit");
 };
 
+export enum ExecutionContext {
+  PRODUCTION = "production",
+  TEST = "test",
+  DEVELOPMENT = "devl",
+  SANDBOX = "sandbox",
+  EXPERIMENTAL = "experimental",
+}
+export const executionContexts = Object.values(ExecutionContext);
+
 export type PgDcpPgDomainDefns = {
   readonly execution_host_identity: SQLa.SqlDomain<
     Any,
@@ -294,86 +303,6 @@ export class PgDcpLifecycle<
   }
 }
 
-export enum ExecutionContext {
-  PRODUCTION = "production",
-  TEST = "test",
-  DEVELOPMENT = "devl",
-  SANDBOX = "sandbox",
-  EXPERIMENTAL = "experimental",
-}
-export const executionContexts = Object.values(ExecutionContext);
-
-export class PgDcpContext<
-  SchemaDefns extends PgDcpSchemaDefns,
-  ExtensionDefns extends PgDcpExtensionDefns,
-  PgDomainDefns extends PgDcpPgDomainDefns,
-> {
-  readonly subjectArea: string;
-  readonly cSchema: SQLa.SchemaDefinition<
-    "dcp_context",
-    PgDcpEmitContext
-  >;
-  protected constructor(
-    readonly ec: PgDcpEmitCoordinator<
-      SchemaDefns,
-      ExtensionDefns,
-      PgDomainDefns
-    >,
-  ) {
-    this.cSchema = ec.schemaDefns.dcp_context;
-    this.subjectArea = ec.subjectArea(this.cSchema);
-  }
-
-  storage() {
-    const { governedModel: gm, governedModel: { domains: d } } = this.ec;
-
-    const execCtx = gm.textEnumTable("execution_context", ExecutionContext, {
-      sqlNS: this.cSchema,
-    });
-
-    const singletonId = SQLa.declareZodTypeSqlDomainFactoryFromHook(
-      "singleton_id",
-      (_zodType, init) => {
-        return {
-          ...d.sdf.anySDF.defaults<Any>(
-            z.boolean().default(true).optional(),
-            { isOptional: true, ...init },
-          ),
-          sqlDataType: () => ({ SQL: () => `BOOL` }),
-          sqlDefaultValue: () => ({ SQL: () => `TRUE CHECK (singleton_id)` }),
-        };
-      },
-    );
-
-    const context = SQLa.tableDefinition(
-      "context",
-      {
-        singleton_id: gm.tcFactory.unique(
-          z.boolean(SQLa.zodSqlDomainRawCreateParams(singletonId)),
-        ),
-        active: execCtx.references.code(),
-        host: d.text(),
-      },
-      { sqlNS: this.cSchema },
-    );
-    return { execCtx, context };
-  }
-
-  static init<
-    SchemaDefns extends PgDcpSchemaDefns,
-    ExtensionDefns extends PgDcpExtensionDefns,
-    PgDomainDefns extends PgDcpPgDomainDefns,
-  >(
-    ec: PgDcpEmitCoordinator<
-      SchemaDefns,
-      ExtensionDefns,
-      PgDomainDefns
-    >,
-  ) {
-    return new PgDcpContext(ec);
-  }
-}
-
 export class PgDcpAssurance<
   SchemaDefns extends PgDcpSchemaDefns,
   ExtensionDefns extends PgDcpExtensionDefns,
@@ -543,9 +472,8 @@ export function pgDcpState<
 
   const lc = PgDcpLifecycle.init(ec, subjectArea);
   const ae = PgDcpAssurance.init(ec, subjectArea);
-  const c = PgDcpContext.init(ec);
 
-  return { ...stateSE, lc, ae, c };
+  return { ...stateSE, lc, ae };
 }
 
 export type SqlFileConfidentiality = "non-sensitive" | "contains-secrets";
@@ -559,7 +487,11 @@ export function pgDcpPersister({ importMeta, sources }: {
   readonly importMeta: ImportMeta;
   readonly sources: SqlFilePersistProvenance[];
 }) {
-  const relativeToCWD = (fsPath: string) => path.relative(Deno.cwd(), fsPath);
+  const relativeToCWD = (fsPath: string) =>
+    path.relative(
+      Deno.cwd(),
+      fsPath.startsWith("file:") ? path.fromFileUrl(fsPath) : fsPath,
+    );
   let persistIndex = -1;
   return pc.textFilesPersister<SqlFilePersistProvenance>({
     destPath: (file) =>
@@ -572,16 +504,16 @@ export function pgDcpPersister({ importMeta, sources }: {
         // executed, will supply content in STDOUT.
         const source = path.fromFileUrl(importMeta.resolve(s.source));
         persistIndex = s.index ?? persistIndex + 1;
-        const basename = () =>
-          `${persistIndex.toString().padStart(3, "0")}_${
-            path.basename(source, ".sqla.ts") + ".auto.psql"
-          }`;
+        const piPrefix = persistIndex.toString().padStart(3, "0");
 
         // if the source implements PersistableContent then it means it's
         // computing its content in Deno (or some other way) so we just
         // use the content as-is with our filenaming convention.
         if (pc.isPersistableContent<SqlFilePersistProvenance>(s)) {
-          yield { ...s, provenance: () => ({ ...s, source }), basename };
+          yield {
+            ...s,
+            basename: async () => `${piPrefix}_${await s.basename()}`,
+          };
           continue;
         }
 
@@ -591,7 +523,8 @@ export function pgDcpPersister({ importMeta, sources }: {
         yield pc.persistCmdOutput({
           // deno-fmt-ignore
           provenance: () => ({ ...s, source }),
-          basename,
+          basename: () =>
+            `${piPrefix}_${path.basename(source, ".sqla.ts") + ".auto.psql"}`,
         });
       }
     },

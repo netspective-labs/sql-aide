@@ -1,103 +1,180 @@
 #!/usr/bin/env -S deno run --allow-all
-import * as g from "./pgdcp.ts";
 
-// see https://maxgreenwald.me/blog/do-more-with-run
-// const run = <T>(fn: () => T): T => fn();
+import { persistContent as pc, SQLa, zod as z } from "./deps.ts";
+import * as pgdcp from "./pgdcp.ts";
 
-export const context = () => {
-  const state = g.pgDcpState(import.meta, {
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
+export class PgDcpContext {
+  readonly state = pgdcp.pgDcpState(import.meta, {
     principal: "dcp_context",
     schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy"],
   });
-  const { ec, lc, ae, c, schemas, ec: { pgDomains: pgd } } = state;
-  const [sQR] = ec.schemaQualifier("dcp_context");
 
-  const cStorage = c.storage();
-  // deno-fmt-ignore
-  const constructStorage = lc.constructStorage()`
-    ${pgd.execution_host_identity}
+  readonly subjectArea: string;
+  readonly cSchema = this.state.ec.schemaDefns.dcp_context;
+  readonly execCtxTable = this.state.ec.governedModel.textEnumTable(
+    "execution_context",
+    pgdcp.ExecutionContext,
+    {
+      sqlNS: this.cSchema,
+    },
+  );
 
-    ${cStorage.execCtx}
+  protected constructor() {
+    this.subjectArea = this.state.ec.subjectArea(this.cSchema);
+  }
 
-    -- TODO: the host column in context table should be \`execution_host_identity\` not TEXT
-    -- TODO: see ticket #87 - REFERENCES "execution_context"("code") should be schema-qualified
-    ${cStorage.context}
+  constructStorage() {
+    const { ec, lc, ec: { pgDomains: pgd } } = this.state;
+    const { governedModel: gm, governedModel: { domains: d } } = ec;
 
-    -- TODO: add trigger to ensure that no improper values can be added into context`;
+    const singletonId = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+      "singleton_id",
+      (_zodType, init) => {
+        return {
+          ...d.sdf.anySDF.defaults<Any>(
+            z.boolean().default(true).optional(),
+            { isOptional: true, ...init },
+          ),
+          sqlDataType: () => ({ SQL: () => `BOOL` }),
+          sqlDefaultValue: () => ({ SQL: () => `TRUE CHECK (singleton_id)` }),
+        };
+      },
+    );
 
-  // deno-fmt-ignore
-  const ecConstantFn = (ec: g.ExecutionContext) => ({
-    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'`
-  });
+    const context = SQLa.tableDefinition(
+      "context",
+      {
+        singleton_id: gm.tcFactory.unique(
+          z.boolean(
+            SQLa.zodSqlDomainRawCreateParams(singletonId),
+          ),
+        ),
+        active: this.execCtxTable.references.code(),
+        host: d.text(),
+      },
+      { sqlNS: this.cSchema },
+    );
 
-  // deno-fmt-ignore
-  const isCompareExecCtxFn = (ec: g.ExecutionContext) => ({
-    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 = ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
-  });
-
-  // deno-fmt-ignore
-  const isActiveExecCtxFn = (ec: g.ExecutionContext) => ({
-    SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active = ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
-  });
-
-  const dropExecCtxFns = (
-    ec: g.ExecutionContext,
-  ) => [{
-    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`exec_context_${ec}`)}()`,
-  }, {
-    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_exec_context_${ec}`)}()`,
-  }, {
-    SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_active_context_${ec}`)}()`,
-  }];
-
-  // deno-fmt-ignore
-  const constructIdempotent = lc.constructIdempotent()`
-    ${g.executionContexts.map(ec => ecConstantFn(ec))}
-
-    ${g.executionContexts.map(ec => isCompareExecCtxFn(ec))}
-
-    ${g.executionContexts.map(ec => isActiveExecCtxFn(ec))}`;
-
-  // deno-fmt-ignore
-  const destroyIdempotent = lc.destroyIdempotent()`
-    -- TODO: DROP FUNCTION IF EXISTS {lcf.unitTest(state).qName}();
-    ${g.executionContexts.map(ec => dropExecCtxFns(ec)).flat()}`;
-
-  const populateSeedData = lc.populateSeedData()`
-    ${cStorage.execCtx.seedDML}`;
-
-  // deno-fmt-ignore
-  const unitTest = ae.unitTest()`
-    ${g.executionContexts.map(ec => [
-      ae.hasFunction("dcp_context", `exec_context_${ec}`),
-      ae.hasFunction("dcp_context", `is_exec_context_${ec}`),
-      ae.hasFunction("dcp_context", `is_active_context_${ec}`)]).flat()}`;
-
-  return {
-    ...state,
-    constructStorage,
-    // TODO: is search_path required? switch to fully qualified schema object names
     // deno-fmt-ignore
-    psqlText: ec.SQL()`
+    return lc.constructStorage()`
+      ${pgd.execution_host_identity}
+
+      ${this.execCtxTable}
+
+      -- TODO: the host column in context table should be \`execution_host_identity\` not TEXT
+      -- TODO: see ticket #87 - REFERENCES "execution_context"("code") should be schema-qualified
+      ${context}
+
+      -- TODO: add trigger to ensure that no improper values can be added into context`;
+  }
+
+  execCtxFunctions() {
+    const { ec } = this.state;
+    const [sQR] = ec.schemaQualifier("dcp_context");
+
+    // deno-fmt-ignore
+    const ecConstantFn = (ec: pgdcp.ExecutionContext) => ({
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'`
+    });
+
+    // deno-fmt-ignore
+    const isCompareExecCtxFn = (ec: pgdcp.ExecutionContext) => ({
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 = ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
+    });
+
+    // deno-fmt-ignore
+    const isActiveExecCtxFn = (ec: pgdcp.ExecutionContext) => ({
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active = ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
+    });
+
+    const dropExecCtxFns = (
+      ec: pgdcp.ExecutionContext,
+    ) => [{
+      SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`exec_context_${ec}`)}()`,
+    }, {
+      SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_exec_context_${ec}`)}()`,
+    }, {
+      SQL: () => `DROP FUNCTION IF EXISTS ${sQR(`is_active_context_${ec}`)}()`,
+    }];
+
+    return {
+      ecConstantFn,
+      isCompareExecCtxFn,
+      isActiveExecCtxFn,
+      dropExecCtxFns,
+    };
+  }
+
+  content() {
+    const { ae, ec, lc, schemas } = this.state;
+    const ecf = this.execCtxFunctions();
+
+    // deno-fmt-ignore
+    const psqlText = ec.SQL()`
       ${ec.psqlHeader}
 
       ${schemas}
 
-      ${constructStorage}
+      ${this.constructStorage()}
 
-      ${constructIdempotent}
+      ${lc.constructIdempotent()`
+        ${pgdcp.executionContexts.map((ec) => ecf.ecConstantFn(ec))}
 
-      ${destroyIdempotent}
+        ${pgdcp.executionContexts.map((ec) => ecf.isCompareExecCtxFn(ec))}
 
-      ${populateSeedData}
+        ${pgdcp.executionContexts.map((ec) => ecf.isActiveExecCtxFn(ec))}`}
 
-      ${unitTest}`,
-  };
-};
+      ${lc.destroyIdempotent()`
+        -- TODO: DROP FUNCTION IF EXISTS {lcf.unitTest(state).qName}();
+        ${pgdcp.executionContexts.map((ec) => ecf.dropExecCtxFns(ec)).flat()}`}
 
-export default context;
+      ${lc.populateSeedData()`
+        ${this.execCtxTable.seedDML}`}
+
+      ${ae.unitTest()`
+        ${pgdcp.executionContexts.map((ec) => [
+            ae.hasFunction("dcp_context", `exec_context_${ec}`),
+            ae.hasFunction("dcp_context", `is_exec_context_${ec}`),
+            ae.hasFunction("dcp_context", `is_active_context_${ec}`),
+          ]).flat()}`}`;
+
+    const provenance: pgdcp.SqlFilePersistProvenance = {
+      confidentiality: "non-sensitive",
+      source: import.meta.url,
+    };
+    const persistableSQL:
+      & pgdcp.SqlFilePersistProvenance
+      & pc.PersistableContent<pgdcp.SqlFilePersistProvenance> = {
+        ...provenance,
+        basename: () => `context.auto.psql`,
+        // deno-lint-ignore require-await
+        content: async () => {
+          return {
+            provenance,
+            text: psqlText.SQL(ec.sqlEmitContext()),
+          };
+        },
+      };
+
+    return {
+      ec: this.state.ec,
+      state: this.state,
+      party: this,
+      psqlText,
+      provenance,
+      persistableSQL,
+    };
+  }
+
+  static init() {
+    return new PgDcpContext();
+  }
+}
 
 if (import.meta.main) {
-  const tmpl = context();
-  console.log(tmpl.psqlText.SQL(tmpl.ec.sqlEmitContext()));
+  const content = PgDcpContext.init().content();
+  console.log(content.psqlText.SQL(content.ec.sqlEmitContext()));
 }

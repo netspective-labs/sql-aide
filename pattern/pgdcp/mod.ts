@@ -17,14 +17,14 @@ export * from "./context.sqla.ts";
 // module
 
 import * as g from "./pgdcp.ts";
+import * as c from "./context.sqla.ts";
 
 if (import.meta.main) {
+  const context = c.PgDcpContext.init();
+
   const persister = g.pgDcpPersister({
     importMeta: import.meta,
-    sources: [{
-      source: "./context.sqla.ts",
-      confidentiality: "non-sensitive",
-    }, {
+    sources: [context.content().persistableSQL, {
       source: "./engine.sqla.ts",
       confidentiality: "non-sensitive",
     }],
