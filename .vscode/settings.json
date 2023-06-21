@@ -3,7 +3,7 @@
     ".githooks/prepare-commit-msg": "typescript",
     "*.psql": "sql"
   },
-  "files.trimTrailingWhitespace": true,
+  "files.trimTrailingWhitespace": false,
   "git.autofetch": true,
   "terminal.integrated.fontFamily": "CascadianCode NF",
   "deno.enable": true,
@@ -16,14 +16,17 @@
   },
   "[javascript]": {
     "editor.formatOnSave": true,
+    "files.trimTrailingWhitespace": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "[json]": {
     "editor.formatOnSave": true,
+    "files.trimTrailingWhitespace": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "[jsonc]": {
     "editor.formatOnSave": true,
+    "files.trimTrailingWhitespace": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "[markdown]": {
@@ -38,6 +41,7 @@
   },
   "[typescript]": {
     "editor.formatOnSave": true,
+    "files.trimTrailingWhitespace": true,
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "git.decorations.enabled": true,
