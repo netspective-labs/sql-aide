@@ -32,6 +32,11 @@ Deno.test(`type guard`, () => {
   ta.assert(!isTestType({ invalidPropName: "test prop value" }));
 });
 
+Deno.test(`type guard strict`, () => {
+  const tgs = mod.typeGuardStrict<TestType>();
+  ta.assert(tgs({ testPropName: "test prop value" }));
+});
+
 Deno.test(`subtype guard`, () => {
   ta.assert(
     isTestSubType({
