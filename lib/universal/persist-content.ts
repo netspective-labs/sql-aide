@@ -6,13 +6,13 @@
  * PersistProvenance: An interface for content provenance which includes the
  * source of the content.
  *
- * PersistContent: A generic interface for the output any object which could be
+ * PersistableContent: A generic interface for the output any object which could be
  * a successful result with the text of the output or an error.
  *
  * persistCmdOutput: A function that runs a Deno command defined by the provided
- * provenance object and constructs a PersistContent object. This allows the
+ * provenance object and constructs a PersistableContent object. This allows the
  * STDOUT result of a CLI command to be persisted as a text file. It serves as
- * both a useful implementation of PersistContent but also an example of how you
+ * both a useful implementation of PersistableContent but also an example of how you
  * can get source text from anywhere.
  *
  * textFilesPersister: A function that persists an arbitrary set of text to an
@@ -20,7 +20,7 @@
  * and failures according to the provided optional methods.
  *
  * This module is designed with flexibility in mind, allowing the user to define
- * their own output (via PersistProvenance and PersistContent), how those
+ * their own output (via PersistProvenance and PersistableContent), how those
  * commands' results should be stored (via PersistStrategy), and even how to
  * handle successes and failures. The user may compose these pieces as needed to
  * handle a variety of scenarios for persisting Deno command outputs.
@@ -29,11 +29,13 @@
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+import { typeGuard } from "./safety.ts";
+
 export interface PersistProvenance {
   readonly source: string;
 }
 
-export interface PersistContent<Provenance extends PersistProvenance> {
+export interface PersistableContent<Provenance extends PersistProvenance> {
   readonly basename: () => Promise<string> | string;
   readonly content: () => Promise<
     {
@@ -46,6 +48,13 @@ export interface PersistContent<Provenance extends PersistProvenance> {
   >;
 }
 
+export function isPersistableContent<Provenance extends PersistProvenance>(
+  o: unknown,
+): o is PersistableContent<Provenance> {
+  const isPC = typeGuard<PersistableContent<Provenance>>("basename", "content");
+  return isPC(o);
+}
+
 export function persistCmdOutput<Provenance extends PersistProvenance>(
   source: {
     readonly provenance: () => Provenance;
@@ -53,7 +62,7 @@ export function persistCmdOutput<Provenance extends PersistProvenance>(
   },
 ) {
   const provenance = source.provenance();
-  const result: PersistContent<Provenance> = {
+  const result: PersistableContent<Provenance> = {
     basename: source.basename,
     content: async () => {
       try {
@@ -84,7 +93,7 @@ export interface TextFilePersistSuccess<Provenance extends PersistProvenance> {
 export function textFilesPersister<Provenance extends PersistProvenance>(
   strategy: {
     readonly destPath: (target: string) => string;
-    readonly content: () => AsyncGenerator<PersistContent<Provenance>>;
+    readonly content: () => AsyncGenerator<PersistableContent<Provenance>>;
     readonly persist?: (destFile: string, content: string) => Promise<void>;
     readonly finalize?: (
       state: {
