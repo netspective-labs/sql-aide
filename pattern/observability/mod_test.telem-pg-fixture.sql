@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS "span" (
-    "span_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "span_id" SERIAL PRIMARY KEY,
     "trace_id" TEXT NOT NULL,
     "parent_span_id" INTEGER,
     "name" TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "span" (
 );
 
 CREATE TABLE IF NOT EXISTS "span_attribute" (
-    "span_attribute_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "span_attribute_id" SERIAL PRIMARY KEY,
     "span_id" INTEGER NOT NULL,
     "key" TEXT NOT NULL,
     "value" TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS "span_attribute" (
 );
 
 CREATE TABLE IF NOT EXISTS "span_event" (
-    "span_event_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "span_event_id" SERIAL PRIMARY KEY,
     "span_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "timestamp" TIMESTAMP NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS "span_event" (
 );
 
 CREATE TABLE IF NOT EXISTS "span_link" (
-    "span_link_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "span_link_id" SERIAL PRIMARY KEY,
     "span_id" INTEGER NOT NULL,
     "linked_span_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS "span_link" (
 );
 
 CREATE TABLE IF NOT EXISTS "span_baggage" (
-    "span_baggage_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "span_baggage_id" SERIAL PRIMARY KEY,
     "span_id" INTEGER NOT NULL,
     "key" TEXT NOT NULL,
     "value" TEXT NOT NULL,

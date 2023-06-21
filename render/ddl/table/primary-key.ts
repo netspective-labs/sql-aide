@@ -84,6 +84,14 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
         isPrimaryKey: true,
         isExcludedFromInsertDML: true,
         isAutoIncrement: true,
+        sqlDataType: (purpose) => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
+              return `SERIAL`;
+            }
+            return sqlDomain.sqlDataType(purpose).SQL(ctx);
+          },
+        }),
         sqlPartial: (dest) => {
           if (dest === "create table, column defn decorators") {
             const ctcdd = sqlDomain?.sqlPartial?.(
@@ -93,6 +101,9 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
               SQL: (ctx) => {
                 if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
                   return `IDENTITY(1,1) PRIMARY KEY`;
+                }
+                if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
+                  return `PRIMARY KEY`;
                 }
                 return `PRIMARY KEY AUTOINCREMENT`;
               },
