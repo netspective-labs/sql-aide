@@ -285,6 +285,7 @@ export function governedModel<
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
         & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+      readonly sqlNS?: SQLa.SqlNamespaceSupplier;
     },
   ) => {
     const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
@@ -292,7 +293,7 @@ export function governedModel<
       columnsShape,
       {
         isIdempotent: true,
-        sqlNS: ddlOptions?.sqlNS,
+        sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
         constraints: options?.constraints,
       },
     );
@@ -346,6 +347,7 @@ export function governedModel<
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
         & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+      readonly sqlNS?: SQLa.SqlNamespaceSupplier;
     },
   ) => {
     const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
@@ -353,7 +355,7 @@ export function governedModel<
       columnsShape,
       {
         isIdempotent: true,
-        sqlNS: ddlOptions?.sqlNS,
+        sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
         constraints: options?.constraints,
       },
     );
