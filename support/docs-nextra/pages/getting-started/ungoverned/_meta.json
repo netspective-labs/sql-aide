@@ -5,5 +5,6 @@
   "04-zod-table-pk-fk-tmpl-dialects": "Multiple Zod Tables with Dialects and Naming",
   "05-unwrapping-zod-types": "Unwrapping Zod Types",
   "06-zod-type-baggage": "Zod Type Baggage",
-  "07-zod-schema-proxy": "Zod Schema Proxy"
+  "07-zod-schema-proxy": "Zod Schema Proxy",
+  "08-zod-table-pk-tmpl": "Single Zod Table (with PK and template)"
 }
