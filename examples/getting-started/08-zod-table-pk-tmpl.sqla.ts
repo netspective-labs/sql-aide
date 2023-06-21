@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/render/mod.ts";
+import * as SQLa from "../../render/mod.ts";
 
 type SyntheticContext = SQLa.SqlEmitContext;
 const pkcFactory = SQLa.primaryKeyColumnFactory<SyntheticContext>();
