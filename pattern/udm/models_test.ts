@@ -197,7 +197,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "25");
+    ta.assertEquals(output, "26");
   });
 
   // deno-lint-ignore require-await

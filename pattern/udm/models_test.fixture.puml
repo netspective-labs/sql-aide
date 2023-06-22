@@ -45,6 +45,8 @@
     * person_type_id: TEXT
     * person_first_name: TEXT
     * person_last_name: TEXT
+      honorific_prefix: TEXT
+      honorific_suffix: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
   }

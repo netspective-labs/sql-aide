@@ -364,84 +364,13 @@ export const raciMatrixActivity = gm.autoIncPkTable("raci_matrix_activity", {
   ...gm.housekeeping.columns,
 });
 
-export const party = gm.autoIncPkTable("party", {
-  party_id: udm.autoIncPK(),
-  party_type_id: udm.partyType.references.code(),
-  party_name: udm.text(),
-  ...gm.housekeeping.columns,
-});
-
 /**
  * Reference URL: https://help.salesforce.com/s/articleView?id=sf.c360_a_partyidentification_object.htm&type=5
  */
 
-export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
-  party_identifier_id: udm.autoIncPK(),
-  identifier_number: udm.text(),
-  party_identifier_type_id: udm.partyIdentifierType.references.code(),
-  party_id: party.references.party_id(),
-  ...gm.housekeeping.columns,
-});
-
-export const person = gm.autoIncPkTable("person", {
-  person_id: udm.autoIncPK(),
-  party_id: party.references.party_id(),
-  person_type_id: udm.personType.references.code(),
-  person_first_name: udm.text(),
-  person_last_name: udm.text(),
-  ...gm.housekeeping.columns,
-});
-
 /**
  * Reference URL: https://docs.oracle.com/cd/E29633_01/CDMRF/GUID-F52E49F4-AE6F-4FF5-8EEB-8366A66AF7E9.htm
  */
-
-export const partyRelation = gm.autoIncPkTable("party_relation", {
-  party_relation_id: udm.autoIncPK(),
-  party_id: party.references.party_id(),
-  related_party_id: party.references.party_id(),
-  relation_type_id: udm.partyRelationType.references.code(),
-  party_role_id: udm.partyRole.references.code().optional(),
-  ...gm.housekeeping.columns,
-});
-
-export const organization = gm.autoIncPkTable("organization", {
-  organization_id: udm.autoIncPK(),
-  party_id: party.references.party_id(),
-  name: udm.text(),
-  license: udm.text(),
-  registration_date: udm.date(),
-  ...gm.housekeeping.columns,
-});
-
-export const organizationRole = gm.autoIncPkTable("organization_role", {
-  organization_role_id: udm.autoIncPK(),
-  person_id: person.references.person_id(),
-  organization_id: organization.references.organization_id(),
-  organization_role_type_id: udm.organizationRoleType.references.code(),
-  ...gm.housekeeping.columns,
-});
-
-export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
-  contact_electronic_id: udm.autoIncPK(),
-  contact_type_id: udm.contactType.references.code(),
-  party_id: party.references.party_id(),
-  electronics_details: udm.text(),
-  ...gm.housekeeping.columns,
-});
-
-export const contactLand = gm.autoIncPkTable("contact_land", {
-  contact_land_id: udm.autoIncPK(),
-  contact_type_id: udm.contactType.references.code(),
-  party_id: party.references.party_id(),
-  address_line1: udm.text(),
-  address_line2: udm.text(),
-  address_zip: udm.text(),
-  address_city: udm.text(),
-  address_state: udm.text(),
-  address_country: udm.text(),
-  ...gm.housekeeping.columns,
-});
 
 /**
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
@@ -961,13 +890,10 @@ export const allContentTables: SQLa.TableDefinition<Any, udm.EmitContext>[] = [
   udm.contactLand,
   asset,
   vulnerabilitySource,
-  severity,
   vulnerability,
   threatSource,
   threatEvent,
-  assetRiskType,
   assetRisk,
-  priority,
   securityImpactAnalysis,
   impactOfRisk,
   proposedControls,
@@ -982,13 +908,7 @@ export const allContentTables: SQLa.TableDefinition<Any, udm.EmitContext>[] = [
   notes,
   auditAssertion,
   contract,
-  riskSubject,
-  riskType,
   riskRegister,
-  incidentCategory,
-  incidentSubCategory,
-  incidentType,
-  incidentStatus,
   incident,
   incidentRootCause,
   raciMatrixAssignment,
@@ -1016,7 +936,7 @@ const securityResponseTeamView = SQLa.safeViewDefinition(
   INNER JOIN person p ON p.person_id = sirt.person_id
   INNER JOIN organization o ON o.organization_id=sirt.organization_id
   INNER JOIN organization_role orl ON orl.person_id = sirt.person_id AND orl.organization_id = sirt.organization_id
-  INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+  INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
   INNER JOIN party pr ON pr.party_id = p.party_id
   INNER JOIN contact_electronic e ON e.party_id=pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'`;
 
@@ -1034,7 +954,7 @@ const awarenessTrainingView = SQLa.safeViewDefinition(
   FROM awareness_training at
   INNER JOIN person p ON p.person_id = at.person_id
   INNER JOIN organization_role orl ON orl.person_id = at.person_id AND orl.organization_id = at.organization_id
-  INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+  INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
   INNER JOIN training_subject sub ON sub.code = at.training_subject_id`;
 
 const personSkillView = SQLa.safeViewDefinition(
@@ -1049,7 +969,7 @@ const personSkillView = SQLa.safeViewDefinition(
   FROM person_skill ps
   INNER JOIN person p ON p.person_id = ps.person_id
   INNER JOIN skill s ON s.code = ps.skill_id
-  INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id`;
+  INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id,person_name,s.value,proficiency`;
 
 const securityIncidentResponseView = SQLa.safeViewDefinition(
   "security_incident_response_view",
@@ -1099,8 +1019,8 @@ const securityIncidentResponseView = SQLa.safeViewDefinition(
   i.detailed_description,p3.person_first_name || ' ' || p3.person_last_name AS assigned_to,
   i.assigned_date,i.investigation_details,i.containment_details,i.eradication_details,i.business_impact,
   i.lessons_learned,ist.value AS status,i.closed_date,i.feedback_from_business,i.reported_to_regulatory,i.report_date,i.report_time,
-  irc.description AS root_cause_of_the_issue,p1.value AS probability_of_issue,irc.testing_analysis AS testing_for_possible_root_cause_analysis,
-  irc.solution,p2.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
+  irc.description AS root_cause_of_the_issue,p4.value AS probability_of_issue,irc.testing_analysis AS testing_for_possible_root_cause_analysis,
+  irc.solution,p5.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
   FROM incident i
   INNER JOIN asset ast ON ast.asset_id = i.asset_id
   INNER JOIN incident_category ic ON ic.code = i.category_id
@@ -1112,8 +1032,8 @@ const securityIncidentResponseView = SQLa.safeViewDefinition(
   INNER JOIN person p3 ON p3.person_id = i.assigned_to_id
   INNER JOIN incident_status ist ON ist.code = i.status_id
   LEFT JOIN incident_root_cause irc ON irc.incident_id = i.incident_id
-  LEFT JOIN priority p1 ON p1.code = irc.probability_id
-  LEFT JOIN priority p2 ON p2.code = irc.likelihood_of_risk_id`;
+  LEFT JOIN priority p4 ON p4.code = irc.probability_id
+  LEFT JOIN priority p5 ON p5.code = irc.likelihood_of_risk_id`;
 
 const raciMatrixAssignmentView = SQLa.safeViewDefinition(
   "raci_matrix_assignment_view",
@@ -1124,12 +1044,12 @@ const raciMatrixAssignmentView = SQLa.safeViewDefinition(
     assignment_nature: udm.text(),
   },
 )`
-  SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rma.activity,
+  SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rmac.activity,
   rman.value AS assignment_nature
   FROM raci_matrix_assignment rma
   INNER JOIN person p ON p.person_id = rma.person_id
   INNER JOIN raci_matrix_subject rms on rms.code = rma.subject_id
-  INNER JOIN raci_matrix_activity rma on rma.raci_matrix_activity_id = rma.activity_id
+  INNER JOIN raci_matrix_activity rmac on rmac.raci_matrix_activity_id = rma.activity_id
   INNER JOIN raci_matrix_assignment_nature rman on rman.code = rma.raci_matrix_assignment_nature_id`;
 
 const securityImpactAnalysisView = SQLa.safeViewDefinition(
@@ -1317,17 +1237,59 @@ const vendorView = SQLa.safeViewDefinition(
   INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
 
-const organizationRoleTypeProjectManagerTechnologyInsertion = udm
-  .organizationRoleType.insertDML({
+const organizationRoleTypeInsertion = udm
+  .organizationRoleType.insertDML([{
     code: "PROJECT_MANAGER_TECHNOLOGY",
     value: "Project Manager Technology",
-  });
-
-const organizationRoleTypeProjectManagerQualityInsertion = udm
-  .organizationRoleType.insertDML({
+  }, {
     code: "PROJECT_MANAGER_QUALITY",
     value: "Project Manager Quality",
-  });
+  }, {
+    code: "PROJECT_MANAGER_DEVOPS",
+    value: "Project Manager DevOps",
+  }, {
+    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    value: "Associated Manager Technology",
+  }, {
+    code: "ASSOCIATE_MANAGER_QUALITY",
+    value: "Associate Manager Quality",
+  }, {
+    code: "ASSOCIATE_MANAGER_DEVOPS",
+    value: "Associate Manager DevOps",
+  }, {
+    code: "SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT",
+    value: "Senior Lead Software Engineer Architect",
+  }, {
+    code: "LEAD_SOFTWARE_ENGINEER_ARCHITECT",
+    value: "Lead Software Engineer Architect",
+  }, {
+    code: "SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER",
+    value: "Senior Lead Software DevOps Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_ENGINEER",
+    value: "Lead Software Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_QUALITY_ENGINEER",
+    value: "Lead Software Quality Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_DEVOPS_ENGINEER",
+    value: "Lead Software DevOps Engineer",
+  }, {
+    code: "LEAD_SYSTEM_NETWORK_ENGINEER",
+    value: "Lead System Network Engineer",
+  }, {
+    code: "SENIOR_SOFTWARE_ENGINEER",
+    value: "Senior Software Engineer",
+  }, {
+    code: "SENIOR_SOFTWARE_QUALITY_ENGINEER",
+    value: "Senior Software Quality Engineer",
+  }, {
+    code: "SOFTWARE_QUALITY_ENGINEER",
+    value: "Software Quality Engineer",
+  }, {
+    code: "SECURITY_ENGINEER",
+    value: "Security Engineer",
+  }]);
 
 const contractView = SQLa.safeViewDefinition(
   "contract_view",
@@ -1402,9 +1364,7 @@ export function sqlDDL() {
     -- seed Data
     ${allReferenceTables.map(e => e.seedDML).flat()}
 
-    ${organizationRoleTypeProjectManagerTechnologyInsertion}
-
-    ${organizationRoleTypeProjectManagerQualityInsertion}
+    ${organizationRoleTypeInsertion}
     `;
 }
 

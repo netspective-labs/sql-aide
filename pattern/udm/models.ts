@@ -38,7 +38,7 @@ export const organizationRoleType = gm.autoIncPkTable(
   "organization_role_type",
   {
     organization_role_type_id: autoIncPK(),
-    code: text(),
+    code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
   },
@@ -48,7 +48,7 @@ export const partyRoleType = gm.autoIncPkTable(
   "party_role_type",
   {
     party_role_type_id: autoIncPK(),
-    code: text(),
+    code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
   },
@@ -124,12 +124,19 @@ export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
   ...gm.housekeeping.columns,
 });
 
+/**
+ * Reference URL: https://schema.org/honorificPrefix
+ * Reference URL: https://schema.org/honorificSuffix
+ */
+
 export const person = gm.autoIncPkTable("person", {
   person_id: autoIncPK(),
   party_id: party.references.party_id(),
   person_type_id: personType.references.code(),
   person_first_name: text(),
   person_last_name: text(),
+  honorific_prefix: textNullable(),
+  honorific_suffix: textNullable(),
   ...gm.housekeeping.columns,
 });
 
