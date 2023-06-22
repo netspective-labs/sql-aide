@@ -149,7 +149,7 @@ export class PgDcpContext {
       & pgdcp.SqlFilePersistProvenance
       & pc.PersistableContent<pgdcp.SqlFilePersistProvenance> = {
         ...provenance,
-        basename: () => `context.auto.psql`,
+        basename: () => ec.psqlBasename(),
         // deno-lint-ignore require-await
         content: async () => {
           return {
@@ -160,9 +160,6 @@ export class PgDcpContext {
       };
 
     return {
-      ec: this.state.ec,
-      state: this.state,
-      party: this,
       psqlText,
       provenance,
       persistableSQL,
@@ -175,6 +172,7 @@ export class PgDcpContext {
 }
 
 if (import.meta.main) {
-  const content = PgDcpContext.init().content();
-  console.log(content.psqlText.SQL(content.ec.sqlEmitContext()));
+  const context = PgDcpContext.init();
+  const content = context.content();
+  console.log(content.psqlText.SQL(context.state.ec.sqlEmitContext()));
 }

@@ -36,7 +36,7 @@ export class Party {
         pgdcp.SqlFilePersistProvenance
       > = {
         ...provenance,
-        basename: () => `party.auto.psql`,
+        basename: () => ec.psqlBasename(),
         // deno-lint-ignore require-await
         content: async () => {
           return {
@@ -47,9 +47,6 @@ export class Party {
       };
 
     return {
-      ec: this.state.ec,
-      state: this.state,
-      party: this,
       psqlText,
       provenance,
       persistableSQL,
@@ -62,6 +59,7 @@ export class Party {
 }
 
 if (import.meta.main) {
-  const content = Party.init().content();
-  console.log(content.psqlText.SQL(content.ec.sqlEmitContext()));
+  const party = Party.init();
+  const content = party.content();
+  console.log(content.psqlText.SQL(party.state.ec.sqlEmitContext()));
 }

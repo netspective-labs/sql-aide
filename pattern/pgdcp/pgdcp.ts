@@ -107,7 +107,7 @@ export class PgDcpEmitCoordinator<
     return `-- generated from ${p.identity} version ${p.version} (basename: ${this.psqlBasename()})`;
   }
 
-  psqlBasename(forceExtn = ".psql") {
+  psqlBasename(forceExtn = ".auto.psql") {
     let source = this.provenance.source;
     if (source.startsWith("file://")) source = path.fromFileUrl(source);
     return path.basename(source, ".sqla.ts") + forceExtn;
@@ -483,17 +483,20 @@ export interface SqlFilePersistProvenance extends pc.PersistProvenance {
   readonly confidentiality: SqlFileConfidentiality;
 }
 
-export function pgDcpPersister({ importMeta, sources }: {
-  readonly importMeta: ImportMeta;
-  readonly sources: SqlFilePersistProvenance[];
-}) {
-  const relativeToCWD = (fsPath: string) =>
-    path.relative(
-      Deno.cwd(),
-      fsPath.startsWith("file:") ? path.fromFileUrl(fsPath) : fsPath,
-    );
+export function pgDcpPersister(
+  { importMeta, sources }: {
+    readonly importMeta: ImportMeta;
+    readonly sources: SqlFilePersistProvenance[];
+  },
+  options?: Partial<
+    Parameters<
+      typeof pc.textFilesPersister<SqlFilePersistProvenance>
+    >[0]
+  >,
+) {
   let persistIndex = -1;
   return pc.textFilesPersister<SqlFilePersistProvenance>({
+    ...options,
     destPath: (file) =>
       path.isAbsolute(file)
         ? file
@@ -502,7 +505,6 @@ export function pgDcpPersister({ importMeta, sources }: {
       for (const s of sources) {
         // a source can either supply its content or be a file that, when
         // executed, will supply content in STDOUT.
-        const source = path.fromFileUrl(importMeta.resolve(s.source));
         persistIndex = s.index ?? persistIndex + 1;
         const piPrefix = persistIndex.toString().padStart(3, "0");
 
@@ -517,24 +519,61 @@ export function pgDcpPersister({ importMeta, sources }: {
           continue;
         }
 
-        // if we get to here then we assume a `psql` file X is in a `X.sqla.ts`
-        // source file and that it's executable and that executing it will
-        // return its `psl` content which needs to be saved to `X.auto.psql`.
-        yield pc.persistCmdOutput({
+        const source = path.fromFileUrl(importMeta.resolve(s.source));
+        const tryExec: Parameters<typeof pc.persistCmdOutput>[0] = {
           // deno-fmt-ignore
           provenance: () => ({ ...s, source }),
           basename: () =>
             `${piPrefix}_${path.basename(source, ".sqla.ts") + ".auto.psql"}`,
+        };
+        const isExecutable = await pc.isExecutable(tryExec);
+        switch (isExecutable) {
+          case true:
+            yield pc.persistCmdOutput({
+              // deno-fmt-ignore
+              provenance: () => ({ ...s, source }),
+              basename: () =>
+                `${piPrefix}_${
+                  path.basename(source).replace(/(\.[^\.]*)+$/, "") + // remove all extensions
+                  ".auto.psql"
+                }`,
+            });
+            continue;
+        }
+
+        // if we get to here then we assume the file is a SQL file and we just
+        // take the entire contents and emit it as an "indexed" file
+        yield pc.persistFileContent({
+          // deno-fmt-ignore
+          provenance: () => ({ ...s, source }),
+          basename: () =>
+            `${piPrefix}_${
+              path.basename(source, path.extname(source)) + ".auto.psql"
+            }`,
         });
       }
     },
     finalize: async ({ emitted, persist, destPath }) => {
-      const driver = destPath("driver.auto.psql");
-      await persist(
-        driver,
-        emitted.map((e) => `\\ir ${path.basename(e.destFile)}`).join("\n"),
-      );
+      const destFile = destPath("driver.auto.psql");
+      const text = emitted.map((e) => `\\ir ${path.basename(e.destFile)}`)
+        .join("\n");
+      await persist(destFile, text);
+      options?.reportSuccess?.({ destFile, text });
     },
+  });
+}
+
+export function pgDcpPersisterVerbose(
+  init: Parameters<typeof pgDcpPersister>[0],
+  options?: Parameters<typeof pgDcpPersister>[1],
+) {
+  const relativeToCWD = (fsPath: string) =>
+    path.relative(
+      Deno.cwd(),
+      fsPath.startsWith("file:") ? path.fromFileUrl(fsPath) : fsPath,
+    );
+  return pgDcpPersister(init, {
+    ...options,
     reportSuccess: ({ provenance, destFile }) => {
       console.log(
         provenance ? relativeToCWD(provenance.source) : "<?>",

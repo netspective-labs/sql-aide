@@ -10,22 +10,34 @@ export * from "./party.sqla.ts";
 import * as pgdcp from "../../pattern/pgdcp/mod.ts";
 import * as party from "./party.sqla.ts";
 
-if (import.meta.main) {
+export const persistables = (): Parameters<typeof pgdcp.pgDcpPersister>[0] => {
+  // there are three types of examples "sources":
+  // 1. Deno (meaning sourcable from anywhere, including URLs) - e.g. party, context, etc.
+  // 2. local executables, relative to importMeta (e.g. executable.sh)
+  // 2. local text files, relative to importMeta (e.g. inspect.psql)
+
   const p = party.Party.init();
-
-  // there are two types of examples "sources":
-  // 1. Deno (meaning sourcable from anywhere, including URLs) - e.g. party
-  // 2. local files, relative to importMeta
-
-  const persister = pgdcp.pgDcpPersister({
+  const c = pgdcp.PgDcpContext.init();
+  const e = pgdcp.PgDcpEngine.init();
+  return {
     importMeta: import.meta,
-    sources: [{
-      source: "../../pattern/pgdcp/context.sqla.ts",
-      confidentiality: "non-sensitive",
-    }, {
-      source: "../../pattern/pgdcp/engine.sqla.ts",
-      confidentiality: "non-sensitive",
-    }, p.content().persistableSQL],
-  });
+    sources: [
+      c.content().persistableSQL,
+      e.content().persistableSQL,
+      {
+        source: "../../lib/sql/pg/inspect.psql",
+        confidentiality: "non-sensitive",
+      },
+      p.content().persistableSQL,
+      {
+        source: "./executable.sh",
+        confidentiality: "non-sensitive",
+      },
+    ],
+  };
+};
+
+if (import.meta.main) {
+  const persister = pgdcp.pgDcpPersisterVerbose(persistables());
   await persister.emitAll();
 }

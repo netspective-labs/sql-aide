@@ -1,33 +1,18 @@
 #!/usr/bin/env -S deno run --allow-all
-import * as g from "./pgdcp.ts";
 
-// see https://maxgreenwald.me/blog/do-more-with-run
-// const run = <T>(fn: () => T): T => fn();
+import { persistContent as pc } from "./deps.ts";
+import * as pgdcp from "./pgdcp.ts";
 
-export const engine = () => {
-  // "engine" is just a "subject area" not a schema
-  const state = g.pgDcpState(import.meta, { subjectArea: "engine" });
-  const { ec, lc, ae } = state;
-  const { sqlNamespace: extnsSchemaName } = ec.schemaDefns.dcp_extensions;
-  const [_lcQR] = ec.schemaQualifier("dcp_lifecycle");
+export class PgDcpEngine {
+  protected constructor() {}
 
-  // deno-fmt-ignore
-  const constructIdempotent = lc.constructIdempotent()`
-  `;
+  readonly state = pgdcp.pgDcpState(import.meta, { subjectArea: "engine" });
 
-  // deno-fmt-ignore
-  const destroyIdempotent = lc.destroyIdempotent()`
-  `;
+  content() {
+    const { ec } = this.state;
+    const { sqlNamespace: extnsSchemaName } = ec.schemaDefns.dcp_extensions;
 
-  // deno-fmt-ignore
-  const unitTest = ae.unitTest()``;
-
-  return {
-    ...state,
-    constructIdempotent,
-    // TODO: is search_path required? switch to fully qualified schema object names
-    // deno-fmt-ignore
-    psqlText: ec.SQL()`
+    const psqlText = ec.SQL()`
       ${ec.psqlHeader}
 
       -- make sure everybody can use everything in the extensions schema
@@ -39,21 +24,40 @@ export const engine = () => {
         grant execute on functions to public;
 
       alter default privileges in schema ${extnsSchemaName}
-      grant usage on types to public;
+      grant usage on types to public;`;
 
-      ${constructIdempotent}
+    const provenance: pgdcp.SqlFilePersistProvenance = {
+      confidentiality: "non-sensitive",
+      source: import.meta.url,
+    };
+    const persistableSQL:
+      & pgdcp.SqlFilePersistProvenance
+      & pc.PersistableContent<pgdcp.SqlFilePersistProvenance> = {
+        ...provenance,
+        basename: () => ec.psqlBasename(),
+        // deno-lint-ignore require-await
+        content: async () => {
+          return {
+            provenance,
+            text: psqlText.SQL(ec.sqlEmitContext()),
+          };
+        },
+      };
 
-      ${constructIdempotent}
+    return {
+      psqlText,
+      provenance,
+      persistableSQL,
+    };
+  }
 
-      ${destroyIdempotent}
-
-      ${unitTest}`,
-  };
-};
-
-export default engine;
+  static init() {
+    return new PgDcpEngine();
+  }
+}
 
 if (import.meta.main) {
-  const tmpl = engine();
-  console.log(tmpl.psqlText.SQL(tmpl.ec.sqlEmitContext()));
+  const engine = PgDcpEngine.init();
+  const content = engine.content();
+  console.log(content.psqlText.SQL(engine.state.ec.sqlEmitContext()));
 }

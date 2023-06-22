@@ -55,6 +55,26 @@ export function isPersistableContent<Provenance extends PersistProvenance>(
   return isPC(o);
 }
 
+export async function isExecutable<Provenance extends PersistProvenance>(
+  source: {
+    readonly provenance: () => Provenance;
+    readonly basename: () => Promise<string> | string;
+  },
+): Promise<boolean | Error> {
+  const provenance = source.provenance();
+  try {
+    const command = new Deno.Command(provenance.source);
+    await command.output();
+    return true;
+  } catch (error) {
+    // If the command could not be run, it's not executable
+    if (error instanceof Deno.errors.PermissionDenied) {
+      false;
+    }
+    return error;
+  }
+}
+
 export function persistCmdOutput<Provenance extends PersistProvenance>(
   source: {
     readonly provenance: () => Provenance;
@@ -69,13 +89,42 @@ export function persistCmdOutput<Provenance extends PersistProvenance>(
         const command = new Deno.Command(provenance.source);
         const { code, stdout, stderr } = await command.output();
         if (code === 0) {
-          return { provenance, text: new TextDecoder().decode(stdout) };
+          return {
+            provenance,
+            text: new TextDecoder().decode(stdout),
+            isExecutable: true,
+          };
         } else {
           return {
             provenance,
             error: new Error(new TextDecoder().decode(stderr)),
+            isExecutable: true,
           };
         }
+      } catch (error) {
+        if (error instanceof Deno.errors.PermissionDenied) {
+          return { provenance, error, isExecutable: false };
+        } else {
+          return { provenance, error, isExecutable: true };
+        }
+      }
+    },
+  };
+  return result;
+}
+
+export function persistFileContent<Provenance extends PersistProvenance>(
+  source: {
+    readonly provenance: () => Provenance;
+    readonly basename: () => Promise<string> | string;
+  },
+) {
+  const provenance = source.provenance();
+  const result: PersistableContent<Provenance> = {
+    basename: source.basename,
+    content: async () => {
+      try {
+        return { provenance, text: await Deno.readTextFile(provenance.source) };
       } catch (error) {
         return { provenance, error };
       }
