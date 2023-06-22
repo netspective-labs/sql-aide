@@ -274,10 +274,11 @@ CREATE TABLE IF NOT EXISTS "asset_risk_type" (
 -- content tables
 CREATE TABLE IF NOT EXISTS "organization_role_type" (
     "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "code" TEXT NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "graph" (
     "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -365,6 +366,8 @@ CREATE TABLE IF NOT EXISTS "person" (
     "person_type_id" TEXT NOT NULL,
     "person_first_name" TEXT NOT NULL,
     "person_last_name" TEXT NOT NULL,
+    "honorific_prefix" TEXT,
+    "honorific_suffix" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
@@ -464,11 +467,6 @@ CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN'
 );
-CREATE TABLE IF NOT EXISTS "severity" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "vulnerability" (
     "vulnerability_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "short_name" TEXT NOT NULL,
@@ -516,11 +514,6 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("threat_event_type_id") REFERENCES "threat_event_type"("code")
 );
-CREATE TABLE IF NOT EXISTS "asset_risk_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "asset_risk" (
     "asset_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "asset_risk_type_id" TEXT NOT NULL,
@@ -536,11 +529,6 @@ CREATE TABLE IF NOT EXISTS "asset_risk" (
     FOREIGN KEY("threat_event_id") REFERENCES "threat_event"("threat_event_id"),
     FOREIGN KEY("relevance_id") REFERENCES "severity"("code"),
     FOREIGN KEY("likelihood_id") REFERENCES "probability"("code")
-);
-CREATE TABLE IF NOT EXISTS "priority" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
     "security_impact_analysis_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -739,16 +727,6 @@ CREATE TABLE IF NOT EXISTS "contract" (
     FOREIGN KEY("periodicity_id") REFERENCES "periodicity"("code"),
     FOREIGN KEY("contract_type_id") REFERENCES "contract_type"("code")
 );
-CREATE TABLE IF NOT EXISTS "risk_subject" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "risk_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 CREATE TABLE IF NOT EXISTS "risk_register" (
     "risk_register_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "description" TEXT NOT NULL,
@@ -774,26 +752,6 @@ CREATE TABLE IF NOT EXISTS "risk_register" (
     FOREIGN KEY("rating_overall_risk_id") REFERENCES "rating_value"("code"),
     FOREIGN KEY("over_all_residual_risk_rating_id") REFERENCES "rating_value"("code"),
     FOREIGN KEY("control_monitor_risk_owner_id") REFERENCES "person"("person_id")
-);
-CREATE TABLE IF NOT EXISTS "incident_category" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "incident_sub_category" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "incident_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "incident_status" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "incident" (
     "incident_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -989,7 +947,7 @@ CREATE VIEW IF NOT EXISTS "security_incident_response_team_view"("person_name", 
     INNER JOIN person p ON p.person_id = sirt.person_id
     INNER JOIN organization o ON o.organization_id=sirt.organization_id
     INNER JOIN organization_role orl ON orl.person_id = sirt.person_id AND orl.organization_id = sirt.organization_id
-    INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+    INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
     INNER JOIN party pr ON pr.party_id = p.party_id
     INNER JOIN contact_electronic e ON e.party_id=pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL';
 CREATE VIEW IF NOT EXISTS "awareness_training_view"("person_name", "person_role", "trainigng_subject", "training_status_id", "attended_date") AS
@@ -997,14 +955,14 @@ CREATE VIEW IF NOT EXISTS "awareness_training_view"("person_name", "person_role"
     FROM awareness_training at
     INNER JOIN person p ON p.person_id = at.person_id
     INNER JOIN organization_role orl ON orl.person_id = at.person_id AND orl.organization_id = at.organization_id
-    INNER JOIN organization_role_type ort ON ort.code = orl.organization_role_type_id
+    INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
     INNER JOIN training_subject sub ON sub.code = at.training_subject_id;
 CREATE VIEW IF NOT EXISTS "person_skill_view"("person_name", "skill", "proficiency") AS
     SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
     FROM person_skill ps
     INNER JOIN person p ON p.person_id = ps.person_id
     INNER JOIN skill s ON s.code = ps.skill_id
-    INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id;
+    INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id,person_name,s.value,proficiency;
 CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "incident_date", "asset_name", "category", "severity", "priority", "internal_or_external", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by", "reported_to", "brief_description", "detailed_description", "assigned_to", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status", "closed_date", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "root_cause_of_the_issue", "probability_of_issue", "testing_for_possible_root_cause_analysis", "solution", "likelihood_of_risk", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results") AS
     SELECT i.title AS incident,i.incident_date,ast.name as asset_name,ic.value AS category,s.value AS severity,
     p.value AS priority,it.value AS internal_or_external,i.location,i.it_service_impacted,
@@ -1013,8 +971,8 @@ CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "inciden
     i.detailed_description,p3.person_first_name || ' ' || p3.person_last_name AS assigned_to,
     i.assigned_date,i.investigation_details,i.containment_details,i.eradication_details,i.business_impact,
     i.lessons_learned,ist.value AS status,i.closed_date,i.feedback_from_business,i.reported_to_regulatory,i.report_date,i.report_time,
-    irc.description AS root_cause_of_the_issue,p1.value AS probability_of_issue,irc.testing_analysis AS testing_for_possible_root_cause_analysis,
-    irc.solution,p2.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
+    irc.description AS root_cause_of_the_issue,p4.value AS probability_of_issue,irc.testing_analysis AS testing_for_possible_root_cause_analysis,
+    irc.solution,p5.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
     FROM incident i
     INNER JOIN asset ast ON ast.asset_id = i.asset_id
     INNER JOIN incident_category ic ON ic.code = i.category_id
@@ -1026,15 +984,15 @@ CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "inciden
     INNER JOIN person p3 ON p3.person_id = i.assigned_to_id
     INNER JOIN incident_status ist ON ist.code = i.status_id
     LEFT JOIN incident_root_cause irc ON irc.incident_id = i.incident_id
-    LEFT JOIN priority p1 ON p1.code = irc.probability_id
-    LEFT JOIN priority p2 ON p2.code = irc.likelihood_of_risk_id;
+    LEFT JOIN priority p4 ON p4.code = irc.probability_id
+    LEFT JOIN priority p5 ON p5.code = irc.likelihood_of_risk_id;
 CREATE VIEW IF NOT EXISTS "raci_matrix_assignment_view"("person_name", "subject", "activity", "assignment_nature") AS
-    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rma.activity,
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,rms.value AS subject,rmac.activity,
     rman.value AS assignment_nature
     FROM raci_matrix_assignment rma
     INNER JOIN person p ON p.person_id = rma.person_id
     INNER JOIN raci_matrix_subject rms on rms.code = rma.subject_id
-    INNER JOIN raci_matrix_activity rma on rma.raci_matrix_activity_id = rma.activity_id
+    INNER JOIN raci_matrix_activity rmac on rmac.raci_matrix_activity_id = rma.activity_id
     INNER JOIN raci_matrix_assignment_nature rman on rman.code = rma.raci_matrix_assignment_nature_id;
 CREATE VIEW IF NOT EXISTS "security_impact_analysis_view"("vulnerability", "security_risk", "security_threat", "impact_of_risk", "proposed_controls", "impact_level", "risk_level", "existing_controls", "priority", "reported_date", "reported_by", "responsible_by") AS
     SELECT v.short_name as vulnerability, ast.name as security_risk,te.title as security_threat,
@@ -1507,9 +1465,24 @@ INSERT INTO "incident_status" ("code", "value") VALUES ('SUSPENDED', 'Suspended'
 INSERT INTO "incident_status" ("code", "value") VALUES ('WORK_IN_PROGRESS', 'Work In Progress');
 INSERT INTO "asset_risk_type" ("code", "value") VALUES ('SECURITY', 'Security');
 
-INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL);
-
-INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL);
+INSERT INTO "organization_role_type" ("code", "value", "created_by")
+       VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL),
+              ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL),
+              ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL),
+              ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL),
+              ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL),
+              ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL),
+              ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL),
+              ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL),
+              ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL),
+              ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL),
+              ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL),
+              ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL),
+              ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL),
+              ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL),
+              ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL),
+              ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL),
+              ('SECURITY_ENGINEER', 'Security Engineer', NULL);
 ;
 INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('ORGANIZATION', 'Orgnization Name', NULL);
 INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'Orgnization Name', 'XXXX-XXXXX-XXXX', '2010-01-15', NULL);
@@ -1518,14 +1491,14 @@ INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_de
 ;
 INSERT INTO "contact_land" ("contact_type_id", "party_id", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country", "created_by") VALUES ('OFFICIAL_ADDRESS', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'Address line 1', 'Address line 2', '', 'City', 'State', 'Country', NULL);
 INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSON', 'First Name Last Name', NULL);
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'INDIVIDUAL', 'First Name', 'Last Name', NULL);
+INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'INDIVIDUAL', 'First Name', 'Last Name', NULL, NULL, NULL);
 INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('OFFICIAL_EMAIL', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'person@org.com', NULL);
 INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), '+911234567890', NULL);
 ;
 INSERT INTO "contact_land" ("contact_type_id", "party_id", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country", "created_by") VALUES ('OFFICIAL_ADDRESS', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), 'Address line 1', 'Address line 2', '', 'City', 'State', 'Country', NULL);
 ;
 INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'LEAD_SOFTWARE_ENGINEER', NULL);
+INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'LEAD_SOFTWARE_ENGINEER'), NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'REACTJS', 'INTERMEDIATE', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JAVASCRIPT', 'ADVANCED', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'HUGO', 'FUNDAMENTAL_AWARENESS', NULL);
@@ -1541,6 +1514,7 @@ INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "profici
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JAVA', 'FUNDAMENTAL_AWARENESS', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'JQUERY', 'ADVANCED', NULL);
 INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'SOFTWARE', 'OSQUERY', 'FUNDAMENTAL_AWARENESS', NULL);
+INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL);
 INSERT INTO "awareness_training" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES ('HIPAA', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'YES', '2022-02-21', NULL);
 INSERT INTO "security_incident_response_team" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by") VALUES (NULL, (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, NULL, NULL);
 INSERT INTO "rating" ("author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = 'INDIVIDUAL' AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), 'FOUR', 'FIVE', 'Good Service', 'Satisfied', 'THREE', NULL);

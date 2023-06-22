@@ -74,10 +74,11 @@ CREATE TABLE IF NOT EXISTS "contact_type" (
 -- content tables
 CREATE TABLE IF NOT EXISTS "organization_role_type" (
     "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "code" TEXT NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "party" (
     "party_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,6 +104,8 @@ CREATE TABLE IF NOT EXISTS "person" (
     "person_type_id" TEXT NOT NULL,
     "person_first_name" TEXT NOT NULL,
     "person_last_name" TEXT NOT NULL,
+    "honorific_prefix" TEXT,
+    "honorific_suffix" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
@@ -215,7 +218,7 @@ INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSO
 
 INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL);
 
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL);
+INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL, NULL, NULL);
 
 INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
 

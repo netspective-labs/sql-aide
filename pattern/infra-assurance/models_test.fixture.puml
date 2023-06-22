@@ -113,6 +113,8 @@
     * person_type_id: TEXT
     * person_first_name: TEXT
     * person_last_name: TEXT
+      honorific_prefix: TEXT
+      honorific_suffix: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
   }
@@ -209,13 +211,6 @@
       created_by: TEXT
   }
 
-  entity "severity" as severity {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
   entity "vulnerability" as vulnerability {
       **vulnerability_id**: INTEGER
     --
@@ -262,13 +257,6 @@
       created_by: TEXT
   }
 
-  entity "asset_risk_type" as asset_risk_type {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
   entity "asset_risk" as asset_risk {
       **asset_risk_id**: INTEGER
     --
@@ -280,13 +268,6 @@
     * impact: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
-  }
-
-  entity "priority" as priority {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
   }
 
   entity "security_impact_analysis" as security_impact_analysis {
@@ -478,20 +459,6 @@
       created_by: TEXT
   }
 
-  entity "risk_subject" as risk_subject {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
-  entity "risk_type" as risk_type {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
   entity "risk_register" as risk_register {
       **risk_register_id**: INTEGER
     --
@@ -511,34 +478,6 @@
     * control_monitor_risk_owner_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
-  }
-
-  entity "incident_category" as incident_category {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
-  entity "incident_sub_category" as incident_sub_category {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
-  entity "incident_type" as incident_type {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
-  }
-
-  entity "incident_status" as incident_status {
-    * **code**: TEXT
-    --
-    * value: TEXT
-      created_at: TIMESTAMP
   }
 
   entity "incident" as incident {
@@ -731,16 +670,12 @@
   party |o..o{ contact_land
   organization |o..o{ asset
   vulnerability_source |o..o{ vulnerability
-  severity |o..o{ vulnerability
   threat_source |o..o{ threat_event
   asset |o..o{ threat_event
-  asset_risk_type |o..o{ asset_risk
   asset |o..o{ asset_risk
   threat_event |o..o{ asset_risk
-  severity |o..o{ asset_risk
   vulnerability |o..o{ security_impact_analysis
   asset_risk |o..o{ security_impact_analysis
-  priority |o..o{ security_impact_analysis
   person |o..o{ security_impact_analysis
   person |o..o{ security_impact_analysis
   security_impact_analysis |o..o{ impact_of_risk
@@ -756,22 +691,12 @@
   person |o..o{ audit_assertion
   party |o..o{ contract
   party |o..o{ contract
-  risk_subject |o..o{ risk_register
-  risk_type |o..o{ risk_register
   person |o..o{ risk_register
   asset |o..o{ incident
-  incident_category |o..o{ incident
-  incident_sub_category |o..o{ incident
-  severity |o..o{ incident
-  priority |o..o{ incident
-  incident_type |o..o{ incident
   person |o..o{ incident
   person |o..o{ incident
   person |o..o{ incident
-  incident_status |o..o{ incident
   incident |o..o{ incident_root_cause
-  priority |o..o{ incident_root_cause
-  priority |o..o{ incident_root_cause
   person |o..o{ raci_matrix_assignment
   raci_matrix_activity |o..o{ raci_matrix_assignment
   person |o..o{ person_skill

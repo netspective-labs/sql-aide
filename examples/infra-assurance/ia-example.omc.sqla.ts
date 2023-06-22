@@ -2,6 +2,7 @@
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
 import * as iam from "../../pattern/infra-assurance/mod.ts";
+import * as udm from "../../pattern/udm/mod.ts";
 import * as z from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import * as emit from "../../render/emit/mod.ts";
 
@@ -21,15 +22,15 @@ const { typical: tp } = iam;
 
 const gts = tp.governedTemplateState<iam.typical.GovernedDomain, EmitContext>();
 
-type px = z.infer<typeof iam.person.zoSchema>;
+type px = z.infer<typeof udm.person.zoSchema>;
 
 // these are the "governed models" (`GM`) and can be used to build our types
-type PersonGM = z.infer<typeof iam.person.zoSchema>;
-type OrganizationGM = z.infer<typeof iam.organization.zoSchema>;
-type ContactLandGM = z.infer<typeof iam.contactLand.zoSchema>;
+type PersonGM = z.infer<typeof udm.person.zoSchema>;
+type OrganizationGM = z.infer<typeof udm.organization.zoSchema>;
+type ContactLandGM = z.infer<typeof udm.contactLand.zoSchema>;
 
-type PartyRelationGM = z.infer<typeof iam.partyRelation.zoSchema>;
-type OrganizationRoleGM = z.infer<typeof iam.organizationRole.zoSchema>;
+type PartyRelationGM = z.infer<typeof udm.partyRelation.zoSchema>;
+type OrganizationRoleGM = z.infer<typeof udm.organizationRole.zoSchema>;
 type SecurityImpactAnalysisGM = z.infer<
   typeof iam.securityImpactAnalysis.zoSchema
 >;
@@ -173,12 +174,13 @@ export type SecurityImpact =
 type PartyRole = Pick<PartyRelationGM, "party_role_id">;
 type OrganizationType = Pick<
   OrganizationRoleGM,
-  "organization_role_type_id"
+  "organization_role_id"
 >;
 
 type OrganizationRole = OrganizationType & {
   person_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
   organization_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
+  organization_role_type_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
 };
 type PartyRelation = PartyRole & OrganizationRole & {
   party_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
@@ -187,29 +189,29 @@ type PartyRelation = PartyRole & OrganizationRole & {
 
 const person = {
   insertDML: (person: Person) => {
-    const partyDML = iam.party.insertDML({
+    const partyDML = udm.party.insertDML({
       party_name: (`${person.person_first_name} ${person.person_last_name}`)
         .trim(),
       party_type_id: "PERSON",
     });
-    const partyIdSS = iam.party.select(partyDML.insertable);
-    const personDML = iam.person.insertDML({
-      party_id: iam.party.select(partyDML.insertable),
+    const partyIdSS = udm.party.select(partyDML.insertable);
+    const personDML = udm.person.insertDML({
+      party_id: udm.party.select(partyDML.insertable),
       person_first_name: person.person_first_name,
       person_last_name: person.person_last_name,
       person_type_id: person.person_type_id
         ? person.person_type_id
         : "INDIVIDUAL",
     });
-    const personIdSS = iam.person.select(personDML.insertable);
+    const personIdSS = udm.person.select(personDML.insertable);
     const contactElectronicDML = {
-      email: iam.contactElectronic.insertDML({
-        party_id: iam.party.select(partyDML.insertable),
+      email: udm.contactElectronic.insertDML({
+        party_id: udm.party.select(partyDML.insertable),
         contact_type_id: "OFFICIAL_EMAIL",
         electronics_details: person.email_address,
       }),
-      phoneNumber: iam.contactElectronic.insertDML({
-        party_id: iam.party.select(partyDML.insertable),
+      phoneNumber: udm.contactElectronic.insertDML({
+        party_id: udm.party.select(partyDML.insertable),
         contact_type_id: "MOBILE_PHONE_NUMBER",
         electronics_details: person.phone_number,
       }),
@@ -219,8 +221,8 @@ const person = {
           ${contactElectronicDML.phoneNumber}
           `,
     };
-    const contactLandDML = iam.contactLand.insertDML({
-      party_id: iam.party.select(partyDML.insertable),
+    const contactLandDML = udm.contactLand.insertDML({
+      party_id: udm.party.select(partyDML.insertable),
       contact_type_id: "OFFICIAL_ADDRESS",
       address_line1: person.address_line1,
       address_line2: person.address_line2 ? person.address_line2 : "",
@@ -271,31 +273,31 @@ const organizationAllPersons = {
 
 const organization = {
   insertDML: (organization: Organization) => {
-    const partyDML = iam.party.insertDML({
+    const partyDML = udm.party.insertDML({
       party_name: organization.name,
       party_type_id: "ORGANIZATION",
     });
-    const partyIdSS = iam.party.select(partyDML.insertable);
-    const organizationDML = iam.organization.insertDML({
-      party_id: iam.party.select(partyDML.insertable),
+    const partyIdSS = udm.party.select(partyDML.insertable);
+    const organizationDML = udm.organization.insertDML({
+      party_id: udm.party.select(partyDML.insertable),
       name: organization.name,
       license: organization.license ? organization.license : "",
       registration_date: organization.registration_date,
     });
-    const organizationIdSS = iam.organization.select(
+    const organizationIdSS = udm.organization.select(
       {
         name: organization.name,
         license: organization.license ? organization.license : "",
       },
     );
     const contactElectronicDML = {
-      email: iam.contactElectronic.insertDML({
-        party_id: iam.party.select(partyDML.insertable),
+      email: udm.contactElectronic.insertDML({
+        party_id: udm.party.select(partyDML.insertable),
         contact_type_id: "OFFICIAL_EMAIL",
         electronics_details: organization.email_address,
       }),
-      phoneNumber: iam.contactElectronic.insertDML({
-        party_id: iam.party.select(partyDML.insertable),
+      phoneNumber: udm.contactElectronic.insertDML({
+        party_id: udm.party.select(partyDML.insertable),
         contact_type_id: "LAND_PHONE_NUMBER",
         electronics_details: organization.phone_number,
       }),
@@ -305,8 +307,8 @@ const organization = {
         ${contactElectronicDML.phoneNumber}
         `,
     };
-    const contactLandDML = iam.contactLand.insertDML({
-      party_id: iam.party.select(partyDML.insertable),
+    const contactLandDML = udm.contactLand.insertDML({
+      party_id: udm.party.select(partyDML.insertable),
       contact_type_id: "OFFICIAL_ADDRESS",
       address_line1: organization.address_line1,
       address_line2: organization.address_line2
@@ -346,7 +348,7 @@ const personToOrganizationRelation = {
   insertDML: (
     partyRelation: PartyRelation,
   ) => {
-    const partyRelationDML = iam.partyRelation.insertDML({
+    const partyRelationDML = udm.partyRelation.insertDML({
       party_id: partyRelation.party_id,
       related_party_id: partyRelation.related_party_id,
       relation_type_id: "ORGANIZATION_TO_PERSON",
@@ -354,7 +356,7 @@ const personToOrganizationRelation = {
         ? partyRelation.party_role_id
         : "VENDOR",
     });
-    const oraganizationRoleDML = iam.organizationRole.insertDML({
+    const oraganizationRoleDML = udm.organizationRole.insertDML({
       person_id: partyRelation.person_id,
       organization_id: partyRelation.organization_id,
       organization_role_type_id: partyRelation.organization_role_type_id,
@@ -369,10 +371,20 @@ const personToOrganizationRelation = {
   },
 };
 
+const organizationRoleTypeInsertion = udm.organizationRoleType
+  .insertDML({
+    code: "LEAD_SOFTWARE_ENGINEER",
+    value: "Lead Software Engineer",
+  });
+
+const organizationRoleTypeCode = udm.organizationRoleType.select({
+  code: "LEAD_SOFTWARE_ENGINEER",
+});
+
 const organizationToPerson = personToOrganizationRelation.insertDML({
   party_id: personDetails.partyIdSS,
   related_party_id: organizationDetails.partyIdSS,
-  organization_role_type_id: "LEAD_SOFTWARE_ENGINEER",
+  organization_role_type_id: organizationRoleTypeCode,
   person_id: personDetails.personIdSS,
   organization_id: organizationDetails.organizationIdSS,
 });
@@ -484,7 +496,8 @@ const personDetailsSkill = {
     ${personDetailsSkill.oracle}
     ${personDetailsSkill.java}
     ${personDetailsSkill.jQuery}
-    ${personDetailsSkill.osQuery}`,
+    ${personDetailsSkill.osQuery}
+    ${organizationRoleTypeInsertion}`,
 };
 
 const organizationToPersonAllRelations = {

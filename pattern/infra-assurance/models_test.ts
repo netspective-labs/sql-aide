@@ -117,12 +117,6 @@ const personID = udm.person.select({
 });
 const organizationID = udm.organization.select({ name: "Test Name" });
 
-const organizationRoleTypeInsertion = udm.organizationRoleType
-  .insertDML({
-    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
-    value: "Associate Manager Technology",
-  });
-
 const organizationRoleTypeCode = udm.organizationRoleType.select({
   code: "ASSOCIATE_MANAGER_TECHNOLOGY",
 });
@@ -172,7 +166,6 @@ function sqlDDL() {
 
     ${organizationInsertion}
 
-    ${organizationRoleTypeInsertion}
 
     ${organizationRoleInsertion}
 
@@ -263,7 +256,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "155");
+    ta.assertEquals(output, "156");
   });
 
   // deno-lint-ignore require-await
