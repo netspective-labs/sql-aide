@@ -278,6 +278,11 @@ CREATE TABLE IF NOT EXISTS "organization_role_type" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "graph" (
@@ -287,6 +292,11 @@ CREATE TABLE IF NOT EXISTS "graph" (
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("graph_nature_id") REFERENCES "graph_nature"("code")
 );
 CREATE TABLE IF NOT EXISTS "boundary" (
@@ -298,6 +308,11 @@ CREATE TABLE IF NOT EXISTS "boundary" (
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("parent_boundary_id") REFERENCES "boundary"("boundary_id"),
     FOREIGN KEY("graph_id") REFERENCES "graph"("graph_id"),
     FOREIGN KEY("boundary_nature_id") REFERENCES "boundary_nature"("code")
@@ -308,6 +323,11 @@ CREATE TABLE IF NOT EXISTS "host" (
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     UNIQUE("host_name")
 );
 CREATE TABLE IF NOT EXISTS "host_boundary" (
@@ -315,6 +335,11 @@ CREATE TABLE IF NOT EXISTS "host_boundary" (
     "host_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("host_id") REFERENCES "host"("host_id")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix" (
@@ -325,7 +350,12 @@ CREATE TABLE IF NOT EXISTS "raci_matrix" (
     "consulted" TEXT NOT NULL,
     "informed" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     "raci_matrix_subject_boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -333,6 +363,11 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     "raci_matrix_subject_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id"),
     FOREIGN KEY("raci_matrix_subject_id") REFERENCES "raci_matrix_subject"("code")
 );
@@ -340,7 +375,12 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
     "raci_matrix_activity_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "activity" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "party" (
     "party_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -348,6 +388,11 @@ CREATE TABLE IF NOT EXISTS "party" (
     "party_name" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_type_id") REFERENCES "party_type"("code")
 );
 CREATE TABLE IF NOT EXISTS "party_identifier" (
@@ -357,6 +402,11 @@ CREATE TABLE IF NOT EXISTS "party_identifier" (
     "party_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_identifier_type_id") REFERENCES "party_identifier_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -370,6 +420,11 @@ CREATE TABLE IF NOT EXISTS "person" (
     "honorific_suffix" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("person_type_id") REFERENCES "person_type"("code")
 );
@@ -381,6 +436,11 @@ CREATE TABLE IF NOT EXISTS "party_relation" (
     "party_role_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("related_party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("relation_type_id") REFERENCES "party_relation_type"("code"),
@@ -394,6 +454,11 @@ CREATE TABLE IF NOT EXISTS "organization" (
     "registration_date" DATE NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "organization_role" (
@@ -403,6 +468,11 @@ CREATE TABLE IF NOT EXISTS "organization_role" (
     "organization_role_type_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("organization_role_type_id")
@@ -414,6 +484,11 @@ CREATE TABLE IF NOT EXISTS "contact_electronic" (
     "electronics_details" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -429,6 +504,11 @@ CREATE TABLE IF NOT EXISTS "contact_land" (
     "address_country" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -454,6 +534,11 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "tco_currency" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("asset_status_id") REFERENCES "asset_status"("code"),
     FOREIGN KEY("asset_type_id") REFERENCES "asset_type"("code"),
@@ -465,7 +550,12 @@ CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "source_url" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "vulnerability" (
     "vulnerability_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -480,6 +570,11 @@ CREATE TABLE IF NOT EXISTS "vulnerability" (
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("source_id") REFERENCES "vulnerability_source"("vulnerability_source_id"),
     FOREIGN KEY("status_id") REFERENCES "vulnerability_status"("code"),
     FOREIGN KEY("severity_id") REFERENCES "severity"("code")
@@ -496,6 +591,11 @@ CREATE TABLE IF NOT EXISTS "threat_source" (
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("threat_source_type_id") REFERENCES "threat_source_type"("code")
 );
 CREATE TABLE IF NOT EXISTS "threat_event" (
@@ -510,6 +610,11 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("threat_source_id") REFERENCES "threat_source"("threat_source_id"),
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("threat_event_type_id") REFERENCES "threat_event_type"("code")
@@ -524,6 +629,11 @@ CREATE TABLE IF NOT EXISTS "asset_risk" (
     "impact" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("asset_risk_type_id") REFERENCES "asset_risk_type"("code"),
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("threat_event_id") REFERENCES "threat_event"("threat_event_id"),
@@ -543,6 +653,11 @@ CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
     "responsible_by_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("vulnerability_id") REFERENCES "vulnerability"("vulnerability_id"),
     FOREIGN KEY("asset_risk_id") REFERENCES "asset_risk"("asset_risk_id"),
     FOREIGN KEY("risk_level_id") REFERENCES "probability"("code"),
@@ -557,6 +672,11 @@ CREATE TABLE IF NOT EXISTS "impact_of_risk" (
     "impact" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "proposed_controls" (
@@ -565,6 +685,11 @@ CREATE TABLE IF NOT EXISTS "proposed_controls" (
     "controls" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "billing" (
@@ -576,7 +701,12 @@ CREATE TABLE IF NOT EXISTS "billing" (
     "effective_to_date" TEXT NOT NULL,
     "prorate" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "scheduled_task" (
     "scheduled_task_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -586,7 +716,12 @@ CREATE TABLE IF NOT EXISTS "scheduled_task" (
     "assigned_to" TEXT NOT NULL,
     "reminder_to" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "timesheet" (
     "timesheet_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -597,6 +732,11 @@ CREATE TABLE IF NOT EXISTS "timesheet" (
     "timesheet_summary" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("is_billable_id") REFERENCES "status_value"("code"),
     FOREIGN KEY("time_entry_category_id") REFERENCES "time_entry_category"("code")
 );
@@ -613,7 +753,12 @@ CREATE TABLE IF NOT EXISTS "certificate" (
     "key_size" INTEGER NOT NULL,
     "path" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "device" (
     "device_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -628,7 +773,12 @@ CREATE TABLE IF NOT EXISTS "device" (
     "purpose" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     "security_incident_response_team_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -639,6 +789,11 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     "attended_date" DATE,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("code"),
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
@@ -653,6 +808,11 @@ CREATE TABLE IF NOT EXISTS "awareness_training" (
     "attended_date" DATE NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("code"),
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
@@ -669,6 +829,11 @@ CREATE TABLE IF NOT EXISTS "rating" (
     "worst_rating_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("author_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("rating_given_to_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("rating_value_id") REFERENCES "rating_value"("code"),
@@ -681,6 +846,11 @@ CREATE TABLE IF NOT EXISTS "note" (
     "note" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "audit_assertion" (
@@ -697,6 +867,11 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
     "assertion_description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("auditor_type_id") REFERENCES "auditor_type"("code"),
     FOREIGN KEY("audit_purpose_id") REFERENCES "audit_purpose"("code"),
     FOREIGN KEY("auditor_org_id") REFERENCES "organization"("organization_id"),
@@ -720,6 +895,11 @@ CREATE TABLE IF NOT EXISTS "contract" (
     "date_of_contract_approval" TIMESTAMP,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("contract_from_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("contract_to_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("contract_status_id") REFERENCES "contract_status"("code"),
@@ -745,6 +925,11 @@ CREATE TABLE IF NOT EXISTS "risk_register" (
     "control_monitor_risk_owner_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("risk_subject_id") REFERENCES "risk_subject"("code"),
     FOREIGN KEY("risk_type_id") REFERENCES "risk_type"("code"),
     FOREIGN KEY("rating_likelihood_id") REFERENCES "rating_value"("code"),
@@ -788,6 +973,11 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "report_time" TIMESTAMP,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("category_id") REFERENCES "incident_category"("code"),
     FOREIGN KEY("sub_category_id") REFERENCES "incident_sub_category"("code"),
@@ -813,6 +1003,11 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
     "test_results" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("incident_id") REFERENCES "incident"("incident_id"),
     FOREIGN KEY("probability_id") REFERENCES "priority"("code"),
     FOREIGN KEY("likelihood_of_risk_id") REFERENCES "priority"("code")
@@ -825,6 +1020,11 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
     "raci_matrix_assignment_nature_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("subject_id") REFERENCES "raci_matrix_subject"("code"),
     FOREIGN KEY("activity_id") REFERENCES "raci_matrix_activity"("raci_matrix_activity_id"),
@@ -838,6 +1038,11 @@ CREATE TABLE IF NOT EXISTS "person_skill" (
     "proficiency_scale_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("skill_nature_id") REFERENCES "skill_nature"("code"),
     FOREIGN KEY("skill_id") REFERENCES "skill"("code"),
@@ -848,7 +1053,12 @@ CREATE TABLE IF NOT EXISTS "key_performance" (
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     "key_performance_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -876,6 +1086,11 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     "trend_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("key_performance_id") REFERENCES "key_performance"("key_performance_id"),
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("calendar_period_id") REFERENCES "calendar_period"("code"),
@@ -891,7 +1106,12 @@ CREATE TABLE IF NOT EXISTS "key_risk" (
     "description" TEXT NOT NULL,
     "base_value" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
     "key_risk_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -900,6 +1120,11 @@ CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
     "entry_value" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("key_risk_id") REFERENCES "key_risk"("key_risk_id")
 );
 CREATE TABLE IF NOT EXISTS "assertion" (
@@ -910,7 +1135,12 @@ CREATE TABLE IF NOT EXISTS "assertion" (
     "assertion_expires_on" DATE,
     "assertion_expires_poam" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "created_by" TEXT DEFAULT 'UNKNOWN'
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB
 );
 CREATE TABLE IF NOT EXISTS "attestation" (
     "attestation_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -923,6 +1153,11 @@ CREATE TABLE IF NOT EXISTS "attestation" (
     "boundary_id" INTEGER,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("assertion_id") REFERENCES "assertion"("assertion_id"),
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id")
@@ -937,6 +1172,11 @@ CREATE TABLE IF NOT EXISTS "attestation_evidence" (
     "attachment" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("attestation_id") REFERENCES "attestation"("attestation_id")
 );
 
@@ -1465,57 +1705,57 @@ INSERT INTO "incident_status" ("code", "value") VALUES ('SUSPENDED', 'Suspended'
 INSERT INTO "incident_status" ("code", "value") VALUES ('WORK_IN_PROGRESS', 'Work In Progress');
 INSERT INTO "asset_risk_type" ("code", "value") VALUES ('SECURITY', 'Security');
 
-INSERT INTO "organization_role_type" ("code", "value", "created_by")
-       VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL),
-              ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL),
-              ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL),
-              ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL),
-              ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL),
-              ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL),
-              ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL),
-              ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL),
-              ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL),
-              ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL),
-              ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL),
-              ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL),
-              ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL),
-              ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL),
-              ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL),
-              ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL),
-              ('SECURITY_ENGINEER', 'Security Engineer', NULL);
+INSERT INTO "organization_role_type" ("code", "value", "created_by", "updated_by", "deleted_by", "activity_log")
+       VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL, NULL, NULL, NULL),
+              ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL, NULL, NULL, NULL),
+              ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL, NULL, NULL, NULL),
+              ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL, NULL, NULL, NULL),
+              ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL, NULL, NULL, NULL),
+              ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL, NULL, NULL, NULL),
+              ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL, NULL, NULL, NULL),
+              ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL, NULL, NULL, NULL),
+              ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL, NULL, NULL, NULL),
+              ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL, NULL, NULL, NULL),
+              ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL, NULL, NULL, NULL),
+              ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL, NULL, NULL, NULL),
+              ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL, NULL, NULL, NULL),
+              ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL, NULL, NULL, NULL),
+              ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL, NULL, NULL, NULL),
+              ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL, NULL, NULL, NULL),
+              ('SECURITY_ENGINEER', 'Security Engineer', NULL, NULL, NULL, NULL);
 ;
 
 -- synthetic / test data
-INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by") VALUES ('SERVICE', 'text-value', 'description', NULL);
+INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('SERVICE', 'text-value', 'description', NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES (NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL);
+INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_by", "deleted_by", "activity_log") VALUES (NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name', 'test description', NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name Self Test', 'test description', NULL);
+INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = 'REGULATORY_TAX_ID' AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = 'SERVICE' AND "name" = 'text-value' AND "description" = 'description'), 'REGULATORY_TAX_ID', 'Boundery Name Self Test', 'test description', NULL, NULL, NULL, NULL);
 
-INSERT INTO "host" ("host_name", "description", "created_by") VALUES ('Test Host Name', 'description test', NULL);
+INSERT INTO "host" ("host_name", "description", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('Test Host Name', 'description test', NULL, NULL, NULL, NULL);
 
-INSERT INTO "host_boundary" ("host_id", "created_by") VALUES ((SELECT "host_id" FROM "host" WHERE "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL);
+INSERT INTO "host_boundary" ("host_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "host_id" FROM "host" WHERE "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix" ("asset", "responsible", "accountable", "consulted", "informed", "created_by") VALUES ('asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL);
+INSERT INTO "raci_matrix" ("asset", "responsible", "accountable", "consulted", "informed", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), 'CURATION_WORKS', NULL);
+INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), 'CURATION_WORKS', NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_activity" ("activity", "created_by") VALUES ('Activity', NULL);
+INSERT INTO "raci_matrix_activity" ("activity", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('Activity', NULL, NULL, NULL, NULL);
 
-INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSON', 'person', NULL);
+INSERT INTO "party" ("party_type_id", "party_name", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('PERSON', 'person', NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL);
+INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL, NULL, NULL, NULL);
 
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL, NULL, NULL);
+INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
+INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL);
+INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL, NULL, NULL, NULL);
 
 
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL);
+INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL, NULL, NULL, NULL);
 
-INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL, NULL, NULL, NULL);
 
 -- the .dump in the last line is necessary because we load into :memory:
 -- first because performance is better and then emit all the SQL for saving

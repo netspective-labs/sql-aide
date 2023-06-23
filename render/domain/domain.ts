@@ -548,10 +548,15 @@ export type SqlDomainZodDateDescr = SqlDomainZodDescrMeta & {
   readonly isDateSqlDomain: true;
   readonly isDateTime?: boolean;
   readonly isCreatedAt?: boolean;
+  readonly isUpdatedAt?: boolean;
+  readonly isDeletedAt?: boolean;
 };
 
 export function sqlDomainZodDateDescr(
-  options: Pick<SqlDomainZodDateDescr, "isDateTime" | "isCreatedAt">,
+  options: Pick<
+    SqlDomainZodDateDescr,
+    "isDateTime" | "isCreatedAt" | "isUpdatedAt" | "isDeletedAt"
+  >,
 ): SqlDomainZodDateDescr {
   return {
     isSqlDomainZodDescrMeta: true,
@@ -690,6 +695,52 @@ export function zodDateSqlDomainFactory<
               return `GETDATE()`;
             }
             return `CURRENT_TIMESTAMP`;
+          },
+        }),
+      };
+    },
+    updatedAt: <
+      ZodType extends z.ZodOptional<z.ZodDefault<z.ZodDate>>,
+      Identity extends string,
+    >(init?: {
+      readonly identity?: Identity;
+      readonly parents?: z.ZodTypeAny[];
+      readonly dateFormat?: Intl.DateTimeFormatOptions;
+    }): SqlDomain<ZodType, Context, Identity> => {
+      return {
+        ...ztaSDF.defaults<Identity>(
+          z.date().default(new Date()).optional() as ZodType,
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `DATETIME2`;
+            }
+            return `TIMESTAMP`;
+          },
+        }),
+      };
+    },
+    deletedAt: <
+      ZodType extends z.ZodOptional<z.ZodDefault<z.ZodDate>>,
+      Identity extends string,
+    >(init?: {
+      readonly identity?: Identity;
+      readonly parents?: z.ZodTypeAny[];
+      readonly dateFormat?: Intl.DateTimeFormatOptions;
+    }): SqlDomain<ZodType, Context, Identity> => {
+      return {
+        ...ztaSDF.defaults<Identity>(
+          z.date().default(new Date()).optional() as ZodType,
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `DATETIME2`;
+            }
+            return `TIMESTAMP`;
           },
         }),
       };
@@ -993,11 +1044,25 @@ export function zodTypeSqlDomainFactory<
       case z.ZodFirstPartyTypeKind.ZodDate: {
         if (zodDefHook?.descrMeta) {
           if (isSqlDomainZodDateDescr(zodDefHook.descrMeta)) {
-            return zodDefHook.descrMeta.isCreatedAt
-              ? dateSDF.createdAt(init)
-              : zodDefHook.descrMeta.isDateTime
-              ? dateSDF.dateTime(zodType, init)
-              : dateSDF.date(zodType, init);
+            if (zodDefHook.descrMeta.isCreatedAt) {
+              return zodDefHook.descrMeta.isCreatedAt
+                ? dateSDF.createdAt(init)
+                : zodDefHook.descrMeta.isDateTime
+                ? dateSDF.dateTime(zodType, init)
+                : dateSDF.date(zodType, init);
+            } else if (zodDefHook.descrMeta.isUpdatedAt) {
+              return zodDefHook.descrMeta.isUpdatedAt
+                ? dateSDF.updatedAt(init)
+                : zodDefHook.descrMeta.isDateTime
+                ? dateSDF.dateTime(zodType, init)
+                : dateSDF.date(zodType, init);
+            } else {
+              return zodDefHook.descrMeta.isDeletedAt
+                ? dateSDF.deletedAt(init)
+                : zodDefHook.descrMeta.isDateTime
+                ? dateSDF.dateTime(zodType, init)
+                : dateSDF.date(zodType, init);
+            }
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodDate ${

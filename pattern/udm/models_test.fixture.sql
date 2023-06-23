@@ -44,6 +44,11 @@ CREATE TABLE IF NOT EXISTS "organization_role_type" (
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "party" (
@@ -52,6 +57,11 @@ CREATE TABLE IF NOT EXISTS "party" (
     "party_name" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_type_id") REFERENCES "party_type"("code")
 );
 CREATE TABLE IF NOT EXISTS "party_identifier" (
@@ -61,6 +71,11 @@ CREATE TABLE IF NOT EXISTS "party_identifier" (
     "party_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_identifier_type_id") REFERENCES "party_identifier_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -74,6 +89,11 @@ CREATE TABLE IF NOT EXISTS "person" (
     "honorific_suffix" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("person_type_id") REFERENCES "person_type"("code")
 );
@@ -85,6 +105,11 @@ CREATE TABLE IF NOT EXISTS "party_relation" (
     "party_role_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("related_party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("relation_type_id") REFERENCES "party_relation_type"("code"),
@@ -98,6 +123,11 @@ CREATE TABLE IF NOT EXISTS "organization" (
     "registration_date" DATE NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "organization_role" (
@@ -107,6 +137,11 @@ CREATE TABLE IF NOT EXISTS "organization_role" (
     "organization_role_type_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
     FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("organization_role_type_id")
@@ -118,6 +153,11 @@ CREATE TABLE IF NOT EXISTS "contact_electronic" (
     "electronics_details" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -133,6 +173,11 @@ CREATE TABLE IF NOT EXISTS "contact_land" (
     "address_country" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("code"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
@@ -180,18 +225,18 @@ INSERT INTO "contact_type" ("code", "value") VALUES ('PERSONAL_EMAIL', 'Personal
 
 -- synthetic / test data
 
-INSERT INTO "party" ("party_type_id", "party_name", "created_by") VALUES ('PERSON', 'person', NULL);
+INSERT INTO "party" ("party_type_id", "party_name", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('PERSON', 'person', NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL);
+INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('test identifier', 'PASSPORT', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL, NULL, NULL, NULL);
 
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL, NULL, NULL);
+INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'PROFESSIONAL', 'Test First Name', 'Test Last Name', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
+INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', 'VENDOR', NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL);
+INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization_role_type" ("code", "value", "created_by") VALUES ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associate Manager Technology', NULL);
+INSERT INTO "organization_role_type" ("code", "value", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associate Manager Technology', NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL);
+INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL, NULL, NULL, NULL);
 
-INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL);
+INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('MOBILE_PHONE_NUMBER', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL, NULL, NULL, NULL);

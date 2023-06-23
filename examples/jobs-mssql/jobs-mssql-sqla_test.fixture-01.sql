@@ -49,6 +49,11 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES (2, 'Future');
     [position_status_id] INTEGER NOT NULL,
     [created_at] DATETIME2 DEFAULT GETDATE(),
     [created_by] TEXT DEFAULT 'UNKNOWN',
+    [updated_at] DATETIME2,
+    [updated_by] TEXT,
+    [deleted_at] DATETIME2,
+    [deleted_by] TEXT,
+    [activity_log] JSONB,
     FOREIGN KEY([status_id]) REFERENCES [job_status]([code]),
     FOREIGN KEY([position_status_id]) REFERENCES [job_position_status]([code])
 );
