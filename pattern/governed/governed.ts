@@ -272,8 +272,8 @@ export class GovernedTemplateState<Context extends SQLa.SqlEmitContext> {
   public tablesDeclared = new Set<SQLa.TableDefinition<Any, Context>>();
   public viewsDeclared = new Set<SQLa.ViewDefinition<Any, Context>>();
 
-  public context() {
-    return SQLa.typicalSqlEmitContext() as Context;
+  public context(inherit?: Partial<Context>) {
+    return SQLa.typicalSqlEmitContext(inherit) as Context;
   }
 
   public ddlOptions = SQLa.typicalSqlTextSupplierOptions<Context>({
