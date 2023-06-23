@@ -17,6 +17,11 @@
     * value: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "graph" as graph {
@@ -27,6 +32,11 @@
       description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "boundary" as boundary {
@@ -39,6 +49,11 @@
       description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "host" as host {
@@ -48,6 +63,11 @@
       description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "host_boundary" as host_boundary {
@@ -56,6 +76,11 @@
     * host_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "raci_matrix" as raci_matrix {
@@ -68,6 +93,11 @@
     * informed: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "raci_matrix_subject_boundary" as raci_matrix_subject_boundary {
@@ -77,6 +107,11 @@
     * raci_matrix_subject_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "raci_matrix_activity" as raci_matrix_activity {
@@ -85,6 +120,11 @@
     * activity: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party" as party {
@@ -94,6 +134,11 @@
     * party_name: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party_identifier" as party_identifier {
@@ -104,6 +149,11 @@
     * party_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "person" as person {
@@ -117,6 +167,11 @@
       honorific_suffix: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party_relation" as party_relation {
@@ -128,6 +183,11 @@
       party_role_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "organization" as organization {
@@ -139,6 +199,11 @@
     * registration_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "organization_role" as organization_role {
@@ -149,6 +214,11 @@
     * organization_role_type_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "contact_electronic" as contact_electronic {
@@ -159,6 +229,11 @@
     * electronics_details: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "contact_land" as contact_land {
@@ -174,6 +249,11 @@
     * address_country: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "asset" as asset {
@@ -199,6 +279,11 @@
     * tco_currency: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "vulnerability_source" as vulnerability_source {
@@ -209,6 +294,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "vulnerability" as vulnerability {
@@ -225,6 +315,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "threat_source" as threat_source {
@@ -240,6 +335,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "threat_event" as threat_event {
@@ -255,6 +355,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "asset_risk" as asset_risk {
@@ -268,6 +373,11 @@
     * impact: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "security_impact_analysis" as security_impact_analysis {
@@ -284,6 +394,11 @@
     * responsible_by_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "impact_of_risk" as impact_of_risk {
@@ -293,6 +408,11 @@
     * impact: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "proposed_controls" as proposed_controls {
@@ -302,6 +422,11 @@
     * controls: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "billing" as billing {
@@ -315,6 +440,11 @@
     * prorate: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "scheduled_task" as scheduled_task {
@@ -327,6 +457,11 @@
     * reminder_to: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "timesheet" as timesheet {
@@ -339,6 +474,11 @@
     * timesheet_summary: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "certificate" as certificate {
@@ -356,6 +496,11 @@
     * path: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "device" as device {
@@ -373,6 +518,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "security_incident_response_team" as security_incident_response_team {
@@ -385,6 +535,11 @@
       attended_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "awareness_training" as awareness_training {
@@ -397,6 +552,11 @@
     * attended_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "rating" as rating {
@@ -411,6 +571,11 @@
       worst_rating_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "note" as note {
@@ -420,6 +585,11 @@
     * note: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "audit_assertion" as audit_assertion {
@@ -437,6 +607,11 @@
     * assertion_description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "contract" as contract {
@@ -457,6 +632,11 @@
       date_of_contract_approval: TIMESTAMP
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "risk_register" as risk_register {
@@ -478,6 +658,11 @@
     * control_monitor_risk_owner_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "incident" as incident {
@@ -516,6 +701,11 @@
       report_time: TIMESTAMP
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "incident_root_cause" as incident_root_cause {
@@ -533,6 +723,11 @@
     * test_results: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "raci_matrix_assignment" as raci_matrix_assignment {
@@ -544,6 +739,11 @@
     * raci_matrix_assignment_nature_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "person_skill" as person_skill {
@@ -555,6 +755,11 @@
     * proficiency_scale_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "key_performance" as key_performance {
@@ -564,6 +769,11 @@
     * description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "key_performance_indicator" as key_performance_indicator {
@@ -593,6 +803,11 @@
     * trend_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "key_risk" as key_risk {
@@ -603,6 +818,11 @@
       base_value: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "key_risk_indicator" as key_risk_indicator {
@@ -613,6 +833,11 @@
       entry_value: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "assertion" as assertion {
@@ -625,6 +850,11 @@
     * assertion_expires_poam: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "attestation" as attestation {
@@ -639,6 +869,11 @@
       boundary_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "attestation_evidence" as attestation_evidence {
@@ -652,6 +887,11 @@
     * attachment: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   boundary |o..o{ boundary

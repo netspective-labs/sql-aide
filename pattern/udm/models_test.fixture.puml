@@ -17,6 +17,11 @@
     * value: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party" as party {
@@ -26,6 +31,11 @@
     * party_name: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party_identifier" as party_identifier {
@@ -36,6 +46,11 @@
     * party_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "person" as person {
@@ -49,6 +64,11 @@
       honorific_suffix: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "party_relation" as party_relation {
@@ -60,6 +80,11 @@
       party_role_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "organization" as organization {
@@ -71,6 +96,11 @@
     * registration_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "organization_role" as organization_role {
@@ -81,6 +111,11 @@
     * organization_role_type_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "contact_electronic" as contact_electronic {
@@ -91,6 +126,11 @@
     * electronics_details: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   entity "contact_land" as contact_land {
@@ -106,6 +146,11 @@
     * address_country: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
   }
 
   party |o..o{ party_identifier

@@ -138,7 +138,21 @@ export function governedDomains<
           SQLa.sqlDomainZodDateDescr({ isCreatedAt: true }),
         ),
       ).default(new Date()).optional(),
+    updatedAt: () =>
+      z.date(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true }),
+        ),
+      ).default(new Date()).optional(),
 
+    deletedAt: () =>
+      z.date(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodDateDescr({ isDeletedAt: true }),
+        ),
+      ).optional(),
+
+    activity_log: () => SQLa.zodJsonB().optional(),
     ulid: () => z.string().ulid(),
     ulidNullable: () => z.string().ulid().optional(),
 
@@ -231,23 +245,74 @@ export function governedModel<
       };
     },
   );
+  const updatedBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "updated_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+      };
+    },
+  );
+  const deletedBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "deleted_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+      };
+    },
+  );
 
   const housekeeping = {
     columns: {
       created_at: domains.createdAt(),
       created_by: z.string(SQLa.zodSqlDomainRawCreateParams(createdBySDF))
         .optional(),
+      updated_at: domains.updatedAt(),
+      updated_by: z.string(SQLa.zodSqlDomainRawCreateParams(updatedBySDF))
+        .optional(),
+      deleted_at: domains.deletedAt(),
+      deleted_by: z.string(SQLa.zodSqlDomainRawCreateParams(deletedBySDF))
+        .optional(),
+      activity_log: domains.jsonbNullable(),
     },
     insertStmtPrepOptions: <TableName extends string>() => {
       const result: SQLa.InsertStmtPreparerOptions<
         TableName,
-        { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
-        { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
+        {
+          created_at?: Date;
+          created_by?: string;
+          updated_at?: Date;
+          updated_by?: string;
+          deleted_at?: Date;
+          deleted_by?: string;
+          activity_log?: JSON;
+        }, // this must match typical.columns so that isColumnEmittable is type-safe
+        {
+          created_at?: Date;
+          created_by?: string;
+          updated_at?: Date;
+          updated_by?: string;
+          deleted_at?: Date;
+          deleted_by?: string;
+          activity_log?: JSON;
+        }, // this must match typical.columns so that isColumnEmittable is type-safe
         Context
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
-        isColumnEmittable: (name) => name == "created_at" ? false : true,
+        isColumnEmittable: (name) =>
+          name == "created_at" || name == "updated_at" ||
+            name == "deleted_at"
+            ? false
+            : true,
       };
       return result as SQLa.InsertStmtPreparerOptions<
         Any,
