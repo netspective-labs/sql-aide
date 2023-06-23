@@ -169,6 +169,22 @@ export class GovernedDomains<
     ).default(new Date()).optional();
   }
 
+  updatedAt() {
+    return z.date(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true }),
+      ),
+    ).default(new Date()).optional();
+  }
+
+  deletedAt() {
+    return z.date(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodDateDescr({ isDeletedAt: true }),
+      ),
+    ).optional();
+  }
+
   ulid() {
     return z.string().ulid();
   }
@@ -220,6 +236,104 @@ export function housekeepingMinimal<
       TableName,
       { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
       { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
+      Context
+    > = {
+      // created_at should be filled in by the database so we don't want
+      // to emit it as part of the an insert DML SQL statement
+      isColumnEmittable: (name) => name == "created_at" ? false : true,
+    };
+    return result as SQLa.InsertStmtPreparerOptions<
+      Any,
+      Any,
+      Any,
+      Context
+    >;
+  };
+
+  return {
+    createdBySDF,
+    columns,
+    insertStmtPrepOptions,
+  };
+}
+
+export function housekeepingAuditable<
+  Domain extends GovernedDomain,
+  Domains extends GovernedDomains<Domain, Context>,
+  Context extends GovernedEmitContext,
+>(domains: Domains) {
+  const createdBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "created_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+        sqlDefaultValue: () => ({ SQL: () => `'UNKNOWN'` }),
+      };
+    },
+  );
+  const updatedBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "updated_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+      };
+    },
+  );
+  const deletedBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
+    "deleted_by",
+    (_zodType, init) => {
+      return {
+        ...domains.sdf.anySDF.defaults<Any>(
+          z.string().default("UNKNOWN").optional(),
+          { isOptional: true, ...init },
+        ),
+        sqlDataType: () => ({ SQL: () => `TEXT` }),
+      };
+    },
+  );
+
+  const columns = {
+    created_at: domains.createdAt(),
+    created_by: z.string(SQLa.zodSqlDomainRawCreateParams(createdBySDF))
+      .optional(),
+    updated_at: domains.updatedAt(),
+    updated_by: z.string(SQLa.zodSqlDomainRawCreateParams(updatedBySDF))
+      .optional(),
+    deleted_at: domains.deletedAt(),
+    deleted_by: z.string(SQLa.zodSqlDomainRawCreateParams(deletedBySDF))
+      .optional(),
+    activity_log: domains.jsonbNullable(),
+  };
+
+  const insertStmtPrepOptions = <TableName extends string>() => {
+    const result: SQLa.InsertStmtPreparerOptions<
+      TableName,
+      {
+        created_at?: Date;
+        created_by?: string;
+        updated_at?: Date;
+        updated_by?: string;
+        deleted_at?: Date;
+        deleted_by?: string;
+        activity_log?: JSON;
+      }, // this must match typical.columns so that isColumnEmittable is type-safe
+      {
+        created_at?: Date;
+        created_by?: string;
+        updated_at?: Date;
+        updated_by?: string;
+        deleted_at?: Date;
+        deleted_by?: string;
+        activity_log?: JSON;
+      }, // this must match typical.columns so that isColumnEmittable is type-safe
       Context
     > = {
       // created_at should be filled in by the database so we don't want
@@ -538,7 +652,6 @@ export class GovernedIM<
   >(sqlNS?: SQLa.SqlNamespaceSupplier) {
     type Domains = GovernedDomains<Domain, Context>;
     type Keys = GovernedKeys<Domain, Domains, Context>;
-    type HousekeepingShape = typeof housekeeping.columns;
 
     const gts = new GovernedTemplateState<Context>(sqlNS);
     const domains = new GovernedDomains<Domain, Context>();
@@ -547,13 +660,35 @@ export class GovernedIM<
       Domain,
       Domains,
       Keys,
-      HousekeepingShape,
+      typeof housekeeping.columns,
+      typeof gts,
+      Context
+    >(domains, new GovernedKeys(domains), housekeeping, gts);
+  }
+
+  static auditable<
+    Domain extends GovernedDomain,
+    Context extends GovernedEmitContext,
+  >(sqlNS?: SQLa.SqlNamespaceSupplier) {
+    type Domains = GovernedDomains<Domain, Context>;
+    type Keys = GovernedKeys<Domain, Domains, Context>;
+
+    const gts = new GovernedTemplateState<Context>(sqlNS);
+    const domains = new GovernedDomains<Domain, Context>();
+    const housekeeping = housekeepingAuditable<Domain, Domains, Context>(
+      domains,
+    );
+    return new GovernedIM<
+      Domain,
+      Domains,
+      Keys,
+      typeof housekeeping.columns,
       typeof gts,
       Context
     >(
       domains,
       new GovernedKeys(domains),
-      housekeepingMinimal<Domain, Domains, Context>(domains),
+      housekeeping,
       gts,
     );
   }
