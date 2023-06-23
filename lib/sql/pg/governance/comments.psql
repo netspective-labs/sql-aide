@@ -1,0 +1,80 @@
+---------------------------
+--- Data Governance SQL ---
+---------------------------
+
+-- UNTESTED ChatGPT draft of PostgreSQL stored function that retrieves the 
+-- comments for all objects, including custom object types and extensions,
+-- within a given schema and returns them as a JSON structure
+-- TODO: finish and generate unit tests
+CREATE OR REPLACE FUNCTION get_schema_comments(schema_name text)
+  RETURNS JSON AS
+$$
+DECLARE
+  comments_json json;
+BEGIN
+  SELECT json_object_agg(objname, objcomment) INTO comments_json
+  FROM (
+    SELECT objname, objcomment
+    FROM (
+      -- Retrieve table and column comments
+      SELECT t.table_name AS objname, col.column_name AS subobjname, col.description AS objcomment
+      FROM information_schema.tables AS t
+      LEFT JOIN information_schema.columns AS col ON col.table_name = t.table_name AND col.table_schema = t.table_schema
+      WHERE t.table_schema = schema_name
+
+      UNION ALL
+
+      -- Retrieve constraint comments
+      SELECT con.conname AS objname, NULL AS subobjname, con.description AS objcomment
+      FROM pg_constraint AS con
+      WHERE con.connamespace::regnamespace::text = schema_name
+
+      UNION ALL
+
+      -- Retrieve index comments
+      SELECT indexname AS objname, NULL AS subobjname, obj_description(indexrelid, 'pg_class') AS objcomment
+      FROM pg_index
+      WHERE indrelid::regclass::text LIKE schema_name || '.%'
+        AND indisprimary = false
+
+      UNION ALL
+
+      -- Retrieve function comments
+      SELECT p.proname AS objname, NULL AS subobjname, d.description AS objcomment
+      FROM pg_proc AS p
+      LEFT JOIN pg_description AS d ON p.oid = d.objoid
+      WHERE p.pronamespace::regnamespace::text = schema_name
+
+      UNION ALL
+
+      -- Retrieve view comments
+      SELECT table_name AS objname, NULL AS subobjname, obj_description(('"' || table_schema || '"."' || table_name || '"')::regclass, 'pg_class') AS objcomment
+      FROM information_schema.views
+      WHERE table_schema = schema_name
+
+      UNION ALL
+
+      -- Retrieve custom object type comments
+      SELECT t.typname AS objname, NULL AS subobjname, d.description AS objcomment
+      FROM pg_type AS t
+      LEFT JOIN pg_description AS d ON t.oid = d.objoid
+      WHERE t.typnamespace::regnamespace::text = schema_name
+
+      UNION ALL
+
+      -- Retrieve extension comments
+      SELECT extname AS objname, NULL AS subobjname, obj_description(extnamespace::regnamespace::oid, 'pg_extension') AS objcomment
+      FROM pg_extension
+      WHERE extnamespace::regnamespace::text = schema_name
+    ) AS objects
+    WHERE objcomment IS NOT NULL
+  ) AS commented_objects;
+
+  RETURN comments_json;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- usage: 
+-- SELECT get_schema_comments('your_schema_name');
+

@@ -1,0 +1,264 @@
+---------------------------
+--- Data Governance SQL ---
+---------------------------
+
+-- UNTESTED DRAFT of data lineage schema strategy ... needs to be converted to SQLa
+-- Storing data lineage as metadata in PostgreSQL can be achieved by extending 
+-- the database schema and utilizing additional tables and columns to capture
+-- the necessary information. Here's a suggested approach:
+
+-- Remember to populate the metadata tables with appropriate information and
+-- maintain the data governance metadata as part of your ETL processes. You
+-- can then query and retrieve the data governance metadata using SQL queries,
+-- joining the relevant tables and applying filters based on your specific criteria.
+-- Customize the schema and tables further based on your organization's data
+-- governance practices, such as incorporating fields for data stewardship,
+-- data retention policies, data lineage completeness, or any other metadata
+-- attributes relevant to your data governance framework.
+
+CREATE TABLE source_table (
+  source_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  -- Additional columns for data governance metadata
+  data_quality_rating INTEGER,
+  data_classification TEXT,
+  data_privacy_level TEXT,
+  -- Other relevant metadata columns
+);
+
+CREATE TABLE target_table (
+  target_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  -- Additional columns for data governance metadata
+  data_quality_rating INTEGER,
+  data_classification TEXT,
+  data_privacy_level TEXT,
+  -- Other relevant metadata columns
+);
+
+CREATE TABLE transformation (
+  transformation_id SERIAL PRIMARY KEY,
+  transformation_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  -- Additional columns for data governance metadata
+  transformation_type TEXT,
+  execution_frequency TEXT,
+  -- Other relevant metadata columns
+);
+
+CREATE TABLE data_lineage (
+  lineage_id SERIAL PRIMARY KEY,
+  source_table_id INTEGER REFERENCES source_table (source_id),
+  target_table_id INTEGER REFERENCES target_table (target_id),
+  transformation_id INTEGER REFERENCES transformation (transformation_id),
+  lineage_type TEXT,
+  -- Additional columns for data governance metadata
+  lineage_quality_rating INTEGER,
+  -- Other relevant metadata columns
+);
+
+SELECT s.table_name AS source_table,
+       t.table_name AS target_table,
+       tr.transformation_name
+FROM source_table s
+JOIN transformation tr ON s.transformation_id = tr.transformation_id
+JOIN target_table t ON tr.target_table_id = t.target_id
+WHERE s.table_name = 'your_source_table'
+  AND t.table_name = 'your_target_table';
+
+/*
+In addition to the tables mentioned earlier, here are some other data governance tables you can consider incorporating into your PostgreSQL schema:
+
+# Data Stewardship:
+
+* data_steward: Stores information about data stewards or owners responsible for specific tables, columns, or data assets.
+* data_steward_assignment: Tracks the assignment of data stewards to data assets, including start and end dates for stewardship responsibilities.
+
+# Data Quality:
+
+* data_quality_issue: Captures details about data quality issues, such as data anomalies, inconsistencies, or errors.
+* data_quality_rule: Stores data quality rules or checks that need to be applied to ensure data integrity and accuracy.
+* data_quality_score: Records data quality scores or ratings for tables or columns based on predefined metrics or criteria.
+
+# Data Classification and Sensitivity:
+
+* data_classification_level: Defines different levels or categories of data classification, such as public, internal, confidential, etc.
+* data_sensitivity_level: Represents the sensitivity level of data, indicating the degree of sensitivity or privacy requirements.
+
+# Data Privacy and Security:
+
+* data_privacy_policy: Describes the privacy policies or regulations applicable to data assets, including compliance requirements.
+* data_access_control: Tracks access control permissions, roles, and privileges for tables, columns, or data assets.
+* data_audit_log: Logs data access and modifications, including timestamps, users, and actions performed for audit purposes.
+
+# Data Retention and Archiving:
+
+* data_retention_policy: Specifies the retention periods for different types of data, indicating how long data should be retained.
+* data_archival_info: Stores information related to data archiving processes, such as archival location, dates, and archival policies.
+
+# Data Lineage History:
+
+* data_lineage_history: Records historical changes to data lineage, capturing modifications, additions, or deletions in the data flow.
+*/
+
+-- Source Table Metadata
+CREATE TABLE source_table (
+  source_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  data_quality_rating INTEGER,
+  data_classification TEXT,
+  data_privacy_level TEXT
+);
+
+-- Target Table Metadata
+CREATE TABLE target_table (
+  target_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  data_quality_rating INTEGER,
+  data_classification TEXT,
+  data_privacy_level TEXT
+);
+
+-- Transformation Metadata
+CREATE TABLE transformation (
+  transformation_id SERIAL PRIMARY KEY,
+  transformation_name TEXT,
+  description TEXT,
+  owner TEXT,
+  last_updated TIMESTAMP,
+  transformation_type TEXT,
+  execution_frequency TEXT
+);
+
+-- Data Lineage Metadata
+CREATE TABLE data_lineage (
+  lineage_id SERIAL PRIMARY KEY,
+  source_table_id INTEGER REFERENCES source_table (source_id),
+  target_table_id INTEGER REFERENCES target_table (target_id),
+  transformation_id INTEGER REFERENCES transformation (transformation_id),
+  lineage_type TEXT,
+  lineage_quality_rating INTEGER
+);
+
+-- Data Stewardship
+CREATE TABLE data_steward (
+  steward_id SERIAL PRIMARY KEY,
+  steward_name TEXT,
+  department TEXT,
+  contact_information TEXT
+);
+
+CREATE TABLE data_steward_assignment (
+  assignment_id SERIAL PRIMARY KEY,
+  source_table_id INTEGER REFERENCES source_table (source_id),
+  target_table_id INTEGER REFERENCES target_table (target_id),
+  steward_id INTEGER REFERENCES data_steward (steward_id),
+  start_date DATE,
+  end_date DATE
+);
+
+-- Data Quality
+CREATE TABLE data_quality_issue (
+  issue_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  issue_description TEXT,
+  reported_date DATE,
+  resolution_status TEXT
+);
+
+CREATE TABLE data_quality_rule (
+  rule_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  rule_description TEXT,
+  rule_expression TEXT
+);
+
+CREATE TABLE data_quality_score (
+  score_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  score INTEGER,
+  assessment_date DATE
+);
+
+-- Data Classification and Sensitivity
+CREATE TABLE data_classification_level (
+  level_id SERIAL PRIMARY KEY,
+  level_name TEXT,
+  level_description TEXT
+);
+
+CREATE TABLE data_sensitivity_level (
+  sensitivity_id SERIAL PRIMARY KEY,
+  sensitivity_level TEXT,
+  sensitivity_description TEXT
+);
+
+-- Data Privacy and Security
+CREATE TABLE data_privacy_policy (
+  policy_id SERIAL PRIMARY KEY,
+  policy_name TEXT,
+  policy_description TEXT
+);
+
+CREATE TABLE data_access_control (
+  access_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  user_id INTEGER,
+  permission_type TEXT
+);
+
+CREATE TABLE data_audit_log (
+  log_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  user_id INTEGER,
+  action_type TEXT,
+  action_date TIMESTAMP
+);
+
+-- Data Retention and Archiving
+CREATE TABLE data_retention_policy (
+  policy_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  retention_period INTEGER,
+  retention_description TEXT
+);
+
+CREATE TABLE data_archival_info (
+  archival_id SERIAL PRIMARY KEY,
+  table_name TEXT,
+  archival_location TEXT,
+  archival_date DATE,
+  archival_policy TEXT
+);
+
+-- Data Lineage History
+CREATE TABLE data_lineage_history (
+  history_id SERIAL PRIMARY KEY,
+  lineage_id INTEGER REFERENCES data_lineage (lineage_id),
+  modification_type TEXT,
+  modified_by TEXT,
+  modification_date TIMESTAMP
+);
