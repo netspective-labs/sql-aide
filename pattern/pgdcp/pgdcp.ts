@@ -114,7 +114,9 @@ export class PgDcpEmitCoordinator<
   }
 
   sqlEmitContext(): PgDcpEmitContext {
-    return this.governedModel.templateState.context();
+    return this.governedModel.templateState.context({
+      sqlDialect: SQLa.postgreSqlDialect(),
+    });
   }
 
   subjectArea(target: SchemaName | SQLa.SqlNamespaceSupplier) {
