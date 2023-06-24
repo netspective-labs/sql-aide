@@ -6,7 +6,8 @@ import * as typ from "../typical/typical.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export type ObservabilityDomainGovn = typ.GovernedDomain;
+export type ObservabilityDomainQS = typ.TypicalDomainQS;
+export type ObservabilityDomainsQS = SQLa.SqlDomainsQS<ObservabilityDomainQS>;
 
 /**
  * Convenience object which defines aliases of all the domains that we'll be using.
@@ -15,7 +16,11 @@ export type ObservabilityDomainGovn = typ.GovernedDomain;
  * @returns the typical domains used by observability models
  */
 export function observabilityDomains<Context extends SQLa.SqlEmitContext>() {
-  return typ.governedDomains<ObservabilityDomainGovn, Context>();
+  return typ.governedDomains<
+    ObservabilityDomainQS,
+    ObservabilityDomainsQS,
+    Context
+  >();
 }
 
 /**
@@ -23,7 +28,11 @@ export function observabilityDomains<Context extends SQLa.SqlEmitContext>() {
  * @returns a builder object with helper functions as properties which can be used to build observability keys
  */
 export function observabilityKeys<Context extends SQLa.SqlEmitContext>() {
-  return typ.governedKeys<ObservabilityDomainGovn, Context>();
+  return typ.governedKeys<
+    ObservabilityDomainQS,
+    ObservabilityDomainsQS,
+    Context
+  >();
 }
 
 /**
@@ -46,11 +55,11 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     readonly sqlNS?: SQLa.SqlNamespaceSupplier;
   },
 ) {
-  const tcf = SQLa.tableColumnFactory<Any, Any>();
+  const tcf = SQLa.tableColumnFactory<Any, Any, ObservabilityDomainQS>();
   const names = observabilityNames<Context>();
   const domains = observabilityDomains<Context>();
   const keys = observabilityKeys<Context>();
-  const tableLintRules = SQLa.tableLintRules<Context>();
+  const tableLintRules = SQLa.tableLintRules<Context, ObservabilityDomainQS>();
 
   const housekeeping = {
     columns: {
@@ -62,7 +71,8 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         { created_at?: Date; created_by?: string; provenance: string }, // this must match typical.columns so that isColumnEmittable is type-safe
         { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-        Context
+        Context,
+        ObservabilityDomainQS
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
@@ -73,7 +83,8 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
         Any,
         Any,
         Any,
-        Context
+        Context,
+        ObservabilityDomainQS
       >;
     },
   };
@@ -107,10 +118,20 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
       ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+        & SQLa.FKeyColNameConsistencyLintOptions<
+          Context,
+          ObservabilityDomainQS,
+          ObservabilityDomainsQS
+        >;
     },
   ) => {
-    const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
+    const tableDefn = SQLa.tableDefinition<
+      TableName,
+      ColumnsShape,
+      Context,
+      ObservabilityDomainQS,
+      ObservabilityDomainsQS
+    >(
       tableName,
       columnsShape,
       {
@@ -124,12 +145,22 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
     >();
     const result = {
       ...tableDefn,
-      ...SQLa.tableColumnsRowFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableColumnsRowFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        ObservabilityDomainQS
+      >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        ObservabilityDomainQS
+      >(
         tableName,
         columnsShape,
       ),

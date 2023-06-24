@@ -12,7 +12,8 @@ export type ViewColumnDefn<
   ColumnName extends string,
   ColumnTsType extends z.ZodTypeAny,
   Context extends emit.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, ColumnName> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, ColumnName, DomainQS> & {
   readonly viewName: ViewName;
   readonly columnName: ColumnName;
 };
@@ -137,6 +138,8 @@ export function safeViewDefinitionCustom<
   ViewName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   ColumnName extends keyof ColumnsShape & string = keyof ColumnsShape & string,
 >(
   viewName: ViewName,
@@ -148,7 +151,7 @@ export function safeViewDefinitionCustom<
     & ViewDefnOptions<ViewName, ColumnName, ColumnsShape, Context>
     & Partial<emit.EmbeddedSqlSupplier>,
 ) {
-  const sdf = d.sqlDomainsFactory<ViewName, Context>();
+  const sdf = d.sqlDomainsFactory<ViewName, Context, DomainQS, DomainsQS>();
   const sd = sdf.sqlDomains(zodRawShape);
 
   type ColumnDefns = {
@@ -157,15 +160,21 @@ export function safeViewDefinitionCustom<
         ViewName,
         Extract<Property, string>,
         z.ZodType<T, D, I>,
-        Context
+        Context,
+        DomainQS
       >
       : never;
   };
 
   const { zoSchema, zbSchema } = sd;
   const columns: ColumnDefns = {} as Any;
-  const columnsList: ViewColumnDefn<ViewName, Any, z.ZodTypeAny, Context>[] =
-    [];
+  const columnsList: ViewColumnDefn<
+    ViewName,
+    Any,
+    z.ZodTypeAny,
+    Context,
+    DomainQS
+  >[] = [];
   const { keys: viewShapeKeys } = zoSchema._getCached();
 
   for (const key of viewShapeKeys) {
@@ -174,7 +183,8 @@ export function safeViewDefinitionCustom<
       ViewName,
       Any,
       z.ZodTypeAny,
-      Context
+      Context,
+      DomainQS
     >;
     (columnDefn as unknown as { viewName: ViewName }).viewName = viewName;
     (columnDefn as unknown as { columnName: ColumnName }).columnName =
@@ -258,6 +268,8 @@ export function safeViewDefinition<
   ViewName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   ColumnName extends keyof ColumnsShape & string = keyof ColumnsShape & string,
 >(
   viewName: ViewName,
@@ -275,7 +287,13 @@ export function safeViewDefinition<
       embeddedSQL = (stsOptions: emit.SqlTextSupplierOptions<Any>) =>
         emit.SQL({ ...stsOptions, symbolsFirst: true }),
     } = vdOptions ?? {};
-    const selectStmt = ss.typedSelect<Any, ColumnsShape, Context>(
+    const selectStmt = ss.typedSelect<
+      Any,
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       columnsShape,
       {
         embeddedSQL,

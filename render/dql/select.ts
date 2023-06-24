@@ -138,12 +138,19 @@ export function typedSelect<
   SelectStmtName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >(
   props: ColumnsShape,
   ess: tmpl.EmbeddedSqlSupplier,
   ssOptions?: SelectTemplateOptions<SelectStmtName, Context>,
 ) {
-  const sdf = d.sqlDomainsFactory<SelectStmtName, Context>();
+  const sdf = d.sqlDomainsFactory<
+    SelectStmtName,
+    Context,
+    DomainQS,
+    DomainsQS
+  >();
   return (
     literals: TemplateStringsArray,
     ...expressions: tmpl.SqlPartialExpression<Context>[]

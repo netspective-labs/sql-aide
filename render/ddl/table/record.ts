@@ -1,5 +1,6 @@
 import { zod as z } from "../../deps.ts";
 import * as r from "../../../lib/universal/record.ts";
+import * as d from "../../domain/mod.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as i from "../../dml/insert.ts";
 import * as c from "./column.ts";
@@ -13,6 +14,7 @@ export function tableColumnsRowFactory<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   tableName: TableName,
   props: ColumnsShape,
@@ -21,7 +23,8 @@ export function tableColumnsRowFactory<
       TableName,
       Any,
       Any,
-      Context
+      Context,
+      DomainQS
     >;
   },
 ) {
@@ -102,7 +105,8 @@ export function tableColumnsRowFactory<
       TableName,
       InsertableRecord,
       EntireRecord,
-      Context
+      Context,
+      DomainQS
     >(
       tableName,
       (group) => {
@@ -125,7 +129,8 @@ export function tableColumnsRowFactory<
       TableName,
       InsertableRecord,
       EntireRecord,
-      Context
+      Context,
+      DomainQS
     >(
       tableName,
       (group) => {

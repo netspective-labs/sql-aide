@@ -1,5 +1,4 @@
 import { zod as z } from "../../deps.ts";
-import * as za from "../../lib/universal/zod-aide.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as et from "../typical/enum-table.ts";
 import * as diaPUML from "../../render/diagram/plantuml-ie-notation.ts";
@@ -8,36 +7,20 @@ import * as diaPUML from "../../render/diagram/plantuml-ie-notation.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-// TODO: domain governance is for meta-data and documentation, optionally part of emitted tables
-//       create a govn_* set of tables that would contain business logic, assurance, presentation, and other details
-//       * govn_entity would be a table that stores table meta data (descriptions, immutability, presentation, migration instructions, etc.)
-//       * govn_entity_property would be a table that stores table column meta data (descriptions, immutability, presentation, migration instructions, etc.)
-//       * govn_entity_relationship would be a table that stores entity/property relationships (1:N, 1:M, etc.) for literate programming documentation, etc.
-//       * govn_entity_activity would be a table that stores governance history and activity data in JSON format for documentation, migration status, etc.
-export type GovernedDomain = {
-  readonly isDigestPrimaryKeyMember?: boolean;
-  readonly isSurrogateKey?: boolean;
-  readonly isDenormalized?: boolean;
-  readonly isUniqueConstraintMember?: string[];
-};
-
-export type GovernedDomainSupplier<GD extends GovernedDomain> = {
-  readonly govnDomain: GD;
-};
+export type GovernedDomainQS = SQLa.SqlDomainQS;
+export type GovernedDomainsQS = SQLa.SqlDomainsQS<GovernedDomainQS>;
 
 export interface GovernedEmitContext extends SQLa.SqlEmitContext {
   readonly isGovnEmitContext: true;
 }
 
 export class GovernedDomains<
-  Domain extends GovernedDomain,
+  DomainQS extends GovernedDomainQS,
+  DomainsQS extends GovernedDomainsQS,
   Context extends SQLa.SqlEmitContext,
 > {
   constructor(
-    readonly sdf = SQLa.sqlDomainsFactory<Any, Context>(),
-    readonly govnZB = za.zodBaggage<Domain, { readonly govnDomain: Domain }>(
-      "govnDomain",
-    ),
+    readonly sdf = SQLa.sqlDomainsFactory<Any, Context, DomainQS, DomainsQS>(),
   ) {
   }
 
@@ -202,14 +185,15 @@ export class GovernedDomains<
   }
 
   selfRef<ZTA extends z.ZodTypeAny>(zodType: ZTA) {
-    return SQLa.selfRef<ZTA, Context>(zodType, this.sdf);
+    return SQLa.selfRef<ZTA, Context, DomainQS, DomainsQS>(zodType, this.sdf);
   }
 }
 
 export function housekeepingMinimal<
-  Domain extends GovernedDomain,
-  Domains extends GovernedDomains<Domain, Context>,
+  Domains extends GovernedDomains<DomainQS, DomainsQS, Context>,
   Context extends GovernedEmitContext,
+  DomainQS extends GovernedDomainQS,
+  DomainsQS extends GovernedDomainsQS,
 >(domains: Domains) {
   const createdBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
     "created_by",
@@ -236,7 +220,8 @@ export function housekeepingMinimal<
       TableName,
       { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
       { created_at?: Date; created_by?: string }, // this must match typical.columns so that isColumnEmittable is type-safe
-      Context
+      Context,
+      DomainQS
     > = {
       // created_at should be filled in by the database so we don't want
       // to emit it as part of the an insert DML SQL statement
@@ -246,7 +231,8 @@ export function housekeepingMinimal<
       Any,
       Any,
       Any,
-      Context
+      Context,
+      DomainQS
     >;
   };
 
@@ -258,9 +244,10 @@ export function housekeepingMinimal<
 }
 
 export function housekeepingAuditable<
-  Domain extends GovernedDomain,
-  Domains extends GovernedDomains<Domain, Context>,
+  Domains extends GovernedDomains<DomainQS, DomainsQS, Context>,
   Context extends GovernedEmitContext,
+  DomainQS extends GovernedDomainQS,
+  DomainsQS extends GovernedDomainsQS,
 >(domains: Domains) {
   const createdBySDF = SQLa.declareZodTypeSqlDomainFactoryFromHook(
     "created_by",
@@ -334,7 +321,8 @@ export function housekeepingAuditable<
         deleted_by?: string;
         activity_log?: JSON;
       }, // this must match typical.columns so that isColumnEmittable is type-safe
-      Context
+      Context,
+      DomainQS
     > = {
       // created_at should be filled in by the database so we don't want
       // to emit it as part of the an insert DML SQL statement
@@ -344,7 +332,8 @@ export function housekeepingAuditable<
       Any,
       Any,
       Any,
-      Context
+      Context,
+      DomainQS
     >;
   };
 
@@ -356,13 +345,14 @@ export function housekeepingAuditable<
 }
 
 export class GovernedKeys<
-  Domain extends GovernedDomain,
-  Domains extends GovernedDomains<Domain, Context>,
+  Domains extends GovernedDomains<DomainQS, DomainsQS, Context>,
   Context extends GovernedEmitContext,
+  DomainQS extends GovernedDomainQS,
+  DomainsQS extends GovernedDomainsQS,
 > {
   constructor(
     readonly domains: Domains,
-    readonly pkcf = SQLa.primaryKeyColumnFactory<Context>(),
+    readonly pkcf = SQLa.primaryKeyColumnFactory<Context, DomainQS>(),
   ) {
   }
 
@@ -379,11 +369,16 @@ export class GovernedKeys<
   }
 }
 
-export class GovernedTemplateState<Context extends SQLa.SqlEmitContext> {
+export class GovernedTemplateState<
+  Context extends SQLa.SqlEmitContext,
+  DomainQS extends GovernedDomainQS,
+> {
   constructor(readonly sqlNS?: SQLa.SqlNamespaceSupplier) {
   }
 
-  public tablesDeclared = new Set<SQLa.TableDefinition<Any, Context>>();
+  public tablesDeclared = new Set<
+    SQLa.TableDefinition<Any, Context, DomainQS>
+  >();
   public viewsDeclared = new Set<SQLa.ViewDefinition<Any, Context>>();
 
   public context(inherit?: Partial<Context>) {
@@ -410,7 +405,7 @@ export class GovernedTemplateState<Context extends SQLa.SqlEmitContext> {
   }
 
   catalog(sts: SQLa.SqlTextSupplier<Context>) {
-    if (SQLa.isTableDefinition<Any, Context>(sts)) {
+    if (SQLa.isTableDefinition<Any, Context, DomainQS>(sts)) {
       this.tablesDeclared.add(sts);
     }
     if (SQLa.isViewDefinition<Any, Context>(sts)) {
@@ -435,16 +430,19 @@ export class GovernedTemplateState<Context extends SQLa.SqlEmitContext> {
 }
 
 export class GovernedIM<
-  Domain extends GovernedDomain,
-  Domains extends GovernedDomains<Domain, Context>,
-  Keys extends GovernedKeys<Domain, Domains, Context>,
+  Domains extends GovernedDomains<DomainQS, DomainsQS, Context>,
+  Keys extends GovernedKeys<Domains, Context, DomainQS, DomainsQS>,
   HousekeepingShape extends z.ZodRawShape,
-  TemplateState extends GovernedTemplateState<Context>,
+  TemplateState extends GovernedTemplateState<Context, DomainQS>,
   Context extends GovernedEmitContext,
+  DomainQS extends GovernedDomainQS,
+  DomainsQS extends GovernedDomainsQS,
 > {
-  readonly tableLintRules = SQLa.tableLintRules<Context>();
-  readonly tcFactory = SQLa.tableColumnFactory<Any, Context>();
-  readonly enumTablesFactory: ReturnType<typeof et.enumTablesFactory<Context>>;
+  readonly tableLintRules = SQLa.tableLintRules<Context, DomainQS>();
+  readonly tcFactory = SQLa.tableColumnFactory<Any, Context, DomainQS>();
+  readonly enumTablesFactory: ReturnType<
+    typeof et.enumTablesFactory<Context, DomainQS>
+  >;
 
   constructor(
     readonly domains: Domains,
@@ -456,12 +454,13 @@ export class GovernedIM<
           TableName,
           Any,
           Any,
-          Context
+          Context,
+          DomainQS
         >;
     },
     readonly templateState: TemplateState,
   ) {
-    this.enumTablesFactory = et.enumTablesFactory<Context>({
+    this.enumTablesFactory = et.enumTablesFactory<Context, DomainQS>({
       isIdempotent: true,
       sqlNS: templateState.sqlNS,
     });
@@ -506,10 +505,16 @@ export class GovernedIM<
       ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+        & SQLa.FKeyColNameConsistencyLintOptions<Context, DomainQS, DomainsQS>;
     },
   ) {
-    const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
+    const tableDefn = SQLa.tableDefinition<
+      TableName,
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       tableName,
       columnsShape,
       {
@@ -523,12 +528,17 @@ export class GovernedIM<
     >();
     const result = {
       ...tableDefn,
-      ...SQLa.tableColumnsRowFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableColumnsRowFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS
+      >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
         tableName,
         columnsShape,
       ),
@@ -570,10 +580,16 @@ export class GovernedIM<
       ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+        & SQLa.FKeyColNameConsistencyLintOptions<Context, DomainQS, DomainsQS>;
     },
   ) {
-    const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
+    const tableDefn = SQLa.tableDefinition<
+      TableName,
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       tableName,
       columnsShape,
       {
@@ -587,12 +603,17 @@ export class GovernedIM<
     >();
     const result = {
       ...tableDefn,
-      ...SQLa.tableColumnsRowFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableColumnsRowFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS
+      >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
         tableName,
         columnsShape,
       ),
@@ -627,7 +648,13 @@ export class GovernedIM<
       & SQLa.ViewDefnOptions<ViewName, ColumnName, ColumnsShape, Context>
       & Partial<SQLa.EmbeddedSqlSupplier>,
   ) {
-    return SQLa.safeViewDefinition<ViewName, ColumnsShape, Context>(
+    return SQLa.safeViewDefinition<
+      ViewName,
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       viewName,
       columnsShape,
       vdOptions,
@@ -647,44 +674,58 @@ export class GovernedIM<
   }
 
   static typical<
-    Domain extends GovernedDomain,
+    DomainQS extends GovernedDomainQS,
+    DomainsQS extends GovernedDomainsQS,
     Context extends GovernedEmitContext,
   >(sqlNS?: SQLa.SqlNamespaceSupplier) {
-    type Domains = GovernedDomains<Domain, Context>;
-    type Keys = GovernedKeys<Domain, Domains, Context>;
+    type Domains = GovernedDomains<DomainQS, DomainsQS, Context>;
+    type Keys = GovernedKeys<Domains, Context, DomainQS, DomainsQS>;
 
-    const gts = new GovernedTemplateState<Context>(sqlNS);
-    const domains = new GovernedDomains<Domain, Context>();
-    const housekeeping = housekeepingMinimal<Domain, Domains, Context>(domains);
+    const gts = new GovernedTemplateState<Context, DomainQS>(sqlNS);
+    const domains = new GovernedDomains<DomainQS, DomainsQS, Context>();
+    const housekeeping = housekeepingMinimal<
+      Domains,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(domains);
     return new GovernedIM<
-      Domain,
       Domains,
       Keys,
       typeof housekeeping.columns,
       typeof gts,
-      Context
+      Context,
+      DomainQS,
+      DomainsQS
     >(domains, new GovernedKeys(domains), housekeeping, gts);
   }
 
   static auditable<
-    Domain extends GovernedDomain,
+    DomainQS extends GovernedDomainQS,
+    DomainsQS extends GovernedDomainsQS,
     Context extends GovernedEmitContext,
   >(sqlNS?: SQLa.SqlNamespaceSupplier) {
-    type Domains = GovernedDomains<Domain, Context>;
-    type Keys = GovernedKeys<Domain, Domains, Context>;
+    type Domains = GovernedDomains<DomainQS, DomainsQS, Context>;
+    type Keys = GovernedKeys<Domains, Context, DomainQS, DomainsQS>;
 
-    const gts = new GovernedTemplateState<Context>(sqlNS);
-    const domains = new GovernedDomains<Domain, Context>();
-    const housekeeping = housekeepingAuditable<Domain, Domains, Context>(
+    const gts = new GovernedTemplateState<Context, DomainQS>(sqlNS);
+    const domains = new GovernedDomains<DomainQS, DomainsQS, Context>();
+    const housekeeping = housekeepingAuditable<
+      Domains,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       domains,
     );
     return new GovernedIM<
-      Domain,
       Domains,
       Keys,
       typeof housekeeping.columns,
       typeof gts,
-      Context
+      Context,
+      DomainQS,
+      DomainsQS
     >(
       domains,
       new GovernedKeys(domains),

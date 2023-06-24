@@ -11,11 +11,19 @@ const expectType = <T>(_value: T) => {
   // Do nothing, the TypeScript compiler handles this for us
 };
 
+type SyntheticDomainQS = d.SqlDomainQS & {
+  readonly isSyntheticDomainQS: true;
+};
+
 type SyntheticContext = tmpl.SqlEmitContext & {
   readonly customContextProp1: string;
   readonly executedAt: Date;
 };
-const ztsdFactory = d.zodTypeSqlDomainFactory<Any, SyntheticContext>();
+const ztsdFactory = d.zodTypeSqlDomainFactory<
+  Any,
+  SyntheticContext,
+  SyntheticDomainQS
+>();
 
 const sqlGen = () => {
   const ctx: SyntheticContext = {
@@ -108,11 +116,23 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   });
 
   await tc.step("SqlDomain compile-time type safety", () => {
-    expectType<d.SqlDomain<z.ZodString, SyntheticContext, "syntheticText">>(
+    expectType<
+      d.SqlDomain<
+        z.ZodString,
+        SyntheticContext,
+        "syntheticText",
+        SyntheticDomainQS
+      >
+    >(
       textSD,
     );
     expectType<
-      d.SqlDomain<z.ZodString, SyntheticContext, "syntheticVarChar47">
+      d.SqlDomain<
+        z.ZodString,
+        SyntheticContext,
+        "syntheticVarChar47",
+        SyntheticDomainQS
+      >
     >(
       varCharSD,
     );
@@ -120,38 +140,50 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       d.SqlDomain<
         z.ZodOptional<z.ZodString>,
         SyntheticContext,
-        "syntheticTextOptional"
+        "syntheticTextOptional",
+        SyntheticDomainQS
       >
     >(textOptionalSD);
     expectType<
       d.SqlDomain<
         z.ZodOptional<z.ZodString>,
         SyntheticContext,
-        "syntheticVarChar52Optional"
+        "syntheticVarChar52Optional",
+        SyntheticDomainQS
       >
     >(varCharOptionalSD);
     expectType<
       d.SqlDomain<
         z.ZodDefault<z.ZodOptional<z.ZodString>>,
         SyntheticContext,
-        "syntheticTextOptionalDefault"
+        "syntheticTextOptionalDefault",
+        SyntheticDomainQS
       >
     >(textOptionalDefaultSD);
-    expectType<d.SqlDomain<z.ZodNumber, SyntheticContext, "syntheticNumber">>(
+    expectType<
+      d.SqlDomain<
+        z.ZodNumber,
+        SyntheticContext,
+        "syntheticNumber",
+        SyntheticDomainQS
+      >
+    >(
       numberSD,
     );
     expectType<
       d.SqlDomain<
         z.ZodNativeEnum<typeof NativeEnumOrdinal>,
         SyntheticContext,
-        "nativeEnumOrdinal"
+        "nativeEnumOrdinal",
+        SyntheticDomainQS
       >
     >(nativeEnumOrdinalSD);
     expectType<
       d.SqlDomain<
         z.ZodEnum<SZE>,
         SyntheticContext,
-        "syntheticZodEnum"
+        "syntheticZodEnum",
+        SyntheticDomainQS
       >
     >(zodEnumSD);
   });
@@ -210,7 +242,9 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
 
   await tc.step("SqlDomain SQL types", () => {
     const { ctx } = sqlGen();
-    const types = (domain: d.SqlDomain<Any, SyntheticContext, Any>) => ({
+    const types = (
+      domain: d.SqlDomain<Any, SyntheticContext, Any, SyntheticDomainQS>,
+    ) => ({
       nullable: domain.isNullable(),
       sqlDataType: domain.sqlDataType("create table column").SQL(ctx),
     });
@@ -248,8 +282,8 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
 
 Deno.test("SQLa custom domain based on native Zod type", async (tc) => {
   const syntheticZB = za.zodBaggage<
-    d.SqlDomain<Any, SyntheticContext, Any>,
-    d.SqlDomainSupplier<Any, Any, SyntheticContext>
+    d.SqlDomain<Any, SyntheticContext, Any, SyntheticDomainQS>,
+    d.SqlDomainSupplier<Any, Any, SyntheticContext, SyntheticDomainQS>
   >("sqlDomain");
 
   await tc.step("native zod domains plus a custom domain", async (innerTC) => {
@@ -268,7 +302,7 @@ Deno.test("SQLa custom domain based on native Zod type", async (tc) => {
     function customDomainNumeric() {
       const zodSchema = z.number();
       const customSD:
-        & d.SqlDomain<z.ZodNumber, SyntheticContext, Any>
+        & d.SqlDomain<z.ZodNumber, SyntheticContext, Any, SyntheticDomainQS>
         & MyCustomColumnDefn = {
           ...ztsdFactory.cacheableFrom<Any, z.ZodNumber>(zodSchema),
           isCustomProperty1: true,
@@ -290,7 +324,8 @@ Deno.test("SQLa custom domain based on native Zod type", async (tc) => {
           MyCustomColumnDefn,
           z.ZodNumber,
           Any,
-          SyntheticContext
+          SyntheticContext,
+          SyntheticDomainQS
         >;
     }
 
@@ -300,7 +335,7 @@ Deno.test("SQLa custom domain based on native Zod type", async (tc) => {
         & z.ZodNumber
         & {
           sqlDomain:
-            & d.SqlDomain<z.ZodNumber, SyntheticContext, Any>
+            & d.SqlDomain<z.ZodNumber, SyntheticContext, Any, SyntheticDomainQS>
             & MyCustomColumnDefn;
         }
       >(customNumeric);

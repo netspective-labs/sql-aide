@@ -71,7 +71,8 @@ export type PgDcpPgDomainDefns = {
   readonly execution_host_identity: SQLa.SqlDomain<
     Any,
     PgDcpEmitContext,
-    "execution_host_identity"
+    "execution_host_identity",
+    pggp.PgDcpDomainQS
   >;
 };
 
@@ -84,10 +85,13 @@ export class PgDcpEmitCoordinator<
   SchemaDefns,
   ExtensionDefns,
   PgDomainDefns,
-  PgDcpEmitContext
+  PgDcpEmitContext,
+  pggp.PgDcpDomainQS,
+  pggp.PgDcpDomainsQS
 > {
   readonly governedModel = pggp.PgDcpIM.prime<
-    gp.GovernedDomain,
+    pggp.PgDcpDomainQS,
+    pggp.PgDcpDomainsQS,
     PgDcpEmitContext
   >();
 
@@ -96,7 +100,9 @@ export class PgDcpEmitCoordinator<
       SchemaDefns,
       ExtensionDefns,
       PgDomainDefns,
-      PgDcpEmitContext
+      PgDcpEmitContext,
+      pggp.PgDcpDomainQS,
+      pggp.PgDcpDomainsQS
     >,
   ) {
     super(init);

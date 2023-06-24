@@ -19,7 +19,11 @@ const relativeFileContent = (name: string) => {
 
 type EmitContext = typeof ctx;
 const ctx = SQLa.typicalSqlEmitContext();
-const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const gts = tp.governedTemplateState<
+  tp.TypicalDomainQS,
+  tp.TypicalDomainsQS,
+  EmitContext
+>();
 
 const partyInsertion = mod.party
   .insertDML({

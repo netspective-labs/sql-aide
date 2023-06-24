@@ -19,7 +19,8 @@ export type PgRoutineArgModifier<
   ArgName extends string,
   ArgTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ArgTsType, Context, ArgName> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ArgTsType, Context, ArgName, DomainQS> & {
   readonly pgRouteineArgModifier: "IN" | "OUT" | "IN OUT";
 };
 
@@ -27,9 +28,12 @@ export function isPgRoutineArgModifer<
   ArgName extends string,
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
->(o: unknown): o is PgRoutineArgModifier<ArgName, ColumnTsType, Context> {
+  DomainQS extends d.SqlDomainQS,
+>(
+  o: unknown,
+): o is PgRoutineArgModifier<ArgName, ColumnTsType, Context, DomainQS> {
   const isPRAM = safety.typeGuard<
-    PgRoutineArgModifier<ArgName, ColumnTsType, Context>
+    PgRoutineArgModifier<ArgName, ColumnTsType, Context, DomainQS>
   >("pgRouteineArgModifier");
   return isPRAM(o);
 }
@@ -37,13 +41,15 @@ export function isPgRoutineArgModifer<
 export function pgRoutineArgFactory<
   RoutineName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >() {
-  const sdf = d.sqlDomainsFactory<RoutineName, Context>();
+  const sdf = d.sqlDomainsFactory<RoutineName, Context, DomainQS, DomainsQS>();
 
   const IN = <ArgName extends string, ZodType extends z.ZodTypeAny>(
     zodType: ZodType,
   ) => {
-    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context> = {
+    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context, DomainQS> = {
       ...sdf.cacheableFrom<ArgName, ZodType>(zodType),
       pgRouteineArgModifier: "IN",
     };
@@ -58,7 +64,7 @@ export function pgRoutineArgFactory<
   const OUT = <ArgName extends string, ZodType extends z.ZodTypeAny>(
     zodType: ZodType,
   ) => {
-    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context> = {
+    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context, DomainQS> = {
       ...sdf.cacheableFrom<ArgName, ZodType>(zodType),
       pgRouteineArgModifier: "OUT",
     };
@@ -73,7 +79,7 @@ export function pgRoutineArgFactory<
   const IN_OUT = <ArgName extends string, ZodType extends z.ZodTypeAny>(
     zodType: ZodType,
   ) => {
-    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context> = {
+    const argSD: PgRoutineArgModifier<ArgName, ZodType, Context, DomainQS> = {
       ...sdf.cacheableFrom<ArgName, ZodType>(zodType),
       pgRouteineArgModifier: "IN OUT",
     };
@@ -457,7 +463,8 @@ export interface StoredProcedureDefnOptions<
 
 export function routineArgsSQL<
   Context extends tmpl.SqlEmitContext,
->(domains: d.SqlDomain<Any, Context, Any>[], ctx: Context) {
+  DomainQS extends d.SqlDomainQS,
+>(domains: d.SqlDomain<Any, Context, Any, DomainQS>[], ctx: Context) {
   const ns = ctx.sqlNamingStrategy(ctx, {
     quoteIdentifiers: true,
   });
@@ -476,11 +483,13 @@ export function storedRoutineBuilder<
   RoutineName extends string,
   ArgsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >(
   routineName: RoutineName,
   argsDefn: ArgsShape,
 ) {
-  const sdf = d.sqlDomainsFactory<RoutineName, Context>();
+  const sdf = d.sqlDomainsFactory<RoutineName, Context, DomainQS, DomainsQS>();
   const argsSD = sdf.sqlDomains(argsDefn, { identity: () => routineName });
 
   type ArgsShapeIndex = {
@@ -513,6 +522,8 @@ export function storedProcedure<
     Any
   >,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   BodyTemplateReturnType extends tmpl.SafeTemplateStringReturnType<
     BodyTemplateSupplier
   > = tmpl.SafeTemplateStringReturnType<BodyTemplateSupplier>,
@@ -522,7 +533,13 @@ export function storedProcedure<
   bodyTemplate: BodyTemplateSupplier,
   spOptions?: StoredProcedureDefnOptions<RoutineName, Context>,
 ) {
-  const srBuilder = storedRoutineBuilder<RoutineName, ArgsShape, Context>(
+  const srBuilder = storedRoutineBuilder<
+    RoutineName,
+    ArgsShape,
+    Context,
+    DomainQS,
+    DomainsQS
+  >(
     routineName,
     argsDefn,
   );
@@ -620,7 +637,7 @@ export function storedFunction<
   RoutineName extends string,
   ArgsShape extends z.ZodRawShape,
   Returns extends
-    | d.SqlDomain<Any, Context, Any>
+    | d.SqlDomain<Any, Context, Any, DomainQS>
     | z.ZodRawShape // TABLE
     | "RECORD"
     | string, // arbitrary SQL
@@ -634,6 +651,8 @@ export function storedFunction<
     Any
   >,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   BodyTemplateReturnType extends tmpl.SafeTemplateStringReturnType<
     BodyTemplateSupplier
   > = tmpl.SafeTemplateStringReturnType<BodyTemplateSupplier>,
@@ -644,7 +663,13 @@ export function storedFunction<
   bodyTemplate: BodyTemplateSupplier,
   sfOptions?: StoredFunctionDefnOptions<RoutineName, Context>,
 ) {
-  const srBuilder = storedRoutineBuilder<RoutineName, ArgsShape, Context>(
+  const srBuilder = storedRoutineBuilder<
+    RoutineName,
+    ArgsShape,
+    Context,
+    DomainQS,
+    DomainsQS
+  >(
     routineName,
     argsDefn,
   );

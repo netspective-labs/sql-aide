@@ -12,9 +12,10 @@ export interface DomainDefinition<
   ZodType extends z.ZodTypeAny,
   DomainName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 > extends
   tmpl.SqlTextSupplier<Context>,
-  d.SqlDomain<ZodType, Context, DomainName> {
+  d.SqlDomain<ZodType, Context, DomainName, DomainQS> {
   readonly domainName: DomainName;
   readonly isIdempotent: boolean;
 }
@@ -34,6 +35,8 @@ export interface DomainDefnOptions<
 export function pgDomainsFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >() {
   const df = d.sqlDomainsFactory();
 
@@ -42,9 +45,9 @@ export function pgDomainsFactory<
     DomainName extends DomainsIdentity,
   >(
     o: unknown,
-  ): o is DomainDefinition<ZodType, DomainName, Context> {
+  ): o is DomainDefinition<ZodType, DomainName, Context, DomainQS> {
     const isSD = safety.typeGuard<
-      DomainDefinition<ZodType, DomainName, Context>
+      DomainDefinition<ZodType, DomainName, Context, DomainQS>
     >(
       "domainName",
       "SQL",
@@ -59,7 +62,7 @@ export function pgDomainsFactory<
     schema: s.SchemaDefinition<SchemaName, Context>,
     identity: Target,
   ) => {
-    const result: d.SqlDomain<Any, Context, Target> = {
+    const result: d.SqlDomain<Any, Context, Target, DomainQS> = {
       isSqlDomain: true as true, // must not be a boolean but `true`
       identity,
       isNullable: () => false,
@@ -82,7 +85,7 @@ export function pgDomainsFactory<
     ZodType extends z.ZodTypeAny,
     DomainName extends DomainsIdentity,
   >(
-    dd: d.SqlDomain<ZodType, Context, DomainName>,
+    dd: d.SqlDomain<ZodType, Context, DomainName, DomainQS>,
     domainName: DomainName,
     ddOptions?:
       & DomainDefnOptions<DomainName, Context>

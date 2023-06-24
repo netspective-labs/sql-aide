@@ -11,7 +11,8 @@ type Any = any; // make it easy on linter
 export type TablePrimaryKeyColumnDefn<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, Any> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, Any, DomainQS> & {
   readonly isPrimaryKey: true;
   readonly isAutoIncrement: boolean;
 };
@@ -19,27 +20,31 @@ export type TablePrimaryKeyColumnDefn<
 export function isTablePrimaryKeyColumnDefn<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
-): o is TablePrimaryKeyColumnDefn<ColumnTsType, Context> {
+): o is TablePrimaryKeyColumnDefn<ColumnTsType, Context, DomainQS> {
   const isTPKCD = safety.typeGuard<
-    TablePrimaryKeyColumnDefn<ColumnTsType, Context>
+    TablePrimaryKeyColumnDefn<ColumnTsType, Context, DomainQS>
   >("isPrimaryKey", "isAutoIncrement");
   return isTPKCD(o);
 }
 
-export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
-  const sdf = d.zodTypeSqlDomainFactory<Any, Context>();
+export function primaryKeyColumnFactory<
+  Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+>() {
+  const sdf = d.zodTypeSqlDomainFactory<Any, Context, DomainQS>();
   const zb = za.zodBaggage<
-    d.SqlDomain<Any, Context, Any>,
-    d.SqlDomainSupplier<Any, Any, Context>
+    d.SqlDomain<Any, Context, Any, DomainQS>,
+    d.SqlDomainSupplier<Any, Any, Context, DomainQS>
   >("sqlDomain");
 
   const primaryKey = <ColumnName extends string, ZodType extends z.ZodTypeAny>(
     zodType: ZodType,
   ) => {
     const sqlDomain = sdf.cacheableFrom<ColumnName, typeof zodType>(zodType);
-    const pkSD: TablePrimaryKeyColumnDefn<typeof zodType, Context> = {
+    const pkSD: TablePrimaryKeyColumnDefn<typeof zodType, Context, DomainQS> = {
       ...sqlDomain,
       isPrimaryKey: true,
       isAutoIncrement: false,
@@ -75,10 +80,11 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
       zodType,
     );
     const aipkSD:
-      & TablePrimaryKeyColumnDefn<z.ZodOptional<z.ZodNumber>, Context>
+      & TablePrimaryKeyColumnDefn<z.ZodOptional<z.ZodNumber>, Context, DomainQS>
       & c.TableColumnInsertDmlExclusionSupplier<
         z.ZodOptional<z.ZodNumber>,
-        Context
+        Context,
+        DomainQS
       > = {
         ...sqlDomain,
         isPrimaryKey: true,
@@ -140,10 +146,11 @@ export function primaryKeyColumnFactory<Context extends tmpl.SqlEmitContext>() {
       zodType,
     );
     const uadPK:
-      & TablePrimaryKeyColumnDefn<z.ZodDefault<z.ZodString>, Context>
+      & TablePrimaryKeyColumnDefn<z.ZodDefault<z.ZodString>, Context, DomainQS>
       & c.TableColumnInsertableOptionalSupplier<
         z.ZodDefault<z.ZodString>,
-        Context
+        Context,
+        DomainQS
       > = {
         ...sqlDomain,
         isPrimaryKey: true,

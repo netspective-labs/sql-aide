@@ -11,9 +11,17 @@ type Any = any;
 export const ctx = SQLa.typicalSqlEmitContext();
 export type EmitContext = typeof ctx;
 
-export const tcf = SQLa.tableColumnFactory<Any, Any>();
-export const gts = typ.governedTemplateState<typ.GovernedDomain, EmitContext>();
-export const gm = typ.governedModel<typ.GovernedDomain, EmitContext>(
+export const tcf = SQLa.tableColumnFactory<Any, Any, typ.TypicalDomainQS>();
+export const gts = typ.governedTemplateState<
+  typ.TypicalDomainQS,
+  typ.TypicalDomainsQS,
+  EmitContext
+>();
+export const gm = typ.governedModel<
+  typ.TypicalDomainQS,
+  typ.TypicalDomainsQS,
+  EmitContext
+>(
   gts.ddlOptions,
 );
 export const {
@@ -93,7 +101,7 @@ export const contactType = gm.textEnumTable(
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allReferenceTables: (
-  & SQLa.TableDefinition<Any, EmitContext>
+  & SQLa.TableDefinition<Any, EmitContext, typ.TypicalDomainQS>
   & typ.EnumTableDefn<EmitContext>
 )[] = [
   execCtx,
@@ -210,7 +218,11 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
 
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
-export const allContentTables: SQLa.TableDefinition<Any, EmitContext>[] = [
+export const allContentTables: SQLa.TableDefinition<
+  Any,
+  EmitContext,
+  typ.TypicalDomainQS
+>[] = [
   organizationRoleType,
   party,
   partyIdentifier,

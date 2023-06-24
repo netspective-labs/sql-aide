@@ -6,8 +6,11 @@ import * as d from "../../domain/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
-export function primaryKeyColumnFactory<Context extends emit.SqlEmitContext>() {
-  const pkcf = tbl.primaryKeyColumnFactory<Context>();
+export function primaryKeyColumnFactory<
+  Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+>() {
+  const pkcf = tbl.primaryKeyColumnFactory<Context, DomainQS>();
   const { sdFactory: sdf, zodBaggage: zb } = pkcf;
 
   const serialPrimaryKey = <ColumnName extends string>() => {
@@ -15,17 +18,20 @@ export function primaryKeyColumnFactory<Context extends emit.SqlEmitContext>() {
     const sqlDomain: d.SqlDomain<
       z.ZodOptional<z.ZodNumber>,
       Context,
-      ColumnName
+      ColumnName,
+      DomainQS
     > = {
       ...sdf.numberSDF.defaults<ColumnName>(zodType, { isOptional: true }),
       sqlDataType: () => ({ SQL: () => `SERIAL` }),
     };
     const pkSD:
-      & tbl.TablePrimaryKeyColumnDefn<typeof zodType, Context>
+      & tbl.TablePrimaryKeyColumnDefn<typeof zodType, Context, DomainQS>
       & tbl.TableColumnInsertDmlExclusionSupplier<
         z.ZodOptional<z.ZodNumber>,
-        Context
-      > = {
+        Context,
+        DomainQS
+      >
+      & typeof sqlDomain = {
         ...sqlDomain,
         isPrimaryKey: true,
         isExcludedFromInsertDML: true,

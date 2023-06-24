@@ -14,20 +14,22 @@ type Any = any; // make it easy on linter
 export type TableDefinition<
   TableName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 > = tmpl.SqlTextSupplier<Context> & {
   readonly tableName: TableName;
-  readonly domains: c.TableColumnDefn<TableName, Any, Any, Context>[];
+  readonly domains: c.TableColumnDefn<TableName, Any, Any, Context, DomainQS>[];
 };
 
 export function isTableDefinition<
   TableName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
   checkName?: TableName,
-): o is TableDefinition<TableName, Context> {
+): o is TableDefinition<TableName, Context, DomainQS> {
   const isTD = safety.typeGuard<
-    TableDefinition<TableName, Context>
+    TableDefinition<TableName, Context, DomainQS>
   >("tableName", "SQL");
   return checkName ? isTD(o) && o.tableName == checkName : isTD(o);
 }
@@ -55,15 +57,23 @@ export function tableDefinition<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainQS>,
 >(
   tableName: TableName,
   zodRawShape: ColumnsShape,
   tdOptions?: TableDefnOptions<ColumnsShape, Context>,
 ) {
-  const sdf = d.sqlDomainsFactory<TableName, Context>();
+  const sdf = d.sqlDomainsFactory<TableName, Context, DomainQS, DomainsQS>();
   const zoSchema = tdOptions?.zodObject?.(zodRawShape) ??
     z.object(zodRawShape).strict();
-  const fkf = fk.foreignKeysFactory<TableName, ColumnsShape, Context>(
+  const fkf = fk.foreignKeysFactory<
+    TableName,
+    ColumnsShape,
+    Context,
+    DomainQS,
+    DomainsQS
+  >(
     tableName,
     zodRawShape,
     sdf,
@@ -77,7 +87,8 @@ export function tableDefinition<
         TableName,
         Extract<Property, string>,
         z.ZodType<T, D, I>,
-        Context
+        Context,
+        DomainQS
       >
       : never;
   };
@@ -95,9 +106,10 @@ export function tableDefinition<
           TableName,
           Extract<Property, string>,
           z.ZodType<T, D, I>,
-          Context
+          Context,
+          DomainQS
         >
-        & pk.TablePrimaryKeyColumnDefn<z.ZodType<T, D, I>, Context>
+        & pk.TablePrimaryKeyColumnDefn<z.ZodType<T, D, I>, Context, DomainQS>
       : never;
   };
 
@@ -114,7 +126,8 @@ export function tableDefinition<
           TableName,
           Extract<Property, string>,
           z.ZodType<T, D, I>,
-          Context
+          Context,
+          DomainQS
         >
         & con.UniqueTableColumn
       : never;
@@ -132,7 +145,8 @@ export function tableDefinition<
       TableName,
       Any,
       Any,
-      Context
+      Context,
+      DomainQS
     >
   );
 
@@ -190,7 +204,13 @@ export function tableDefinition<
   }
 
   const graphEntityDefn = () => {
-    const result: g.GraphEntityDefinition<TableName, Context, Any> = {
+    const result: g.GraphEntityDefinition<
+      TableName,
+      Context,
+      Any,
+      DomainQS,
+      DomainsQS
+    > = {
       identity: () => tableName,
       attributes: domains,
       outboundReferences: (options) => fkf.outboundReferences(options),
@@ -199,8 +219,8 @@ export function tableDefinition<
   };
 
   const tableDefnResult:
-    & TableDefinition<TableName, Context>
-    & g.GraphEntityDefinitionSupplier<TableName, Context>
+    & TableDefinition<TableName, Context, DomainQS>
+    & g.GraphEntityDefinitionSupplier<TableName, Context, DomainQS, DomainsQS>
     & {
       readonly domains: typeof domains;
       readonly columns: ColumnDefns;

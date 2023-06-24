@@ -13,7 +13,8 @@ export type TableColumnDefn<
   ColumnName extends string,
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, ColumnName> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, ColumnName, DomainQS> & {
   readonly tableName: TableName;
   readonly columnName: ColumnName;
 };
@@ -21,11 +22,12 @@ export type TableColumnDefn<
 export function tableColumnFactory<
   TableName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >() {
-  const sdf = d.zodTypeSqlDomainFactory<Any, Context>();
+  const sdf = d.zodTypeSqlDomainFactory<Any, Context, DomainQS>();
   const zb = za.zodBaggage<
-    d.SqlDomain<Any, Context, Any>,
-    d.SqlDomainSupplier<Any, Any, Context>
+    d.SqlDomain<Any, Context, Any, DomainQS>,
+    d.SqlDomainSupplier<Any, Any, Context, DomainQS>
   >("sqlDomain");
 
   const isTableColumnDefn = <
@@ -35,9 +37,15 @@ export function tableColumnFactory<
   >(
     o: unknown,
     args?: { checkTableName: TableName; checkColumnName: ColumnName },
-  ): o is TableColumnDefn<TableName, ColumnName, ColumnTsType, Context> => {
+  ): o is TableColumnDefn<
+    TableName,
+    ColumnName,
+    ColumnTsType,
+    Context,
+    DomainQS
+  > => {
     const isTCD = safety.typeGuard<
-      TableColumnDefn<TableName, ColumnName, ColumnTsType, Context>
+      TableColumnDefn<TableName, ColumnName, ColumnTsType, Context, DomainQS>
     >("tableName", "columnName");
     if (isTCD(o) && sdf.anySDF.isSqlDomain(o)) {
       if (args?.checkTableName && o.tableName != args?.checkTableName) {
@@ -56,7 +64,7 @@ export function tableColumnFactory<
   ) => {
     const sqlDomain = sdf.cacheableFrom<ColumnName, ColumnTsType>(zodType);
     const uniqueSD:
-      & d.SqlDomain<ColumnTsType, Context, ColumnName>
+      & d.SqlDomain<ColumnTsType, Context, ColumnName, DomainQS>
       & con.UniqueTableColumn = {
         ...sqlDomain,
         isUnique: true,
@@ -96,18 +104,20 @@ export function tableColumnFactory<
 export type TableColumnInsertDmlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, Any> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, Any, DomainQS> & {
   readonly isExcludedFromInsertDML: true;
 };
 
 export function isTableColumnInsertDmlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
-): o is TableColumnInsertDmlExclusionSupplier<ColumnTsType, Context> {
+): o is TableColumnInsertDmlExclusionSupplier<ColumnTsType, Context, DomainQS> {
   const isIDES = safety.typeGuard<
-    TableColumnInsertDmlExclusionSupplier<ColumnTsType, Context>
+    TableColumnInsertDmlExclusionSupplier<ColumnTsType, Context, DomainQS>
   >("isExcludedFromInsertDML");
   return isIDES(o);
 }
@@ -115,18 +125,20 @@ export function isTableColumnInsertDmlExclusionSupplier<
 export type TableColumnInsertableOptionalSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, Any> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, Any, DomainQS> & {
   readonly isOptionalInInsertableRecord: true;
 };
 
 export function isTableColumnInsertableOptionalSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
-): o is TableColumnInsertableOptionalSupplier<ColumnTsType, Context> {
+): o is TableColumnInsertableOptionalSupplier<ColumnTsType, Context, DomainQS> {
   const isIDES = safety.typeGuard<
-    TableColumnInsertableOptionalSupplier<ColumnTsType, Context>
+    TableColumnInsertableOptionalSupplier<ColumnTsType, Context, DomainQS>
   >("isOptionalInInsertableRecord");
   return isIDES(o);
 }
@@ -134,18 +146,28 @@ export function isTableColumnInsertableOptionalSupplier<
 export type TableColumnFilterCriteriaDqlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
-> = d.SqlDomain<ColumnTsType, Context, Any> & {
+  DomainQS extends d.SqlDomainQS,
+> = d.SqlDomain<ColumnTsType, Context, Any, DomainQS> & {
   readonly isExcludedFromFilterCriteriaDql: true;
 };
 
 export function isTableColumnFilterCriteriaDqlExclusionSupplier<
   ColumnTsType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
-): o is TableColumnFilterCriteriaDqlExclusionSupplier<ColumnTsType, Context> {
+): o is TableColumnFilterCriteriaDqlExclusionSupplier<
+  ColumnTsType,
+  Context,
+  DomainQS
+> {
   const isFCDES = safety.typeGuard<
-    TableColumnFilterCriteriaDqlExclusionSupplier<ColumnTsType, Context>
+    TableColumnFilterCriteriaDqlExclusionSupplier<
+      ColumnTsType,
+      Context,
+      DomainQS
+    >
   >("isExcludedFromFilterCriteriaDql");
   return isFCDES(o);
 }
@@ -154,9 +176,10 @@ export function typicalTableColumnDefnSQL<
   TableName extends string,
   ColumnName extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   tableName: TableName,
-  isd: d.SqlDomain<Any, Context, ColumnName>,
+  isd: d.SqlDomain<Any, Context, ColumnName, DomainQS>,
 ): tmpl.RenderedSqlText<Context> {
   return (ctx) => {
     const { sqlTextEmitOptions: steOptions } = ctx;

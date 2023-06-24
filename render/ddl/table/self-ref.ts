@@ -9,7 +9,7 @@ type Any = any; // make it easy on linter
 
 export type SelfRefPlaceholder = {
   readonly isSelfRefPlaceholder: true;
-  readonly selfRefDomain: d.SqlDomain<Any, Any, Any> | undefined;
+  readonly selfRefDomain: d.SqlDomain<Any, Any, Any, Any> | undefined;
 };
 
 export const isSelfRefPlaceholder = safety.typeGuard<SelfRefPlaceholder>(
@@ -35,12 +35,16 @@ export const selfRefPlacholderZB = za.zodBaggage<
 export function selfRef<
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   // the "inferred type" is the same as the original types except without
   // optionals, defaults, or nulls (always required, considered the "CoreZTA");
   SelfReference = za.CoreZTA<ZTA> & SelfRefPlaceholderSupplier,
 >(
   zodType: ZTA,
-  sdf: ReturnType<typeof d.sqlDomainsFactory<Any, Context>>,
+  sdf: ReturnType<
+    typeof d.sqlDomainsFactory<Any, Context, DomainQS, DomainsQS>
+  >,
 ) {
   // trick Typescript into thinking Zod instance is also SR placeholder;
   // this allows assignment of a reference to a Zod object or use as a

@@ -18,8 +18,15 @@ const sqlGen = () => {
 };
 
 const syntheticSchema = () => {
-  const _tcf = SQLa.tableColumnFactory<Any, SyntheticContext>();
-  const pkcFactory = SQLa.primaryKeyColumnFactory<SyntheticContext>();
+  const _tcf = SQLa.tableColumnFactory<
+    Any,
+    SyntheticContext,
+    SQLa.SqlDomainQS
+  >();
+  const pkcFactory = SQLa.primaryKeyColumnFactory<
+    SyntheticContext,
+    SQLa.SqlDomainQS
+  >();
   const commonColumns = {
     text: z.string(),
     text_nullable: z.string().optional(),
@@ -37,7 +44,8 @@ const syntheticSchema = () => {
         TableName,
         { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
         { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
-        SyntheticContext
+        SyntheticContext,
+        SQLa.SqlDomainQS
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the insert DML SQL statement
@@ -47,7 +55,8 @@ const syntheticSchema = () => {
         Any,
         Any,
         Any,
-        SyntheticContext
+        SyntheticContext,
+        SQLa.SqlDomainQS
       >;
     },
   };

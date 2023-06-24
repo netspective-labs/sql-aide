@@ -42,13 +42,15 @@ export function sqlTypeDefinition<
   TypeName extends string,
   ArgsShape extends z.ZodRawShape,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainQS>,
   ColumnName extends keyof ArgsShape & string = keyof ArgsShape & string,
 >(
   typeName: TypeName,
   argsShape: ArgsShape,
   stdOptions?: SqlTypeDefnOptions<TypeName, ColumnName, Context>,
 ) {
-  const sdf = d.sqlDomainsFactory<TypeName, Context>();
+  const sdf = d.sqlDomainsFactory<TypeName, Context, DomainQS, DomainsQS>();
   const sd = sdf.sqlDomains(argsShape);
   const typeDefn: SqlTypeDefinition<TypeName, Context> & {
     readonly sqlNS?: emit.SqlNamespaceSupplier;

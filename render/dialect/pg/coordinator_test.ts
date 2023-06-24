@@ -1,13 +1,23 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
 import { unindentWhitespace as uws } from "../../../lib/universal/whitespace.ts";
 import * as emit from "../../emit/mod.ts";
-import { SqlDomain } from "../../domain/mod.ts";
+import { SqlDomain, SqlDomainQS, SqlDomainsQS } from "../../domain/mod.ts";
 import { SchemaDefinition } from "../../ddl/schema.ts";
 import { ExtensionDefinition } from "./extension.ts";
 import * as mod from "./coordinator.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+interface SyntheticSqlDomainQS extends SqlDomainQS {
+  // branding is just for testing, it's not required
+  readonly isSyntheticSqlDomainQS: true;
+}
+
+interface SyntheticSqlDomainsQS extends SqlDomainsQS<SyntheticSqlDomainQS> {
+  // branding is just for testing, it's not required
+  readonly isSyntheticSqlDomainsQS: true;
+}
 
 interface SyntheticContext extends emit.SqlEmitContext {
   // branding is just for testing, it's not required
@@ -23,20 +33,29 @@ class SyntheticTemplate<
     ltree: ExtensionDefinition<"extensions", "ltree", SyntheticContext>;
   },
   PgDomainDefns extends {
-    execution_context: SqlDomain<Any, SyntheticContext, Any>;
+    execution_context: SqlDomain<
+      Any,
+      SyntheticContext,
+      Any,
+      SyntheticSqlDomainQS
+    >;
   },
 > extends mod.EmitCoordinator<
   SchemaDefns,
   ExtensionDefns,
   PgDomainDefns,
-  SyntheticContext
+  SyntheticContext,
+  SyntheticSqlDomainQS,
+  SyntheticSqlDomainsQS
 > {
   public constructor(
     readonly init: mod.EmitCoordinatorInit<
       SchemaDefns,
       ExtensionDefns,
       PgDomainDefns,
-      SyntheticContext
+      SyntheticContext,
+      SyntheticSqlDomainQS,
+      SyntheticSqlDomainsQS
     >,
   ) {
     super(init);
@@ -58,7 +77,8 @@ class SyntheticTemplate<
           pgdf.pgDomainRef(schemas.extensions, "ltree") as unknown as SqlDomain<
             Any,
             SyntheticContext,
-            "execution_context"
+            "execution_context",
+            SyntheticSqlDomainQS
           >,
           "execution_context",
           {

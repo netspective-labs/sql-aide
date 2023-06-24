@@ -11,7 +11,11 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     readonly sqlNS?: SQLa.SqlNamespaceSupplier;
   },
 ) {
-  const gm = mod.governedModel<mod.GovernedDomain, Context>(ddlOptions);
+  const gm = mod.governedModel<
+    mod.TypicalDomainQS,
+    mod.TypicalDomainsQS,
+    Context
+  >(ddlOptions);
   const { domains: sd, tcFactory: tcf, keys, housekeeping } = gm;
 
   enum HostType {
@@ -126,7 +130,8 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
   }
   const stContext = (): SyntheticTmplContext => SQLa.typicalSqlEmitContext();
   const gts = mod.governedTemplateState<
-    mod.GovernedDomain,
+    mod.TypicalDomainQS,
+    mod.TypicalDomainsQS,
     SyntheticTmplContext
   >();
   const ss = syntheticSchema<SyntheticTmplContext>(gts.ddlOptions);

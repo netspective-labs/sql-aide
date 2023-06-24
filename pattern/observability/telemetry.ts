@@ -89,11 +89,12 @@ export function telemetryGovn<Context extends SQLa.SqlEmitContext>(
  * Typical schema emitter for telemetry models.
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
-export function telemetryTemplateState<Context extends SQLa.SqlEmitContext>() {
-  const gts = typ.governedTemplateState<
-    govn.ObservabilityDomainGovn,
-    Context
-  >();
+export function telemetryTemplateState<
+  Context extends SQLa.SqlEmitContext,
+  DomainQS extends govn.ObservabilityDomainQS,
+  DomainsQS extends govn.ObservabilityDomainsQS,
+>() {
+  const gts = typ.governedTemplateState<DomainQS, DomainsQS, Context>();
   return {
     ...gts,
     ...telemetryGovn<Context>(gts.ddlOptions),

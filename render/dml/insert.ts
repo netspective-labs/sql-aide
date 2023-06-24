@@ -23,6 +23,7 @@ export interface InsertStmtPreparerOptions<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
   InsertableColumnName extends keyof InsertableRecord = keyof InsertableRecord,
 > {
   readonly isColumnEmittable?: (
@@ -31,7 +32,8 @@ export interface InsertStmtPreparerOptions<
     columnDefn: d.SqlDomain<
       Any,
       Context,
-      Extract<InsertableColumnName, string>
+      Extract<InsertableColumnName, string>,
+      DomainQS
     >,
     tableName: TableName,
   ) => boolean;
@@ -41,7 +43,8 @@ export interface InsertStmtPreparerOptions<
     columnDefn: d.SqlDomain<
       Any,
       Context,
-      Extract<InsertableColumnName, string>
+      Extract<InsertableColumnName, string>,
+      DomainQS
     >,
     tableName: TableName,
     ns: tmpl.SqlObjectNames,
@@ -80,6 +83,7 @@ export interface InsertStmtPreparerSync<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 > {
   (
     ir: InsertableRecord | InsertableRecord[],
@@ -87,7 +91,8 @@ export interface InsertStmtPreparerSync<
       TableName,
       InsertableRecord,
       ReturnableRecord,
-      Context
+      Context,
+      DomainQS
     >,
   ): tmpl.SqlTextSupplier<Context> & {
     readonly insertable: InsertableRecord | InsertableRecord[];
@@ -100,6 +105,7 @@ export interface InsertStmtPreparer<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 > {
   (
     ir: InsertableRecord | InsertableRecord[],
@@ -107,7 +113,8 @@ export interface InsertStmtPreparer<
       TableName,
       InsertableRecord,
       ReturnableRecord,
-      Context
+      Context,
+      DomainQS
     >,
   ): Promise<
     tmpl.SqlTextSupplier<Context> & {
@@ -122,6 +129,8 @@ export function typicalInsertValuesSqlPreparerSync<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
   InsertableColumnName extends keyof InsertableRecord = keyof InsertableRecord,
 >(
   ctx: Context,
@@ -129,12 +138,18 @@ export function typicalInsertValuesSqlPreparerSync<
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context, Extract<InsertableColumnName, string>>[],
+  ) => d.SqlDomain<
+    Any,
+    Context,
+    Extract<InsertableColumnName, string>,
+    DomainQS
+  >[],
   ispOptions?: InsertStmtPreparerOptions<
     TableName,
     InsertableRecord,
     ReturnableRecord,
-    Context
+    Context,
+    DomainQS
   >,
 ) {
   const records = Array.isArray(irSupplier) ? irSupplier : [irSupplier];
@@ -204,18 +219,25 @@ export function typicalInsertStmtSqlPreparerSync<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
   InsertableColumnName extends keyof InsertableRecord = keyof InsertableRecord,
 >(
   ir: InsertableRecord | InsertableRecord[],
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context, Extract<InsertableColumnName, string>>[],
+  ) => d.SqlDomain<
+    Any,
+    Context,
+    Extract<InsertableColumnName, string>,
+    DomainQS
+  >[],
   ispOptions?: InsertStmtPreparerOptions<
     TableName,
     InsertableRecord,
     ReturnableRecord,
-    Context
+    Context,
+    DomainQS
   >,
 ): tmpl.SqlTextSupplier<Context> {
   return {
@@ -294,11 +316,17 @@ export function typicalInsertStmtPreparerSync<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context, Extract<keyof InsertableRecord, string>>[],
+  ) => d.SqlDomain<
+    Any,
+    Context,
+    Extract<keyof InsertableRecord, string>,
+    DomainQS
+  >[],
   mutateValues?: (
     ir: safety.Writeable<InsertableRecord> | safety.Writeable<
       InsertableRecord
@@ -308,13 +336,15 @@ export function typicalInsertStmtPreparerSync<
     TableName,
     InsertableRecord,
     ReturnableRecord,
-    Context
+    Context,
+    DomainQS
   >,
 ): InsertStmtPreparerSync<
   TableName,
   InsertableRecord,
   ReturnableRecord,
-  Context
+  Context,
+  DomainQS
 > {
   return (ir, ispOptions = defaultIspOptions) => {
     // typically used when Zod parser should be invoked before SQL generated
@@ -337,11 +367,17 @@ export function typicalInsertStmtPreparer<
   InsertableRecord,
   ReturnableRecord,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   tableName: TableName,
   candidateColumns: (
     group?: "all" | "primary-keys",
-  ) => d.SqlDomain<Any, Context, Extract<keyof InsertableRecord, string>>[],
+  ) => d.SqlDomain<
+    Any,
+    Context,
+    Extract<keyof InsertableRecord, string>,
+    DomainQS
+  >[],
   mutateValues?: (
     ir: safety.Writeable<InsertableRecord> | safety.Writeable<
       InsertableRecord
@@ -351,9 +387,16 @@ export function typicalInsertStmtPreparer<
     TableName,
     InsertableRecord,
     ReturnableRecord,
-    Context
+    Context,
+    DomainQS
   >,
-): InsertStmtPreparer<TableName, InsertableRecord, ReturnableRecord, Context> {
+): InsertStmtPreparer<
+  TableName,
+  InsertableRecord,
+  ReturnableRecord,
+  Context,
+  DomainQS
+> {
   return async (ir, ispOptions = defaultIspOptions) => {
     // typically used when Zod parser should be invoked before SQL generated
     if (mutateValues) ir = await mutateValues(ir);

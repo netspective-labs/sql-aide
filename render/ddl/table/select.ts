@@ -1,6 +1,7 @@
 import { zod as z } from "../../deps.ts";
 import * as r from "../../../lib/universal/record.ts";
 import * as tmpl from "../../emit/mod.ts";
+import * as d from "../../domain/mod.ts";
 import * as cr from "../../dql/criteria.ts";
 import * as s from "../../dql/select.ts";
 import * as c from "./column.ts";
@@ -14,6 +15,7 @@ export function tableSelectFactory<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   tableName: TableName,
   props: ColumnsShape,
@@ -32,7 +34,8 @@ export function tableSelectFactory<
     TableName,
     Any,
     Any,
-    Context
+    Context,
+    DomainQS
   >[];
 
   type OptionalInInsertableRecord = {

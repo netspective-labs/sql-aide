@@ -3,33 +3,51 @@ import * as SQLa from "../mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export interface PlantUmlIeOptions<Context extends SQLa.SqlEmitContext> {
+export interface PlantUmlIeOptions<
+  Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
+> {
   readonly diagramName: string;
   readonly includeEntityAttr: (
-    ea: SQLa.GraphEntityAttrReference<Any, Any, Context>,
+    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
   ) => boolean;
   readonly elaborateEntityAttr?: (
-    ea: SQLa.GraphEntityAttrReference<Any, Any, Context>,
+    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
     entity: (
       name: string,
-    ) => SQLa.GraphEntityDefinition<Any, Context, Any> | undefined,
+    ) =>
+      | SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>
+      | undefined,
     ns: SQLa.SqlObjectNames,
   ) => string;
   readonly includeEntity: (
-    e: SQLa.GraphEntityDefinition<Any, Context, Any>,
+    e: SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
   ) => boolean;
-  readonly includeRelationship: (edge: SQLa.GraphEdge<Context>) => boolean;
+  readonly includeRelationship: (
+    edge: SQLa.GraphEdge<Context, Any, Any>,
+  ) => boolean;
   readonly relationshipIndicator: (
-    edge: SQLa.GraphEdge<Context>,
+    edge: SQLa.GraphEdge<Context, Any, Any>,
   ) => string | false;
   readonly includeChildren: (
-    ir: SQLa.EntityGraphInboundRelationship<Any, Any, Context>,
+    ir: SQLa.EntityGraphInboundRelationship<
+      Any,
+      Any,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) => boolean;
 }
 
-export function typicalPlantUmlIeOptions<Context extends SQLa.SqlEmitContext>(
-  inherit?: Partial<PlantUmlIeOptions<Context>>,
-): PlantUmlIeOptions<Context> {
+export function typicalPlantUmlIeOptions<
+  Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
+>(
+  inherit?: Partial<PlantUmlIeOptions<Context, DomainQS, DomainsQS>>,
+): PlantUmlIeOptions<Context, DomainQS, DomainsQS> {
   // we let type inference occur so generics can follow through
   return {
     diagramName: "IE",
@@ -46,17 +64,27 @@ export function typicalPlantUmlIeOptions<Context extends SQLa.SqlEmitContext>(
 }
 
 export function plantUmlIE<
-  Entity extends SQLa.GraphEntityDefinition<Any, Context, Any>,
+  Entity extends SQLa.GraphEntityDefinition<
+    Any,
+    Context,
+    Any,
+    DomainQS,
+    DomainsQS
+  >,
   Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
 >(
   ctx: Context,
   entityDefns: (ctx: Context) => Generator<Entity>,
-  puieOptions: PlantUmlIeOptions<Context>,
+  puieOptions: PlantUmlIeOptions<Context, DomainQS, DomainsQS>,
 ) {
   const graph = SQLa.entitiesGraph(ctx, entityDefns);
   const ns = ctx.sqlNamingStrategy(ctx);
 
-  const attrPuml = (ea: SQLa.GraphEntityAttrReference<Any, Any, Context>) => {
+  const attrPuml = (
+    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
+  ) => {
     const tcName = ns.tableColumnName({
       tableName: ea.entity.identity("presentation"),
       columnName: ea.attr.identity,
@@ -74,7 +102,9 @@ export function plantUmlIE<
     return `    ${required} ${name}: ${sqlType}${descr ?? ""}`;
   };
 
-  const entityPuml = (e: SQLa.GraphEntityDefinition<Any, Context, Any>) => {
+  const entityPuml = (
+    e: SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+  ) => {
     const columns: string[] = [];
     // we want to put all the primary keys at the top of the entity
     for (const column of e.attributes) {

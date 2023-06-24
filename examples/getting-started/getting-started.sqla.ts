@@ -8,8 +8,16 @@ const { SQLa, ws } = tp;
 const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() });
 type EmitContext = typeof ctx;
 
-const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
-const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
+const gts = tp.governedTemplateState<
+  tp.TypicalDomainQS,
+  tp.TypicalDomainsQS,
+  EmitContext
+>();
+const gm = tp.governedModel<
+  tp.TypicalDomainQS,
+  tp.TypicalDomainsQS,
+  EmitContext
+>(gts.ddlOptions);
 const { text, textNullable, integer, date } = gm.domains;
 const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 

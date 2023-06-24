@@ -3,14 +3,18 @@ import { govnPattern as gp, pgSQLa, SQLa, zod as z } from "./deps.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+export type PgDcpDomainQS = gp.GovernedDomainQS;
+export type PgDcpDomainsQS = SQLa.SqlDomainsQS<PgDcpDomainQS>;
+
 export class PgDcpKeys<
-  Domain extends gp.GovernedDomain,
-  Domains extends gp.GovernedDomains<Domain, Context>,
+  DomainQS extends PgDcpDomainQS,
+  DomainsQS extends PgDcpDomainsQS,
+  Domains extends gp.GovernedDomains<DomainQS, DomainsQS, Context>,
   Context extends gp.GovernedEmitContext,
-> extends gp.GovernedKeys<Domain, Domains, Context> {
+> extends gp.GovernedKeys<Domains, Context, DomainQS, DomainsQS> {
   constructor(
     readonly domains: Domains,
-    readonly pgPkcf = pgSQLa.primaryKeyColumnFactory<Context>(),
+    readonly pgPkcf = pgSQLa.primaryKeyColumnFactory<Context, DomainQS>(),
   ) {
     super(domains, pgPkcf);
   }
@@ -20,8 +24,10 @@ export class PgDcpKeys<
   }
 }
 
-export class PgDcpTemplateState<Context extends gp.GovernedEmitContext>
-  extends gp.GovernedTemplateState<Context> {
+export class PgDcpTemplateState<
+  Context extends gp.GovernedEmitContext,
+  DomainQS extends PgDcpDomainQS,
+> extends gp.GovernedTemplateState<Context, DomainQS> {
   public context() {
     return {
       ...SQLa.typicalSqlEmitContext({
@@ -32,19 +38,21 @@ export class PgDcpTemplateState<Context extends gp.GovernedEmitContext>
 }
 
 export class PgDcpIM<
-  Domain extends gp.GovernedDomain,
-  Domains extends gp.GovernedDomains<Domain, Context>,
-  Keys extends PgDcpKeys<Domain, Domains, Context>,
+  DomainQS extends PgDcpDomainQS,
+  DomainsQS extends PgDcpDomainsQS,
+  Domains extends gp.GovernedDomains<DomainQS, DomainsQS, Context>,
+  Keys extends PgDcpKeys<DomainQS, DomainsQS, Domains, Context>,
   HousekeepingShape extends z.ZodRawShape,
-  TemplateState extends gp.GovernedTemplateState<Context>,
+  TemplateState extends gp.GovernedTemplateState<Context, DomainQS>,
   Context extends gp.GovernedEmitContext,
 > extends gp.GovernedIM<
-  Domain,
   Domains,
   Keys,
   HousekeepingShape,
   TemplateState,
-  Context
+  Context,
+  DomainQS,
+  DomainsQS
 > {
   constructor(
     readonly domains: Domains,
@@ -56,7 +64,8 @@ export class PgDcpIM<
           TableName,
           Any,
           Any,
-          Context
+          Context,
+          DomainQS
         >;
     },
     readonly templateState: TemplateState,
@@ -65,20 +74,27 @@ export class PgDcpIM<
   }
 
   static prime<
-    Domain extends gp.GovernedDomain,
+    DomainQS extends PgDcpDomainQS,
+    DomainsQS extends PgDcpDomainsQS,
     Context extends gp.GovernedEmitContext,
   >(sqlNS?: SQLa.SqlNamespaceSupplier) {
-    type Domains = gp.GovernedDomains<Domain, Context>;
-    type Keys = PgDcpKeys<Domain, Domains, Context>;
+    type Domains = gp.GovernedDomains<DomainQS, DomainsQS, Context>;
+    type Keys = PgDcpKeys<DomainQS, DomainsQS, Domains, Context>;
     type HousekeepingShape = typeof housekeeping.columns;
 
-    const gts = new gp.GovernedTemplateState<Context>(sqlNS);
-    const domains = new gp.GovernedDomains<Domain, Context>();
-    const housekeeping = gp.housekeepingMinimal<Domain, Domains, Context>(
+    const gts = new gp.GovernedTemplateState<Context, DomainQS>(sqlNS);
+    const domains = new gp.GovernedDomains<DomainQS, DomainsQS, Context>();
+    const housekeeping = gp.housekeepingMinimal<
+      Domains,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
       domains,
     );
     return new PgDcpIM<
-      Domain,
+      DomainQS,
+      DomainsQS,
       Domains,
       Keys,
       HousekeepingShape,
@@ -87,7 +103,9 @@ export class PgDcpIM<
     >(
       domains,
       new PgDcpKeys(domains),
-      gp.housekeepingMinimal<Domain, Domains, Context>(domains),
+      gp.housekeepingMinimal<Domains, Context, DomainQS, DomainsQS>(
+        domains,
+      ),
       gts,
     );
   }

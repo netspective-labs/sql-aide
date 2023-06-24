@@ -20,7 +20,11 @@ export type Context = typeof ctx;
 type EmitContext = typeof ctx;
 const { typical: tp } = iam;
 
-const gts = tp.governedTemplateState<iam.typical.GovernedDomain, EmitContext>();
+const gts = tp.governedTemplateState<
+  iam.typical.TypicalDomainQS,
+  iam.typical.TypicalDomainsQS,
+  EmitContext
+>();
 
 type px = z.infer<typeof udm.person.zoSchema>;
 

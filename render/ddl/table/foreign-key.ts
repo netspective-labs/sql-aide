@@ -13,10 +13,14 @@ export function foreignKeysFactory<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >(
   tableName: TableName,
   zodRawShape: ColumnsShape,
-  sdf: ReturnType<typeof d.sqlDomainsFactory<TableName, Context>>,
+  sdf: ReturnType<
+    typeof d.sqlDomainsFactory<TableName, Context, DomainQS, DomainsQS>
+  >,
 ) {
   type ColumnName = Extract<keyof ColumnsShape, string>;
   type BaggageSchema = {
@@ -151,7 +155,9 @@ export function foreignKeysFactory<
 
   type TableSelfRefDestNature = {
     readonly isSelfRef: true;
-    readonly selfRefDomain: d.SqlDomain<Any, Context, Any> | undefined;
+    readonly selfRefDomain:
+      | d.SqlDomain<Any, Context, Any, DomainQS>
+      | undefined;
   };
 
   type ForeignKeyRelNature =
@@ -254,7 +260,8 @@ export function foreignKeysFactory<
       & d.SqlDomain<
         BaggageSchema[Property],
         Context,
-        Extract<Property, string>
+        Extract<Property, string>,
+        DomainQS
       >
       & ForeignKeyDestination;
   };
@@ -270,10 +277,12 @@ export function foreignKeysFactory<
 
   const outboundReferences: g.EntityGraphOutboundReferencesSupplier<
     Context,
-    TableName
+    TableName,
+    DomainQS,
+    DomainsQS
   > = function* (
     { entity, entityByName, reportIssue },
-  ): Generator<g.EntityGraphOutboundReference<Context>> {
+  ): Generator<g.EntityGraphOutboundReference<Context, DomainQS, DomainsQS>> {
     for (const key of tableShapeKeys) {
       const zodTypeSD = zbSchema[key];
       if (isForeignKeyDestination(zodTypeSD.sqlDomain)) {

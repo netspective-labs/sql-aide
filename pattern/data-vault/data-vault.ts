@@ -15,7 +15,8 @@ type Any = any;
 //      `dbt` artifacts for transformations as a potential augment to PostgreSQL stored
 //      procedures and `pgSQL`.
 
-export type DataVaultDomainGovn = typ.GovernedDomain;
+export type DataVaultDomainQS = typ.TypicalDomainQS;
+export type DataVaultDomainsQS = SQLa.SqlDomainsQS<DataVaultDomainQS>;
 
 /**
  * dataVaultDomains is a convenience object which defines aliases of all the
@@ -24,7 +25,7 @@ export type DataVaultDomainGovn = typ.GovernedDomain;
  * @returns the typical domains used by Data Vault models
  */
 export function dataVaultDomains<Context extends SQLa.SqlEmitContext>() {
-  return typ.governedDomains<DataVaultDomainGovn, Context>();
+  return typ.governedDomains<DataVaultDomainQS, DataVaultDomainsQS, Context>();
 }
 
 /**
@@ -32,7 +33,7 @@ export function dataVaultDomains<Context extends SQLa.SqlEmitContext>() {
  * @returns a builder object with helper functions as properties which can be used to build DV keys
  */
 export function dataVaultKeys<Context extends SQLa.SqlEmitContext>() {
-  return typ.governedKeys<DataVaultDomainGovn, Context>();
+  return typ.governedKeys<DataVaultDomainQS, DataVaultDomainsQS, Context>();
 }
 
 /**
@@ -110,7 +111,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
   const names = dataVaultNames<Context>();
   const domains = dataVaultDomains<Context>();
   const keys = dataVaultKeys<Context>();
-  const tableLintRules = SQLa.tableLintRules<Context>();
+  const tableLintRules = SQLa.tableLintRules<Context, DataVaultDomainQS>();
 
   const housekeeping = {
     columns: {
@@ -123,7 +124,8 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         { created_at?: Date; created_by?: string; provenance: string }, // this must match typical.columns so that isColumnEmittable is type-safe
         { created_at?: Date }, // this must match typical.columns so that isColumnEmittable is type-safe
-        Context
+        Context,
+        DataVaultDomainQS
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
@@ -134,7 +136,8 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         Any,
         Any,
         Any,
-        Context
+        Context,
+        DataVaultDomainQS
       >;
     },
   };
@@ -168,10 +171,20 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
       readonly lint?:
         & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context>;
+        & SQLa.FKeyColNameConsistencyLintOptions<
+          Context,
+          DataVaultDomainQS,
+          DataVaultDomainsQS
+        >;
     },
   ) => {
-    const tableDefn = SQLa.tableDefinition<TableName, ColumnsShape, Context>(
+    const tableDefn = SQLa.tableDefinition<
+      TableName,
+      ColumnsShape,
+      Context,
+      DataVaultDomainQS,
+      DataVaultDomainsQS
+    >(
       tableName,
       columnsShape,
       {
@@ -185,12 +198,22 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     >();
     const result = {
       ...tableDefn,
-      ...SQLa.tableColumnsRowFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableColumnsRowFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DataVaultDomainQS
+      >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DataVaultDomainQS
+      >(
         tableName,
         columnsShape,
       ),
@@ -337,7 +360,11 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
 export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>() {
-  const gts = typ.governedTemplateState<DataVaultDomainGovn, Context>();
+  const gts = typ.governedTemplateState<
+    DataVaultDomainQS,
+    DataVaultDomainsQS,
+    Context
+  >();
   return {
     ...gts,
     ...dataVaultGovn<Context>(gts.ddlOptions),

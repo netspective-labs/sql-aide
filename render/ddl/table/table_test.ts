@@ -27,8 +27,11 @@ const sqlGen = () => {
 };
 
 const syntheticSchema = () => {
-  const tcf = mod.tableColumnFactory<Any, SyntheticContext>();
-  const pkcFactory = mod.primaryKeyColumnFactory<SyntheticContext>();
+  const tcf = mod.tableColumnFactory<Any, SyntheticContext, d.SqlDomainQS>();
+  const pkcFactory = mod.primaryKeyColumnFactory<
+    SyntheticContext,
+    d.SqlDomainQS
+  >();
   const commonColumns = {
     text: z.string(),
     text_nullable: z.string().optional(),
@@ -46,7 +49,8 @@ const syntheticSchema = () => {
         TableName,
         { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
         { created_at?: Date }, // this must match housekeeping.columns so that isColumnEmittable is type-safe
-        SyntheticContext
+        SyntheticContext,
+        d.SqlDomainQS
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the insert DML SQL statement
@@ -56,7 +60,8 @@ const syntheticSchema = () => {
         Any,
         Any,
         Any,
-        SyntheticContext
+        SyntheticContext,
+        d.SqlDomainQS
       >;
     },
   };
@@ -157,7 +162,8 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         "synthetic_table_without_pk",
         ColumnName,
         ColumnTsType,
-        SyntheticContext
+        SyntheticContext,
+        d.SqlDomainQS
       >;
 
       await innerTC.step("type safety", () => {
@@ -367,9 +373,19 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
   } = syntheticSchema();
 
   const selfRef = <ZTA extends z.ZodTypeAny>(zodType: ZTA) =>
-    mod.selfRef<ZTA, SyntheticContext>(
+    mod.selfRef<
+      ZTA,
+      SyntheticContext,
+      d.SqlDomainQS,
+      d.SqlDomainsQS<d.SqlDomainQS>
+    >(
       zodType,
-      d.sqlDomainsFactory<Any, SyntheticContext>(),
+      d.sqlDomainsFactory<
+        Any,
+        SyntheticContext,
+        d.SqlDomainQS,
+        d.SqlDomainsQS<d.SqlDomainQS>
+      >(),
     );
 
   const auto_inc_primary_key = pkcFactory.autoIncPrimaryKey();

@@ -105,12 +105,14 @@ Deno.test("PostgreSQL type-safe custom domains in custom table with qualified na
     readonly execution_context: d.SqlDomain<
       Any,
       typeof ctx,
-      "execution_context"
+      "execution_context",
+      Any
     >;
     readonly execution_host_identity: d.SqlDomain<
       Any,
       typeof ctx,
-      "execution_host_identity"
+      "execution_host_identity",
+      Any
     >;
   };
 
@@ -124,7 +126,8 @@ Deno.test("PostgreSQL type-safe custom domains in custom table with qualified na
       pgdf.pgDomainRef(qnss, "ltree") as unknown as d.SqlDomain<
         Any,
         typeof ctx,
-        "execution_context"
+        "execution_context",
+        Any
       >,
       "execution_context",
       {

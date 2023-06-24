@@ -4,7 +4,10 @@ import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import * as SQLa from "../../render/mod.ts";
 
 type SyntheticContext = SQLa.SqlEmitContext;
-const pkcFactory = SQLa.primaryKeyColumnFactory<SyntheticContext>();
+const pkcFactory = SQLa.primaryKeyColumnFactory<
+  SyntheticContext,
+  SQLa.SqlDomainQS
+>();
 
 const tableWithAutoIncPK = SQLa.tableDefinition(
   "synthetic_table_with_auto_inc_pk",

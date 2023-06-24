@@ -1,6 +1,6 @@
 import * as safety from "../../../lib/universal/safety.ts";
 import * as emit from "../../emit/mod.ts";
-import { SqlDomain } from "../../domain/mod.ts";
+import { SqlDomain, SqlDomainQS, SqlDomainsQS } from "../../domain/mod.ts";
 import { pgDomainsFactory } from "./domain.ts";
 import { SchemaDefinition, sqlSchemaDefn } from "../../ddl/schema.ts";
 import {
@@ -33,8 +33,10 @@ export interface EmitCoordinatorInit<
     string,
     ExtensionDefinition<SchemaName, string, Context>
   >,
-  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any>>,
+  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any, DomainQS>>,
   Context extends emit.SqlEmitContext,
+  DomainQS extends SqlDomainQS,
+  DomainsQS extends SqlDomainsQS<DomainsQS>,
   SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
   ExtensionName extends keyof ExtensionDefns & string =
     & keyof ExtensionDefns
@@ -61,7 +63,7 @@ export interface EmitCoordinatorInit<
   ) => ExtensionDefns;
   readonly pgDomainDefns: (
     pgdf: ReturnType<
-      typeof pgDomainsFactory<PgDomainName, Context>
+      typeof pgDomainsFactory<PgDomainName, Context, DomainQS, DomainsQS>
     >,
     schemaDefns: SchemaDefns,
   ) => PgDomainDefns;
@@ -94,8 +96,10 @@ export class EmitCoordinator<
     string,
     ExtensionDefinition<keyof SchemaDefns & string, string, Context>
   >,
-  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any>>,
+  PgDomainDefns extends Record<string, SqlDomain<Any, Context, Any, DomainQS>>,
   Context extends emit.SqlEmitContext,
+  DomainQS extends SqlDomainQS,
+  DomainsQS extends SqlDomainsQS<DomainsQS>,
   SchemaName extends keyof SchemaDefns & string = keyof SchemaDefns & string,
   ExtensionName extends keyof ExtensionDefns & string =
     & keyof ExtensionDefns
@@ -111,7 +115,12 @@ export class EmitCoordinator<
   readonly embedSymsSTSO: emit.SqlTextSupplierOptions<Context>;
   readonly schemaDefns: SchemaDefns;
   readonly extnDefns: ExtensionDefns;
-  readonly pgDomainsFactory = pgDomainsFactory<PgDomainName, Context>();
+  readonly pgDomainsFactory = pgDomainsFactory<
+    PgDomainName,
+    Context,
+    DomainQS,
+    DomainsQS
+  >();
   readonly pgDomains: PgDomainDefns;
 
   protected constructor(
@@ -119,7 +128,9 @@ export class EmitCoordinator<
       SchemaDefns,
       ExtensionDefns,
       PgDomainDefns,
-      Context
+      Context,
+      DomainQS,
+      DomainsQS
     >,
   ) {
     this.provenance = {

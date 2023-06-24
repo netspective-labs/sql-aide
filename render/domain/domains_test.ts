@@ -16,7 +16,12 @@ type SyntheticContext = tmpl.SqlEmitContext & {
   readonly customContextProp1: string;
   readonly executedAt: Date;
 };
-const factory = ds.sqlDomainsFactory<Any, SyntheticContext>();
+const factory = ds.sqlDomainsFactory<
+  Any,
+  SyntheticContext,
+  d.SqlDomainQS,
+  ds.SqlDomainsQS<d.SqlDomainQS>
+>();
 
 const sqlGen = () => {
   const ctx: SyntheticContext = {
@@ -57,48 +62,59 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
       expectType<{
         text:
           & z.ZodString
-          & d.SqlDomainSupplier<z.ZodString, "text", SyntheticContext>;
+          & d.SqlDomainSupplier<
+            z.ZodString,
+            "text",
+            SyntheticContext,
+            d.SqlDomainQS
+          >;
         text_nullable:
           & z.ZodOptional<z.ZodString>
           & d.SqlDomainSupplier<
             z.ZodOptional<z.ZodString>,
             "text_nullable",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
         text_defaultable:
           & z.ZodDefault<z.ZodString>
           & d.SqlDomainSupplier<
             z.ZodDefault<z.ZodString>,
             "text_defaultable",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
         text_optional_defaultable:
           & z.ZodDefault<z.ZodOptional<z.ZodString>>
           & d.SqlDomainSupplier<
             z.ZodDefault<z.ZodOptional<z.ZodString>>,
             "text_optional_defaultable",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
         text_defaultable_optional:
           & z.ZodOptional<z.ZodDefault<z.ZodString>>
           & d.SqlDomainSupplier<
             z.ZodOptional<z.ZodDefault<z.ZodString>>,
             "text_defaultable_optional",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
         int:
           & z.ZodNumber
           & d.SqlDomainSupplier<
             z.ZodNumber,
             "int",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
         int_nullable:
           & z.ZodOptional<z.ZodNumber>
           & d.SqlDomainSupplier<
             z.ZodOptional<z.ZodNumber>,
             "int",
-            SyntheticContext
+            SyntheticContext,
+            d.SqlDomainQS
           >;
       }>(domains.zbSchema);
 
@@ -267,28 +283,32 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
         & d.SqlDomainSupplier<
           z.ZodString,
           "ref_text1_required_in_src_and_dest",
-          SyntheticContext
+          SyntheticContext,
+          d.SqlDomainQS
         >;
       ref_text1_nullable:
         & z.ZodOptional<z.ZodString>
         & d.SqlDomainSupplier<
           z.ZodOptional<z.ZodString>,
           "ref_text1_nullable",
-          SyntheticContext
+          SyntheticContext,
+          d.SqlDomainQS
         >;
       ref_text2_dest_not_nullable:
         & z.ZodString
         & d.SqlDomainSupplier<
           z.ZodString,
           "ref_text2_dest_not_nullable",
-          SyntheticContext
+          SyntheticContext,
+          d.SqlDomainQS
         >;
       ref_text2_dest_nullable:
         & z.ZodOptional<z.ZodString>
         & d.SqlDomainSupplier<
           z.ZodOptional<z.ZodString>,
           "ref_text2_dest_nullable",
-          SyntheticContext
+          SyntheticContext,
+          d.SqlDomainQS
         >;
     }>(
       refDomains.zbSchema,

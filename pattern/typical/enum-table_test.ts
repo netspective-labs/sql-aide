@@ -103,7 +103,7 @@ Deno.test("SQL Aide (SQLa) numeric enum table", async (tc) => {
   });
 
   await tc.step("insert enum values into table rows", () => {
-    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const tcf = SQLa.tableColumnFactory<Any, Any, Any>();
     const keys = SQLa.primaryKeyColumnFactory();
 
     const synthetic = SQLa.tableDefinition("synthetic_table", {
@@ -214,7 +214,7 @@ Deno.test("SQL Aide (SQLa) text enum table", async (tc) => {
   });
 
   await tc.step("insert enum values into table rows", () => {
-    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const tcf = SQLa.tableColumnFactory<Any, Any, Any>();
     const keys = SQLa.primaryKeyColumnFactory();
 
     const synthetic = SQLa.tableDefinition("synthetic_table", {
@@ -318,7 +318,7 @@ Deno.test("SQL Aide (SQLa) varchar enum table", async (tc) => {
   });
 
   await tc.step("insert enum values into table rows", () => {
-    const tcf = SQLa.tableColumnFactory<Any, Any>();
+    const tcf = SQLa.tableColumnFactory<Any, Any, Any>();
     const keys = SQLa.primaryKeyColumnFactory();
 
     const synthetic = SQLa.tableDefinition("synthetic_table", {

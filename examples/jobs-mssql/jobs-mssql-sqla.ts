@@ -13,8 +13,16 @@ const ctx = SQLa.typicalSqlEmitContext({
 });
 type EmitContext = typeof ctx;
 
-const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
-const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
+const gts = tp.governedTemplateState<
+  tp.TypicalDomainQS,
+  tp.TypicalDomainsQS,
+  EmitContext
+>();
+const gm = tp.governedModel<
+  tp.TypicalDomainQS,
+  tp.TypicalDomainsQS,
+  EmitContext
+>(gts.ddlOptions);
 const {
   text,
   textNullable,

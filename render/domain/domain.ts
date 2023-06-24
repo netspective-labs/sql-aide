@@ -1,6 +1,7 @@
 import { zod as z } from "../deps.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
+import * as qs from "../quality-system.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -16,91 +17,113 @@ export function isSqlDomainZodDescr<SDZD extends SqlDomainZodDescrMeta>(
   return isSDZD(o);
 }
 
+export type SqlDomainQS = qs.Documentable;
+
 export type SqlDomain<
   ZTA extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
   DomainIdentity extends string,
-> = tmpl.SqlSymbolSupplier<Context> & {
-  readonly isSqlDomain: true;
-  readonly identity: DomainIdentity;
-  readonly isNullable: () => boolean;
-  readonly sqlDataType: (
-    purpose:
-      | "create table column"
-      | "stored routine arg"
-      | "stored function returns scalar"
-      | "stored function returns table column"
-      | "type field"
-      | "table foreign key ref"
-      | "diagram"
-      | "PostgreSQL domain",
-  ) => tmpl.SqlTextSupplier<Context>;
-  readonly sqlDefaultValue?: (
-    purpose: "create table column" | "stored routine arg",
-  ) => tmpl.SqlTextSupplier<Context>;
-  readonly sqlDqlQuotedLiteral?: <Value extends Any | undefined>(
-    purpose: "select",
-    value: Value,
-    qlSupplier: (value: Value) => [value: Value, quoted: string],
-    ctx: Context,
-  ) => [value: Value, quoted: string];
-  readonly sqlDmlQuotedLiteral?: <Value extends Any | undefined>(
-    purpose: "insert" | "update" | "delete",
-    columnValue: Value,
-    qlSupplier: (value: Value) => [value: Value, quoted: string],
-    rowValues: Record<string, Any>,
-    ctx: Context,
-  ) => [value: Value, quoted: string];
-  readonly sqlPartial?: (
-    destination:
-      | "create table, full column defn"
-      | "create table, column defn decorators"
-      | "create table, after all column definitions",
-  ) => tmpl.SqlTextSupplier<Context>[] | undefined;
-};
+  QualitySystem extends SqlDomainQS,
+> =
+  & tmpl.SqlSymbolSupplier<Context>
+  & Partial<qs.QualitySystemSupplier<QualitySystem>>
+  & {
+    readonly isSqlDomain: true;
+    readonly identity: DomainIdentity;
+    readonly isNullable: () => boolean;
+    readonly sqlDataType: (
+      purpose:
+        | "create table column"
+        | "stored routine arg"
+        | "stored function returns scalar"
+        | "stored function returns table column"
+        | "type field"
+        | "table foreign key ref"
+        | "diagram"
+        | "PostgreSQL domain",
+    ) => tmpl.SqlTextSupplier<Context>;
+    readonly sqlDefaultValue?: (
+      purpose: "create table column" | "stored routine arg",
+    ) => tmpl.SqlTextSupplier<Context>;
+    readonly sqlDqlQuotedLiteral?: <Value extends Any | undefined>(
+      purpose: "select",
+      value: Value,
+      qlSupplier: (value: Value) => [value: Value, quoted: string],
+      ctx: Context,
+    ) => [value: Value, quoted: string];
+    readonly sqlDmlQuotedLiteral?: <Value extends Any | undefined>(
+      purpose: "insert" | "update" | "delete",
+      columnValue: Value,
+      qlSupplier: (value: Value) => [value: Value, quoted: string],
+      rowValues: Record<string, Any>,
+      ctx: Context,
+    ) => [value: Value, quoted: string];
+    readonly sqlPartial?: (
+      destination:
+        | "create table, full column defn"
+        | "create table, column defn decorators"
+        | "create table, after all column definitions",
+    ) => tmpl.SqlTextSupplier<Context>[] | undefined;
+  };
 
 export type SqlDomainPreparer<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 > = <ZodType extends z.ZodTypeAny, Identity extends DomainsIdentity>(
   zodType: ZodType,
   init?: { identity: Identity },
-) => SqlDomain<ZodType, Context, Identity>;
+) => SqlDomain<ZodType, Context, Identity, QualitySystem>;
 
 export type SqlDomainSupplier<
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
-> = { readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> };
+  QualitySystem extends SqlDomainQS,
+> = {
+  readonly sqlDomain: SqlDomain<
+    ZodType,
+    Context,
+    DomainsIdentity,
+    QualitySystem
+  >;
+};
 
 export type SqlCustomDomainSupplier<
   Enrich extends Record<string, unknown>,
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 > = {
-  readonly sqlDomain: SqlDomain<ZodType, Context, DomainsIdentity> & Enrich;
+  readonly sqlDomain:
+    & SqlDomain<ZodType, Context, DomainsIdentity, QualitySystem>
+    & Enrich;
 };
 
 export type ZodTypeSqlDomainSupplier<
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
-> = ZodType & SqlDomainSupplier<ZodType, DomainsIdentity, Context>;
+  QualitySystem extends SqlDomainQS,
+> =
+  & ZodType
+  & SqlDomainSupplier<ZodType, DomainsIdentity, Context, QualitySystem>;
 
 export function zodTypeAnySqlDomainFactory<
   ZodType extends z.ZodTypeAny,
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >() {
   const SQL_DOMAIN_NOT_IN_COLLECTION = "SQL_DOMAIN_NOT_IN_COLLECTION" as const;
 
   const isSqlDomain = safety.typeGuard<
-    SqlDomain<ZodType, Context, DomainsIdentity>
+    SqlDomain<ZodType, Context, DomainsIdentity, QualitySystem>
   >("isSqlDomain", "sqlDataType");
 
   const isSqlDomainSupplier = safety.typeGuard<
-    SqlDomainSupplier<ZodType, DomainsIdentity, Context>
+    SqlDomainSupplier<ZodType, DomainsIdentity, Context, QualitySystem>
   >(
     "sqlDomain",
   );
@@ -116,7 +139,7 @@ export function zodTypeAnySqlDomainFactory<
     const lintIssues: tmpl.SqlLintIssueSupplier[] = [];
     const defaults:
       & Pick<
-        SqlDomain<Any, Context, Identity>,
+        SqlDomain<Any, Context, Identity, QualitySystem>,
         "identity" | "isSqlDomain" | "sqlSymbol" | "isNullable"
       >
       & tmpl.SqlLintIssuesSupplier = {
@@ -169,8 +192,14 @@ export function isSqlDomainZodStringDescr<
 export function zodStringSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >(zsdfOptions?: { defaultVarCharMaxLen?: number }) {
-  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
   return {
     ...ztaSDF,
     string: <
@@ -339,8 +368,14 @@ export function sqlDomainZodJsonDescrMeta(): SqlDomainZodJsonDescr {
 export function zodJsonSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >() {
-  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
   return {
     ...ztaSDF,
     isSqlDomainZodJsonDescr,
@@ -393,11 +428,13 @@ export function isSqlDomainZodNumberDescr<
 export function zodNumberSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >() {
   const ztaSDF = zodTypeAnySqlDomainFactory<
     z.ZodTypeAny,
     DomainsIdentity,
-    Context
+    Context,
+    QualitySystem
   >();
   return {
     ...ztaSDF,
@@ -599,11 +636,17 @@ export function sqlDateFormatStrategy(
 export function zodDateSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >(
   dtfStrategy: ReturnType<typeof sqlDateFormatStrategy> =
     sqlDateFormatStrategy(),
 ) {
-  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
   return {
     ...ztaSDF,
     dateFmtStrategy: dtfStrategy,
@@ -618,7 +661,7 @@ export function zodDateSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
         readonly formattedDate?: (date: Date) => string;
       },
-    ): SqlDomain<ZodType, Context, Identity> => {
+    ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `DATE` }),
@@ -643,7 +686,7 @@ export function zodDateSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
         readonly formattedDate?: (date: Date) => string;
       },
-    ): SqlDomain<ZodType, Context, Identity> => {
+    ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
@@ -673,7 +716,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
-    }): SqlDomain<ZodType, Context, Identity> => {
+    }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
           z.date().default(new Date()).optional() as ZodType,
@@ -705,7 +748,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
-    }): SqlDomain<ZodType, Context, Identity> => {
+    }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
           z.date().default(new Date()).optional() as ZodType,
@@ -728,7 +771,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
-    }): SqlDomain<ZodType, Context, Identity> => {
+    }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
           z.date().default(new Date()).optional() as ZodType,
@@ -750,8 +793,14 @@ export function zodDateSqlDomainFactory<
 export function zodEnumSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >() {
-  const ztaSDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
   return {
     ...ztaSDF,
     nativeNumeric: <
@@ -839,6 +888,7 @@ export type ZodTypeSqlDomainFactoryFromHook<
   Identity extends string,
   ZodType extends z.ZodTypeAny,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 > = (
   zodType: ZodType,
   init?: {
@@ -846,16 +896,16 @@ export type ZodTypeSqlDomainFactoryFromHook<
     readonly isOptional?: boolean;
     readonly parents?: z.ZodTypeAny[];
   },
-) => SqlDomain<ZodType, Context, Identity>;
+) => SqlDomain<ZodType, Context, Identity, QualitySystem>;
 
 export const zodTypeSqlDomainFactoryFromHooks = new Map<
   string,
-  ZodTypeSqlDomainFactoryFromHook<Any, Any, Any>
+  ZodTypeSqlDomainFactoryFromHook<Any, Any, Any, Any>
 >();
 
 export function declareZodTypeSqlDomainFactoryFromHook(
   name: string,
-  hook: ZodTypeSqlDomainFactoryFromHook<Any, Any, Any>,
+  hook: ZodTypeSqlDomainFactoryFromHook<Any, Any, Any, Any>,
 ) {
   zodTypeSqlDomainFactoryFromHooks.set(name, hook);
   const result:
@@ -881,16 +931,42 @@ export function isZodTypeSqlDomainFactoryFromHookSupplier<
 export function zodTypeSqlDomainFactory<
   DomainsIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
 >() {
   const SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE =
     "SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE";
 
-  const anySDF = zodTypeAnySqlDomainFactory<Any, DomainsIdentity, Context>();
-  const stringSDF = zodStringSqlDomainFactory<DomainsIdentity, Context>();
-  const numberSDF = zodNumberSqlDomainFactory<DomainsIdentity, Context>();
-  const dateSDF = zodDateSqlDomainFactory<DomainsIdentity, Context>();
-  const enumSDF = zodEnumSqlDomainFactory<DomainsIdentity, Context>();
-  const jsonSDF = zodJsonSqlDomainFactory<DomainsIdentity, Context>();
+  const anySDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  const stringSDF = zodStringSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  const numberSDF = zodNumberSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  const dateSDF = zodDateSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  const enumSDF = zodEnumSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  const jsonSDF = zodJsonSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
 
   const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
     delete (zodType as Any)["sqlDomain"];
@@ -951,7 +1027,7 @@ export function zodTypeSqlDomainFactory<
       readonly isOptional?: boolean;
       readonly parents?: z.ZodTypeAny[];
     },
-  ): SqlDomain<ZodType, Context, Identity> => {
+  ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
     const zodDef = zodType._def;
 
     // we allow SqlDomain "hooks" to be defined in meta data
@@ -1132,14 +1208,15 @@ export function zodTypeSqlDomainFactory<
       readonly parents?: z.ZodTypeAny[];
       readonly forceCreate?: boolean;
     },
-  ): SqlDomain<ZodType, Context, Identity> => {
+  ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
     // if a sqlDomain is already attached to a ZodType use it as-is;
     if (anySDF.isSqlDomainSupplier(zodType)) {
       if (!init?.forceCreate) {
         const proxied = (zodType as Any).sqlDomain as SqlDomain<
           ZodType,
           Context,
-          Identity
+          Identity,
+          QualitySystem
         >;
         if (proxied.identity == anySDF.SQL_DOMAIN_NOT_IN_COLLECTION) {
           (proxied.identity as string) = init?.identity ??

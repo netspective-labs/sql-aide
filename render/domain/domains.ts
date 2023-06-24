@@ -3,34 +3,46 @@ import * as safety from "../../lib/universal/safety.ts";
 import * as za from "../../lib/universal/zod-aide.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as d from "./domain.ts";
+import * as qs from "../quality-system.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+export type SqlDomainsQS<DomainQS extends d.SqlDomainQS> = qs.Documentable;
+
 export type SqlDomains<
   ZodRawShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends SqlDomainsQS<DomainsQS>,
 > = {
   [Property in keyof ZodRawShape]: d.SqlDomain<
     ZodRawShape[Property],
     Context,
-    Extract<Property, string>
+    Extract<Property, string>,
+    DomainQS
   >;
 };
 
-export type SqlDomainsSupplier<Context extends tmpl.SqlEmitContext> = {
-  readonly domains: () => d.SqlDomain<Any, Context, Any>[];
+export type SqlDomainsSupplier<
+  Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends SqlDomainsQS<DomainsQS>,
+> = {
+  readonly domains: () => d.SqlDomain<Any, Context, Any, DomainQS>[];
 };
 
 export function sqlDomainsFactory<
   EntityIdentity extends string,
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends SqlDomainsQS<DomainsQS>,
 >() {
   let sqlDomainsIterationIndex = 0;
-  const sdf = d.zodTypeSqlDomainFactory<Any, Context>();
+  const sdf = d.zodTypeSqlDomainFactory<Any, Context, DomainQS>();
   const zb = za.zodBaggage<
-    d.SqlDomain<Any, Context, Any>,
-    d.SqlDomainSupplier<Any, Any, Context>
+    d.SqlDomain<Any, Context, Any, DomainQS>,
+    d.SqlDomainSupplier<Any, Any, Context, DomainQS>
   >("sqlDomain");
 
   const sqlDomains = <
@@ -44,7 +56,8 @@ export function sqlDomainsFactory<
       [Property in keyof RawShape]: d.SqlDomain<
         RawShape[Property],
         Context,
-        Extract<Property, string>
+        Extract<Property, string>,
+        DomainQS
       >;
     },
     SqlSymbolSuppliersSchema extends {
@@ -66,7 +79,7 @@ export function sqlDomainsFactory<
     const zoSchema = z.object(zodRawShape).strict();
     const zbSchema: BaggageSchema = {} as Any;
     const sdSchema: SqlDomainSchema = {} as Any;
-    const domains: d.SqlDomain<Any, Context, Any>[] = [];
+    const domains: d.SqlDomain<Any, Context, Any, DomainQS>[] = [];
     const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
     const symbols: SqlSymbolsSchema = {} as Any;
 
@@ -184,7 +197,12 @@ export function sqlDomainsFactory<
           });
           const nativeRefSrcPlaceholder = inferredPlaceholder();
           const nri:
-            & d.SqlDomain<za.CoreZTA<typeof zodType>, Context, typeof key>
+            & d.SqlDomain<
+              za.CoreZTA<typeof zodType>,
+              Context,
+              typeof key,
+              DomainQS
+            >
             & RefSrcPlaceholderSupplier = {
               nativeRefSrcPlaceholder, // <-- this is what allows isInferencePlaceholder() to pick up the placeholder
               ...placeholder,
@@ -219,7 +237,8 @@ export function sqlDomainsFactory<
           & d.SqlDomain<
             RawShape[Property],
             Context,
-            Extract<Property, string>
+            Extract<Property, string>,
+            DomainQS
           >
           & ReferenceDestination;
       };

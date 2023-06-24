@@ -34,24 +34,27 @@ export function ordinalEnumTable<
   EnumValue extends number,
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodNumber
-      & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context>;
+      & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context, DomainQS>;
     readonly value:
       // "value" is the actual text, but in an enum the "code" contains the value
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
       & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
         "value",
-        Context
+        Context,
+        DomainQS
       >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
       & SQLa.SqlDomainSupplier<
         z.ZodOptional<z.ZodDefault<z.ZodDate>>,
         "created_at",
-        Context
+        Context,
+        DomainQS
       >;
   },
 >(
@@ -87,10 +90,15 @@ export function ordinalEnumTable<
   }
 
   // "value" is the actual text, but in an enum the "code" contains the value
-  const tcf = SQLa.tableColumnFactory<TableName, Context>();
-  const pkf = SQLa.primaryKeyColumnFactory<Context>();
+  const tcf = SQLa.tableColumnFactory<TableName, Context, DomainQS>();
+  const pkf = SQLa.primaryKeyColumnFactory<Context, DomainQS>();
 
-  const valueSD: SQLa.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+  const valueSD: SQLa.SqlDomain<
+    z.ZodEnum<ValueZodEnum>,
+    Context,
+    "value",
+    DomainQS
+  > = {
     ...tcf.enumSDF.zodText<EnumCode, ValueZodEnum, "value">(enumValues),
     identity: "value",
   };
@@ -174,27 +182,31 @@ export function textEnumTable<
   EnumValue extends string,
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
       & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
         "code",
-        Context
+        Context,
+        DomainQS
       >;
     readonly value:
       & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
       & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
         "value",
-        Context
+        Context,
+        DomainQS
       >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
       & SQLa.SqlDomainSupplier<
         z.ZodOptional<z.ZodDefault<z.ZodDate>>,
         "created_at",
-        Context
+        Context,
+        DomainQS
       >;
   },
 >(
@@ -218,9 +230,14 @@ export function textEnumTable<
   type ValueZodEnum = [EnumValue, ...(readonly EnumValue[])];
   const enumCodes = Object.keys(seedEnum) as unknown as CodeZodEnum;
   const enumValues = Object.values(seedEnum) as unknown as ValueZodEnum;
-  const tcf = SQLa.tableColumnFactory<TableName, Context>();
-  const pkf = SQLa.primaryKeyColumnFactory<Context>();
-  const codeSD: SQLa.SqlDomain<z.ZodEnum<CodeZodEnum>, Context, "code"> = {
+  const tcf = SQLa.tableColumnFactory<TableName, Context, DomainQS>();
+  const pkf = SQLa.primaryKeyColumnFactory<Context, DomainQS>();
+  const codeSD: SQLa.SqlDomain<
+    z.ZodEnum<CodeZodEnum>,
+    Context,
+    "code",
+    DomainQS
+  > = {
     ...tcf.enumSDF.zodText<EnumCode, CodeZodEnum, "code">(enumCodes),
     identity: "code",
   };
@@ -229,7 +246,12 @@ export function textEnumTable<
     codeSD,
   ) as unknown as z.ZodString & { sqlDomain: typeof codeSD };
 
-  const valueSD: SQLa.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+  const valueSD: SQLa.SqlDomain<
+    z.ZodEnum<ValueZodEnum>,
+    Context,
+    "value",
+    DomainQS
+  > = {
     ...tcf.enumSDF.zodText<EnumValue, ValueZodEnum, "value">(enumValues),
     identity: "value",
   };
@@ -311,27 +333,31 @@ export function varCharEnumTable<
   EnumValue extends string,
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
       & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
         "code",
-        Context
+        Context,
+        DomainQS
       >;
     readonly value:
       & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
       & SQLa.SqlDomainSupplier<
         z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
         "value",
-        Context
+        Context,
+        DomainQS
       >;
     readonly created_at:
       & z.ZodOptional<z.ZodDefault<z.ZodDate>>
       & SQLa.SqlDomainSupplier<
         z.ZodOptional<z.ZodDefault<z.ZodDate>>,
         "created_at",
-        Context
+        Context,
+        DomainQS
       >;
   },
 >(
@@ -356,9 +382,14 @@ export function varCharEnumTable<
   type ValueZodEnum = [EnumValue, ...(readonly EnumValue[])];
   const enumCodes = Object.keys(seedEnum) as unknown as CodeZodEnum;
   const enumValues = Object.values(seedEnum) as unknown as ValueZodEnum;
-  const tcf = SQLa.tableColumnFactory<TableName, Context>();
-  const pkf = SQLa.primaryKeyColumnFactory<Context>();
-  const codeSD: SQLa.SqlDomain<z.ZodEnum<CodeZodEnum>, Context, "code"> = {
+  const tcf = SQLa.tableColumnFactory<TableName, Context, DomainQS>();
+  const pkf = SQLa.primaryKeyColumnFactory<Context, DomainQS>();
+  const codeSD: SQLa.SqlDomain<
+    z.ZodEnum<CodeZodEnum>,
+    Context,
+    "code",
+    DomainQS
+  > = {
     ...tcf.enumSDF.zodVarChar<EnumCode, CodeZodEnum, "code">(
       enumCodes,
       varCharMaxLength,
@@ -370,7 +401,12 @@ export function varCharEnumTable<
     codeSD,
   ) as unknown as z.ZodString & { sqlDomain: typeof codeSD };
 
-  const valueSD: SQLa.SqlDomain<z.ZodEnum<ValueZodEnum>, Context, "value"> = {
+  const valueSD: SQLa.SqlDomain<
+    z.ZodEnum<ValueZodEnum>,
+    Context,
+    "value",
+    DomainQS
+  > = {
     ...tcf.enumSDF.zodText<EnumValue, ValueZodEnum, "value">(enumValues),
     identity: "value",
   };
@@ -442,7 +478,10 @@ export function varCharEnumTable<
  * enumTablesFactory is a "typical enums" builders object for database models.
  * @returns a single object with helper functions as properties (for building models)
  */
-export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
+export function enumTablesFactory<
+  Context extends SQLa.SqlEmitContext,
+  DomainQS extends SQLa.SqlDomainQS,
+>(
   defaultTdOptions?: SQLa.TableDefnOptions<Any, Context>,
 ) {
   function ordinalTable<
@@ -452,21 +491,23 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
     ColumnsShape extends z.ZodRawShape = {
       readonly code:
         & z.ZodNumber
-        & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context>;
+        & SQLa.SqlDomainSupplier<z.ZodNumber, "code", Context, DomainQS>;
       readonly value:
         // "value" is the actual text, but in an enum the "code" contains the value
         & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
         & SQLa.SqlDomainSupplier<
           z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
           "value",
-          Context
+          Context,
+          DomainQS
         >;
       readonly created_at:
         & z.ZodOptional<z.ZodDefault<z.ZodDate>>
         & SQLa.SqlDomainSupplier<
           z.ZodOptional<z.ZodDefault<z.ZodDate>>,
           "created_at",
-          Context
+          Context,
+          DomainQS
         >;
     },
   >(
@@ -479,6 +520,7 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
       EnumValue,
       TableName,
       Context,
+      DomainQS,
       ColumnsShape
     >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
   }
@@ -493,21 +535,24 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
         & SQLa.SqlDomainSupplier<
           z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
           "code",
-          Context
+          Context,
+          DomainQS
         >;
       readonly value:
         & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
         & SQLa.SqlDomainSupplier<
           z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
           "value",
-          Context
+          Context,
+          DomainQS
         >;
       readonly created_at:
         & z.ZodOptional<z.ZodDefault<z.ZodDate>>
         & SQLa.SqlDomainSupplier<
           z.ZodOptional<z.ZodDefault<z.ZodDate>>,
           "created_at",
-          Context
+          Context,
+          DomainQS
         >;
     },
   >(
@@ -520,6 +565,7 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
       EnumValue,
       TableName,
       Context,
+      DomainQS,
       ColumnsShape
     >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
   }
@@ -534,21 +580,24 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
         & SQLa.SqlDomainSupplier<
           z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>,
           "code",
-          Context
+          Context,
+          DomainQS
         >;
       readonly value:
         & z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>
         & SQLa.SqlDomainSupplier<
           z.ZodEnum<[EnumValue, ...(readonly EnumValue[])]>,
           "value",
-          Context
+          Context,
+          DomainQS
         >;
       readonly created_at:
         & z.ZodOptional<z.ZodDefault<z.ZodDate>>
         & SQLa.SqlDomainSupplier<
           z.ZodOptional<z.ZodDefault<z.ZodDate>>,
           "created_at",
-          Context
+          Context,
+          DomainQS
         >;
     },
   >(
@@ -562,6 +611,7 @@ export function enumTablesFactory<Context extends SQLa.SqlEmitContext>(
       EnumValue,
       TableName,
       Context,
+      DomainQS,
       ColumnsShape
     >(tableName, seedEnum, varCharMaxLength, tdOptions ?? defaultTdOptions);
   }

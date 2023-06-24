@@ -22,8 +22,12 @@ export type TableNamePrimaryKeyLintOptions = {
  */
 export const tableLacksPrimaryKeyLintRule = <
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >(
-  tableDefn: t.TableDefinition<Any, Context> & d.SqlDomainsSupplier<Context>,
+  tableDefn:
+    & t.TableDefinition<Any, Context, DomainQS>
+    & d.SqlDomainsSupplier<Context, DomainQS, DomainsQS>,
 ) => {
   const rule: tmpl.SqlLintRule<TableNamePrimaryKeyLintOptions> = {
     lint: (lis, lOptions) => {
@@ -33,11 +37,11 @@ export const tableLacksPrimaryKeyLintRule = <
         : false;
       if (!ignoreRule) {
         const pkColumn = tableDefn.domains().find((ap) =>
-          pk.isTablePrimaryKeyColumnDefn<Any, Context>(ap)
+          pk.isTablePrimaryKeyColumnDefn<Any, Context, DomainQS>(ap)
         ) as unknown as (
           | (
-            & d.SqlDomain<z.ZodTypeAny, Context, Any>
-            & pk.TablePrimaryKeyColumnDefn<Any, Context>
+            & d.SqlDomain<z.ZodTypeAny, Context, Any, DomainQS>
+            & pk.TablePrimaryKeyColumnDefn<Any, Context, DomainQS>
           )
           | undefined
         );
@@ -91,8 +95,11 @@ export const tableNameConsistencyLintRule = (tableName: string) => {
  * @returns a lint rule which, when executed and is not being ignored, will
  *          add each column defnintion lintIssue to a given LintIssuesSupplier
  */
-export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
-  tableDefn: t.TableDefinition<Any, Context>,
+export function tableColumnsLintIssuesRule<
+  Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+>(
+  tableDefn: t.TableDefinition<Any, Context, DomainQS>,
 ) {
   const rule: tmpl.SqlLintRule = {
     lint: (lis) => {
@@ -113,22 +120,24 @@ export function tableColumnsLintIssuesRule<Context extends tmpl.SqlEmitContext>(
 
 export type FKeyColNameConsistencyLintOptions<
   Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 > = {
   readonly ignoreFKeyColNameMissing_id?:
     | boolean
     | ((
-      col: c.TableColumnDefn<Any, Any, Any, Context>,
+      col: c.TableColumnDefn<Any, Any, Any, Context, DomainQS>,
       tableDefn:
-        & t.TableDefinition<Any, Context>
-        & d.SqlDomainsSupplier<Context>,
+        & t.TableDefinition<Any, Context, DomainQS>
+        & d.SqlDomainsSupplier<Context, DomainQS, DomainsQS>,
     ) => boolean);
   readonly ignoreColName_idNotFKey?:
     | boolean
     | ((
-      col: d.SqlDomain<Any, Context, Any>,
+      col: d.SqlDomain<Any, Context, Any, DomainQS>,
       tableDefn:
-        & t.TableDefinition<Any, Context>
-        & d.SqlDomainsSupplier<Context>,
+        & t.TableDefinition<Any, Context, DomainQS>
+        & d.SqlDomainsSupplier<Context, DomainQS, DomainsQS>,
     ) => boolean);
 };
 
@@ -194,14 +203,17 @@ export type FKeyColNameConsistencyLintOptions<
 //   return rule;
 // }
 
-export function tableLintRules<Context extends tmpl.SqlEmitContext>() {
+export function tableLintRules<
+  Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+>() {
   const rules = {
     tableNameConsistency: tableNameConsistencyLintRule,
     columnLintIssues: tableColumnsLintIssuesRule,
     // fKeyColNameConsistency: tableFKeyColNameConsistencyLintRule,
     // noPrimaryKeyDefined: tableLacksPrimaryKeyLintRule,
     typical: (
-      tableDefn: t.TableDefinition<Any, Context>,
+      tableDefn: t.TableDefinition<Any, Context, DomainQS>,
       ...additionalRules: tmpl.SqlLintRule<Any>[]
     ) => {
       return tmpl.aggregatedSqlLintRules<

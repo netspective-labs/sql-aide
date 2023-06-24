@@ -254,7 +254,7 @@ export const incidentStatus = gm.textEnumTable(
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allReferenceTables: (
-  & SQLa.TableDefinition<Any, udm.EmitContext>
+  & SQLa.TableDefinition<Any, udm.EmitContext, typ.TypicalDomainQS>
   & typ.EnumTableDefn<udm.EmitContext>
 )[] = [
   udm.execCtx,
@@ -871,7 +871,11 @@ export const attestationEvidence = gm.autoIncPkTable(
 
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
-export const allContentTables: SQLa.TableDefinition<Any, udm.EmitContext>[] = [
+export const allContentTables: SQLa.TableDefinition<
+  Any,
+  udm.EmitContext,
+  typ.TypicalDomainQS
+>[] = [
   udm.organizationRoleType,
   graph,
   boundary,
