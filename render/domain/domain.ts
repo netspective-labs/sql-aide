@@ -1,7 +1,6 @@
 import { zod as z } from "../deps.ts";
 import * as tmpl from "../emit/mod.ts";
 import * as safety from "../../lib/universal/safety.ts";
-import { SQLa } from "../../pattern/typical/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
@@ -464,7 +463,7 @@ export function zodNumberSqlDomainFactory<
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
-            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
             return "REAL";
           },
         }),
@@ -484,7 +483,7 @@ export function zodNumberSqlDomainFactory<
         ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
-            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
             return "REAL";
           },
         }),
@@ -505,10 +504,10 @@ export function zodNumberSqlDomainFactory<
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
-            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
               return "DOUBLE PRECISION";
             }
-            if (SQLa.isMsSqlServerDialect(ctx.sqlDialect)) {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return "FLOAT";
             }
             return "REAL";
@@ -530,10 +529,10 @@ export function zodNumberSqlDomainFactory<
         ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
-            if (SQLa.isPostgreSqlDialect(ctx.sqlDialect)) {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
               return "DOUBLE PRECISION";
             }
-            if (SQLa.isMsSqlServerDialect(ctx.sqlDialect)) {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return "FLOAT";
             }
             return "REAL";
