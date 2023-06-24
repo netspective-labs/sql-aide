@@ -3,7 +3,7 @@
     "init": "git config core.hooksPath .githooks",
     "doctor": "support/bin/doctor.ts",
     "update-deno-deps": "udd $(find . -type f -not -path \"./support/*\" -regex \".*\/deps\\(-test\\)?\\.ts\")",
-    "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\") && deno fmt --check --ignore=\"support\" && deno lint  --ignore=\"support\" && deno test --allow-all --unstable",
+    "git-hook-pre-commit": "deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\") && deno fmt --check --ignore=\"support\" && deno lint  --ignore=\"support\" && deno test --allow-all --unstable --v8-flags=\"--max-old-space-size=4096\"",
     "git-hook-pre-push": "deno test --allow-all --unstable",
     "prepare-publish": "git semtag final",
     "prepare-npm": "deno run -A support/package-npm/build-npm.ts",
