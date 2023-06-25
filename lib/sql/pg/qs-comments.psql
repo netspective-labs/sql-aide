@@ -1,6 +1,6 @@
----------------------------
---- Data Governance SQL ---
----------------------------
+------------------------------------------
+--- Quality System (QS) Infrastructure ---
+------------------------------------------
 
 -- UNTESTED ChatGPT draft of PostgreSQL stored function that retrieves the 
 -- comments for all objects, including custom object types and extensions,
