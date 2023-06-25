@@ -320,18 +320,17 @@ export function governedModel<
   >(
     tableName: TableName,
     columnsShape: ColumnsShape,
-    options?: {
-      readonly constraints?: <
-        TableName extends string,
-      >(
-        columnsShape: ColumnsShape,
-        tableName: TableName,
-      ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
-      readonly lint?:
-        & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context, DomainQS, DomainsQS>;
-      readonly sqlNS?: SQLa.SqlNamespaceSupplier;
-    },
+    options?:
+      & SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>
+      & {
+        readonly lint?:
+          & SQLa.TableNameConsistencyLintOptions
+          & SQLa.FKeyColNameConsistencyLintOptions<
+            Context,
+            DomainQS,
+            DomainsQS
+          >;
+      },
   ) => {
     const tableDefn = SQLa.tableDefinition<
       TableName,
@@ -343,9 +342,9 @@ export function governedModel<
       tableName,
       columnsShape,
       {
+        ...options,
         isIdempotent: true,
         sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
-        constraints: options?.constraints,
       },
     );
     const defaultIspOptions = housekeeping.insertStmtPrepOptions<
@@ -357,13 +356,20 @@ export function governedModel<
         TableName,
         ColumnsShape,
         Context,
-        DomainQS
+        DomainQS,
+        DomainsQS
       >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
         tableName,
         columnsShape,
       ),
@@ -393,18 +399,17 @@ export function governedModel<
   >(
     tableName: TableName,
     columnsShape: ColumnsShape,
-    options?: {
-      readonly constraints?: <
-        TableName extends string,
-      >(
-        columnsShape: ColumnsShape,
-        tableName: TableName,
-      ) => SQLa.TableColumnsConstraint<ColumnsShape, Context>[];
-      readonly lint?:
-        & SQLa.TableNameConsistencyLintOptions
-        & SQLa.FKeyColNameConsistencyLintOptions<Context, DomainQS, DomainsQS>;
-      readonly sqlNS?: SQLa.SqlNamespaceSupplier;
-    },
+    options?:
+      & SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>
+      & {
+        readonly lint?:
+          & SQLa.TableNameConsistencyLintOptions
+          & SQLa.FKeyColNameConsistencyLintOptions<
+            Context,
+            DomainQS,
+            DomainsQS
+          >;
+      },
   ) => {
     const tableDefn = SQLa.tableDefinition<
       TableName,
@@ -416,9 +421,9 @@ export function governedModel<
       tableName,
       columnsShape,
       {
+        ...options,
         isIdempotent: true,
         sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
-        constraints: options?.constraints,
       },
     );
     const defaultIspOptions = housekeeping.insertStmtPrepOptions<
@@ -430,13 +435,20 @@ export function governedModel<
         TableName,
         ColumnsShape,
         Context,
-        DomainQS
+        DomainQS,
+        DomainsQS
       >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
         tableName,
         columnsShape,
       ),
@@ -484,7 +496,7 @@ export function governedModel<
     );
   }
 
-  const etf = et.enumTablesFactory<Context, DomainQS>({
+  const etf = et.enumTablesFactory<Context, DomainQS, DomainsQS>({
     isIdempotent: true,
     sqlNS: ddlOptions?.sqlNS,
   });

@@ -16,18 +16,21 @@ export function tableSelectFactory<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainQS>,
 >(
   tableName: TableName,
   props: ColumnsShape,
-  tdrfOptions?: t.TableDefnOptions<ColumnsShape, Context> & {
-    defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
-    defaultSspOptions?: s.SelectStmtPreparerOptions<
-      TableName,
-      Any,
-      Any,
-      Context
-    >;
-  },
+  tdrfOptions?:
+    & t.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>
+    & {
+      defaultFcpOptions?: cr.FilterCriteriaPreparerOptions<Any, Context>;
+      defaultSspOptions?: s.SelectStmtPreparerOptions<
+        TableName,
+        Any,
+        Any,
+        Context
+      >;
+    },
 ) {
   const td = t.tableDefinition(tableName, props, tdrfOptions);
   const columns = Array.from(Object.values(td.columns)) as c.TableColumnDefn<

@@ -3,6 +3,7 @@ import * as safety from "../../lib/universal/safety.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
 import * as dialect from "./dialect.ts";
 import * as l from "./lint.ts";
+import * as c from "./comment.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -193,7 +194,12 @@ export const isSqlNamingStrategySupplier = safety.typeGuard<
 
 export interface SqlTextEmitOptions {
   readonly quotedLiteral: (value: unknown) => [value: unknown, quoted: string];
-  readonly comments: (text: string, indent?: string) => string;
+  readonly singeLineSrcComment: (text: string, indent?: string) => string;
+  readonly blockSrcComments: (text: string) => string;
+  readonly objectComment: <
+    Target extends c.SqlObjectCommentTarget,
+    TargetName extends string,
+  >(type: Target, target: TargetName, comment: string) => string;
   readonly indentation: (
     nature:
       | "create table"
@@ -384,9 +390,14 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
 }
 
 export function typicalSqlTextEmitOptions(): SqlTextEmitOptions {
+  const quotedLiteral = typicalQuotedSqlLiteral;
   return {
-    quotedLiteral: typicalQuotedSqlLiteral,
-    comments: (text, indent = "") => text.replaceAll(/^/gm, `${indent}-- `),
+    quotedLiteral,
+    singeLineSrcComment: (text, indent = "") =>
+      text.replaceAll(/^/gm, `${indent}-- `),
+    blockSrcComments: (text) => `/* ${text} */`,
+    objectComment: (type, target, comment) =>
+      `COMMENT ON ${type} ${target} IS ${quotedLiteral(comment)[1]}`,
     indentation: (nature, content) => {
       let indent = "";
       switch (nature) {
@@ -569,6 +580,14 @@ export class SqlPartialExprEventEmitter<
   Context extends SqlEmitContext,
 > extends events.EventEmitter<{
   symbolEncountered(ctx: Context, sss: SqlSymbolSupplier<Context>): void;
+  sqlObjectCommentEncountered(
+    ctx: Context,
+    socs: c.SqlObjectCommentSupplier<Any, Any, Context>,
+  ): void;
+  sqlObjectsCommentsEncountered(
+    ctx: Context,
+    socs: c.SqlObjectsCommentsSupplier<Any, Any, Context>,
+  ): void;
   sqlPartialEncountered(ctx: Context, sts: SqlTextSupplier<Context>): void;
   sqlTokensEncountered(ctx: Context, st: SqlInjection): void;
   persistableSqlEncountered(ctx: Context, sts: SqlTextSupplier<Context>): void;
@@ -649,11 +668,11 @@ export function typicalSqlTextLintManager<Context extends SqlEmitContext>(
                 ? Array.from(
                   new Set(
                     lintedSqlText.lintIssues.map((li) =>
-                      steOptions.comments(lintMessage(li))
+                      steOptions.singeLineSrcComment(lintMessage(li))
                     ),
                   ),
                 ).join("\n")
-                : steOptions.comments(noIssuesText);
+                : steOptions.singeLineSrcComment(noIssuesText);
             },
           };
           return result;
@@ -676,11 +695,11 @@ export function typicalSqlTextLintManager<Context extends SqlEmitContext>(
                 ? Array.from(
                   new Set(
                     lintedSqlTmplEngine.lintIssues.map((li) =>
-                      steOptions.comments(lintMessage(li))
+                      steOptions.singeLineSrcComment(lintMessage(li))
                     ),
                   ),
                 ).join("\n")
-                : steOptions.comments(noIssuesText);
+                : steOptions.singeLineSrcComment(noIssuesText);
             },
           };
           return result;
@@ -724,6 +743,10 @@ export function typicalSqlLintSummaries<Context extends SqlEmitContext>(
   };
 }
 
+export interface SqlTextQualitySystemState<Context extends SqlEmitContext> {
+  readonly sqlObjectsComments: c.SqlObjectComment<Any, Any, Context>[];
+}
+
 export interface SqlTextSupplierOptions<Context extends SqlEmitContext> {
   readonly sqlSuppliersDelimText?: string;
   readonly symbolsFirst?: boolean;
@@ -743,6 +766,7 @@ export interface SqlTextSupplierOptions<Context extends SqlEmitContext> {
     speEE?: SqlPartialExprEventEmitter<Context>,
   ) => SqlTextSupplier<Context> | undefined;
   readonly sqlTextLintState?: SqlTextLintState<Context>;
+  readonly sqlTextQualitySystemState?: SqlTextQualitySystemState<Context>;
   readonly prepareEvents?: (
     speEE: SqlPartialExprEventEmitter<Context>,
   ) => SqlPartialExprEventEmitter<Context>;
@@ -766,6 +790,7 @@ export function typicalSqlTextSupplierOptions<Context extends SqlEmitContext>(
       return emit;
     },
     sqlTextLintState: typicalSqlTextLintManager(),
+    sqlTextQualitySystemState: { sqlObjectsComments: [] },
     ...inherit,
   };
 }
@@ -801,9 +826,12 @@ export function SQL<
 >(stsOptions: SqlTextSupplierOptions<Context>): (
   literals: TemplateStringsArray,
   ...expressions: Expressions[]
-) => SqlTextSupplier<Context> & SqlTextLintIssuesPopulator<Context> & {
-  stsOptions: SqlTextSupplierOptions<Context>;
-} {
+) =>
+  & SqlTextSupplier<Context>
+  & SqlTextLintIssuesPopulator<Context>
+  & {
+    stsOptions: SqlTextSupplierOptions<Context>;
+  } {
   return (literals, ...suppliedExprs) => {
     const {
       symbolsFirst,
@@ -814,7 +842,9 @@ export function SQL<
       persistIndexer = { activeIndex: 0 },
       prepareEvents,
       sqlTextLintState,
+      sqlTextQualitySystemState,
     } = stsOptions ?? {};
+    const soComments = sqlTextQualitySystemState?.sqlObjectsComments;
     const speEE = prepareEvents
       ? prepareEvents(new SqlPartialExprEventEmitter<Context>())
       : undefined;
@@ -852,6 +882,15 @@ export function SQL<
           );
         } else if (isSqlTextSupplier<Context>(expr)) {
           speEE?.emitSync("sqlPartialEncountered", ctx, expr);
+          // some SQL emitters (like tables, views, etc. also might have comments)
+          if (c.isSqlObjectCommentSupplier(expr)) {
+            speEE?.emitSync("sqlObjectCommentEncountered", ctx, expr);
+            soComments?.push(expr.sqlObjectComment());
+          }
+          if (c.isSqlObjectsCommentsSupplier(expr)) {
+            speEE?.emitSync("sqlObjectsCommentsEncountered", ctx, expr);
+            soComments?.push(...expr.sqlObjectsComments());
+          }
         } else if (isSqlInjection(expr)) {
           speEE?.emitSync("sqlTokensEncountered", ctx, expr);
         } else if (isSqlTextBehaviorSupplier<Context>(expr)) {

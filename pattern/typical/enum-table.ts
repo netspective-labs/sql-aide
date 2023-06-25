@@ -35,6 +35,7 @@ export function ordinalEnumTable<
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
   DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodNumber
@@ -60,7 +61,7 @@ export function ordinalEnumTable<
 >(
   tableName: TableName,
   seedEnum: { [key in EnumCode]: EnumValue },
-  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>,
 ) {
   type ValueZodEnum = [EnumCode, ...(readonly EnumCode[])];
   const enumValues = Object.keys(seedEnum) as unknown as ValueZodEnum;
@@ -183,6 +184,7 @@ export function textEnumTable<
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
   DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
@@ -212,7 +214,7 @@ export function textEnumTable<
 >(
   tableName: TableName,
   seedEnum: { [key in EnumCode]: EnumValue },
-  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>,
 ) {
   const seedRows: {
     readonly code: [EnumCode, ...(readonly EnumCode[])][number];
@@ -334,6 +336,7 @@ export function varCharEnumTable<
   TableName extends string,
   Context extends SQLa.SqlEmitContext,
   DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
   ColumnsShape extends z.ZodRawShape = {
     readonly code:
       & z.ZodEnum<[EnumCode, ...(readonly EnumCode[])]>
@@ -364,7 +367,7 @@ export function varCharEnumTable<
   tableName: TableName,
   seedEnum: { [key in EnumCode]: EnumValue },
   varCharMaxLength = 255,
-  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>,
 ) {
   const seedRows: {
     readonly code: [EnumCode, ...(readonly EnumCode[])][number];
@@ -481,8 +484,9 @@ export function varCharEnumTable<
 export function enumTablesFactory<
   Context extends SQLa.SqlEmitContext,
   DomainQS extends SQLa.SqlDomainQS,
+  DomainsQS extends SQLa.SqlDomainsQS<DomainQS>,
 >(
-  defaultTdOptions?: SQLa.TableDefnOptions<Any, Context>,
+  defaultTdOptions?: SQLa.TableDefnOptions<Any, Context, DomainQS, DomainsQS>,
 ) {
   function ordinalTable<
     EnumCode extends string,
@@ -513,7 +517,12 @@ export function enumTablesFactory<
   >(
     tableName: TableName,
     seedEnum: { [key in EnumCode]: EnumValue },
-    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+    tdOptions?: SQLa.TableDefnOptions<
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) {
     return ordinalEnumTable<
       EnumCode,
@@ -521,6 +530,7 @@ export function enumTablesFactory<
       TableName,
       Context,
       DomainQS,
+      DomainsQS,
       ColumnsShape
     >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
   }
@@ -558,7 +568,12 @@ export function enumTablesFactory<
   >(
     tableName: TableName,
     seedEnum: { [key in EnumCode]: EnumValue },
-    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+    tdOptions?: SQLa.TableDefnOptions<
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) {
     return textEnumTable<
       EnumCode,
@@ -566,6 +581,7 @@ export function enumTablesFactory<
       TableName,
       Context,
       DomainQS,
+      DomainsQS,
       ColumnsShape
     >(tableName, seedEnum, tdOptions ?? defaultTdOptions);
   }
@@ -604,7 +620,12 @@ export function enumTablesFactory<
     tableName: TableName,
     seedEnum: { [key in EnumCode]: EnumValue },
     varCharMaxLength: number,
-    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+    tdOptions?: SQLa.TableDefnOptions<
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) {
     return varCharEnumTable<
       EnumCode,
@@ -612,6 +633,7 @@ export function enumTablesFactory<
       TableName,
       Context,
       DomainQS,
+      DomainsQS,
       ColumnsShape
     >(tableName, seedEnum, varCharMaxLength, tdOptions ?? defaultTdOptions);
   }

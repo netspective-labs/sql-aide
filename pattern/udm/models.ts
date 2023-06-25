@@ -117,6 +117,11 @@ export const party = gm.autoIncPkTable("party", {
   party_type_id: partyType.references.code(),
   party_name: text(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity representing parties involved in business transactions.",
+  },
 });
 
 /**

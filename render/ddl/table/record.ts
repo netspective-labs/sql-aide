@@ -15,18 +15,21 @@ export function tableColumnsRowFactory<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainQS>,
 >(
   tableName: TableName,
   props: ColumnsShape,
-  tdrfOptions?: t.TableDefnOptions<ColumnsShape, Context> & {
-    defaultIspOptions?: i.InsertStmtPreparerOptions<
-      TableName,
-      Any,
-      Any,
-      Context,
-      DomainQS
-    >;
-  },
+  tdrfOptions?:
+    & t.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>
+    & {
+      defaultIspOptions?: i.InsertStmtPreparerOptions<
+        TableName,
+        Any,
+        Any,
+        Context,
+        DomainQS
+      >;
+    },
 ) {
   // we compute the tableDefn here instead of having it passed in because
   // Typescript cannot carry all the proper types if we don't generate it here

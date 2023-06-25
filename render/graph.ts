@@ -1,9 +1,15 @@
 import * as safety from "../lib/universal/safety.ts";
+import * as qs from "../lib/quality-system/mod.ts";
 import * as d from "./domain/mod.ts";
 import * as emit from "./emit/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+export type EntitiesGraphQS<
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainsQS>,
+> = qs.Documentable;
 
 export type EntityGraphRefNature<Context extends emit.SqlEmitContext> =
   | "reference"
@@ -187,9 +193,11 @@ export function entitiesGraph<
   Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
+  GraphQS extends EntitiesGraphQS<DomainQS, DomainsQS>,
 >(
   ctx: Context,
   entityDefns: (ctx: Context) => Generator<Entity>,
+  graphQS?: GraphQS,
 ) {
   const lintIssues: emit.SqlLintIssueSupplier[] = [];
   const entities: Entity[] = [];
@@ -253,5 +261,6 @@ export function entitiesGraph<
     entitiesByName,
     entityRels,
     edges,
+    graphQS,
   };
 }

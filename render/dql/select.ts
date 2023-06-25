@@ -107,7 +107,10 @@ export function selectTemplateResult<
       selectStmtName: selectStmtName,
       selectStmt,
       SQL: invalid
-        ? ((ctx) => ctx.sqlTextEmitOptions.comments(invalid!.lintIssue))
+        ? ((ctx) =>
+          ctx.sqlTextEmitOptions.singeLineSrcComment(
+            invalid!.lintIssue,
+          ))
         : selectStmt.SQL,
       populateSqlTextLintIssues: (lis) => {
         if (invalid) lis.registerLintIssue(invalid);

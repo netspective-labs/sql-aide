@@ -1,6 +1,7 @@
 import { zod as z } from "../../deps.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as safety from "../../../lib/universal/safety.ts";
+import * as qs from "../../../lib/quality-system/mod.ts";
 import * as d from "../../domain/mod.ts";
 import * as c from "./column.ts";
 import * as con from "./constraint.ts";
@@ -37,7 +38,9 @@ export function isTableDefinition<
 export interface TableDefnOptions<
   ColumnsShape extends z.ZodRawShape,
   Context extends tmpl.SqlEmitContext,
-> {
+  DomainQS extends d.SqlDomainQS,
+  DomainsQS extends d.SqlDomainsQS<DomainQS>,
+> extends Partial<qs.QualitySystemSupplier<DomainsQS>> {
   readonly zodObject?: (zodRawShape: ColumnsShape) => z.ZodObject<ColumnsShape>;
   readonly isIdempotent?: boolean;
   readonly isTemp?: boolean;
@@ -53,6 +56,29 @@ export interface TableDefnOptions<
   ) => con.TableColumnsConstraint<ColumnsShape, Context>[];
 }
 
+export function tableComment<
+  TableName extends string,
+  Context extends tmpl.SqlEmitContext,
+>(
+  target: TableName,
+  comment: string,
+  sqlNS?: tmpl.SqlNamespaceSupplier,
+): tmpl.SqlObjectComment<"table", TableName, Context> {
+  return {
+    type: "table",
+    target,
+    comment,
+    SQL: (ctx) => {
+      return ctx.sqlTextEmitOptions.objectComment(
+        "table",
+        ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true, qnss: sqlNS })
+          .tableName(target),
+        comment,
+      );
+    },
+  };
+}
+
 export function tableDefinition<
   TableName extends string,
   ColumnsShape extends z.ZodRawShape,
@@ -62,7 +88,7 @@ export function tableDefinition<
 >(
   tableName: TableName,
   zodRawShape: ColumnsShape,
-  tdOptions?: TableDefnOptions<ColumnsShape, Context>,
+  tdOptions?: TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>,
 ) {
   const sdf = d.sqlDomainsFactory<TableName, Context, DomainQS, DomainsQS>();
   const zoSchema = tdOptions?.zodObject?.(zodRawShape) ??
@@ -218,6 +244,12 @@ export function tableDefinition<
     return result;
   };
 
+  const tblQualitySystem = tdOptions?.qualitySystem;
+  const sqlObjectComment = tblQualitySystem
+    ? (() =>
+      tableComment<TableName, Context>(tableName, tblQualitySystem.description))
+    : undefined;
+
   const tableDefnResult:
     & TableDefinition<TableName, Context, DomainQS>
     & g.GraphEntityDefinitionSupplier<TableName, Context, DomainQS, DomainsQS>
@@ -232,7 +264,9 @@ export function tableDefinition<
       readonly belongsTo: typeof fkf.belongsTo;
       readonly foreignKeys: typeof fkf.foreignKeys;
       readonly sqlNS?: tmpl.SqlNamespaceSupplier;
+      readonly tblQualitySystem?: DomainsQS;
     }
+    & Partial<tmpl.SqlObjectCommentSupplier<"table", TableName, Context>>
     & tmpl.SqlSymbolSupplier<Context>
     & tmpl.SqlLintIssuesSupplier
     & tmpl.SqlTextLintIssuesPopulator<Context> = {
@@ -272,7 +306,7 @@ export function tableDefinition<
         const result = `${steOptions.indentation("create table")}CREATE ${isTemp ? 'TEMP ' : ''}TABLE ${isIdempotent && !tmpl.isMsSqlServerDialect(ctx.sqlDialect) ? "IF NOT EXISTS " : ""}${ns.tableName(tableName)} (\n` +
         columnDefnsSS.map(cdss => cdss.SQL(ctx)).join(",\n") +
         (decoratorsSQL.length > 0 ? `,\n${indent}${decoratorsSQL}` : "") +
-        "\n)";
+        `\n)`;
         return result;
       },
       graphEntityDefn,
@@ -286,6 +320,8 @@ export function tableDefinition<
       belongsTo: fkf.belongsTo,
       foreignKeys: fkf.foreignKeys,
       sqlNS: tdOptions?.sqlNS,
+      tblQualitySystem,
+      sqlObjectComment,
     };
 
   // we let Typescript infer function return to allow generics in sqlDomains to

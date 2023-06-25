@@ -202,7 +202,8 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         ColumnsShape,
         Context,
-        DataVaultDomainQS
+        DataVaultDomainQS,
+        DataVaultDomainsQS
       >(
         tableName,
         columnsShape,
@@ -212,7 +213,8 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         ColumnsShape,
         Context,
-        DataVaultDomainQS
+        DataVaultDomainQS,
+        DataVaultDomainsQS
       >(
         tableName,
         columnsShape,
@@ -238,7 +240,12 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
   >(
     hubName: HubName,
     props: ColumnsShape,
-    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+    tdOptions?: SQLa.TableDefnOptions<
+      ColumnsShape,
+      Context,
+      DataVaultDomainQS,
+      DataVaultDomainsQS
+    >,
   ) => {
     const hubTableName = names.hubTableName(hubName);
     const hubTableDefn = table(hubTableName, {
@@ -258,7 +265,12 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     >(
       satelliteName: SatelliteName,
       columnsShape: ColumnsShape,
-      tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+      tdOptions?: SQLa.TableDefnOptions<
+        ColumnsShape,
+        Context,
+        DataVaultDomainQS,
+        DataVaultDomainsQS
+      >,
     ) => {
       const satTableName = names.linkSatelliteTableName(hubName, satelliteName);
       // TODO: add lint rule for checking if key or group of keys is unique
@@ -296,7 +308,12 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
   >(
     linkName: LinkName,
     props: ColumnsShape,
-    tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context>,
+    tdOptions?: SQLa.TableDefnOptions<
+      ColumnsShape,
+      Context,
+      DataVaultDomainQS,
+      DataVaultDomainsQS
+    >,
   ) => {
     const linkTableName = names.linkTableName(linkName);
     const linkTableDefn = table(linkTableName, {

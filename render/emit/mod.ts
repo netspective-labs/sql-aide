@@ -1,3 +1,4 @@
+export * from "./comment.ts";
 export * from "./dialect.ts";
 export * from "./directive.ts";
 export * from "./js.ts";

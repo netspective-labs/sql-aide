@@ -116,13 +116,37 @@ Deno.test("qualified identifiers", async (tc) => {
 });
 
 Deno.test("SQL Aide (SQLa) template", () => {
-  const syntheticTable1Defn: mod.SqlTextSupplier<SyntheticTmplContext> & {
-    isTableDefinition: true;
-    insertDML: (record: Record<string, unknown>) => string;
-  } & mod.SqlLintIssuesSupplier = {
-    isTableDefinition: true,
-    SQL: () =>
-      ws.unindentWhitespace(`
+  function syntheticTableComment(
+    target: string,
+    comment: string,
+  ): mod.SqlObjectComment<"table", string, SyntheticTmplContext> {
+    return {
+      type: "table",
+      target,
+      comment,
+      SQL: (ctx) => {
+        return ctx.sqlTextEmitOptions.objectComment(
+          "table",
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).tableName(
+            target,
+          ),
+          comment,
+        );
+      },
+    };
+  }
+
+  const syntheticTable1Defn:
+    & mod.SqlTextSupplier<SyntheticTmplContext>
+    & {
+      isTableDefinition: true;
+      insertDML: (record: Record<string, unknown>) => string;
+    }
+    & mod.SqlObjectCommentSupplier<"table", Any, SyntheticTmplContext>
+    & mod.SqlLintIssuesSupplier = {
+      isTableDefinition: true,
+      SQL: () =>
+        ws.unindentWhitespace(`
       CREATE TABLE "synthetic_table1" (
         "synthetic_table1_id" INTEGER PRIMARY KEY AUTOINCREMENT,
         "column_one_text" TEXT NOT NULL,
@@ -132,11 +156,16 @@ Deno.test("SQL Aide (SQLa) template", () => {
         "created_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE("column_unique")
       );`),
-    insertDML: () =>
-      `INSERT INTO "synthetic_table1" ("column_one_text", "column_two_text_nullable", "column_unique", "column_linted_optional", "created_at") VALUES ('test', NULL, 'testHI', NULL, NULL);`,
-    registerLintIssue: () => {},
-    lintIssues: [{ lintIssue: "synthetic lint issue #1" }],
-  };
+      insertDML: () =>
+        `INSERT INTO "synthetic_table1" ("column_one_text", "column_two_text_nullable", "column_unique", "column_linted_optional", "created_at") VALUES ('test', NULL, 'testHI', NULL, NULL);`,
+      registerLintIssue: () => {},
+      sqlObjectComment: () =>
+        syntheticTableComment(
+          "synthetic_table1",
+          "This is a comment for synthetic_table1",
+        ),
+      lintIssues: [{ lintIssue: "synthetic lint issue #1" }],
+    };
 
   const syntheticTable1ViewWrapper:
     & mod.SqlTextSupplier<SyntheticTmplContext>
@@ -239,6 +268,9 @@ Deno.test("SQL Aide (SQLa) template", () => {
 
     -- show that arbitrary "SQL tokens" can be emitted in the template...${tokens1} ${tokens2} ${tokens3}
 
+    -- show that comments will be collected
+    ${ddlOptions?.sqlTextQualitySystemState?.sqlObjectsComments ?? `-- no SQL objects comments collected`}
+
     -- ${ctx.syntheticBehavior1}`;
 
   const syntheticSQL = DDL.SQL(ctx);
@@ -294,5 +326,8 @@ const fixturePrime = ws.unindentWhitespace(/*sql*/`
   select * from "varValue1" where column = 'varValue2';
 
   -- show that arbitrary "SQL tokens" can be emitted in the template..."synthetic"."tokens1_sql" "synthetic"."tokens2_sql" "synthetic"."tokens3_sql"
+
+  -- show that comments will be collected
+  COMMENT ON table "synthetic_table1" IS 'This is a comment for synthetic_table1';
 
   -- behavior 1 state value: 2`);

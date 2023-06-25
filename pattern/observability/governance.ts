@@ -149,7 +149,8 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         ColumnsShape,
         Context,
-        ObservabilityDomainQS
+        ObservabilityDomainQS,
+        ObservabilityDomainsQS
       >(
         tableName,
         columnsShape,
@@ -159,7 +160,8 @@ export function observabilityGovn<Context extends SQLa.SqlEmitContext>(
         TableName,
         ColumnsShape,
         Context,
-        ObservabilityDomainQS
+        ObservabilityDomainQS,
+        ObservabilityDomainsQS
       >(
         tableName,
         columnsShape,

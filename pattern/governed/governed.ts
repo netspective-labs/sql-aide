@@ -441,7 +441,7 @@ export class GovernedIM<
   readonly tableLintRules = SQLa.tableLintRules<Context, DomainQS>();
   readonly tcFactory = SQLa.tableColumnFactory<Any, Context, DomainQS>();
   readonly enumTablesFactory: ReturnType<
-    typeof et.enumTablesFactory<Context, DomainQS>
+    typeof et.enumTablesFactory<Context, DomainQS, DomainsQS>
   >;
 
   constructor(
@@ -460,10 +460,12 @@ export class GovernedIM<
     },
     readonly templateState: TemplateState,
   ) {
-    this.enumTablesFactory = et.enumTablesFactory<Context, DomainQS>({
-      isIdempotent: true,
-      sqlNS: templateState.sqlNS,
-    });
+    this.enumTablesFactory = et.enumTablesFactory<Context, DomainQS, DomainsQS>(
+      {
+        isIdempotent: true,
+        sqlNS: templateState.sqlNS,
+      },
+    );
   }
 
   /**
@@ -532,13 +534,20 @@ export class GovernedIM<
         TableName,
         ColumnsShape,
         Context,
-        DomainQS
+        DomainQS,
+        DomainsQS
       >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
         tableName,
         columnsShape,
       ),
@@ -607,13 +616,20 @@ export class GovernedIM<
         TableName,
         ColumnsShape,
         Context,
-        DomainQS
+        DomainQS,
+        DomainsQS
       >(
         tableName,
         columnsShape,
         { defaultIspOptions },
       ),
-      ...SQLa.tableSelectFactory<TableName, ColumnsShape, Context, DomainQS>(
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
         tableName,
         columnsShape,
       ),
