@@ -9,7 +9,7 @@ import * as udm from "../udm/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-const { ctx, gm, gts, tcf } = udm;
+const { gm, gts, tcf } = udm;
 
 export const contractStatus = gm.textEnumTable(
   "contract_status",
@@ -1373,6 +1373,7 @@ export function sqlDDL() {
 }
 
 if (import.meta.main) {
+  const ctx = SQLa.typicalSqlEmitContext();
   typ.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,

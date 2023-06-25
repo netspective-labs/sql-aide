@@ -18,7 +18,7 @@ const relativeFileContent = (name: string) => {
   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
 };
 
-const { ctx, gts } = udm;
+const { gts } = udm;
 
 const graphTableInsertion = mod.graph.insertDML({
   name: "text-value",
@@ -174,6 +174,7 @@ function sqlDDL() {
 }
 
 if (import.meta.main) {
+  const ctx = SQLa.typicalSqlEmitContext();
   await tp.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
@@ -261,6 +262,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
 
   // deno-lint-ignore require-await
   await tc.step("Typescript SQL", async () => {
+    const ctx = SQLa.typicalSqlEmitContext();
     const output = sqlDDL().SQL(ctx);
     ta.assertEquals(
       output,

@@ -8,8 +8,7 @@ import * as govn from "./governance.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export const ctx = SQLa.typicalSqlEmitContext();
-export type EmitContext = typeof ctx;
+export type EmitContext = SQLa.SqlEmitContext;
 
 export const tcf = SQLa.tableColumnFactory<Any, Any, typ.TypicalDomainQS>();
 export const gts = typ.governedTemplateState<
@@ -285,6 +284,7 @@ export function sqlDDL() {
 }
 
 if (import.meta.main) {
+  const ctx = SQLa.typicalSqlEmitContext();
   typ.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
