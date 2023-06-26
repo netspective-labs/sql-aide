@@ -2,8 +2,7 @@ import { events, fs } from "../deps.ts";
 import * as safety from "../../lib/universal/safety.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
 import * as dialect from "./dialect.ts";
-import * as l from "./lint.ts";
-import * as c from "./comment.ts";
+import * as qs from "./quality-system.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -197,7 +196,7 @@ export interface SqlTextEmitOptions {
   readonly singeLineSrcComment: (text: string, indent?: string) => string;
   readonly blockSrcComments: (text: string) => string;
   readonly objectComment: <
-    Target extends c.SqlObjectCommentTarget,
+    Target extends qs.SqlObjectCommentTarget,
     TargetName extends string,
   >(type: Target, target: TargetName, comment: string) => string;
   readonly indentation: (
@@ -223,7 +222,7 @@ export interface EmbeddedSqlSupplier {
   >(stsOptions: SqlTextSupplierOptions<Context>) => (
     literals: TemplateStringsArray,
     ...expressions: Expressions[]
-  ) => SqlTextSupplier<Context> & Partial<l.SqlLintIssuesSupplier>;
+  ) => SqlTextSupplier<Context> & Partial<qs.SqlLintIssuesSupplier>;
 }
 
 export interface SqlEmitContext
@@ -494,7 +493,7 @@ export interface SqlTextLintIssuesPopulator<
   Context extends SqlEmitContext,
 > {
   readonly populateSqlTextLintIssues: (
-    lis: l.SqlLintIssuesSupplier,
+    lis: qs.SqlLintIssuesSupplier,
     ctx: Context,
   ) => void;
 }
@@ -582,11 +581,11 @@ export class SqlPartialExprEventEmitter<
   symbolEncountered(ctx: Context, sss: SqlSymbolSupplier<Context>): void;
   sqlObjectCommentEncountered(
     ctx: Context,
-    socs: c.SqlObjectCommentSupplier<Any, Any, Context>,
+    socs: qs.SqlObjectCommentSupplier<Any, Any, Context>,
   ): void;
   sqlObjectsCommentsEncountered(
     ctx: Context,
-    socs: c.SqlObjectsCommentsSupplier<Any, Any, Context>,
+    socs: qs.SqlObjectsCommentsSupplier<Any, Any, Context>,
   ): void;
   sqlPartialEncountered(ctx: Context, sts: SqlTextSupplier<Context>): void;
   sqlTokensEncountered(ctx: Context, st: SqlInjection): void;
@@ -611,12 +610,12 @@ export class SqlPartialExprEventEmitter<
 }> {}
 
 export interface SqlTextLintState<Context extends SqlEmitContext> {
-  readonly isFatalIssue: (lis: l.SqlLintIssueSupplier) => boolean;
-  readonly lintedSqlText: l.SqlLintIssuesSupplier;
+  readonly isFatalIssue: (lis: qs.SqlLintIssueSupplier) => boolean;
+  readonly lintedSqlText: qs.SqlLintIssuesSupplier;
   readonly sqlTextLintSummary: (options?: {
     noIssuesText?: string;
   }) => SqlTextBehaviorSupplier<Context>;
-  readonly lintedSqlTmplEngine: l.SqlLintIssuesSupplier;
+  readonly lintedSqlTmplEngine: qs.SqlLintIssuesSupplier;
   readonly sqlTmplEngineLintSummary: (options?: {
     noIssuesText?: string;
   }) => SqlTextBehaviorSupplier<Context>;
@@ -625,19 +624,19 @@ export interface SqlTextLintState<Context extends SqlEmitContext> {
 export function typicalSqlTextLintManager<Context extends SqlEmitContext>(
   inherit?: Partial<SqlTextLintState<Context>>,
 ): SqlTextLintState<Context> {
-  const lintedSqlText: l.SqlLintIssuesSupplier = {
+  const lintedSqlText: qs.SqlLintIssuesSupplier = {
     lintIssues: [],
-    registerLintIssue: (...slis: l.SqlLintIssueSupplier[]) => {
+    registerLintIssue: (...slis: qs.SqlLintIssueSupplier[]) => {
       lintedSqlText.lintIssues.push(...slis);
     },
   };
-  const lintedSqlTmplEngine: l.SqlLintIssuesSupplier = {
+  const lintedSqlTmplEngine: qs.SqlLintIssuesSupplier = {
     lintIssues: [],
-    registerLintIssue: (...slis: l.SqlLintIssueSupplier[]) => {
+    registerLintIssue: (...slis: qs.SqlLintIssueSupplier[]) => {
       lintedSqlTmplEngine.lintIssues.push(...slis);
     },
   };
-  const lintMessage = (li: l.SqlLintIssueSupplier) => {
+  const lintMessage = (li: qs.SqlLintIssueSupplier) => {
     return `${li.consequence ? `[${li.consequence}] ` : ""}${li.lintIssue}${
       li.location
         ? ` (${
@@ -649,7 +648,7 @@ export function typicalSqlTextLintManager<Context extends SqlEmitContext>(
     }`;
   };
   return {
-    isFatalIssue: (lis: l.SqlLintIssueSupplier) =>
+    isFatalIssue: (lis: qs.SqlLintIssueSupplier) =>
       lis.consequence && lis.consequence.toString().startsWith("FATAL")
         ? true
         : false,
@@ -744,7 +743,7 @@ export function typicalSqlLintSummaries<Context extends SqlEmitContext>(
 }
 
 export interface SqlTextQualitySystemState<Context extends SqlEmitContext> {
-  readonly sqlObjectsComments: c.SqlObjectComment<Any, Any, Context>[];
+  readonly sqlObjectsComments: qs.SqlObjectComment<Any, Any, Context>[];
 }
 
 export interface SqlTextSupplierOptions<Context extends SqlEmitContext> {
@@ -883,11 +882,11 @@ export function SQL<
         } else if (isSqlTextSupplier<Context>(expr)) {
           speEE?.emitSync("sqlPartialEncountered", ctx, expr);
           // some SQL emitters (like tables, views, etc. also might have comments)
-          if (c.isSqlObjectCommentSupplier(expr)) {
+          if (qs.isSqlObjectCommentSupplier(expr)) {
             speEE?.emitSync("sqlObjectCommentEncountered", ctx, expr);
             soComments?.push(expr.sqlObjectComment());
           }
-          if (c.isSqlObjectsCommentsSupplier(expr)) {
+          if (qs.isSqlObjectsCommentsSupplier(expr)) {
             speEE?.emitSync("sqlObjectsCommentsEncountered", ctx, expr);
             soComments?.push(...expr.sqlObjectsComments());
           }
