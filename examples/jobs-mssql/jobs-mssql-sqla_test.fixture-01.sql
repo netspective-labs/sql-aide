@@ -53,7 +53,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES (2, 'Future');
     [updated_by] TEXT,
     [deleted_at] DATETIME2,
     [deleted_by] TEXT,
-    [activity_log] JSONB,
+    [activity_log] TEXT,
     FOREIGN KEY([status_id]) REFERENCES [job_status]([code]),
     FOREIGN KEY([position_status_id]) REFERENCES [job_position_status]([code])
 );

@@ -219,7 +219,7 @@ const fixtureSQL = ws.unindentWhitespace(`
   CREATE TABLE IF NOT EXISTS "publ_host" (
       "publ_host_id" TEXT PRIMARY KEY NOT NULL,
       "host" TEXT /* UNIQUE COLUMN */ NOT NULL,
-      "host_identity" JSON,
+      "host_identity" TEXT,
       "host_type_code" INTEGER NOT NULL,
       "mutation_count" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -228,7 +228,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "updated_by" TEXT,
       "deleted_at" TIMESTAMP,
       "deleted_by" TEXT,
-      "activity_log" JSONB,
+      "activity_log" TEXT,
       FOREIGN KEY("host_type_code") REFERENCES "host_type"("code"),
       UNIQUE("host")
   );
@@ -263,7 +263,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "updated_by" TEXT,
       "deleted_at" TIMESTAMP,
       "deleted_by" TEXT,
-      "activity_log" JSONB,
+      "activity_log" TEXT,
       FOREIGN KEY("publ_host_id") REFERENCES "publ_host"("publ_host_id"),
       FOREIGN KEY("build_event_type") REFERENCES "build_event_type"("code")
   );
@@ -281,7 +281,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "updated_by" TEXT,
       "deleted_at" TIMESTAMP,
       "deleted_by" TEXT,
-      "activity_log" JSONB,
+      "activity_log" TEXT,
       FOREIGN KEY("publ_build_event_id") REFERENCES "publ_build_event"("publ_build_event_id")
   );
 
@@ -293,14 +293,14 @@ const fixtureSQL = ws.unindentWhitespace(`
       "filesys_target_path" TEXT NOT NULL,
       "filesys_target_symlink" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
-      "log" JSON NOT NULL,
+      "log" TEXT NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       "updated_at" TIMESTAMP,
       "updated_by" TEXT,
       "deleted_at" TIMESTAMP,
       "deleted_by" TEXT,
-      "activity_log" JSONB,
+      "activity_log" TEXT,
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
@@ -309,9 +309,9 @@ const fixtureSQL = ws.unindentWhitespace(`
       "parent_publ_server_error_log_id" INTEGER,
       "location_href" TEXT NOT NULL,
       "error_summary" TEXT NOT NULL,
-      "host_identity" JSON,
-      "host_meta" JSON,
-      "host_baggage" JSONB,
+      "host_identity" TEXT,
+      "host_meta" TEXT,
+      "host_baggage" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -319,12 +319,12 @@ const fixtureSQL = ws.unindentWhitespace(`
       "updated_by" TEXT,
       "deleted_at" TIMESTAMP,
       "deleted_by" TEXT,
-      "activity_log" JSONB,
+      "activity_log" TEXT,
       FOREIGN KEY("parent_publ_server_error_log_id") REFERENCES "publ_server_error_log"("publ_server_error_log_id"),
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
   );
 
-  INSERT INTO "publ_host" ("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_by", "updated_by", "deleted_by", "activity_log") VALUES ('test', 'test', 'testHI', 0, 0, NULL, NULL, NULL, NULL);
+  INSERT INTO "publ_host" ("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('test', 'test', 'testHI', 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 
   SELECT "publ_host_id" FROM "publ_host" WHERE "host_identity" = 'testHI';
 
@@ -361,7 +361,7 @@ const fixturePUML = `@startuml IE
     * **publ_host_id**: TEXT
     --
     * host: TEXT
-      host_identity: JSON
+      host_identity: TEXT
     * host_type_code: INTEGER
     * mutation_count: INTEGER
       created_at: TIMESTAMP
@@ -370,7 +370,7 @@ const fixturePUML = `@startuml IE
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "build_event_type" as build_event_type {
@@ -401,7 +401,7 @@ const fixturePUML = `@startuml IE
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "publ_server_service" as publ_server_service {
@@ -418,7 +418,7 @@ const fixturePUML = `@startuml IE
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "publ_server_static_access_log" as publ_server_static_access_log {
@@ -430,14 +430,14 @@ const fixturePUML = `@startuml IE
     * filesys_target_path: TEXT
       filesys_target_symlink: TEXT
     * publ_server_service_id: INTEGER
-    * log: JSON
+    * log: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "publ_server_error_log" as publ_server_error_log {
@@ -446,9 +446,9 @@ const fixturePUML = `@startuml IE
       parent_publ_server_error_log_id: INTEGER
     * location_href: TEXT
     * error_summary: TEXT
-      host_identity: JSON
-      host_meta: JSON
-      host_baggage: JSONB
+      host_identity: TEXT
+      host_meta: TEXT
+      host_baggage: TEXT
     * publ_server_service_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
@@ -456,7 +456,7 @@ const fixturePUML = `@startuml IE
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   publ_host |o..o{ publ_build_event

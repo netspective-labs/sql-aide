@@ -239,7 +239,7 @@ export const allContentTables: SQLa.TableDefinition<
 ];
 
 const vendorView = SQLa.safeViewDefinition(
-  "vender_view",
+  "vendor_view",
   {
     name: text(),
     email: text(),

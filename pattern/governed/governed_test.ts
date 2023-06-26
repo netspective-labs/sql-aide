@@ -204,7 +204,7 @@ const fixtureSQL = ws.unindentWhitespace(`
   CREATE TABLE IF NOT EXISTS "publ_host" (
       "publ_host_id" TEXT PRIMARY KEY NOT NULL,
       "host" TEXT /* UNIQUE COLUMN */ NOT NULL,
-      "host_identity" JSON,
+      "host_identity" TEXT,
       "host_type_code" INTEGER NOT NULL,
       "mutation_count" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -263,7 +263,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "filesys_target_path" TEXT NOT NULL,
       "filesys_target_symlink" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
-      "log" JSON NOT NULL,
+      "log" TEXT NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
@@ -274,9 +274,9 @@ const fixtureSQL = ws.unindentWhitespace(`
       "parent_publ_server_error_log_id" INTEGER,
       "location_href" TEXT NOT NULL,
       "error_summary" TEXT NOT NULL,
-      "host_identity" JSON,
-      "host_meta" JSON,
-      "host_baggage" JSONB,
+      "host_identity" TEXT,
+      "host_meta" TEXT,
+      "host_baggage" TEXT,
       "publ_server_service_id" INTEGER NOT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -321,7 +321,7 @@ const fixturePUML = `@startuml IE
     * **publ_host_id**: TEXT
     --
     * host: TEXT
-      host_identity: JSON
+      host_identity: TEXT
     * host_type_code: INTEGER
     * mutation_count: INTEGER
       created_at: TIMESTAMP
@@ -375,7 +375,7 @@ const fixturePUML = `@startuml IE
     * filesys_target_path: TEXT
       filesys_target_symlink: TEXT
     * publ_server_service_id: INTEGER
-    * log: JSON
+    * log: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
   }
@@ -386,9 +386,9 @@ const fixturePUML = `@startuml IE
       parent_publ_server_error_log_id: INTEGER
     * location_href: TEXT
     * error_summary: TEXT
-      host_identity: JSON
-      host_meta: JSON
-      host_baggage: JSONB
+      host_identity: TEXT
+      host_meta: TEXT
+      host_baggage: TEXT
     * publ_server_service_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT

@@ -128,7 +128,6 @@ export function governedDomains<
         ),
       ).optional(),
 
-    activity_log: () => SQLa.zodJsonB().optional(),
     ulid: () => z.string().ulid(),
     ulidNullable: () => z.string().ulid().optional(),
 
@@ -287,11 +286,7 @@ export function governedModel<
       > = {
         // created_at should be filled in by the database so we don't want
         // to emit it as part of the an insert DML SQL statement
-        isColumnEmittable: (name) =>
-          name == "created_at" || name == "updated_at" ||
-            name == "deleted_at"
-            ? false
-            : true,
+        isColumnEmittable: (name) => name == "created_at" ? false : true,
       };
       return result as SQLa.InsertStmtPreparerOptions<
         Any,
