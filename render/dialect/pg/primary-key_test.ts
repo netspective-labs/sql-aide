@@ -17,12 +17,14 @@ Deno.test("SQL Aide (SQLa) PostgreSQL primary keys", async (tc) => {
     sqlDialect: emit.postgreSqlDialect(),
   });
   const ddlOptions = emit.typicalSqlTextSupplierOptions();
-  const lintState = emit.typicalSqlLintSummaries(ddlOptions.sqlTextLintState);
+  const qsContent = emit.typicalSqlQualitySystemContent(
+    ddlOptions.sqlQualitySystemState,
+  );
 
   await tc.step("keys' table definition", () => {
     ta.assertEquals(
       emit.SQL(ddlOptions)`
-        ${lintState.sqlTextLintSummary}
+        ${qsContent.sqlTextLintSummary}
 
         ${tableKeysOwner}`.SQL(ctx),
       uws(`

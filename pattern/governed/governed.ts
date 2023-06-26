@@ -413,8 +413,10 @@ export class GovernedTemplateState<
     }
   }
 
-  lintState() {
-    return SQLa.typicalSqlLintSummaries(this.ddlOptions.sqlTextLintState);
+  qualitySystemContent() {
+    return SQLa.typicalSqlQualitySystemContent(
+      this.ddlOptions.sqlQualitySystemState,
+    );
   }
 
   pumlERD(ctx: Context) {

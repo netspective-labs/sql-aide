@@ -32,10 +32,10 @@ const sqlGen = () => {
     executedAt: new Date(),
   };
   const ddlOptions = tmpl.typicalSqlTextSupplierOptions();
-  const lintState = tmpl.typicalSqlLintSummaries(
-    ddlOptions.sqlTextLintState,
+  const qsContent = tmpl.typicalSqlQualitySystemContent(
+    ddlOptions.sqlQualitySystemState,
   );
-  return { ctx, ddlOptions, lintState };
+  return { ctx, ddlOptions, qsContent };
 };
 
 Deno.test("SQLa domain factories", async (tc) => {

@@ -149,7 +149,7 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     -- * if table's rows are mutable, it MUST have a \`updated_at TIMESTAMP\` column (not having an updated_at means it's immutable)
     -- * if table's rows are deleteable, it MUST have a \`deleted_at TIMESTAMP\` column for soft deletes (not having an deleted_at means it's immutable)
 
-    ${gts.lintState.sqlTextLintSummary}
+    ${gts.qualitySystemContent.sqlTextLintSummary}
 
     ${ss.hostType}
 
@@ -178,17 +178,17 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     -- TypeScript text enum object entries as RDBMS rows
     ${ss.buildEventType.seedDML}
 
-    ${gts.lintState.sqlTmplEngineLintSummary}`;
+    ${gts.qualitySystemContent.sqlTmplEngineLintSummary}`;
 
   const ctx = stContext();
   const syntheticSQL = DDL.SQL(ctx);
-  if (DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length) {
-    console.dir(DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues);
+  if (DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues?.length) {
+    console.dir(DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues);
   }
   ta.assertEquals(syntheticSQL, fixtureSQL);
   ta.assertEquals(
     0,
-    DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length,
+    DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues?.length,
   );
   ta.assertEquals(gts.tablesDeclared.size, 7);
   ta.assertEquals(gts.viewsDeclared.size, 1);

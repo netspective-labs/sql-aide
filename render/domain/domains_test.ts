@@ -30,10 +30,10 @@ const sqlGen = () => {
     executedAt: new Date(),
   };
   const ddlOptions = tmpl.typicalSqlTextSupplierOptions<SyntheticContext>();
-  const lintState = tmpl.typicalSqlLintSummaries<SyntheticContext>(
-    ddlOptions.sqlTextLintState,
+  const qsContent = tmpl.typicalSqlQualitySystemContent<SyntheticContext>(
+    ddlOptions.sqlQualitySystemState,
   );
-  return { ctx, ddlOptions, lintState };
+  return { ctx, ddlOptions, qsContent };
 };
 
 Deno.test("SQLa native Zod domains (without references)", async (tc) => {

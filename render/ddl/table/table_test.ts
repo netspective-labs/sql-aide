@@ -20,10 +20,10 @@ type SyntheticContext = tmpl.SqlEmitContext;
 const sqlGen = () => {
   const ctx: SyntheticContext = tmpl.typicalSqlEmitContext();
   const ddlOptions = tmpl.typicalSqlTextSupplierOptions();
-  const lintState = tmpl.typicalSqlLintSummaries(
-    ddlOptions.sqlTextLintState,
+  const qsContent = tmpl.typicalSqlQualitySystemContent(
+    ddlOptions.sqlQualitySystemState,
   );
-  return { ctx, ddlOptions, lintState };
+  return { ctx, ddlOptions, qsContent };
 };
 
 const syntheticSchema = () => {
@@ -33,8 +33,10 @@ const syntheticSchema = () => {
     d.SqlDomainQS
   >();
   const commonColumns = {
-    text: z.string(),
-    text_nullable: z.string().optional(),
+    text: z.string().describe(`commonColumns.text description`),
+    text_nullable: z.string().optional().describe(
+      `commonColumns.text_nullable description`,
+    ),
     int: z.number(),
     int_nullable: z.number().optional(),
     // TODO: add all the other scalars and types
@@ -88,6 +90,7 @@ const syntheticSchema = () => {
       ),
       ...commonColumns,
     },
+    { descr: "synthetic_table_with_uaod_pk" },
   );
   const tableWithConstraints = mod.tableDefinition(
     "synthetic_table_with_constraints",
@@ -115,6 +118,9 @@ const syntheticSchema = () => {
           c.unique("column_unique", "created_at"),
           c.uniqueNamed("uniq_constr_name", "text_primary_key", "created_at"),
         ];
+      },
+      qualitySystem: {
+        description: "synthetic_table_with_constraints table description",
       },
     },
   );
@@ -213,14 +219,18 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         ta.assertEquals(synthetic.int_nullable, undefined);
       });
 
-      await innerTC.step("SQL DDL with no lint issues", () => {
-        const { ctx, ddlOptions, lintState } = sqlGen();
-        ta.assertEquals(
-          tmpl.SQL(ddlOptions)`
-          ${lintState.sqlTextLintSummary}
+      await innerTC.step(
+        "SQL DDL with no lint issues and no documentation",
+        () => {
+          const { ctx, ddlOptions, qsContent } = sqlGen();
+          ta.assertEquals(
+            tmpl.SQL(ddlOptions)`
+          ${qsContent.sqlTextLintSummary}
 
-          ${table}`.SQL(ctx),
-          uws(`
+          ${table}
+
+          ${qsContent.sqlObjectsComments}`.SQL(ctx),
+            uws(`
           -- no SQL lint issues (typicalSqlTextLintManager)
 
           CREATE TABLE "synthetic_table_without_pk" (
@@ -228,9 +238,12 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
               "text_nullable" TEXT,
               "int" INTEGER NOT NULL,
               "int_nullable" INTEGER
-          );`),
-        );
-      });
+          );
+
+          -- no SQL objects comments (typicalSqlTextLintManager)`),
+          );
+        },
+      );
     },
   );
 
@@ -258,10 +271,10 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     });
 
     await innerTC.step("SQL DDL with no lint issues", () => {
-      const { ctx, ddlOptions, lintState } = sqlGen();
+      const { ctx, ddlOptions, qsContent } = sqlGen();
       ta.assertEquals(
         tmpl.SQL(ddlOptions)`
-        ${lintState.sqlTextLintSummary}
+        ${qsContent.sqlTextLintSummary}
 
         ${table}`.SQL(ctx),
         uws(`
@@ -295,10 +308,10 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
     });
 
     await innerTC.step("SQL DDL with no lint issues", () => {
-      const { ctx, ddlOptions, lintState } = sqlGen();
+      const { ctx, ddlOptions, qsContent } = sqlGen();
       ta.assertEquals(
         tmpl.SQL(ddlOptions)`
-        ${lintState.sqlTextLintSummary}
+        ${qsContent.sqlTextLintSummary}
 
         ${table}`.SQL(ctx),
         uws(`
@@ -339,25 +352,32 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
         );
       });
 
-      await innerTC.step("SQL DDL with no lint issues", () => {
-        const { ctx, ddlOptions, lintState } = sqlGen();
-        ta.assertEquals(
-          tmpl.SQL(ddlOptions)`
-        ${lintState.sqlTextLintSummary}
+      await innerTC.step(
+        "SQL DDL with no lint issues, with documentation",
+        () => {
+          const { ctx, ddlOptions, qsContent } = sqlGen();
+          ta.assertEquals(
+            tmpl.SQL(ddlOptions)`
+        ${qsContent.sqlTextLintSummary}
 
-        ${table}`.SQL(ctx),
-          uws(`
-        -- no SQL lint issues (typicalSqlTextLintManager)
+        ${table}
 
-        CREATE TABLE "synthetic_table_with_uaod_pk" (
-            "ua_on_demand_primary_key" TEXT PRIMARY KEY NOT NULL,
-            "text" TEXT NOT NULL,
-            "text_nullable" TEXT,
-            "int" INTEGER NOT NULL,
-            "int_nullable" INTEGER
-        );`),
-        );
-      });
+        ${qsContent.sqlObjectsComments}`.SQL(ctx),
+            uws(`
+            -- no SQL lint issues (typicalSqlTextLintManager)
+
+            CREATE TABLE "synthetic_table_with_uaod_pk" (
+                "ua_on_demand_primary_key" TEXT PRIMARY KEY NOT NULL,
+                "text" TEXT NOT NULL,
+                "text_nullable" TEXT,
+                "int" INTEGER NOT NULL,
+                "int_nullable" INTEGER
+            );
+
+            COMMENT ON table "synthetic_table_with_uaod_pk" IS 'synthetic_table_with_uaod_pk';`),
+          );
+        },
+      );
     },
   );
 
@@ -510,10 +530,10 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
   });
 
   await tc.step("SQL DDL with no lint issues", () => {
-    const { ctx, ddlOptions, lintState } = sqlGen();
+    const { ctx, ddlOptions, qsContent } = sqlGen();
     ta.assertEquals(
       tmpl.SQL(ddlOptions)`
-    ${lintState.sqlTextLintSummary}
+    ${qsContent.sqlTextLintSummary}
 
     ${table}`.SQL(ctx),
       uws(`
@@ -539,16 +559,18 @@ Deno.test("SQL Aide (SQLa) Table references (foreign keys) DDL", async (tc) => {
   });
 });
 
-Deno.test("SQL Aide (SQLa) Table DDL Constraints", async (tc) => {
+Deno.test("SQL Aide (SQLa) Table DDL Constraints and documentation", async (tc) => {
   const { tableWithConstraints: table } = syntheticSchema();
 
   await tc.step("SQL DDL with no lint issues", () => {
-    const { ctx, ddlOptions, lintState } = sqlGen();
+    const { ctx, ddlOptions, qsContent } = sqlGen();
     ta.assertEquals(
       tmpl.SQL(ddlOptions)`
-    ${lintState.sqlTextLintSummary}
+    ${qsContent.sqlTextLintSummary}
 
-    ${table}`.SQL(ctx),
+    ${table}
+
+    ${qsContent.sqlObjectsComments}`.SQL(ctx),
       uws(`
       -- no SQL lint issues (typicalSqlTextLintManager)
 
@@ -560,7 +582,9 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints", async (tc) => {
           UNIQUE("column_unique", "created_at"),
           UNIQUE("text_primary_key", "created_at"),
           UNIQUE(column_one_text, column_three_text_digest) /* CUSTOM CONSTRAINT */
-      );`),
+      );
+
+      COMMENT ON table "synthetic_table_with_constraints" IS 'synthetic_table_with_constraints table description';`),
     );
   });
 });

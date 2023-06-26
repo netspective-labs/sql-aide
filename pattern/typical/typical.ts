@@ -568,7 +568,9 @@ export function governedTemplateState<
     },
   });
 
-  const lintState = SQLa.typicalSqlLintSummaries(ddlOptions.sqlTextLintState);
+  const qualitySystemContent = SQLa.typicalSqlQualitySystemContent(
+    ddlOptions.sqlQualitySystemState,
+  );
 
   const pumlERD = (ctx: Context) =>
     diaPUML.plantUmlIE(ctx, function* () {
@@ -584,7 +586,7 @@ export function governedTemplateState<
     tablesDeclared,
     viewsDeclared,
     catalog,
-    lintState,
+    qualitySystemContent,
     ddlOptions,
     pumlERD,
   };

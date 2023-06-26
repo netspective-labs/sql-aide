@@ -54,6 +54,7 @@ export interface TableDefnOptions<
     columnsShape: ColumnsShape,
     tableName: TableName,
   ) => con.TableColumnsConstraint<ColumnsShape, Context>[];
+  readonly descr?: string; // convenience form of qualitySystem: { description }
 }
 
 export function tableComment<
@@ -244,7 +245,10 @@ export function tableDefinition<
     return result;
   };
 
-  const tblQualitySystem = tdOptions?.qualitySystem;
+  const tblQualitySystem = tdOptions?.qualitySystem ??
+    (tdOptions?.descr
+      ? { description: tdOptions.descr } as DomainsQS
+      : undefined);
   const sqlObjectComment = tblQualitySystem
     ? (() =>
       tableComment<TableName, Context>(tableName, tblQualitySystem.description))

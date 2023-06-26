@@ -11,10 +11,10 @@ type SyntheticContext = SQLa.SqlEmitContext;
 const sqlGen = () => {
   const ctx: SyntheticContext = SQLa.typicalSqlEmitContext();
   const ddlOptions = SQLa.typicalSqlTextSupplierOptions();
-  const lintState = SQLa.typicalSqlLintSummaries(
-    ddlOptions.sqlTextLintState,
+  const qsContent = SQLa.typicalSqlQualitySystemContent(
+    ddlOptions.sqlQualitySystemState,
   );
-  return { ctx, ddlOptions, lintState };
+  return { ctx, ddlOptions, qsContent };
 };
 
 const syntheticSchema = () => {

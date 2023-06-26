@@ -119,7 +119,7 @@ export function syntheticSchema() {
 Deno.test("SQL Aide (SQLa) emit template", () => {
   const ss = syntheticSchema();
   const gts = ss.governedModel.templateState;
-  const ls = gts.lintState();
+  const ls = gts.qualitySystemContent();
 
   // deno-fmt-ignore
   const DDL = SQLa.SQL(gts.ddlOptions)`
@@ -167,13 +167,13 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
 
   const ctx = gts.context();
   const syntheticSQL = DDL.SQL(ctx);
-  if (DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length) {
-    console.dir(DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues);
+  if (DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues?.length) {
+    console.dir(DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues);
   }
   ta.assertEquals(syntheticSQL, fixtureSQL);
   ta.assertEquals(
     0,
-    DDL.stsOptions.sqlTextLintState?.lintedSqlText.lintIssues?.length,
+    DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues?.length,
   );
   ta.assertEquals(gts.tablesDeclared.size, 7);
   ta.assertEquals(gts.viewsDeclared.size, 1);
