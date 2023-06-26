@@ -240,7 +240,12 @@ export function zodStringSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
-          SQL: () => `JSON`,
+          SQL: (ctx: Context) => {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
+              return `JSONB`;
+            }
+            return `TEXT`;
+          },
         }),
         parents: init?.parents,
       };
@@ -393,7 +398,14 @@ export function zodJsonSqlDomainFactory<
     ) => {
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
-        sqlDataType: () => ({ SQL: () => `JSONB` }),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
+              return `JSONB`;
+            }
+            return `TEXT`;
+          },
+        }),
         parents: init?.parents,
       };
     },

@@ -21,7 +21,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "party" as party {
@@ -35,7 +35,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "party_identifier" as party_identifier {
@@ -50,7 +50,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "person" as person {
@@ -68,7 +68,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "party_relation" as party_relation {
@@ -84,7 +84,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "organization" as organization {
@@ -100,7 +100,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "organization_role" as organization_role {
@@ -115,7 +115,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "contact_electronic" as contact_electronic {
@@ -130,7 +130,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "contact_land" as contact_land {
@@ -150,7 +150,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   party |o..o{ party_identifier
