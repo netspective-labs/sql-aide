@@ -177,11 +177,42 @@ export function tableDefinition<
     >
   );
 
+  function columnComment<ColumnName extends string>(
+    columnName: ColumnName,
+    comment: string,
+  ): tmpl.SqlObjectComment<
+    "column",
+    `${TableName}.${ColumnName}`,
+    Context
+  > {
+    return {
+      type: "column",
+      target: `${tableName}.${columnName}`,
+      comment,
+      SQL: (ctx) => {
+        return ctx.sqlTextEmitOptions.objectComment(
+          "column",
+          ctx.sqlNamingStrategy(ctx, {
+            quoteIdentifiers: true,
+            qnss: tdOptions?.sqlNS,
+          }).tableColumnName({ tableName, columnName }, "."),
+          comment,
+        );
+      },
+    };
+  }
+
   const columnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: con.TableColumnsConstraint<ColumnsShape, Context>[] = [];
   const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
   const symbols: SqlSymbolsSchema = {} as Any;
+  let columnsQS:
+    | (
+      & c.TableColumnDefn<TableName, Any, Any, Context, DomainQS>
+      & qs.QualitySystemSupplier<Any>
+    )[]
+    | undefined = [];
 
   const primaryKey: PrimaryKeys = {} as Any;
   const unique: UniqueColumnDefns = {} as Any;
@@ -195,7 +226,11 @@ export function tableDefinition<
     }
     (symbolSuppliers[column.identity] as Any) = { sqlSymbol: column.sqlSymbol };
     (symbols[column.identity] as Any) = column.sqlSymbol;
+    if (qs.isQualitySystemSupplier(column)) {
+      columnsQS.push(column);
+    }
   }
+  if (columnsQS.length == 0) columnsQS = undefined;
 
   // see if any FK references were registered but need to be created
   const columns: ColumnDefns = {} as Any;
@@ -249,9 +284,26 @@ export function tableDefinition<
     (tdOptions?.descr
       ? { description: tdOptions.descr } as DomainsQS
       : undefined);
-  const sqlObjectComment = tblQualitySystem
-    ? (() =>
-      tableComment<TableName, Context>(tableName, tblQualitySystem.description))
+  const sqlObjectsComments = tblQualitySystem || columnsQS
+    ? (() => {
+      const soc = [];
+      if (tblQualitySystem) {
+        soc.push(
+          tableComment<TableName, Context>(
+            tableName,
+            tblQualitySystem.description,
+          ),
+        );
+      }
+      if (columnsQS) {
+        soc.push(
+          ...(columnsQS.map((cqs) =>
+            columnComment(cqs.columnName, cqs.qualitySystem.description)
+          )),
+        );
+      }
+      return soc;
+    })
     : undefined;
 
   const tableDefnResult:
@@ -269,8 +321,9 @@ export function tableDefinition<
       readonly foreignKeys: typeof fkf.foreignKeys;
       readonly sqlNS?: tmpl.SqlNamespaceSupplier;
       readonly tblQualitySystem?: DomainsQS;
+      readonly columnsQS?: typeof columnsQS;
     }
-    & Partial<tmpl.SqlObjectCommentSupplier<"table", TableName, Context>>
+    & Partial<tmpl.SqlObjectsCommentsSupplier<Any, Any, Context>>
     & tmpl.SqlSymbolSupplier<Context>
     & tmpl.SqlLintIssuesSupplier
     & tmpl.SqlTextLintIssuesPopulator<Context> = {
@@ -325,7 +378,8 @@ export function tableDefinition<
       foreignKeys: fkf.foreignKeys,
       sqlNS: tdOptions?.sqlNS,
       tblQualitySystem,
-      sqlObjectComment,
+      sqlObjectsComments,
+      columnsQS,
     };
 
   // we let Typescript infer function return to allow generics in sqlDomains to

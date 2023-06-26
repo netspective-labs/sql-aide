@@ -137,10 +137,17 @@ export function zodTypeAnySqlDomainFactory<
     },
   ) => {
     const lintIssues: tmpl.SqlLintIssueSupplier[] = [];
+    const qualitySystem: QualitySystem | undefined = zodType.description
+      ? { description: zodType.description } as QualitySystem
+      : undefined;
     const defaults:
       & Pick<
         SqlDomain<Any, Context, Identity, QualitySystem>,
-        "identity" | "isSqlDomain" | "sqlSymbol" | "isNullable"
+        | "identity"
+        | "isSqlDomain"
+        | "sqlSymbol"
+        | "isNullable"
+        | "qualitySystem"
       >
       & tmpl.SqlLintIssuesSupplier = {
         isSqlDomain: true as true, // must not be a boolean but `true`
@@ -155,6 +162,7 @@ export function zodTypeAnySqlDomainFactory<
         registerLintIssue: (...slis: tmpl.SqlLintIssueSupplier[]) => {
           lintIssues.push(...slis);
         },
+        qualitySystem,
       };
     return defaults;
   };

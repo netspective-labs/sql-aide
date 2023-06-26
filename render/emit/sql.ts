@@ -1018,7 +1018,13 @@ export function SQL<
             interpolated += behaviorResult.SQL(ctx);
           } else if (Array.isArray(behaviorResult)) {
             for (let bri = 0; bri < behaviorResult.length; bri++) {
-              emitTerminatedSTS(behaviorResult[bri]);
+              const briExpr = behaviorResult[bri];
+              emitTerminatedSTS(briExpr);
+              const delim = exprInArrayDelim(
+                briExpr,
+                bri == (behaviorResult.length - 1) ?? false,
+              );
+              if (delim && delim.length > 0) interpolated += delim;
             }
           } else {
             recentSTBET = behaviorResult;

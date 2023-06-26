@@ -93,11 +93,40 @@ export function tableColumnFactory<
     ) as unknown as typeof zodType & { sqlDomain: typeof uniqueSD };
   };
 
+  function comment<
+    TableName extends string,
+    ColumnName extends string,
+    Context extends tmpl.SqlEmitContext,
+  >(
+    target: { tableName: TableName; columnName: ColumnName },
+    comment: string,
+    sqlNS?: tmpl.SqlNamespaceSupplier,
+  ): tmpl.SqlObjectComment<
+    "column",
+    `${TableName}.${ColumnName}`,
+    Context
+  > {
+    return {
+      type: "column",
+      target: `${target.tableName}.${target.columnName}`,
+      comment,
+      SQL: (ctx) => {
+        return ctx.sqlTextEmitOptions.objectComment(
+          "column",
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true, qnss: sqlNS })
+            .tableColumnName(target),
+          comment,
+        );
+      },
+    };
+  }
+
   return {
     ...sdf,
     ...zb,
     isTableColumnDefn,
     unique,
+    comment,
   };
 }
 

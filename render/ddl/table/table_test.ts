@@ -34,9 +34,9 @@ const syntheticSchema = () => {
   >();
   const commonColumns = {
     text: z.string().describe(`commonColumns.text description`),
-    text_nullable: z.string().optional().describe(
+    text_nullable: z.string().describe(
       `commonColumns.text_nullable description`,
-    ),
+    ).optional(),
     int: z.number(),
     int_nullable: z.number().optional(),
     // TODO: add all the other scalars and types
@@ -231,16 +231,17 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
 
           ${qsContent.sqlObjectsComments}`.SQL(ctx),
             uws(`
-          -- no SQL lint issues (typicalSqlTextLintManager)
+              -- no SQL lint issues (typicalSqlTextLintManager)
 
-          CREATE TABLE "synthetic_table_without_pk" (
-              "text" TEXT NOT NULL,
-              "text_nullable" TEXT,
-              "int" INTEGER NOT NULL,
-              "int_nullable" INTEGER
-          );
+              CREATE TABLE "synthetic_table_without_pk" (
+                  "text" TEXT NOT NULL,
+                  "text_nullable" TEXT,
+                  "int" INTEGER NOT NULL,
+                  "int_nullable" INTEGER
+              );
 
-          -- no SQL objects comments (typicalSqlTextLintManager)`),
+              COMMENT ON column "synthetic_table_without_pk"."text" IS 'commonColumns.text description';
+              COMMENT ON column "synthetic_table_without_pk"."text_nullable" IS 'commonColumns.text_nullable description';`),
           );
         },
       );
@@ -374,7 +375,9 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
                 "int_nullable" INTEGER
             );
 
-            COMMENT ON table "synthetic_table_with_uaod_pk" IS 'synthetic_table_with_uaod_pk';`),
+            COMMENT ON table "synthetic_table_with_uaod_pk" IS 'synthetic_table_with_uaod_pk';
+            COMMENT ON column "synthetic_table_with_uaod_pk"."text" IS 'commonColumns.text description';
+            COMMENT ON column "synthetic_table_with_uaod_pk"."text_nullable" IS 'commonColumns.text_nullable description';`),
           );
         },
       );

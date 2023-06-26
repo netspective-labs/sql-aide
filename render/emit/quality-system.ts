@@ -5,7 +5,7 @@ import * as sql from "./sql.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export type SqlObjectCommentTarget = "table";
+export type SqlObjectCommentTarget = "table" | "column";
 
 export interface SqlObjectComment<
   Target extends SqlObjectCommentTarget,
