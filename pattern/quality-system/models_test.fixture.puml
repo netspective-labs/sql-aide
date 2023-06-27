@@ -70,7 +70,26 @@
       activity_log: JSONB
   }
 
+  entity "data_lineage" as data_lineage {
+      data_lineage_id: INTEGER
+    * source_table_id: INTEGER
+    * lineage_destination_id: INTEGER
+    * transformation_id: INTEGER
+    * lineage_type: TEXT
+    * lineage_quality_rating: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
   lineage_source |o..o{ lineage_graph_node
   lineage_destination |o..o{ lineage_graph_node
   lineage_transform |o..o{ lineage_graph_node
+  lineage_source |o..o{ data_lineage
+  lineage_destination |o..o{ data_lineage
+  lineage_transform |o..o{ data_lineage
 @enduml

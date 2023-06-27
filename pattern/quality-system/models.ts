@@ -139,6 +139,34 @@ export const lineageGraphNode = gm.autoIncPkTable("lineage_graph_node", {
   descr: "Entity representing a single node of the lineage graph.",
 });
 
+export const dataLineage = gm.autoIncPkTable("data_lineage", {
+  data_lineage_id: autoIncPK().describe(
+    "Primary key for uniquely identifying each lineage entry.",
+  ),
+  source_table_id: lineageSource.references
+    .lineage_source_id().describe(
+      "Foreign key referencing the lineage_source_id column in the lineage_source table.",
+    ),
+  lineage_destination_id: lineageDestination.references
+    .lineage_destination_id().describe(
+      "Foreign key referencing the lineage_dest_id column in the lineage_target table.",
+    ),
+  transformation_id: lineageTransform.references.lineage_transform_id()
+    .describe(
+      "Foreign key referencing the lineage_transform_id column in the lineage_transform table.",
+    ),
+  lineage_type: text().describe("TODO"), // IS IT REQUIRED ?
+  lineage_quality_rating: text().describe(
+    "The quality rating of the data lineage entry, indicating the reliability or trustworthiness of the lineage information.",
+  ),
+  ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Used for trace and understand the origin, transformations, and movement of data / managing data lineage.",
+  },
+});
+
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allContentTables: SQLa.TableDefinition<
@@ -150,6 +178,7 @@ export const allContentTables: SQLa.TableDefinition<
   lineageDestination,
   lineageTransform,
   lineageGraphNode,
+  dataLineage,
 ];
 
 export function sqlDDL() {

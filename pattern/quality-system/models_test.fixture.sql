@@ -97,6 +97,24 @@ CREATE TABLE IF NOT EXISTS "lineage_graph_node" (
     FOREIGN KEY("lineage_dest_id") REFERENCES "lineage_destination"("lineage_destination_id"),
     FOREIGN KEY("lineage_transform_id") REFERENCES "lineage_transform"("lineage_transform_id")
 );
+CREATE TABLE IF NOT EXISTS "data_lineage" (
+    "data_lineage_id" INTEGER,
+    "source_table_id" INTEGER NOT NULL,
+    "lineage_destination_id" INTEGER NOT NULL,
+    "transformation_id" INTEGER NOT NULL,
+    "lineage_type" TEXT NOT NULL,
+    "lineage_quality_rating" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" JSONB,
+    FOREIGN KEY("source_table_id") REFERENCES "lineage_source"("lineage_source_id"),
+    FOREIGN KEY("lineage_destination_id") REFERENCES "lineage_destination"("lineage_destination_id"),
+    FOREIGN KEY("transformation_id") REFERENCES "lineage_transform"("lineage_transform_id")
+);
 
 COMMENT ON column "lineage_source_type"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
 COMMENT ON column "lineage_destination_type"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
@@ -119,6 +137,13 @@ COMMENT ON column "lineage_graph_node"."lineage_dest_id" IS 'Foreign key referen
 COMMENT ON column "lineage_graph_node"."lineage_transform_id" IS 'Foreign key referencing the lineage_transform_id column in the lineage_transform table.';
 COMMENT ON column "lineage_graph_node"."description" IS 'description or additional information about the node of the lineage graph';
 COMMENT ON column "lineage_graph_node"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
+COMMENT ON table "data_lineage" IS 'Used for trace and understand the origin, transformations, and movement of data / managing data lineage.';
+COMMENT ON column "data_lineage"."source_table_id" IS 'Foreign key referencing the lineage_source_id column in the lineage_source table.';
+COMMENT ON column "data_lineage"."lineage_destination_id" IS 'Foreign key referencing the lineage_dest_id column in the lineage_target table.';
+COMMENT ON column "data_lineage"."transformation_id" IS 'Foreign key referencing the lineage_transform_id column in the lineage_transform table.';
+COMMENT ON column "data_lineage"."lineage_type" IS 'TODO';
+COMMENT ON column "data_lineage"."lineage_quality_rating" IS 'The quality rating of the data lineage entry, indicating the reliability or trustworthiness of the lineage information.';
+COMMENT ON column "data_lineage"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
 
 
 --content views
