@@ -1,0 +1,95 @@
+@startuml IE
+  hide circle
+  skinparam linetype ortho
+  skinparam roundcorner 20
+  skinparam class {
+    BackgroundColor White
+    ArrowColor Silver
+    BorderColor Silver
+    FontColor Black
+    FontSize 12
+  }
+
+  entity "lineage_source" as lineage_source {
+      **lineage_source_id**: SERIAL
+    --
+    * lineage_source_type_id: TEXT
+    * source_name: TEXT
+    * description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
+  entity "lineage_destination" as lineage_destination {
+      **lineage_destination_id**: SERIAL
+    --
+    * lineage_dest_type_id: TEXT
+    * dest_name: TEXT
+    * description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
+  entity "lineage_transform" as lineage_transform {
+      lineage_transform_id: INTEGER
+    * lineage_transform_type_id: TEXT
+    * transform_name: TEXT
+    * description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
+  entity "lineage_graph_node" as lineage_graph_node {
+      lineage_graph_node_id: INTEGER
+    * lineage_source_id: INTEGER
+    * lineage_dest_id: INTEGER
+    * lineage_transform_id: INTEGER
+    * graph_node_name: TEXT
+    * description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
+  entity "data_lineage" as data_lineage {
+      data_lineage_id: INTEGER
+    * source_table_id: INTEGER
+    * lineage_destination_id: INTEGER
+    * transformation_id: INTEGER
+    * lineage_type: TEXT
+    * lineage_quality_rating: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: JSONB
+  }
+
+  lineage_source |o..o{ lineage_graph_node
+  lineage_destination |o..o{ lineage_graph_node
+  lineage_transform |o..o{ lineage_graph_node
+  lineage_source |o..o{ data_lineage
+  lineage_destination |o..o{ data_lineage
+  lineage_transform |o..o{ data_lineage
+@enduml

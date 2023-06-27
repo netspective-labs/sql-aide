@@ -76,8 +76,12 @@ export const allReferenceTables: SQLa.TableDefinition<
 export const lineageSource = gm.autoIncPkTable("lineage_source", {
   lineage_source_id: autoIncPK(),
   lineage_source_type_id: lineageSourceType.references.lineage_source_type_id(),
-  source_name: text(),
-  description: text(),
+  source_name: text().describe(
+    "The name of the data source from which the lineage originates.",
+  ),
+  description: text().describe(
+    "Description or additional information about the data source.",
+  ),
   ...gm.housekeeping.columns,
 }, {
   descr: "Entity representing sources of data transformations.",
@@ -87,34 +91,80 @@ export const lineageDestination = gm.autoIncPkTable("lineage_destination", {
   lineage_destination_id: autoIncPK(),
   lineage_dest_type_id: lineageDestinationType.references
     .lineage_destination_type_id(),
-  dest_name: text(),
-  description: text(),
+  dest_name: text().describe(
+    "The name of the data destination to the lineage target.",
+  ),
+  description: text().describe(
+    "Description or additional information about the data target.",
+  ),
   ...gm.housekeeping.columns,
 }, {
   descr: "Entity representing destinations of data transformations.",
 });
 
 export const lineageTransform = gm.autoIncPkTable("lineage_transform", {
-  lineage_transform_id: autoIncPK(),
+  lineage_transform_id: autoIncPK().describe(
+    "Primary key for the lineage transformation.",
+  ),
   lineage_transform_type_id: lineageTransformType.references
     .lineage_transform_type_id(),
-  transform_name: text(),
-  description: text(),
+  transform_name: text().describe("The name of the data transormation"),
+  description: text().describe("Description of the transformation"),
   ...gm.housekeeping.columns,
 }, {
   descr: "Entity representing transformations of data transformations.",
 });
 
 export const lineageGraphNode = gm.autoIncPkTable("lineage_graph_node", {
-  lineage_graph_node_id: autoIncPK(),
-  lineage_source_id: lineageSource.references.lineage_source_id(),
-  lineage_dest_id: lineageDestination.references.lineage_destination_id(),
-  lineage_transform_id: lineageTransform.references.lineage_transform_id(),
+  lineage_graph_node_id: autoIncPK().describe(
+    "Primary key for uniquely identifying each node of the lineage graph.",
+  ),
+  lineage_source_id: lineageSource.references.lineage_source_id().describe(
+    "Foreign key referencing the lineage_source_id column in the lineage_source table.",
+  ),
+  lineage_dest_id: lineageDestination.references.lineage_destination_id()
+    .describe(
+      "Foreign key referencing the lineage_dest_id column in the lineage_target table.",
+    ),
+  lineage_transform_id: lineageTransform.references.lineage_transform_id()
+    .describe(
+      "Foreign key referencing the lineage_transform_id column in the lineage_transform table.",
+    ),
   graph_node_name: text(),
-  description: text(),
+  description: text().describe(
+    "description or additional information about the node of the lineage graph",
+  ),
   ...gm.housekeeping.columns,
 }, {
   descr: "Entity representing a single node of the lineage graph.",
+});
+
+export const dataLineage = gm.autoIncPkTable("data_lineage", {
+  data_lineage_id: autoIncPK().describe(
+    "Primary key for uniquely identifying each lineage entry.",
+  ),
+  source_table_id: lineageSource.references
+    .lineage_source_id().describe(
+      "Foreign key referencing the lineage_source_id column in the lineage_source table.",
+    ),
+  lineage_destination_id: lineageDestination.references
+    .lineage_destination_id().describe(
+      "Foreign key referencing the lineage_dest_id column in the lineage_target table.",
+    ),
+  transformation_id: lineageTransform.references.lineage_transform_id()
+    .describe(
+      "Foreign key referencing the lineage_transform_id column in the lineage_transform table.",
+    ),
+  lineage_type: text().describe("TODO"), // IS IT REQUIRED ?
+  lineage_quality_rating: text().describe(
+    "The quality rating of the data lineage entry, indicating the reliability or trustworthiness of the lineage information.",
+  ),
+  ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Used for trace and understand the origin, transformations, and movement of data / managing data lineage.",
+  },
 });
 
 // Typescript inference would work here but we're explicit about the array
@@ -128,36 +178,8 @@ export const allContentTables: SQLa.TableDefinition<
   lineageDestination,
   lineageTransform,
   lineageGraphNode,
+  dataLineage,
 ];
-
-// const vendorView = SQLa.safeViewDefinition(
-//   "vender_view",
-//   {
-//     name: text(),
-//     email: text(),
-//     address: text(),
-//     state: text(),
-//     city: text(),
-//     zip: text(),
-//     country: text(),
-//   },
-// )`
-//   SELECT pr.party_name as name,
-//   e.electronics_details as email,
-//   l.address_line1 as address,
-//   l.address_state as state,
-//   l.address_city as city,
-//   l.address_zip as zip,
-//   l.address_country as country
-//   FROM party_relation prl
-//   INNER JOIN party pr ON pr.party_id = prl.party_id
-//   INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'
-//   INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
-//   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
-
-// export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
-//   vendorView,
-// ];
 
 export function sqlDDL() {
   // NOTE: every time the template is "executed" it will fill out tables, views
@@ -170,7 +192,13 @@ export function sqlDDL() {
     ${allReferenceTables}
 
     -- content tables
+    -- TODO:SqlObjectComment
     ${allContentTables}
+
+    ${SQLa.typicalSqlQualitySystemContent(
+      gts.ddlOptions.sqlQualitySystemState,
+    ).sqlObjectsComments}
+
 
     --content views
     -- {allContentViews}
@@ -181,7 +209,9 @@ export function sqlDDL() {
 }
 
 if (import.meta.main) {
-  const ctx = SQLa.typicalSqlEmitContext();
+  const ctx = SQLa.typicalSqlEmitContext({
+    sqlDialect: SQLa.postgreSqlDialect(),
+  });
   typ.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
