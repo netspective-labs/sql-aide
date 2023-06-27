@@ -1,0 +1,288 @@
+---
+title: Typical (Common) Example
+---
+
+
+The following code is a complete working example of how to specify a small
+"governed" schema (follows certain rules).
+
+```typescript filename="examples/getting-started.ts"
+#!/usr/bin/env -S deno run --allow-all
+
+import * as tp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/pattern/typical/mod.ts";
+const { SQLa, ws } = tp;
+
+const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() });
+type EmitContext = typeof ctx;
+
+const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
+const { text, textNullable, integer, date } = gm.domains;
+const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+
+export enum ExecutionContext {
+  DEVELOPMENT, // code is text, value is a number
+  TEST,
+  PRODUCTION,
+}
+const execCtx = gm.ordinalEnumTable("execution_context", ExecutionContext);
+
+const jobGrade = gm.autoIncPkTable("job_grade", {
+  job_grade_id: autoIncPK(),
+  grade_name: text(),
+  description: textNullable(),
+  ...gm.housekeeping.columns,
+});
+
+const jobPosition = gm.autoIncPkTable("job_position", {
+  job_position_id: autoIncPK(),
+  position_title: text(),
+  job_category_id: integer(),
+  description: textNullable(),
+  requirements: textNullable(),
+  responsibilities: textNullable(),
+  department_id: integer(),
+  grade_id: jobGrade.references.job_grade_id(),
+  experience_level: textNullable(),
+  skills_required: textNullable(),
+  location_id: integer(),
+  no_of_openings: integer(),
+  salary_type_code: integer(),
+  start_date: date(),
+  end_date: date(),
+  search_committee: textNullable(),
+  question_answers: textNullable(),
+  official_id: integer(),
+  status_id: integer(),
+  ...gm.housekeeping.columns,
+});
+
+export const contentTables = [execCtx, jobGrade, jobPosition];
+
+function sqlDDL() {
+  // deno-fmt-ignore
+  return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+    PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
+
+    ${execCtx}
+    ${execCtx.seedDML}
+
+    ${jobGrade}
+
+    ${jobPosition}
+    `;
+}
+
+tp.typicalCLI({
+  defaultDialect: "SQLite",
+  // auto-discover the module name for the CLI
+  resolve: (specifier) =>
+    specifier ? import.meta.resolve(specifier) : import.meta.url,
+  prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
+  prepareDiagram: () => {
+    return tp.diaPUML.plantUmlIE(ctx, function* () {
+      for (const table of contentTables) {
+        if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+          yield table.graphEntityDefn();
+        }
+      }
+    }, tp.diaPUML.typicalPlantUmlIeOptions()).content;
+  },
+}).commands
+  .command("driver", tp.sqliteDriverCommand(sqlDDL, ctx))
+  .parse(Deno.args);
+```
+
+The code above will generate the following equivalent SQL:
+
+```sql
+PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
+
+CREATE TABLE IF NOT EXISTS "execution_context" (
+    "code" INTEGER PRIMARY KEY NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO "execution_context" ("code", "value") VALUES (0, 'DEVELOPMENT');
+INSERT INTO "execution_context" ("code", "value") VALUES (1, 'TEST');
+INSERT INTO "execution_context" ("code", "value") VALUES (2, 'PRODUCTION');
+
+CREATE TABLE IF NOT EXISTS "job_grade" (
+    "job_grade_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "grade_name" TEXT NOT NULL,
+    "description" TEXT,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN'
+);
+
+CREATE TABLE IF NOT EXISTS "job_position" (
+    "job_position_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "position_title" TEXT NOT NULL,
+    "job_category_id" INTEGER NOT NULL,
+    "description" TEXT,
+    "requirements" TEXT,
+    "responsibilities" TEXT,
+    "department_id" INTEGER NOT NULL,
+    "grade_id" INTEGER NOT NULL,
+    "experience_level" TEXT,
+    "skills_required" TEXT,
+    "location_id" INTEGER NOT NULL,
+    "no_of_openings" INTEGER NOT NULL,
+    "salary_type_code" INTEGER NOT NULL,
+    "start_date" DATE NOT NULL,
+    "end_date" DATE NOT NULL,
+    "search_committee" TEXT,
+    "question_answers" TEXT,
+    "official_id" INTEGER NOT NULL,
+    "status_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    FOREIGN KEY("grade_id") REFERENCES "job_grade"("job_grade_id")
+);
+```
+
+Here's how to use SQLa:
+
+<Steps>
+### Install Deno (single binary)
+
+If you haven't already, install Deno by following the instructions specific to
+your operating system. Visit the Deno website (https://deno.land/) for installation
+guidelines.
+
+### Import SQLa
+
+```typescript
+#!/usr/bin/env -S deno run --allow-all
+// the #! (`shebang`) descriptor allows us to run this script as a binary on Linux
+
+import * as tp from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/pattern/typical/mod.ts";
+const { SQLa, ws } = tp;
+
+const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() });
+type EmitContext = typeof ctx;
+```
+
+Replace `vX.Y.Z` with the version number or just `main` if you want the latest
+version (pinning versions is highly recommended, though).
+
+* The `#!/usr/bin/env -S deno run --allow-all` line is the shebang descriptor that allows running the script as a binary on Linux.
+* The `import` statements bring in the necessary modules from the SQLa Typical Pattern library (tp), which is specifically designed for small to medium-sized databases with common business domains and table schemas.
+* The SQLa symbol provides access to the SQLa functionality, while `ws` provides support for whitespace management.
+* `EmitContext` is not too useful here but it's an example of how the template can have a complete type-safe _contextual environment_ for passing around variables or other dynamic content.
+
+### Prepare domains and table types
+
+SQLa prefers _governed schemas_ meaning standard naming conventions and rules should be followed.
+
+```typescript
+const gts = tp.governedTemplateState<tp.GovernedDomain, EmitContext>();
+const gm = tp.governedModel<tp.GovernedDomain, EmitContext>(gts.ddlOptions);
+const { text, textNullable, integer, date } = gm.domains;
+const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+```
+
+* `gts` is the _governed template state_ which controls SQL emit functionality
+* `gm` is the _governed model_ which has the domains (column types) keys, table types, etc.
+
+### Define your schema
+
+```typescript
+export enum ExecutionContext {
+  DEVELOPMENT, // code is text, value is a number
+  TEST,
+  PRODUCTION,
+}
+const execCtx = gm.ordinalEnumTable("execution_context", ExecutionContext);
+
+const jobGrade = gm.autoIncPkTable("job_grade", {
+  job_grade_id: autoIncPK(),
+  grade_name: text(),
+  description: textNullable(),
+  ...gm.housekeeping.columns,
+});
+
+const jobPosition = gm.autoIncPkTable("job_position", {
+  job_position_id: autoIncPK(),
+  position_title: text(),
+  job_category_id: integer(),
+  description: textNullable(),
+  requirements: textNullable(),
+  responsibilities: textNullable(),
+  department_id: integer(),
+  grade_id: jobGrade.references.job_grade_id(),
+  experience_level: textNullable(),
+  skills_required: textNullable(),
+  location_id: integer(),
+  no_of_openings: integer(),
+  salary_type_code: integer(),
+  start_date: date(),
+  end_date: date(),
+  search_committee: textNullable(),
+  question_answers: textNullable(),
+  official_id: integer(),
+  status_id: integer(),
+  ...gm.housekeeping.columns,
+});
+```
+
+* `execCtx` is an _enumeration table_ which helps create _reference_ or _static lookup_ rows (with foreign key support)
+* `jobGrade` is a simple table
+* `jobPosition` is a more complex table with foreign key to `jobGrade` (see `grade_id` column)
+
+### Prepare SQL DDL
+
+```typescript
+function sqlDDL() {
+  return SQLa.SQL<EmitContext>(gts.ddlOptions)`
+    PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst performance
+
+    ${execCtx}
+    ${execCtx.seedDML}
+
+    ${jobGrade}
+
+    ${jobPosition}
+    `;
+}
+```
+
+### Prepare the CLI
+
+```typescript
+tp.typicalCLI({
+  defaultDialect: "SQLite",
+  // auto-discover the module name for the CLI
+  resolve: (specifier) =>
+    specifier ? import.meta.resolve(specifier) : import.meta.url,
+  prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
+  prepareDiagram: () => {
+    return tp.diaPUML.plantUmlIE(ctx, function* () {
+      for (const table of contentTables) {
+        if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+          yield table.graphEntityDefn();
+        }
+      }
+    }, tp.diaPUML.typicalPlantUmlIeOptions()).content;
+  },
+}).commands
+  .command("driver", tp.sqliteDriverCommand(sqlDDL, ctx))
+  .parse(Deno.args);
+```
+
+### Execute the CLI
+
+```bash
+$ chmod +x getting-started.sqla.ts     # make it executable
+$ ./getting-started.sqla.ts help       # see what commands are available
+$ ./getting-started.sqla.ts sql        # emit the SQL
+$ ./getting-started.sqla.ts diagram    # emit the PlantUML diagram
+$ ./getting-started.sqla.ts driver     # emit a bash script that can create your SQLite database (using `sqlite3` binary)
+
+# execute the driver and prepare a SQLite file
+$ ./getting-started.sqla.ts driver | bash -s :memory:  # in memory for testing only
+$ ./getting-started.sqla.ts driver | bash -s my.db     # create the database file
+```
+
+</Steps>
+

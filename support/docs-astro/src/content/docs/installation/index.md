@@ -1,0 +1,78 @@
+---
+title: Installation
+---
+
+<!-- # Installation -->
+
+SQLa (SQL Aide) is designed to be lightweight and easily accessible, with no
+need for local installations or dependencies other than Deno, a secure runtime
+for JavaScript and TypeScript. With Deno's unique single-binary deployment model
+and use of web-friendly URLs which allow your code and templates to reside
+anywhere, you can quickly import and use SQLa in your projects by adding just a
+few lines of code.
+
+Here's how to install and import SQLa using Deno:
+
+<Steps>
+### Install Deno (single binary)
+
+If you haven't already, install Deno by following the instructions specific to
+your operating system. Visit the Deno website (https://deno.land/) for installation
+guidelines.
+
+### Import SQLa (locally or remotely from URL)
+
+In your project, create a new Typescript file (e.g., index.ts) or use an existing
+one. Open the file in your preferred code editor. Import SQLa using the Deno
+module specifier: Import SQLa by adding the following line of code at the top
+of your file:
+
+```typescript
+import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vX.Y.Z/mod.ts";
+```
+
+Replace `vX.Y.Z` with the version number or just `main` if you want the latest
+version (pinning versions is highly recommended, though). This line of code
+imports the SQLa module from the remote source, making all its functionality
+available for use in your project.
+
+<Callout>
+  Explore the [file system and directory structure guide](architecture/directory-structure/) to learn more about
+  what modules you can import into your models.
+</Callout>
+
+### Start building your database models
+
+With SQLa imported, you can start utilizing its features to generate SQL
+statements, define database schemas, and more. Refer to the SQLa documentation
+and examples to explore the available functionality and unleash the power of
+SQLa in your project.
+</Steps>
+
+By leveraging Deno's unique deployment model, SQLa eliminates the need for local
+installations and dependencies, making it incredibly lightweight and accessible.
+With just a few lines of code, you can import SQLa remotely and take advantage
+of its robust SQL generation capabilities in any Deno project.
+
+Note: When running your project, make sure to use the deno run command with the
+appropriate flags to enable network access for the remote module import. For
+example:
+
+```bash
+deno run --allow-net index.ts
+```
+
+The `--allow-net` flag grants permission to make network requests and allows
+Deno to fetch the SQLa module remotely.
+
+If you want to make your scripts easily executable, just include the _shebang_
+line at the top of your scripts and set the executable bit on the file:
+
+```bash
+#!/usr/bin/env -S deno run --allow-all
+import * as SQLa from "https://raw.githubusercontent.com/netspective-labs/sql-aide/v1.0.0/mod.ts";
+```
+
+With SQLa installed and imported, you're ready to harness the power of SQL
+generation and simplify your database interactions using the lightweight and
+accessible nature of SQLa with Deno.
