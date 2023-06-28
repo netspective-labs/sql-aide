@@ -1,9 +1,7 @@
 ---
 title: Code of Conduct
-description: ""
 ---
 
-<!-- # Code of Conduct -->
 
 SQLa (SQL Aide) is committed to providing a welcoming and inclusive environment
 for all contributors, regardless of their background or identity. We value the

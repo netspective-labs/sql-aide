@@ -1,8 +1,9 @@
 ---
 title: Why DCP
 ---
+<!-- import { Callout } from 'nextra/components' -->
 
-# PostgreSQL Data Computing Platform (PgDCP)
+## PostgreSQL Data Computing Platform (PgDCP)
 
 SQL Aide (`SQLa`) was created as the infrastructure for PgDCP, an approach for
 using PostgreSQL to host tables, views, plus polyglot stored routines and

@@ -1,7 +1,7 @@
 ---
 title: Installation
 ---
-
+<!-- import { Callout, Steps } from 'nextra-theme-docs' -->
 
 SQLa (SQL Aide) is designed to be lightweight and easily accessible, with no
 need for local installations or dependencies other than Deno, a secure runtime

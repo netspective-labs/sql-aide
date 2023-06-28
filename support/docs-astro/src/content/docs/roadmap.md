@@ -2,7 +2,7 @@
 title: Roadmap
 ---
 
-<!-- # Roadmap -->
+# Roadmap
 
 _This is a draft page and isn't really a "Roadmap" yet, just mainly some notes
 about what features and enhancements we need. It needs significant formatting._

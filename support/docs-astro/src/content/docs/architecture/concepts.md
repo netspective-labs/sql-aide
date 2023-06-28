@@ -1,8 +1,8 @@
 ---
-title: SQLa Concepts
-description: A guide in my new Starlight docs site.
-
+title: Concepts
 ---
+
+# SQLa Concepts
 
 ## Domain
 

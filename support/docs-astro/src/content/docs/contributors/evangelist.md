@@ -1,10 +1,8 @@
 ---
 title: Evangelists Needed
-description: ""
-
 ---
 
-<!-- # SQL Aide Developer Evangelist -->
+# SQL Aide Developer Evangelist
 
 One of the most important roles we need filled is the Developer Evanglist role.
 As a Developer Evangelist for SQLa (SQL Aide), your role is pivotal in driving

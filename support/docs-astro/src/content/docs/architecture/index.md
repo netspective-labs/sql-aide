@@ -1,10 +1,9 @@
 ---
 title: Architecture
-description: A guide in my new Starlight docs site.
-
 ---
+<!-- import { Callout } from 'nextra/components' -->
 
-# Architecture and Strategy
+<!--  # Architecture and Strategy -->
 
 In order to allow the most flexiblity, prefer composition through functions
 rather than inheritance through classes.
@@ -15,7 +14,7 @@ consumers of SQLa. The `$RF_HOME/sql/models` module provides a `typical.ts`
 which is an opinionated strategy for governing "typical" or "standard"
 relational entities and attributes based on "best practices".
 
-![Example Image](/src/assets/architecture.drawio.svg)
+![Architecture](/src/assets/architecture.drawio.svg)
 
 <Callout>
     Review

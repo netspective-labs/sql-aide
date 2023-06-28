@@ -1,9 +1,8 @@
 ---
 title: Entities
-description: ""
 ---
 
-<!-- # Groups of SQL Domains are Entities -->
+# Groups of SQL Domains are Entities
 
 An SQLa _entity_ is a concrete instance of a group of domain instances such as
 _attributes_ or _properties_. An _entity_ is usally a _table_ in SQL but might
