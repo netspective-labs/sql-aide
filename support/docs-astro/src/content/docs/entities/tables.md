@@ -1,9 +1,8 @@
 ---
 title: Tables
-description: ""
 ---
 
-<!-- # # Table DDL Aides -->
+# Table DDL Aides
 
 `SQLa` uses Zod to declare type-safe tables and generate SQL DDL that can be
 used directly in template literals.

@@ -1,8 +1,9 @@
 ---
 title: Creating SQL Domain
-description: ""
----
+--- 
+<!-- import { Callout } from 'nextra/components' -->
 
+# How to introduce a new SQL Domain
 
 A new SQL Domain can be introduced several ways:
 

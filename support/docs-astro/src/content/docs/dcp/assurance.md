@@ -2,7 +2,7 @@
 title: Assurance
 ---
 
-<!-- # Assurance as Code _in the Database_ -->
+# Assurance as Code _in the Database_
 
 All code in PostgreSQL should be tested, or _assured_, with pgTAP code. All
 _Assurance Engineering Cases_ (AECs) should be written code-first, not

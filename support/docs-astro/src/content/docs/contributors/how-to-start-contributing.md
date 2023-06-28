@@ -1,10 +1,8 @@
 ---
-title: Your First Contribution
-description: ""
-
+title: How to start contributing
 ---
 
-<!-- # Your First Contribution -->
+# Your First Contribution
 
 Welcome to SQLa (SQL Aide)! We're thrilled that you're interested in making your
 first contribution to our open-source project. Here are some suggestions on how
@@ -21,7 +19,7 @@ tasks.
 To find open tickets and issues:
 
 - Visit our
-  [GitHub repository]([link-to-github-repo](https://github.com/netspective-labs/sql-aide/issues)).
+  [GitHub repository](https://github.com/netspective-labs/sql-aide/issues).
 - Navigate to the "Issues" tab.
 - Filter the issues using labels like "good first issue" or "help wanted".
 

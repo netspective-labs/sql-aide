@@ -2,6 +2,7 @@
 title: Contributors Needed
 ---
 
+<!-- # Contributors -->
 
 SQLa (SQL Aide) is an open-source project that relies on the contributions of a
 diverse and talented community. We welcome contributions from individuals with

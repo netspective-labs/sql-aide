@@ -1,10 +1,8 @@
 ---
-title: Contributors Guide
-description: ""
-
+title: Guidelins
 ---
 
-<!-- # Contribution Guidelines -->
+# Contribution Guidelines
 
 Thank you for considering contributing to SQLa (SQL Aide)! We appreciate your
 interest in making this project even better. By following these guidelines, you

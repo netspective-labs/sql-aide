@@ -1,0 +1,12 @@
+{
+  "index": "Welcome",
+  "installation": "Installation",
+  "getting-started": "Getting Started",
+  "dcp": "Data Compute Platform",
+  "architecture": "Architecture",
+  "domains": "Domains",
+  "entities": "Entities",
+  "emit": "SQL Templates",
+  "roadmap": "Roadmap",
+  "contributors": "Contributors"
+}

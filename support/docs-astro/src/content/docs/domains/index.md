@@ -1,8 +1,8 @@
 ---
 title: Domains
-description: ""
 ---
 
+# SQL Domains
 
 In SQL, a _domain_ refers to a specific set of allowed values that a column
 (field) can have in a database table. It defines the possible values for a

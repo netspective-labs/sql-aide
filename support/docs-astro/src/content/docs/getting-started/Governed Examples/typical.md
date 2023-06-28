@@ -1,7 +1,11 @@
 ---
 title: Typical (Common) Example
 ---
+<!-- import { Steps } from 'nextra-theme-docs'
+ -->
 
+<!-- # Typical (most common) Example
+ -->
 
 The following code is a complete working example of how to specify a small
 "governed" schema (follows certain rules).

@@ -1,8 +1,7 @@
 ---
-title: SQL-first Polyglot
+title: Polyglot but SQL-first
 ---
 
-# Polyglot but SQL-first
 
 Our first choice of languages for writing data-centric micro services should be:
 

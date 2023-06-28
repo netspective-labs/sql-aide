@@ -1,9 +1,9 @@
 ---
 title: SQLpp
 ---
-import { Callout, Steps } from 'nextra-theme-docs'
+<!-- import { Callout, Steps } from 'nextra-theme-docs' -->
 
-<!-- # `SQLpp` - SQL Preprocessor -->
+# `SQLpp` - SQL Preprocessor
 
 `SQLpp` (available in `./lib/pre-process/mod.ts`) is a cross-database utility
 designed for pre-processing SQL files. Its functionality mirrors a subset of the

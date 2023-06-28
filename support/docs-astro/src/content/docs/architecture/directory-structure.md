@@ -3,6 +3,9 @@ title: Directory Structure
 description: A guide in my new Starlight docs site.
 
 ---
+<!-- import { Callout, FileTree } from 'nextra-theme-docs' -->
+
+<!-- # Directory Structure -->
 
 <Callout>
   This guide describes the directory of the SQLa source repo and none of the
