@@ -31,29 +31,68 @@ const partyInsertion = mod.party
     party_name: "person",
   });
 
-const partyID = mod.party.select(partyInsertion.insertable);
+const partyID = mod.party.select({ party_type_id: "PERSON" });
+
+const partyIdentifierType = mod.partyIdentifierType
+  .insertDML([{
+    code: "PASSPORT",
+    value: "Passport",
+  }, {
+    code: "UUID",
+    value: "UUID",
+  }, {
+    code: "DRIVING_LICENSE",
+    value: "Driving License",
+  }]);
+
+const partyIdentifierTypeID = mod.partyIdentifierType.select({
+  code: "PASSPORT",
+});
 
 const partyIdentifierInsertion = mod.partyIdentifier
   .insertDML({
     identifier_number: "test identifier",
-    party_identifier_type_id: "PASSPORT",
+    party_identifier_type_id: partyIdentifierTypeID,
     party_id: partyID,
   });
 
+const personTypeInsertion = mod.personType
+  .insertDML([{
+    code: "INDIVIDUAL",
+    value: "Individual",
+  }, {
+    code: "PROFESSIONAL",
+    value: "Professional",
+  }]);
+
+const personTypeID = mod.personType.select({
+  code: "PROFESSIONAL",
+});
 const personInsertion = mod.person
   .insertDML({
     party_id: partyID,
-    person_type_id: "PROFESSIONAL",
+    person_type_id: personTypeID,
     person_first_name: "Test First Name",
     person_last_name: "Test Last Name",
   });
+
+const partyRole = mod.partyRole
+  .insertDML([{
+    code: "VENDOR",
+    value: "Vendor",
+  }, {
+    code: "CUSTOMER",
+    value: "Customer",
+  }]);
+
+const partyRoleID = mod.partyRole.select({ code: "VENDOR" });
 
 const partyRelationInsertion = mod.partyRelation
   .insertDML({
     party_id: partyID,
     related_party_id: partyID,
     relation_type_id: "ORGANIZATION_TO_PERSON",
-    party_role_id: "VENDOR",
+    party_role_id: partyRoleID,
   });
 
 const organizationInsertion = mod.organization
@@ -87,9 +126,32 @@ const organizationRoleInsertion = mod.organizationRole
     organization_role_type_id: organizationRoleTypeCode,
   });
 
+const contactType = mod.contactType
+  .insertDML([{
+    code: "HOME_ADDRESS",
+    value: "Home Address",
+  }, {
+    code: "OFFICIAL_ADDRESS",
+    value: "Official Address",
+  }, {
+    code: "MOBILE_PHONE_NUMBER",
+    value: "Mobile Phone Number",
+  }, {
+    code: "LAND_PHONE_NUMBER",
+    value: "Land Phone Number",
+  }, {
+    code: "OFFICIAL_EMAIL",
+    value: "Official Email",
+  }, {
+    code: "PERSONAL_EMAIL",
+    value: "Personal Email",
+  }]);
+
+const contactTypeID = mod.contactType.select({ code: "MOBILE_PHONE_NUMBER" });
+
 const contactElectronicInsertion = mod.contactElectronic
   .insertDML({
-    contact_type_id: "MOBILE_PHONE_NUMBER",
+    contact_type_id: contactTypeID,
     party_id: partyID,
     electronics_details: "electronics details",
   });
@@ -100,7 +162,10 @@ function sqlDDL() {
 
     -- synthetic / test data
 
+    ${partyRole}
     ${partyInsertion}
+    ${personTypeInsertion}
+    ${partyIdentifierType}
 
     ${partyIdentifierInsertion}
 
@@ -114,6 +179,7 @@ function sqlDDL() {
 
     ${organizationRoleInsertion}
 
+    ${contactType}
     ${contactElectronicInsertion}
     `;
 }

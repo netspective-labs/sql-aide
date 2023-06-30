@@ -10,6 +10,62 @@
     FontSize 12
   }
 
+  entity "party_role" as party_role {
+      **party_role_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "party_identifier_type" as party_identifier_type {
+      **party_identifier_type_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "person_type" as person_type {
+      **person_type_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "contact_type" as contact_type {
+      **contact_type_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   entity "organization_role_type" as organization_role_type {
       **organization_role_type_id**: INTEGER
     --
@@ -145,7 +201,7 @@
       **party_identifier_id**: INTEGER
     --
     * identifier_number: TEXT
-    * party_identifier_type_id: TEXT
+    * party_identifier_type_id: INTEGER
     * party_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
@@ -160,7 +216,7 @@
       **person_id**: INTEGER
     --
     * party_id: INTEGER
-    * person_type_id: TEXT
+    * person_type_id: INTEGER
     * person_first_name: TEXT
     * person_last_name: TEXT
       honorific_prefix: TEXT
@@ -180,7 +236,7 @@
     * party_id: INTEGER
     * related_party_id: INTEGER
     * relation_type_id: TEXT
-      party_role_id: TEXT
+      party_role_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -224,7 +280,7 @@
   entity "contact_electronic" as contact_electronic {
       **contact_electronic_id**: INTEGER
     --
-    * contact_type_id: TEXT
+    * contact_type_id: INTEGER
     * party_id: INTEGER
     * electronics_details: TEXT
       created_at: TIMESTAMP
@@ -239,7 +295,7 @@
   entity "contact_land" as contact_land {
       **contact_land_id**: INTEGER
     --
-    * contact_type_id: TEXT
+    * contact_type_id: INTEGER
     * party_id: INTEGER
     * address_line1: TEXT
     * address_line2: TEXT
@@ -898,15 +954,20 @@
   graph |o..o{ boundary
   host |o..o{ host_boundary
   boundary |o..o{ raci_matrix_subject_boundary
+  party_identifier_type |o..o{ party_identifier
   party |o..o{ party_identifier
   party |o..o{ person
+  person_type |o..o{ person
   party |o..o{ party_relation
   party |o..o{ party_relation
+  party_role |o..o{ party_relation
   party |o..o{ organization
   person |o..o{ organization_role
   organization |o..o{ organization_role
   organization_role_type |o..o{ organization_role
+  contact_type |o..o{ contact_electronic
   party |o..o{ contact_electronic
+  contact_type |o..o{ contact_land
   party |o..o{ contact_land
   organization |o..o{ asset
   vulnerability_source |o..o{ vulnerability

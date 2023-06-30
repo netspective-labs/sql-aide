@@ -83,14 +83,18 @@ const partyID = udm.party.select(partyInsertion.insertable);
 const partyIdentifierInsertion = udm.partyIdentifier
   .insertDML({
     identifier_number: "test identifier",
-    party_identifier_type_id: "PASSPORT",
+    party_identifier_type_id: udm.partyIdentifierType.select({
+      code: "PASSPORT",
+    }),
     party_id: partyID,
   });
 
 const personInsertion = udm.person
   .insertDML({
     party_id: partyID,
-    person_type_id: "PROFESSIONAL",
+    person_type_id: udm.personType.select({
+      code: "PROFESSIONAL",
+    }),
     person_first_name: "Test First Name",
     person_last_name: "Test Last Name",
   });
@@ -100,7 +104,9 @@ const partyRelationInsertion = udm.partyRelation
     party_id: partyID,
     related_party_id: partyID,
     relation_type_id: "ORGANIZATION_TO_PERSON",
-    party_role_id: "VENDOR",
+    party_role_id: udm.partyRole.select({
+      code: "VENDOR",
+    }),
   });
 
 const organizationInsertion = udm.organization
@@ -130,7 +136,9 @@ const organizationRoleInsertion = udm.organizationRole
 
 const contactElectronicInsertion = udm.contactElectronic
   .insertDML({
-    contact_type_id: "MOBILE_PHONE_NUMBER",
+    contact_type_id: udm.contactType.select({
+      code: "MOBILE_PHONE_NUMBER",
+    }),
     party_id: partyID,
     electronics_details: "electronics details",
   });

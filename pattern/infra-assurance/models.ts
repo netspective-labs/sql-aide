@@ -259,7 +259,6 @@ export const allReferenceTables: (
 )[] = [
   udm.execCtx,
   udm.partyType,
-  udm.partyRole,
   contractStatus,
   paymentType,
   periodicity,
@@ -287,9 +286,6 @@ export const allReferenceTables: (
   auditPurpose,
   auditorStatusType,
   udm.partyRelationType,
-  udm.partyIdentifierType,
-  udm.personType,
-  udm.contactType,
   trainingSubject,
   statusValues,
   ratingValue,
@@ -876,6 +872,10 @@ export const allContentTables: SQLa.TableDefinition<
   udm.EmitContext,
   typ.TypicalDomainQS
 >[] = [
+  udm.partyRole,
+  udm.partyIdentifierType,
+  udm.personType,
+  udm.contactType,
   udm.organizationRoleType,
   graph,
   boundary,
@@ -1241,6 +1241,57 @@ const vendorView = SQLa.safeViewDefinition(
   INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
 
+const partyRoleInsertion = udm
+  .partyRole.insertDML([{
+    code: "CUSTOMER",
+    value: "Customer",
+  }, {
+    code: "VENDOR",
+    value: "Vendor",
+  }]);
+
+const partyIdentifierTypeInsertion = udm
+  .partyIdentifierType.insertDML([{
+    code: "UUID",
+    value: "UUID",
+  }, {
+    code: "DRIVING_LICENSE",
+    value: "Driving License",
+  }, {
+    code: "PASSPORT",
+    value: "Passport",
+  }]);
+
+const personTypeInsertion = udm
+  .personType.insertDML([{
+    code: "INDIVIDUAL",
+    value: "Individual",
+  }, {
+    code: "PROFESSIONAL",
+    value: "Professional",
+  }]);
+
+const contactTypeInsertion = udm
+  .contactType.insertDML([{
+    code: "HOME_ADDRESS",
+    value: "Home Address",
+  }, {
+    code: "OFFICIAL_ADDRESS",
+    value: "Official Address",
+  }, {
+    code: "MOBILE_PHONE_NUMBER",
+    value: "Mobile Phone Number",
+  }, {
+    code: "LAND_PHONE_NUMBER",
+    value: "Land Phone Number",
+  }, {
+    code: "OFFICIAL_EMAIL",
+    value: "Official Email",
+  }, {
+    code: "PERSONAL_EMAIL",
+    value: "Personal Email",
+  }]);
+
 const organizationRoleTypeInsertion = udm
   .organizationRoleType.insertDML([{
     code: "PROJECT_MANAGER_TECHNOLOGY",
@@ -1367,6 +1418,14 @@ export function sqlDDL() {
 
     -- seed Data
     ${allReferenceTables.map(e => e.seedDML).flat()}
+
+    ${partyRoleInsertion}
+
+    ${partyIdentifierTypeInsertion}
+
+    ${personTypeInsertion}
+
+    ${contactTypeInsertion}
 
     ${organizationRoleTypeInsertion}
     `;
