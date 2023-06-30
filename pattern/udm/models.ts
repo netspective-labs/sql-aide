@@ -32,6 +32,10 @@ export const {
   dateTime,
   selfRef,
   dateTimeNullable,
+  float,
+  floatNullable,
+  bigFloat,
+  bigFloatNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
@@ -41,6 +45,53 @@ export const execCtx = gm.textEnumTable(
   { isIdempotent: true },
 );
 
+export const partyRole = gm.autoIncPkTable(
+  "party_role",
+  {
+    party_role_id: autoIncPK(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+  {
+    qualitySystem: {
+      description:
+        "Entity to store different types of party roles. Each role is identified by a unique code and has an associated value/description.",
+    },
+  },
+);
+
+export const partyIdentifierType = gm.autoIncPkTable(
+  "party_identifier_type",
+  {
+    party_identifier_type_id: autoIncPK(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+  {
+    qualitySystem: {
+      description: "Entity to store different types of party identifiers.",
+    },
+  },
+);
+
+export const contactType = gm.autoIncPkTable(
+  "contact_type",
+  {
+    contact_type_id: autoIncPK(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+  {
+    qualitySystem: {
+      description:
+        "Entity Table to store different types of contact information.",
+    },
+  },
+);
+
 export const organizationRoleType = gm.autoIncPkTable(
   "organization_role_type",
   {
@@ -48,6 +99,12 @@ export const organizationRoleType = gm.autoIncPkTable(
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
+  },
+  {
+    qualitySystem: {
+      description:
+        "Entity to store different types of organization roles. Each role is identified by a unique code and has an associated value/description.",
+    },
   },
 );
 
@@ -61,39 +118,25 @@ export const partyRoleType = gm.autoIncPkTable(
   },
 );
 
+export const personType = gm.autoIncPkTable(
+  "person_type",
+  {
+    person_type_id: autoIncPK(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+);
+
 export const partyType = gm.textEnumTable(
   "party_type",
   govn.PartyType,
   { isIdempotent: true },
 );
 
-export const partyRole = gm.textEnumTable(
-  "party_role_type",
-  govn.PartyRole,
-  { isIdempotent: true },
-);
-
-export const partyIdentifierType = gm.textEnumTable(
-  "party_identifier_type",
-  govn.PartyIdentifierType,
-  { isIdempotent: true },
-);
-
 export const partyRelationType = gm.textEnumTable(
   "party_relation_type",
   govn.PartyRelationType,
-  { isIdempotent: true },
-);
-
-export const personType = gm.textEnumTable(
-  "person_type",
-  govn.PersonType,
-  { isIdempotent: true },
-);
-
-export const contactType = gm.textEnumTable(
-  "contact_type",
-  govn.ContactType,
   { isIdempotent: true },
 );
 
@@ -105,11 +148,7 @@ export const allReferenceTables: (
 )[] = [
   execCtx,
   partyType,
-  partyRole,
   partyRelationType,
-  partyIdentifierType,
-  personType,
-  contactType,
 ];
 
 export const party = gm.autoIncPkTable("party", {
@@ -131,9 +170,15 @@ export const party = gm.autoIncPkTable("party", {
 export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
   party_identifier_id: autoIncPK(),
   identifier_number: text(),
-  party_identifier_type_id: partyIdentifierType.references.code(),
+  party_identifier_type_id: partyIdentifierType.references
+    .party_identifier_type_id(),
   party_id: party.references.party_id(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to associate identifiers with parties. Each party identifier has a unique ID and is associated with a specific party and identifier type.",
+  },
 });
 
 /**
@@ -144,12 +189,17 @@ export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
 export const person = gm.autoIncPkTable("person", {
   person_id: autoIncPK(),
   party_id: party.references.party_id(),
-  person_type_id: personType.references.code(),
+  person_type_id: personType.references.person_type_id(),
   person_first_name: text(),
   person_last_name: text(),
   honorific_prefix: textNullable(),
   honorific_suffix: textNullable(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to store information about individuals as persons. Each person has a unique ID associated with them.",
+  },
 });
 
 /**
@@ -161,8 +211,13 @@ export const partyRelation = gm.autoIncPkTable("party_relation", {
   party_id: party.references.party_id(),
   related_party_id: party.references.party_id(),
   relation_type_id: partyRelationType.references.code(),
-  party_role_id: partyRole.references.code().optional(),
+  party_role_id: partyRole.references.party_role_id().optional(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to define relationships between parties. Each party relation has a unique ID associated with it.",
+  },
 });
 
 export const organization = gm.autoIncPkTable("organization", {
@@ -172,6 +227,11 @@ export const organization = gm.autoIncPkTable("organization", {
   license: text(),
   registration_date: date(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to store information about organizations. Each organization has a unique ID associated with it.",
+  },
 });
 
 export const organizationRole = gm.autoIncPkTable("organization_role", {
@@ -181,19 +241,29 @@ export const organizationRole = gm.autoIncPkTable("organization_role", {
   organization_role_type_id: organizationRoleType.references
     .organization_role_type_id(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to associate individuals with roles in organizations. Each organization role has a unique ID associated with it.",
+  },
 });
 
 export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
   contact_electronic_id: autoIncPK(),
-  contact_type_id: contactType.references.code(),
+  contact_type_id: contactType.references.contact_type_id(),
   party_id: party.references.party_id(),
   electronics_details: text(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to store electronic contact information associated with parties. Each electronic contact has a unique ID associated with it.",
+  },
 });
 
 export const contactLand = gm.autoIncPkTable("contact_land", {
   contact_land_id: autoIncPK(),
-  contact_type_id: contactType.references.code(),
+  contact_type_id: contactType.references.contact_type_id(),
   party_id: party.references.party_id(),
   address_line1: text(),
   address_line2: text(),
@@ -202,6 +272,11 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
   address_state: text(),
   address_country: text(),
   ...gm.housekeeping.columns,
+}, {
+  qualitySystem: {
+    description:
+      "Entity to store land-based contact information associated with parties. Each land contact has a unique ID associated with it.",
+  },
 });
 
 /**
@@ -228,6 +303,9 @@ export const allContentTables: SQLa.TableDefinition<
   typ.TypicalDomainQS
 >[] = [
   organizationRoleType,
+  partyRole,
+  partyIdentifierType,
+  contactType,
   party,
   partyIdentifier,
   person,
@@ -236,9 +314,10 @@ export const allContentTables: SQLa.TableDefinition<
   organizationRole,
   contactElectronic,
   contactLand,
+  personType,
 ];
 
-const vendorView = SQLa.safeViewDefinition(
+export const vendorView = SQLa.safeViewDefinition(
   "vendor_view",
   {
     name: text(),
@@ -259,8 +338,8 @@ const vendorView = SQLa.safeViewDefinition(
   l.address_country as country
   FROM party_relation prl
   INNER JOIN party pr ON pr.party_id = prl.party_id
-  INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'
-  INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
+  INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_EMAIL')
+  INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_ADDRESS')
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
 
 export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
@@ -279,6 +358,7 @@ export function sqlDDL() {
 
     -- content tables
     ${allContentTables}
+
 
     --content views
     ${allContentViews}

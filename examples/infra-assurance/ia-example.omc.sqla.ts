@@ -49,7 +49,10 @@ export type Person =
     PersonGM,
     "person_first_name" | "person_last_name"
   >
-  & Partial<Pick<PersonGM, "person_type_id">>
+  // & Partial<Pick<PersonGM, "person_type_id">>
+  & {
+    person_type_id?: emit.SqlTextSupplier<emit.SqlEmitContext>;
+  }
   & Pick<
     ContactLandGM,
     | "address_line1"
@@ -185,6 +188,7 @@ type OrganizationRole = OrganizationType & {
   person_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
   organization_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
   organization_role_type_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
+  party_role_id?: emit.SqlTextSupplier<emit.SqlEmitContext>;
 };
 type PartyRelation = PartyRole & OrganizationRole & {
   party_id: emit.SqlTextSupplier<emit.SqlEmitContext>;
@@ -199,24 +203,31 @@ const person = {
       party_type_id: "PERSON",
     });
     const partyIdSS = udm.party.select(partyDML.insertable);
+    const personTypeId = person.person_type_id
+      ? person.person_type_id
+      : "INDIVIDUAL";
     const personDML = udm.person.insertDML({
       party_id: udm.party.select(partyDML.insertable),
       person_first_name: person.person_first_name,
       person_last_name: person.person_last_name,
-      person_type_id: person.person_type_id
-        ? person.person_type_id
-        : "INDIVIDUAL",
+      person_type_id: udm.personType.select({
+        code: personTypeId,
+      }),
     });
     const personIdSS = udm.person.select(personDML.insertable);
     const contactElectronicDML = {
       email: udm.contactElectronic.insertDML({
         party_id: udm.party.select(partyDML.insertable),
-        contact_type_id: "OFFICIAL_EMAIL",
+        contact_type_id: udm.contactType.select({
+          code: "OFFICIAL_EMAIL",
+        }),
         electronics_details: person.email_address,
       }),
       phoneNumber: udm.contactElectronic.insertDML({
         party_id: udm.party.select(partyDML.insertable),
-        contact_type_id: "MOBILE_PHONE_NUMBER",
+        contact_type_id: udm.contactType.select({
+          code: "MOBILE_PHONE_NUMBER",
+        }),
         electronics_details: person.phone_number,
       }),
       ALL: () =>
@@ -227,7 +238,9 @@ const person = {
     };
     const contactLandDML = udm.contactLand.insertDML({
       party_id: udm.party.select(partyDML.insertable),
-      contact_type_id: "OFFICIAL_ADDRESS",
+      contact_type_id: udm.contactType.select({
+        code: "OFFICIAL_ADDRESS",
+      }),
       address_line1: person.address_line1,
       address_line2: person.address_line2 ? person.address_line2 : "",
       address_city: person.address_city,
@@ -297,12 +310,16 @@ const organization = {
     const contactElectronicDML = {
       email: udm.contactElectronic.insertDML({
         party_id: udm.party.select(partyDML.insertable),
-        contact_type_id: "OFFICIAL_EMAIL",
+        contact_type_id: udm.contactType.select({
+          code: "OFFICIAL_EMAIL",
+        }),
         electronics_details: organization.email_address,
       }),
       phoneNumber: udm.contactElectronic.insertDML({
         party_id: udm.party.select(partyDML.insertable),
-        contact_type_id: "LAND_PHONE_NUMBER",
+        contact_type_id: udm.contactType.select({
+          code: "LAND_PHONE_NUMBER",
+        }),
         electronics_details: organization.phone_number,
       }),
       ALL: () =>
@@ -313,7 +330,9 @@ const organization = {
     };
     const contactLandDML = udm.contactLand.insertDML({
       party_id: udm.party.select(partyDML.insertable),
-      contact_type_id: "OFFICIAL_ADDRESS",
+      contact_type_id: udm.contactType.select({
+        code: "OFFICIAL_ADDRESS",
+      }),
       address_line1: organization.address_line1,
       address_line2: organization.address_line2
         ? organization.address_line2
@@ -352,13 +371,16 @@ const personToOrganizationRelation = {
   insertDML: (
     partyRelation: PartyRelation,
   ) => {
+    const partyRoleId = partyRelation.party_role_id
+      ? partyRelation.party_role_id
+      : "VENDOR";
     const partyRelationDML = udm.partyRelation.insertDML({
       party_id: partyRelation.party_id,
       related_party_id: partyRelation.related_party_id,
       relation_type_id: "ORGANIZATION_TO_PERSON",
-      party_role_id: partyRelation.party_role_id
-        ? partyRelation.party_role_id
-        : "VENDOR",
+      party_role_id: udm.partyRole.select({
+        code: partyRoleId,
+      }),
     });
     const oraganizationRoleDML = udm.organizationRole.insertDML({
       person_id: partyRelation.person_id,
@@ -374,12 +396,6 @@ const personToOrganizationRelation = {
     };
   },
 };
-
-const organizationRoleTypeInsertion = udm.organizationRoleType
-  .insertDML({
-    code: "LEAD_SOFTWARE_ENGINEER",
-    value: "Lead Software Engineer",
-  });
 
 const organizationRoleTypeCode = udm.organizationRoleType.select({
   code: "LEAD_SOFTWARE_ENGINEER",
@@ -500,8 +516,7 @@ const personDetailsSkill = {
     ${personDetailsSkill.oracle}
     ${personDetailsSkill.java}
     ${personDetailsSkill.jQuery}
-    ${personDetailsSkill.osQuery}
-    ${organizationRoleTypeInsertion}`,
+    ${personDetailsSkill.osQuery}`,
 };
 
 const organizationToPersonAllRelations = {
