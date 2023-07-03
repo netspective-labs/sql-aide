@@ -20,33 +20,40 @@ export default defineConfig({
         { label: "Installation", link: "/installation" },
         {
           label: "Getting Started",
-          autogenerate: { directory: "getting-started" },
+          collapsed: true,
+          autogenerate: { directory: "getting-started", collapsed: true },
         },
         {
           label: "Data Compute Platform",
-          autogenerate: { directory: "dcp" },
+          collapsed: true,
+          autogenerate: { directory: "dcp", collapsed: true },
         },
         {
           label: "Architecture",
-          autogenerate: { directory: "architecture" },
+          collapsed: true,
+          autogenerate: { directory: "architecture", collapsed: true },
         },
         {
           label: "Domains",
-          autogenerate: { directory: "domains" },
+          collapsed: true,
+          autogenerate: { directory: "domains", collapsed: true },
         },
         {
           label: "Entities",
-          autogenerate: { directory: "entities" },
-        },
-        {
-          label: "Contributors",
-          autogenerate: { directory: "contributors" },
+          collapsed: true,
+          autogenerate: { directory: "entities", collapsed: true },
         },
         {
           label: "SQL Templates",
-          autogenerate: { directory: "emit" },
+          collapsed: true,
+          autogenerate: { directory: "emit", collapsed: true },
         },
         { label: "Roadmap", link: "/roadmap" },
+        {
+          label: "Contributors",
+          collapsed: true,
+          autogenerate: { directory: "contributors", collapsed: true },
+        },
       ],
       // themeConfig: {
       //   layout: "./layout.astro",
