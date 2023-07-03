@@ -11,39 +11,69 @@ type Any = any;
 
 const { gm, gts, tcf } = udm;
 
-export const contractStatus = gm.textEnumTable(
+export const contractStatus = gm.autoIncPkTable(
   "contract_status",
-  govn.ContractStatus,
+  {
+    contract_status_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const paymentType = gm.textEnumTable(
+export const paymentType = gm.autoIncPkTable(
   "payment_type",
-  govn.PaymentType,
+  {
+    payment_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const periodicity = gm.textEnumTable(
+export const periodicity = gm.autoIncPkTable(
   "periodicity",
-  govn.Periodicity,
+  {
+    periodicity_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const boundaryNature = gm.textEnumTable(
+export const boundaryNature = gm.autoIncPkTable(
   "boundary_nature",
-  govn.BoundaryNature,
+  {
+    boundary_nature_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const timeEntryCategory = gm.textEnumTable(
+export const timeEntryCategory = gm.autoIncPkTable(
   "time_entry_category",
-  govn.TimeEntryCategory,
+  {
+    time_entry_category_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const raciMatrixSubject = gm.textEnumTable(
+export const raciMatrixSubject = gm.autoIncPkTable(
   "raci_matrix_subject",
-  govn.RaciMatrixSubject,
+  {
+    raci_matrix_subject_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -53,15 +83,25 @@ export const raciMatrixAssignmentNature = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const skillNature = gm.textEnumTable(
+export const skillNature = gm.autoIncPkTable(
   "skill_nature",
-  govn.SkillNature,
+  {
+    skill_nature_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const skill = gm.textEnumTable(
+export const skill = gm.autoIncPkTable(
   "skill",
-  govn.Skill,
+  {
+    skill_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -77,21 +117,36 @@ export const vulnerabilityStatus = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const assetStatus = gm.textEnumTable(
+export const assetStatus = gm.autoIncPkTable(
   "asset_status",
-  govn.AssetStatus,
+  {
+    asset_status_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const assetType = gm.textEnumTable(
+export const assetType = gm.autoIncPkTable(
   "asset_type",
-  govn.AssetType,
+  {
+    asset_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const assignment = gm.textEnumTable(
+export const assignment = gm.autoIncPkTable(
   "assignment",
-  govn.Assignment,
+  {
+    assignment_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -101,21 +156,36 @@ export const probability = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const threatSourceType = gm.textEnumTable(
+export const threatSourceType = gm.autoIncPkTable(
   "threat_source_type",
-  govn.ThreatSourceType,
+  {
+    threat_source_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const threatEventType = gm.textEnumTable(
+export const threatEventType = gm.autoIncPkTable(
   "threat_event_type",
-  govn.ThreatEventType,
+  {
+    threat_event_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const calendarPeriod = gm.textEnumTable(
+export const calendarPeriod = gm.autoIncPkTable(
   "calendar_period",
-  govn.CalendarPeriod,
+  {
+    calendar_period_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -137,9 +207,14 @@ export const kpiStatus = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const trackingPeriod = gm.textEnumTable(
+export const trackingPeriod = gm.autoIncPkTable(
   "tracking_period",
-  govn.TrackingPeriod,
+  {
+    tracking_period_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -155,45 +230,80 @@ export const auditorType = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const auditPurpose = gm.textEnumTable(
+export const auditPurpose = gm.autoIncPkTable(
   "audit_purpose",
-  govn.AuditPurpose,
+  {
+    audit_purpose_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const auditorStatusType = gm.textEnumTable(
+export const auditorStatusType = gm.autoIncPkTable(
   "audit_status",
-  govn.AuditorStatusType,
+  {
+    audit_status_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const trainingSubject = gm.textEnumTable(
+export const trainingSubject = gm.autoIncPkTable(
   "training_subject",
-  govn.TrainingSubject,
+  {
+    training_subject_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const statusValues = gm.textEnumTable(
+export const statusValues = gm.autoIncPkTable(
   "status_value",
-  govn.StatusValues,
+  {
+    status_value_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const ratingValue = gm.textEnumTable(
+export const ratingValue = gm.autoIncPkTable(
   "rating_value",
-  govn.RatingValue,
+  {
+    rating_value_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const contractType = gm.textEnumTable(
+export const contractType = gm.autoIncPkTable(
   "contract_type",
-  govn.ContractType,
+  {
+    contract_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const graphNature = gm.textEnumTable(
+export const graphNature = gm.autoIncPkTable(
   "graph_nature",
-  govn.GraphNature,
+  {
+    graph_nature_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -203,9 +313,14 @@ export const severity = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const assetRiskType = gm.textEnumTable(
+export const assetRiskType = gm.autoIncPkTable(
   "asset_risk_type",
-  govn.AssetRiskType,
+  {
+    asset_risk_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -215,39 +330,69 @@ export const priority = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const riskSubject = gm.textEnumTable(
+export const riskSubject = gm.autoIncPkTable(
   "risk_subject",
-  govn.RiskSubject,
+  {
+    risk_subject_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const riskType = gm.textEnumTable(
+export const riskType = gm.autoIncPkTable(
   "risk_type",
-  govn.RiskType,
+  {
+    risk_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const incidentCategory = gm.textEnumTable(
+export const incidentCategory = gm.autoIncPkTable(
   "incident_category",
-  govn.IncidentCategory,
+  {
+    incident_category_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const incidentSubCategory = gm.textEnumTable(
+export const incidentSubCategory = gm.autoIncPkTable(
   "incident_sub_category",
-  govn.IncidentSubCategory,
+  {
+    incident_sub_category_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const incidentType = gm.textEnumTable(
+export const incidentType = gm.autoIncPkTable(
   "incident_type",
-  govn.IncidentType,
+  {
+    incident_type_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
-export const incidentStatus = gm.textEnumTable(
+export const incidentStatus = gm.autoIncPkTable(
   "incident_status",
-  govn.IncidentStatus,
+  {
+    incident_status_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
   { isIdempotent: true },
 );
 
@@ -259,47 +404,18 @@ export const allReferenceTables: (
 )[] = [
   udm.execCtx,
   udm.partyType,
-  contractStatus,
-  paymentType,
-  periodicity,
-  boundaryNature,
-  timeEntryCategory,
-  raciMatrixSubject,
   raciMatrixAssignmentNature,
-  skillNature,
-  skill,
   proficiencyScale,
   vulnerabilityStatus,
-  assetStatus,
-  assetType,
-  assignment,
   probability,
-  threatSourceType,
-  threatEventType,
-  calendarPeriod,
   comparisonOperator,
   kpiMeasurementType,
   kpiStatus,
-  trackingPeriod,
   trend,
   auditorType,
-  auditPurpose,
-  auditorStatusType,
   udm.partyRelationType,
-  trainingSubject,
-  statusValues,
-  ratingValue,
-  contractType,
-  graphNature,
-  riskSubject,
-  riskType,
-  incidentCategory,
-  incidentSubCategory,
   severity,
   priority,
-  incidentType,
-  incidentStatus,
-  assetRiskType,
 ];
 
 export const graph = gm.autoIncPkTable("graph", {
@@ -877,13 +993,6 @@ export const allContentTables: SQLa.TableDefinition<
   udm.personType,
   udm.contactType,
   udm.organizationRoleType,
-  graph,
-  boundary,
-  host,
-  hostBoundary,
-  raciMatrix,
-  raciMatrixSubjectBoundary,
-  raciMatrixActivity,
   udm.party,
   udm.partyIdentifier,
   udm.person,
@@ -892,6 +1001,25 @@ export const allContentTables: SQLa.TableDefinition<
   udm.organizationRole,
   udm.contactElectronic,
   udm.contactLand,
+  contractStatus,
+  paymentType,
+  periodicity,
+  boundaryNature,
+  timeEntryCategory,
+  raciMatrixSubject,
+  skillNature,
+  skill,
+  udm.organizationRoleType,
+  graph,
+  boundary,
+  host,
+  hostBoundary,
+  assetStatus,
+  assetType,
+  assignment,
+  raciMatrix,
+  raciMatrixSubjectBoundary,
+  raciMatrixActivity,
   asset,
   vulnerabilitySource,
   vulnerability,
@@ -910,6 +1038,10 @@ export const allContentTables: SQLa.TableDefinition<
   awarenessTraining,
   rating,
   notes,
+  threatSourceType,
+  threatEventType,
+  calendarPeriod,
+  trackingPeriod,
   auditAssertion,
   contract,
   riskRegister,
@@ -924,7 +1056,538 @@ export const allContentTables: SQLa.TableDefinition<
   assertion,
   attestation,
   attestationEvidence,
+  trainingSubject,
+  statusValues,
+  ratingValue,
+  contractType,
+  graphNature,
+  riskSubject,
+  riskType,
+  incidentCategory,
+  incidentSubCategory,
+  incidentType,
+  incidentStatus,
+  assetRiskType,
+  auditPurpose,
+  auditorStatusType,
 ];
+
+const partyRoleInsertion = udm
+  .partyRole.insertDML([{
+    code: "CUSTOMER",
+    value: "Customer",
+  }, {
+    code: "VENDOR",
+    value: "Vendor",
+  }]);
+
+const partyIdentifierTypeInsertion = udm
+  .partyIdentifierType.insertDML([{
+    code: "UUID",
+    value: "UUID",
+  }, {
+    code: "DRIVING_LICENSE",
+    value: "Driving License",
+  }, {
+    code: "PASSPORT",
+    value: "Passport",
+  }]);
+
+const personTypeInsertion = udm
+  .personType.insertDML([{
+    code: "INDIVIDUAL",
+    value: "Individual",
+  }, {
+    code: "PROFESSIONAL",
+    value: "Professional",
+  }]);
+
+const contactTypeInsertion = udm
+  .contactType.insertDML([{
+    code: "HOME_ADDRESS",
+    value: "Home Address",
+  }, {
+    code: "OFFICIAL_ADDRESS",
+    value: "Official Address",
+  }, {
+    code: "MOBILE_PHONE_NUMBER",
+    value: "Mobile Phone Number",
+  }, {
+    code: "LAND_PHONE_NUMBER",
+    value: "Land Phone Number",
+  }, {
+    code: "OFFICIAL_EMAIL",
+    value: "Official Email",
+  }, {
+    code: "PERSONAL_EMAIL",
+    value: "Personal Email",
+  }]);
+
+const organizationRoleTypeInsertion = udm
+  .organizationRoleType.insertDML([{
+    code: "PROJECT_MANAGER_TECHNOLOGY",
+    value: "Project Manager Technology",
+  }, {
+    code: "PROJECT_MANAGER_QUALITY",
+    value: "Project Manager Quality",
+  }, {
+    code: "PROJECT_MANAGER_DEVOPS",
+    value: "Project Manager DevOps",
+  }, {
+    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
+    value: "Associated Manager Technology",
+  }, {
+    code: "ASSOCIATE_MANAGER_QUALITY",
+    value: "Associate Manager Quality",
+  }, {
+    code: "ASSOCIATE_MANAGER_DEVOPS",
+    value: "Associate Manager DevOps",
+  }, {
+    code: "SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT",
+    value: "Senior Lead Software Engineer Architect",
+  }, {
+    code: "LEAD_SOFTWARE_ENGINEER_ARCHITECT",
+    value: "Lead Software Engineer Architect",
+  }, {
+    code: "SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER",
+    value: "Senior Lead Software DevOps Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_ENGINEER",
+    value: "Lead Software Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_QUALITY_ENGINEER",
+    value: "Lead Software Quality Engineer",
+  }, {
+    code: "LEAD_SOFTWARE_DEVOPS_ENGINEER",
+    value: "Lead Software DevOps Engineer",
+  }, {
+    code: "LEAD_SYSTEM_NETWORK_ENGINEER",
+    value: "Lead System Network Engineer",
+  }, {
+    code: "SENIOR_SOFTWARE_ENGINEER",
+    value: "Senior Software Engineer",
+  }, {
+    code: "SENIOR_SOFTWARE_QUALITY_ENGINEER",
+    value: "Senior Software Quality Engineer",
+  }, {
+    code: "SOFTWARE_QUALITY_ENGINEER",
+    value: "Software Quality Engineer",
+  }, {
+    code: "SECURITY_ENGINEER",
+    value: "Security Engineer",
+  }]);
+
+const contractStatusInsertion = contractStatus.insertDML([
+  { code: "ACTIVE", value: "Active" },
+  { code: "AWAITING_APPROVAL", value: "Awaiting Approval" },
+  {
+    code: "AWAITING_APPROVAL_FOR_RENEWAL",
+    value: "Awaiting Approval For Renewal",
+  },
+  { code: "CANCELED", value: "Canceled" },
+  { code: "DENIED", value: "Denied" },
+  { code: "FINISHED", value: "Finished" },
+  { code: "IN_PREPARATION", value: "In Preparation" },
+  { code: "QUOTE_REQUESTED", value: "Quote Requested" },
+  { code: "QUOTED", value: "Quoted" },
+  { code: "STANDARD_CONTRACT", value: "Standard Contract" },
+  { code: "SUSPENDED", value: "Suspended" },
+  { code: "VALIDATED", value: "Validated" },
+]);
+
+const periodicityInsertion = periodicity.insertDML([
+  { code: "ANNUAL", value: "Annual" },
+  { code: "BI_MONTHLY", value: "Bi Monthly" },
+  { code: "BI_WEEKLY", value: "Bi Weekly" },
+  { code: "DAILY", value: "Daily" },
+  { code: "MONTHLY", value: "Monthly" },
+  { code: "OTHER", value: "Other" },
+  { code: "QUARTERLY", value: "Quarterly" },
+  { code: "SEMI_ANNUAL", value: "Semi Annual" },
+  { code: "SEMI_MONTHLY", value: "Semi Monthly" },
+  { code: "WEEKLY", value: "Weekly" },
+]);
+
+const paymentTypeInsertion = paymentType.insertDML([
+  { code: "BOTH", value: "Both" },
+  { code: "LOANS", value: "Loans" },
+  { code: "NONE", value: "None" },
+  { code: "RENTS", value: "Rents" },
+]);
+
+const boundaryNatureInsertion = boundaryNature.insertDML([
+  { code: "REGULATORY_TAX_ID", value: "Regulatory Tax ID" },
+]);
+
+const timeEntryCategoryInsertion = timeEntryCategory.insertDML([
+  { code: "MISC_MEETINGS", value: "Misc Meetings" },
+  { code: "MISC_OTHER", value: "Misc Other" },
+  { code: "MISC_VACATION", value: "Misc Vacation" },
+  { code: "MISC_WORK_ITEM", value: "Misc Work Item" },
+  { code: "PACKAGE", value: "Package" },
+  { code: "PROJECT", value: "Project" },
+  { code: "REQUEST", value: "Request" },
+  { code: "TASK", value: "Task" },
+]);
+
+const raciMatrixSubjectInsertion = raciMatrixSubject.insertDML([
+  { code: "PROJECT_LEADERSHIP", value: "Project Leadership" },
+  { code: "PROJECT_MANAGEMENT", value: "Project Management" },
+  { code: "APPLICATION_DEVELOPMENT", value: "Application Development" },
+  { code: "DEV_OPERATIONS", value: "Dev Operations" },
+  { code: "QUALITY_ASSURANCE", value: "Quality Assurance" },
+  { code: "SEARCH_ENGINE_OPTIMIZATION", value: "Search Engine Optimization" },
+  { code: "USER_INTERFASE_USABILITY", value: "User Interfase And Usability" },
+  { code: "BUSINESS_ANALYST", value: "Business Analyst (Abm)" },
+  { code: "CURATION_COORDINATION", value: "Curation Coordination" },
+  { code: "KNOWLEDGE_REPRESENTATION", value: "Knowledge Representation" },
+  { code: "MARKETING_OUTREACH", value: "Marketing Outreach" },
+  { code: "CURATION_WORKS", value: "Curation Works" },
+]);
+
+const skillNatureInsertion = skillNature.insertDML([
+  { code: "SOFTWARE", value: "Software" },
+  { code: "HARDWARE", value: "Hardware" },
+]);
+
+const skillInsertion = skill.insertDML([
+  { code: "ANGULAR", value: "Angular" },
+  { code: "DENO", value: "Deno" },
+  { code: "TYPESCRIPT", value: "Typescript" },
+  { code: "POSTGRESQL", value: "PostgreSQL" },
+  { code: "MYSQL", value: "MySQL" },
+  { code: "HUGO", value: "Hugo" },
+  { code: "PHP", value: "PHP" },
+  { code: "JAVASCRIPT", value: "JavaScript" },
+  { code: "PYTHON", value: "Python" },
+  { code: "DOT_NET", value: ".NET" },
+  { code: "ORACLE", value: "Oracle" },
+  { code: "JAVA", value: "Java" },
+  { code: "JQUERY", value: "jQuery" },
+  { code: "OSQUERY", value: "Osquery" },
+  { code: "REACTJS", value: "ReactJs" },
+]);
+
+const assetStatusInsertion = assetStatus.insertDML([
+  { code: "AWAITING_RECEIPT", value: "Awaiting Receipt" },
+  { code: "IN_STOCK", value: "In Stock" },
+  { code: "IN_USE", value: "In Use" },
+  { code: "MISSING", value: "Missing" },
+  { code: "RETIRED", value: "Retired" },
+  { code: "RETURNED_FOR_MAINTENANCE", value: "Returned For Maintenance" },
+  { code: "RETURNED_TO_SUPPLIER", value: "Returned To Supplier" },
+  { code: "UNDEFINED", value: "Undefined" },
+]);
+
+const assetTypeInsertion = assetType.insertDML([
+  { code: "ACCOUNT", value: "Account" },
+  { code: "BUSINESS_SERVICE", value: "Business Service" },
+  { code: "CABLE", value: "Cable" },
+  { code: "CABLE_DEVICE", value: "Cable Device" },
+  { code: "COLLECTIVE_EQUIPMENT", value: "Collective Equipment" },
+  { code: "COMPUTER", value: "Computer" },
+  { code: "CPU", value: "Cpu" },
+  { code: "DOMAIN", value: "Domain" },
+  { code: "SERVER", value: "Server" },
+  { code: "EXTENSION_CARD", value: "Extension Card" },
+  { code: "GLOBAL_SOFTWARE_LICENSE", value: "Global Software License" },
+  { code: "LAPTOP", value: "Laptop" },
+  { code: "LASER_PRINTER", value: "Laser Printer" },
+  { code: "LICENSE_CONTRACT", value: "License Contract" },
+  { code: "MAINTENANCE_CONTRACT", value: "Maintenance Contract" },
+  { code: "MASS_STORAGE", value: "Mass Storage" },
+  { code: "MOBILE_DEVICE", value: "Mobile Device" },
+  { code: "MONITOR", value: "Monitor" },
+  { code: "NETWORK_HARDWARE", value: "Network Hardware" },
+  { code: "NETWORK_INTERFACE", value: "Network Interface" },
+  { code: "OEM_SOFTWARE_LICENSE", value: "Oem Software License" },
+  { code: "PRINTER", value: "Printer" },
+  { code: "RACKMOUNT_MONITOR", value: "Rackmount Monitor" },
+  { code: "SCANNER", value: "Scanner" },
+  {
+    code: "SOFTWARE_ACCESS_AUTHORIZATION",
+    value: "Software Access Authorization",
+  },
+  { code: "SOFTWARE_ACCESS_REMOVAL", value: "Software Access Removal" },
+  { code: "SOFTWARE_ADD_WORK_ORDER", value: "Software Add Work Order" },
+  { code: "SOFTWARE_INSTALLATION", value: "Software Installation" },
+  { code: "SOFTWARE_LICENSE", value: "Software License" },
+  { code: "SOFTWARE_REMOVAL_WORK_ORDER", value: "Software Removal Work Order" },
+  { code: "STANDARD_ASSET", value: "Standard Asset" },
+  { code: "TELECOMMUNICATION_EQUIPMENT", value: "Telecommunication Equipment" },
+  { code: "TELEPHONE", value: "Telephone" },
+  { code: "VIRTUAL_MACHINE", value: "Virtual Machine" },
+  { code: "SECURITY_POLICY", value: "Security Policy" },
+  { code: "EMPLOYEE_DATA", value: "Employee Data" },
+  { code: "API", value: "Api" },
+  { code: "FIREWALL", value: "Firewall" },
+]);
+
+const assignmentInsertion = assignment.insertDML([
+  { code: "AWAITING_RECEIPT", value: "Awaiting receipt" },
+  { code: "IN_STOCK", value: "In Stock" },
+  { code: "IN_USE", value: "In Use" },
+  { code: "MISSING", value: "Missing" },
+  { code: "RETURNED_FOR_MAINTENANCE", value: "Returned For Maintenance" },
+  { code: "RETURNED_TO_SUPPLIER", value: "Returned To Supplier" },
+]);
+
+const threatSourceTypeInsertion = threatSourceType.insertDML([
+  { code: "PHISHING", value: "Phishing" },
+  { code: "SPAM", value: "Spam" },
+  {
+    code: "SPYWARE_AND_MALWARE_FOR_EXTORTION",
+    value: "Spyware and malware for extortion",
+  },
+  {
+    code: "THEFT_OF_PRIVATE_INFORMATION",
+    value: "Theft of private information",
+  },
+  { code: "ONLINE_SCAMS", value: "Online scams" },
+  {
+    code: "DESTROY_OR_ABUSE_CRITICAL_INFRASTRUCTURE",
+    value: "Destroy or abuse critical infrastructure",
+  },
+  { code: "THREATEN_NATIONAL_SECURITY", value: "Threaten national security" },
+  { code: "DISRUPT_ECONOMIES", value: "Disrupt economies" },
+  {
+    code: "CAUSE_BODILY_HARM_TO_CITIZENS",
+    value: "Cause bodily harm to citizens",
+  },
+  { code: "DENIAL_OF_SERVICE_ATTACKS", value: "Denial-of-Service Attacks" },
+  { code: "DOXING", value: "Doxing" },
+  { code: "LEAKING_INFORMATION", value: "Leaking Information" },
+  {
+    code: "THE_USE_OF_THE_SOFTWARE_RECAP",
+    value: "The Use of the Software RECAP",
+  },
+  { code: "BLOGGING_ANONYMOUSLY", value: "Blogging Anonymously" },
+  { code: "GEO_BOMBING", value: "Geo-bombing" },
+  { code: "WEBSITE_MIRRORING", value: "Website Mirroring" },
+  {
+    code: "CHANGING_THE_CODE_FOR_WEBSITES_OR_WEBSITE_DEFACEMENTS",
+    value: "Changing the Code for Websites or website defacements",
+  },
+]);
+
+const threatEventTypeInsertion = threatEventType.insertDML([
+  { code: "VIRUSES", value: "Viruses" },
+  { code: "WORMS", value: "Worms" },
+  { code: "TROJANS", value: "Trojans" },
+  { code: "RANSOMWARE", value: "Ransomware" },
+  { code: "CRYPTOJACKING", value: "Cryptojacking" },
+  { code: "SPYWARE", value: "Spyware" },
+  { code: "ADWARE", value: "Adware" },
+  { code: "FILELESS_MALWARE", value: "Fileless malware" },
+  { code: "ROOTKITS", value: "Rootkits" },
+  { code: "BAITING", value: "Baiting" },
+  { code: "PRETEXTING", value: "Pretexting" },
+  { code: "PHISHING", value: "Phishing" },
+  { code: "VISHING", value: "Vishing" },
+  { code: "SMISHING", value: "Smishing" },
+  { code: "PIGGYBACKING", value: "Piggybacking" },
+  { code: "TAILGATING", value: "Tailgating" },
+  { code: "EMAIL_HIJACKING", value: "Email Hijacking" },
+  { code: "DNS_SPOOFING", value: "DNS spoofing" },
+  { code: "IP_SPOOFING", value: "IP spoofing" },
+  { code: "HTTPS_SPOOFING", value: "HTTPS spoofing" },
+  { code: "HTTP_FLOOD_DDOS", value: "HTTP flood DDoS" },
+  { code: "SYN_FLOOD_DDOS", value: "SYN flood DDoS" },
+  { code: "UDP_FLOOD_DDOS", value: "UDP flood DDoS" },
+  { code: "ICMP_FLOOD", value: "ICMP flood" },
+  { code: "NTP_AMPLIFICATION", value: "NTP amplification" },
+  { code: "SQL_INJECTION", value: "SQL injection" },
+  { code: "CODE_INJECTION", value: "Code injection" },
+  { code: "OS_COMMAND_INJECTION", value: "OS Command Injection" },
+  { code: "LDAP_INJECTION", value: "LDAP injection" },
+  {
+    code: "XML_EXTERNAL_ENTITIES_INJECTION",
+    value: "XML eXternal Entities (XXE) Injection",
+  },
+  { code: "CROSS_SITE_SCRIPTING", value: "Cross Site Scripting (XSS)" },
+  { code: "BROKEN_ACCESS_CONTROL", value: "Broken Access Control" },
+  { code: "CRYPTOGRAPHIC_FAILURES", value: "Cryptographic Failures" },
+  { code: "INSECURE_DESIGN", value: "Insecure Design" },
+  { code: "SECURITY_MISCONFIGURATION", value: "Security Misconfiguration" },
+  {
+    code: "VULNERABLE_AND_OUTDATED_COMPONENTS",
+    value: "Vulnerable and Outdated Components",
+  },
+  {
+    code: "IDENTIFICATION_AND_AUTHENTICATION_FAILURES",
+    value: "Identification and Authentication Failures",
+  },
+  {
+    code: "SOFTWARE_AND_DATA_INTEGRITY_FAILURES",
+    value: "Software and Data Integrity Failures",
+  },
+  {
+    code: "SECURITY_LOGGING_AND_MONITORING_FAILURES",
+    value: "Security Logging and Monitoring Failures",
+  },
+  { code: "SERVER_SIDE_REQUEST_FORGERY", value: "Server Side Request Forgery" },
+]);
+
+const calendarPeriodInsertion = calendarPeriod.insertDML([
+  { code: "TWENTY_FOUR_HOURS_SEVEN_DAYS", value: "24x7" },
+  { code: "BUSINESS_HOURS", value: "Business hours" },
+  { code: "NON_BUSINESS_HOURS", value: "Non-business hours" },
+]);
+
+const trackingPeriodInsertion = trackingPeriod.insertDML([
+  { code: "DAY", value: "Day" },
+  { code: "HOUR", value: "Hour" },
+  { code: "MONTH", value: "Month" },
+  { code: "OTHER", value: "Other" },
+  { code: "QUARTER", value: "Quarter" },
+  { code: "WEEK", value: "Week" },
+  { code: "YEAR", value: "Year" },
+]);
+
+const auditPurposeInsertion = auditPurpose.insertDML([
+  { code: "MEANING_DRY_RUN", value: "exmeaning dry runternal" },
+  { code: "OFFICIAL", value: "official" },
+]);
+
+const auditorStatusTypeInsertion = auditorStatusType.insertDML([
+  { code: "OUTSTANDING", value: "Outstanding" },
+  { code: "FULFILLED", value: "Fulfilled" },
+  { code: "REJECTED", value: "Rejected" },
+  { code: "ACCEPTED", value: "Accepted" },
+]);
+
+const trainingSubjectInsertion = trainingSubject.insertDML([
+  { code: "HIPAA", value: "HIPAA" },
+  { code: "CYBER_SECURITY", value: "Cyber Security" },
+  {
+    code: "OBSERVABILITY_OPEN_TELEMETRY",
+    value: "Observability Open Telemetry",
+  },
+  { code: "BEST_PRACTICES_OF_AGILE", value: "Practices of Agile Workflow" },
+]);
+
+const statusValuesInsertion = statusValues.insertDML([
+  { code: "YES", value: "Yes" },
+  { code: "NO", value: "No" },
+]);
+
+const ratingValueInsertion = ratingValue.insertDML([
+  { code: "ONE", value: "1" },
+  { code: "TWO", value: "2" },
+  { code: "THREE", value: "3" },
+  { code: "FOUR", value: "4" },
+  { code: "FIVE", value: "5" },
+]);
+
+const contractTypeInsertion = contractType.insertDML([
+  {
+    code: "GENERAL_CONTRACT_FOR_SERVICES",
+    value: "General Contract for Services",
+  },
+  { code: "EMPLOYMENT_AGREEMENT", value: "Employment Agreement" },
+  { code: "NONCOMPETE_AGREEMENT", value: "Noncompete Agreement" },
+  { code: "VENDOR_SLA", value: "Vendor SLA" },
+  { code: "VENDOR_NDA", value: "Vendor NDA" },
+]);
+
+const graphNatureInsertion = graphNature.insertDML([
+  { code: "SERVICE", value: "Service" },
+  { code: "APP", value: "Application" },
+]);
+
+const assetRiskTypeInsertion = assetRiskType.insertDML([
+  { code: "SECURITY", value: "Security" },
+]);
+
+const riskSubjectInsertion = riskSubject.insertDML([
+  { code: "TECHNICAL_RISK", value: "Technical Risk" },
+]);
+
+const riskTypeInsertion = riskType.insertDML([
+  { code: "BUDGET", value: "Budget" },
+  { code: "QUALITY", value: "Quality" },
+  { code: "SCHEDULE", value: "Schedule" },
+  { code: "SCHEDULE_AND_BUDGET", value: "Schedule And Budget" },
+]);
+
+const incidentCategoryInsertion = incidentCategory.insertDML([
+  { code: "ACCESS", value: "Access" },
+  { code: "DATA", value: "Data" },
+  { code: "FACILITIES", value: "Facilities" },
+  { code: "FAILURE", value: "Failure" },
+  { code: "GENERAL_INFORMATION", value: "General Information" },
+  { code: "HARDWARE", value: "Hardware" },
+  { code: "HOW_TO", value: "How To" },
+  { code: "OTHER", value: "Other" },
+  { code: "PERFORMANCE", value: "Performance" },
+  { code: "SECURITY", value: "Security" },
+  { code: "SERVICE_DELIVERY", value: "Service Delivery" },
+  { code: "SERVICE_PORTFOLIO", value: "Service Portfolio" },
+  { code: "STATUS", value: "Status" },
+  { code: "SUPPORT", value: "Support" },
+  { code: "THRIFTY", value: "Thrifty" },
+]);
+
+const incidentSubCategoryInsertion = incidentSubCategory.insertDML([
+  { code: "AUTHORIZATION_ERROR", value: "Authorization Error" },
+  { code: "AVAILABILITY", value: "Availability" },
+  { code: "DATA_OR_FILE_CORRUPTED", value: "Data Or File Corrupted" },
+  { code: "DATA_OR_FILE_INCORRECT", value: "Data Or File Incorrect" },
+  { code: "DATA_OR_FILE_MISSING", value: "Data Or File Missing" },
+  { code: "ERROR_MESSAGE", value: "Error Message" },
+  {
+    code: "FUNCTION_OR_FEATURE_NOT_WORKING",
+    value: "Function Or Feature Not Working",
+  },
+  { code: "FUNCTIONALITY", value: "Functionality" },
+  { code: "GENERAL_INFORMATION", value: "General Information" },
+  { code: "HARDWARE_FAILURE", value: "Hardware Failure" },
+  { code: "HOW_TO", value: "How To" },
+  { code: "INCIDENT_RESOLUTION_QUALITY", value: "Incident Resolution Quality" },
+  { code: "INCIDENT_RESOLUTION_TIME", value: "Incident Resolution Time" },
+  { code: "JOB_FAILED", value: "Job Failed" },
+  { code: "LOGIN_FAILURE", value: "Login Failure" },
+  { code: "MISSING_OR_STOLEN", value: "Missing Or Stolen" },
+  { code: "NEW_SERVICE", value: "New Service" },
+  { code: "PERFORMANCE", value: "Performance" },
+  { code: "PERFORMANCE_DEGRADATION", value: "Performance Degradation" },
+  { code: "PERSON", value: "Person" },
+  { code: "SECURITY_BREACH", value: "Security Breach" },
+  { code: "SECURITY_EVENT", value: "Security Event/Message" },
+  { code: "STATUS", value: "Status" },
+  { code: "STORAGE_LIMIT_EXCEEDED", value: "Storage Limit Exceeded" },
+  { code: "SYSTEM_DOWN", value: "System Down" },
+  { code: "SYSTEM_OR_APPLICATION_HANGS", value: "System Or Application Hangs" },
+  { code: "UPGRADE_NEW_RELEASE", value: "Upgrade/New Release" },
+  { code: "VIRUS_ALERT", value: "Virus Alert" },
+]);
+
+const incidentTypeInsertion = incidentType.insertDML([
+  { code: "COMPLAINT", value: "Complaint" },
+  { code: "INCIDENT", value: "Incident" },
+  { code: "REQUEST_FOR_INFORMATION", value: "Request For Information" },
+]);
+
+const incidentStatusInsertion = incidentStatus.insertDML([
+  { code: "ACCEPTED", value: "Accepted" },
+  { code: "ASSIGNED", value: "Assigned" },
+  { code: "CANCELLED", value: "Cancelled" },
+  { code: "CATEGORIZE", value: "Categorize" },
+  { code: "CLOSED", value: "Closed" },
+  { code: "OPEN", value: "Open" },
+  { code: "PENDING_CHANGE", value: "Pending Change" },
+  { code: "PENDING_CUSTOMER", value: "Pending Customer" },
+  { code: "PENDING_EVIDENCE", value: "Pending Evidence" },
+  { code: "PENDING_OTHER", value: "Pending Other" },
+  { code: "PENDING_VENDOR", value: "Pending Vendor" },
+  { code: "REFERRED", value: "Referred" },
+  { code: "REJECTED", value: "Rejected" },
+  { code: "REOPENED", value: "Reopened" },
+  { code: "REPLACED_PROBLEM", value: "Replaced Problem" },
+  { code: "RESOLVED", value: "Resolved" },
+  { code: "SUSPENDED", value: "Suspended" },
+  { code: "WORK_IN_PROGRESS", value: "Work In Progress" },
+]);
 
 const securityResponseTeamView = SQLa.safeViewDefinition(
   "security_incident_response_team_view",
@@ -942,7 +1605,7 @@ const securityResponseTeamView = SQLa.safeViewDefinition(
   INNER JOIN organization_role orl ON orl.person_id = sirt.person_id AND orl.organization_id = sirt.organization_id
   INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
   INNER JOIN party pr ON pr.party_id = p.party_id
-  INNER JOIN contact_electronic e ON e.party_id=pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'`;
+  INNER JOIN contact_electronic e ON e.party_id=pr.party_id AND e.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_EMAIL')`;
 
 const awarenessTrainingView = SQLa.safeViewDefinition(
   "awareness_training_view",
@@ -1237,114 +1900,9 @@ const vendorView = SQLa.safeViewDefinition(
   l.address_country as country
   FROM party_relation prl
   INNER JOIN party pr ON pr.party_id = prl.party_id
-  INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = 'OFFICIAL_EMAIL'
-  INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = 'OFFICIAL_ADDRESS'
+  INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_EMAIL')
+  INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_ADDRESS')
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
-
-const partyRoleInsertion = udm
-  .partyRole.insertDML([{
-    code: "CUSTOMER",
-    value: "Customer",
-  }, {
-    code: "VENDOR",
-    value: "Vendor",
-  }]);
-
-const partyIdentifierTypeInsertion = udm
-  .partyIdentifierType.insertDML([{
-    code: "UUID",
-    value: "UUID",
-  }, {
-    code: "DRIVING_LICENSE",
-    value: "Driving License",
-  }, {
-    code: "PASSPORT",
-    value: "Passport",
-  }]);
-
-const personTypeInsertion = udm
-  .personType.insertDML([{
-    code: "INDIVIDUAL",
-    value: "Individual",
-  }, {
-    code: "PROFESSIONAL",
-    value: "Professional",
-  }]);
-
-const contactTypeInsertion = udm
-  .contactType.insertDML([{
-    code: "HOME_ADDRESS",
-    value: "Home Address",
-  }, {
-    code: "OFFICIAL_ADDRESS",
-    value: "Official Address",
-  }, {
-    code: "MOBILE_PHONE_NUMBER",
-    value: "Mobile Phone Number",
-  }, {
-    code: "LAND_PHONE_NUMBER",
-    value: "Land Phone Number",
-  }, {
-    code: "OFFICIAL_EMAIL",
-    value: "Official Email",
-  }, {
-    code: "PERSONAL_EMAIL",
-    value: "Personal Email",
-  }]);
-
-const organizationRoleTypeInsertion = udm
-  .organizationRoleType.insertDML([{
-    code: "PROJECT_MANAGER_TECHNOLOGY",
-    value: "Project Manager Technology",
-  }, {
-    code: "PROJECT_MANAGER_QUALITY",
-    value: "Project Manager Quality",
-  }, {
-    code: "PROJECT_MANAGER_DEVOPS",
-    value: "Project Manager DevOps",
-  }, {
-    code: "ASSOCIATE_MANAGER_TECHNOLOGY",
-    value: "Associated Manager Technology",
-  }, {
-    code: "ASSOCIATE_MANAGER_QUALITY",
-    value: "Associate Manager Quality",
-  }, {
-    code: "ASSOCIATE_MANAGER_DEVOPS",
-    value: "Associate Manager DevOps",
-  }, {
-    code: "SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT",
-    value: "Senior Lead Software Engineer Architect",
-  }, {
-    code: "LEAD_SOFTWARE_ENGINEER_ARCHITECT",
-    value: "Lead Software Engineer Architect",
-  }, {
-    code: "SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER",
-    value: "Senior Lead Software DevOps Engineer",
-  }, {
-    code: "LEAD_SOFTWARE_ENGINEER",
-    value: "Lead Software Engineer",
-  }, {
-    code: "LEAD_SOFTWARE_QUALITY_ENGINEER",
-    value: "Lead Software Quality Engineer",
-  }, {
-    code: "LEAD_SOFTWARE_DEVOPS_ENGINEER",
-    value: "Lead Software DevOps Engineer",
-  }, {
-    code: "LEAD_SYSTEM_NETWORK_ENGINEER",
-    value: "Lead System Network Engineer",
-  }, {
-    code: "SENIOR_SOFTWARE_ENGINEER",
-    value: "Senior Software Engineer",
-  }, {
-    code: "SENIOR_SOFTWARE_QUALITY_ENGINEER",
-    value: "Senior Software Quality Engineer",
-  }, {
-    code: "SOFTWARE_QUALITY_ENGINEER",
-    value: "Software Quality Engineer",
-  }, {
-    code: "SECURITY_ENGINEER",
-    value: "Security Engineer",
-  }]);
 
 const contractView = SQLa.safeViewDefinition(
   "contract_view",
@@ -1428,6 +1986,64 @@ export function sqlDDL() {
     ${contactTypeInsertion}
 
     ${organizationRoleTypeInsertion}
+
+    ${contractStatusInsertion}
+
+    ${paymentTypeInsertion}
+
+    ${periodicityInsertion}
+
+    ${boundaryNatureInsertion}
+
+    ${timeEntryCategoryInsertion}
+
+    ${raciMatrixSubjectInsertion}
+
+    ${skillNatureInsertion}
+
+    ${skillInsertion}
+
+    ${assetStatusInsertion}
+
+    ${assetTypeInsertion}
+
+    ${assignmentInsertion}
+
+    ${threatSourceTypeInsertion}
+
+    ${threatEventTypeInsertion}
+
+    ${calendarPeriodInsertion}
+
+    ${trackingPeriodInsertion}
+
+    ${auditPurposeInsertion}
+
+    ${auditorStatusTypeInsertion}
+
+    ${trainingSubjectInsertion}
+
+    ${statusValuesInsertion}
+
+    ${ratingValueInsertion}
+
+    ${contractTypeInsertion}
+
+    ${graphNatureInsertion}
+
+    ${assetRiskTypeInsertion}
+
+    ${riskSubjectInsertion}
+
+    ${riskTypeInsertion}
+
+    ${incidentCategoryInsertion}
+
+    ${incidentSubCategoryInsertion}
+
+    ${incidentTypeInsertion}
+
+    ${incidentStatusInsertion}
     `;
 }
 
