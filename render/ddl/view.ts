@@ -218,6 +218,7 @@ export function safeViewDefinitionCustom<
         );
         const ns = ctx.sqlNamingStrategy(ctx, {
           quoteIdentifiers: true,
+          qnss: vdOptions?.sqlNS,
         });
         // by default we create for ANSI/SQLite/"other"
         // deno-fmt-ignore
