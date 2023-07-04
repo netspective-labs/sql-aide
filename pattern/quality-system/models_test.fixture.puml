@@ -11,11 +11,12 @@
   }
 
   entity "lineage_source" as lineage_source {
-      **lineage_source_id**: INTEGER
-    --
+      lineage_source_id: INTEGER
     * lineage_source_type_id: TEXT
     * source_name: TEXT
     * description: TEXT
+    * classification_level_id: INTEGER
+    * sensitivity_level_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -26,11 +27,12 @@
   }
 
   entity "lineage_destination" as lineage_destination {
-      **lineage_destination_id**: INTEGER
-    --
+      lineage_destination_id: INTEGER
     * lineage_dest_type_id: TEXT
     * dest_name: TEXT
     * description: TEXT
+    * classification_level_id: INTEGER
+    * sensitivity_level_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -86,10 +88,182 @@
       activity_log: TEXT
   }
 
+  entity "steward" as steward {
+      steward_id: INTEGER
+    * steward_name: TEXT
+    * department: TEXT
+    * email: TEXT
+    * phone: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "steward_assignment" as steward_assignment {
+      steward_assignment_id: INTEGER
+    * steward_id: INTEGER
+    * source_table_id: INTEGER
+    * target_table_id: INTEGER
+    * start_date: DATE
+    * end_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "quality_issue" as quality_issue {
+      quality_issue_id: INTEGER
+    * source_table_id: INTEGER
+    * column_name: TEXT
+    * issue_description: TEXT
+    * reported_date: DATE
+    * resolution_status: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "quality_rule" as quality_rule {
+      quality_rule_id: INTEGER
+    * source_table_id: INTEGER
+    * column_name: TEXT
+    * rule_description: TEXT
+    * rule_expression: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "quality_score" as quality_score {
+      quality_score_id: INTEGER
+    * source_table_id: INTEGER
+    * column_name: TEXT
+    * score: INTEGER
+    * assessment_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "privacy_policy" as privacy_policy {
+      privacy_policy_id: INTEGER
+    * policy_name: TEXT
+    * policy_description: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "access_control" as access_control {
+      access_control_id: INTEGER
+    * table_name: TEXT
+    * column_name: TEXT
+    * user_id: INTEGER
+    * permission_type: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "audit_log" as audit_log {
+      audit_log_id: INTEGER
+    * table_name: TEXT
+    * column_name: TEXT
+    * user_id: INTEGER
+    * action_type: TEXT
+    * action_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "retention_policy" as retention_policy {
+      retention_policy_id: INTEGER
+    * table_name: TEXT
+    * retention_period: INTEGER
+    * retention_description: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "archival" as archival {
+      archival_id: INTEGER
+    * table_name: TEXT
+    * archival_location: TEXT
+    * archival_date: DATE
+    * archival_policy: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "lineage_history" as lineage_history {
+      lineage_history_id: INTEGER
+    * lineage_id: INTEGER
+    * modification_type: TEXT
+    * modified_by: TEXT
+    * modification_date: DATE
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   lineage_source |o..o{ lineage_graph_node
   lineage_destination |o..o{ lineage_graph_node
   lineage_transform |o..o{ lineage_graph_node
   lineage_source |o..o{ data_lineage
   lineage_destination |o..o{ data_lineage
   lineage_transform |o..o{ data_lineage
+  steward |o..o{ steward_assignment
+  lineage_source |o..o{ steward_assignment
+  lineage_destination |o..o{ steward_assignment
+  lineage_source |o..o{ quality_issue
+  lineage_source |o..o{ quality_rule
+  lineage_source |o..o{ quality_score
+  data_lineage |o..o{ lineage_history
 @enduml
