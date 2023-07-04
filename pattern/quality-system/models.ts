@@ -195,9 +195,7 @@ export function sqlDDL() {
     -- TODO:SqlObjectComment
     ${allContentTables}
 
-    ${SQLa.typicalSqlQualitySystemContent(
-      gts.ddlOptions.sqlQualitySystemState,
-    ).sqlObjectsComments}
+
 
 
     --content views

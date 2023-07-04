@@ -150,34 +150,7 @@ CREATE TABLE IF NOT EXISTS "data_lineage" (
     FOREIGN KEY("transformation_id") REFERENCES "lineage_transform"("lineage_transform_id")
 );
 
-COMMENT ON column "lineage_source_type"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON column "lineage_destination_type"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON column "lineage_transform_type"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON table "lineage_source" IS 'Entity representing sources of data transformations.';
-COMMENT ON column "lineage_source"."source_name" IS 'The name of the data source from which the lineage originates.';
-COMMENT ON column "lineage_source"."description" IS 'Description or additional information about the data source.';
-COMMENT ON column "lineage_source"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON table "lineage_destination" IS 'Entity representing destinations of data transformations.';
-COMMENT ON column "lineage_destination"."dest_name" IS 'The name of the data destination to the lineage target.';
-COMMENT ON column "lineage_destination"."description" IS 'Description or additional information about the data target.';
-COMMENT ON column "lineage_destination"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON table "lineage_transform" IS 'Entity representing transformations of data transformations.';
-COMMENT ON column "lineage_transform"."transform_name" IS 'The name of the data transormation';
-COMMENT ON column "lineage_transform"."description" IS 'Description of the transformation';
-COMMENT ON column "lineage_transform"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON table "lineage_graph_node" IS 'Entity representing a single node of the lineage graph.';
-COMMENT ON column "lineage_graph_node"."lineage_source_id" IS 'Foreign key referencing the lineage_source_id column in the lineage_source table.';
-COMMENT ON column "lineage_graph_node"."lineage_dest_id" IS 'Foreign key referencing the lineage_dest_id column in the lineage_target table.';
-COMMENT ON column "lineage_graph_node"."lineage_transform_id" IS 'Foreign key referencing the lineage_transform_id column in the lineage_transform table.';
-COMMENT ON column "lineage_graph_node"."description" IS 'description or additional information about the node of the lineage graph';
-COMMENT ON column "lineage_graph_node"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
-COMMENT ON table "data_lineage" IS 'Used for trace and understand the origin, transformations, and movement of data / managing data lineage.';
-COMMENT ON column "data_lineage"."source_table_id" IS 'Foreign key referencing the lineage_source_id column in the lineage_source table.';
-COMMENT ON column "data_lineage"."lineage_destination_id" IS 'Foreign key referencing the lineage_dest_id column in the lineage_target table.';
-COMMENT ON column "data_lineage"."transformation_id" IS 'Foreign key referencing the lineage_transform_id column in the lineage_transform table.';
-COMMENT ON column "data_lineage"."lineage_type" IS 'TODO';
-COMMENT ON column "data_lineage"."lineage_quality_rating" IS 'The quality rating of the data lineage entry, indicating the reliability or trustworthiness of the lineage information.';
-COMMENT ON column "data_lineage"."activity_log" IS '{"isSqlDomainZodDescrMeta":true,"isJsonSqlDomain":true}';
+
 
 
 --content views

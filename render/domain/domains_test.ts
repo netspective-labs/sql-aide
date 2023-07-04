@@ -40,6 +40,7 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
   await tc.step("typical Zod scalars as SQL domains", async (innerTC) => {
     const domains = factory.sqlDomains({
       text: z.string(),
+      text_array: z.array(z.string()),
       text_nullable: z.string().optional(),
       text_defaultable: z.string().default("text_defaultable-defaultValue"),
       text_optional_defaultable: z.string().optional().default(
@@ -65,6 +66,14 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
           & d.SqlDomainSupplier<
             z.ZodString,
             "text",
+            SyntheticContext,
+            d.SqlDomainQS
+          >;
+        text_array:
+          & z.ZodArray<z.ZodString>
+          & d.SqlDomainSupplier<
+            z.ZodArray<z.ZodString>,
+            "text_array",
             SyntheticContext,
             d.SqlDomainQS
           >;
@@ -121,12 +130,14 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
       type SyntheticSchema = z.infer<typeof domains.zoSchema>;
       const synthetic: SyntheticSchema = {
         text: "text-required",
+        text_array: ["text-required"],
         int: 0,
         text_defaultable: "text_defaultable-value",
         text_optional_defaultable: "text_optional_defaultable-value",
       };
       expectType<{
         text: string;
+        text_array: Array<string>;
         text_defaultable: string;
         text_optional_defaultable: string;
         int: number;
@@ -146,6 +157,7 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
         })),
         [
           { identifier: "text", sqlDataType: "TEXT" },
+          { identifier: "text_array", sqlDataType: "TEXT[]" },
           { identifier: "text_nullable", sqlDataType: "TEXT" },
           { identifier: "text_defaultable", sqlDataType: "TEXT" },
           { identifier: "text_optional_defaultable", sqlDataType: "TEXT" },
@@ -222,6 +234,7 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
   const srcRefs = srcDomains.infer;
   const refDomains = factory.sqlDomains({
     non_ref_text: z.string(),
+    non_ref_array: z.array(z.string()),
     non_ref_int: z.number(),
     ref_text1_required_in_src_and_dest: srcRefs.text1_src_required()
       .describe(
@@ -265,9 +278,10 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
 
   await tc.step("type expectations", () => {
     const { shape, keys: shapeKeys } = refDomains.zoSchema._getCached();
-    ta.assertEquals(shapeKeys.length, 8);
+    ta.assertEquals(shapeKeys.length, 9);
     expectType<{
       non_ref_text: z.ZodString;
+      non_ref_array: z.ZodArray<z.ZodString>;
       non_ref_int: z.ZodNumber;
       ref_text1_required_in_src_and_dest: z.ZodString;
       ref_text1_nullable: z.ZodOptional<z.ZodString>;
@@ -317,6 +331,7 @@ Deno.test("SQLa native Zod domains (with references)", async (tc) => {
     type SyntheticSchema = z.infer<typeof refDomains.zoSchema>;
     const synthetic: SyntheticSchema = {
       non_ref_text: "non-ref-text-value",
+      non_ref_array: ["non-ref-text-value"],
       non_ref_int: 23567,
       ref_text1_required_in_src_and_dest: "ref-text1",
       ref_text2_dest_not_nullable:
