@@ -24,6 +24,10 @@ export class GovernedDomains<
   ) {
   }
 
+  textArray() {
+    return z.array(z.string());
+  }
+
   text() {
     return z.string();
   }

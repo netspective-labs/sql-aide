@@ -180,6 +180,9 @@ export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
 } & {
   readonly isVarChar?: boolean;
 };
+export type SqlDomainZodArrayDescr = SqlDomainZodDescrMeta & {
+  readonly isArray?: boolean;
+};
 
 export function sqlDomainZodStringDescr(
   options: Pick<SqlDomainZodStringDescr, "isJsonText" | "isVarChar">,
@@ -195,6 +198,22 @@ export function isSqlDomainZodStringDescr<
 >(o: unknown): o is SDZND {
   const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
   return isSDZSD(o) && ("isJsonText" in o || "isVarChar" in o);
+}
+
+export function sqlDomainZodArrayDescr(
+  options: Pick<SqlDomainZodArrayDescr, "isArray">,
+): SqlDomainZodArrayDescr {
+  return {
+    isSqlDomainZodDescrMeta: true,
+    ...options,
+  };
+}
+
+export function isSqlDomainZodArrayDescr<
+  SDZND extends SqlDomainZodArrayDescr,
+>(o: unknown): o is SDZND {
+  const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
+  return isSDZSD(o) && ("isArray" in o);
 }
 
 export function zodStringSqlDomainFactory<
@@ -319,6 +338,46 @@ export function zodStringSqlDomainFactory<
             return `TEXT /* ${JSON.stringify(
               tmpl.dialectState(ctx.sqlDialect)
             )} */`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
+  };
+}
+
+export function zodArraySqlDomainFactory<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
+>() {
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  return {
+    ...ztaSDF,
+    array: <
+      ZodType extends z.ZodType<Array<string>, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `NVARCHAR(MAX)[]`;
+            }
+            return `TEXT[]`;
           },
         }),
         parents: init?.parents,
@@ -967,6 +1026,11 @@ export function zodTypeSqlDomainFactory<
     Context,
     QualitySystem
   >();
+  const arraySDF = zodArraySqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
   const numberSDF = zodNumberSqlDomainFactory<
     DomainsIdentity,
     Context,
@@ -1088,6 +1152,24 @@ export function zodTypeSqlDomainFactory<
     }
 
     switch (zodDef.typeName) {
+      case z.ZodFirstPartyTypeKind.ZodArray: {
+        if (zodDefHook?.descrMeta) {
+          if (isSqlDomainZodArrayDescr(zodDefHook.descrMeta)) {
+            return arraySDF.array(zodType, init);
+          } else {
+            throw new Error(
+              `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${
+                JSON.stringify(
+                  zodDefHook.descrMeta,
+                )
+              }`,
+            );
+          }
+        } else {
+          return arraySDF.array(zodType, init);
+        }
+      }
+
       case z.ZodFirstPartyTypeKind.ZodString: {
         if (zodDefHook?.descrMeta) {
           if (isSqlDomainZodStringDescr(zodDefHook.descrMeta)) {
