@@ -73,9 +73,13 @@ export function primaryKeyColumnFactory<
     ) as unknown as typeof zodType & { sqlDomain: typeof pkSD };
   };
 
-  const autoIncPrimaryKey = <ColumnName extends string>() => {
-    // the zodSchema is optional() because the actual value is computed in the DB
-    const zodType = z.number().optional();
+  const autoIncPrimaryKey = <ColumnName extends string>(
+    overrideZodType: string | z.ZodOptional<z.ZodNumber> = z.number()
+      .optional(),
+  ) => {
+    const zodType = typeof overrideZodType === "string"
+      ? z.number().describe(overrideZodType).optional()
+      : overrideZodType;
     const sqlDomain = sdf.cacheableFrom<ColumnName, z.ZodOptional<z.ZodNumber>>(
       zodType,
     );

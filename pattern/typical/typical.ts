@@ -158,7 +158,7 @@ export function governedKeys<
 
   const textPrimaryKey = () => pkcf.primaryKey(z.string());
   const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
-  const autoIncPrimaryKey = () => pkcf.autoIncPrimaryKey();
+  const autoIncPrimaryKey = pkcf.autoIncPrimaryKey;
 
   return {
     textPrimaryKey,

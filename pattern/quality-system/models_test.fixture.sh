@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS "lineage_destination" (
     FOREIGN KEY("lineage_dest_type_id") REFERENCES "lineage_destination_type"("lineage_destination_type_id")
 );
 CREATE TABLE IF NOT EXISTS "lineage_transform" (
-    "lineage_transform_id" INTEGER,
+    "lineage_transform_id" SERIAL PRIMARY KEY,
     "lineage_transform_type_id" TEXT NOT NULL,
     "transform_name" TEXT NOT NULL,
     "description" TEXT NOT NULL,

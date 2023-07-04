@@ -1,5 +1,6 @@
 #!/usr/bin/env -S deno run --allow-all
 
+import { zod as z } from "../../deps.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typ from "../typical/mod.ts";
@@ -74,7 +75,11 @@ export const allReferenceTables: SQLa.TableDefinition<
 ];
 
 export const lineageSource = gm.autoIncPkTable("lineage_source", {
-  lineage_source_id: autoIncPK(),
+  lineage_source_id: autoIncPK(
+    z.number().describe(
+      "Primary key for uniquely identifying each lineage source.",
+    ).optional(),
+  ),
   lineage_source_type_id: lineageSourceType.references.lineage_source_type_id(),
   source_name: text().describe(
     "The name of the data source from which the lineage originates.",
@@ -88,7 +93,9 @@ export const lineageSource = gm.autoIncPkTable("lineage_source", {
 });
 
 export const lineageDestination = gm.autoIncPkTable("lineage_destination", {
-  lineage_destination_id: autoIncPK(),
+  lineage_destination_id: autoIncPK(
+    "Primary key for uniquely identifying each lineage destination.",
+  ),
   lineage_dest_type_id: lineageDestinationType.references
     .lineage_destination_type_id(),
   dest_name: text().describe(
@@ -103,7 +110,7 @@ export const lineageDestination = gm.autoIncPkTable("lineage_destination", {
 });
 
 export const lineageTransform = gm.autoIncPkTable("lineage_transform", {
-  lineage_transform_id: autoIncPK().describe(
+  lineage_transform_id: autoIncPK(
     "Primary key for the lineage transformation.",
   ),
   lineage_transform_type_id: lineageTransformType.references

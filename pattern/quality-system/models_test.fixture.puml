@@ -41,7 +41,8 @@
   }
 
   entity "lineage_transform" as lineage_transform {
-      lineage_transform_id: INTEGER
+      **lineage_transform_id**: SERIAL
+    --
     * lineage_transform_type_id: TEXT
     * transform_name: TEXT
     * description: TEXT
