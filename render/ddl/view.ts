@@ -216,29 +216,32 @@ export function safeViewDefinitionCustom<
           "create view select statement",
           rawSelectStmtSqlText,
         );
-        const ns = ctx.sqlNamingStrategy(ctx, {
+        const vns = ctx.sqlNamingStrategy(ctx, {
           quoteIdentifiers: true,
           qnss: vdOptions?.sqlNS,
         });
+        const cns = ctx.sqlNamingStrategy(ctx, {
+          quoteIdentifiers: true,
+        });
         // by default we create for ANSI/SQLite/"other"
         // deno-fmt-ignore
-        let head = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${ns.viewName(viewName)}`;
+        let head = `CREATE ${isTemp ? "TEMP " : ""}VIEW ${ isIdempotent ? "IF NOT EXISTS " : ""}${vns.viewName(viewName)}`;
         if (
           emit.isPostgreSqlDialect(ctx.sqlDialect)
         ) {
           // deno-fmt-ignore
-          head = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)}`;
+          head = `CREATE ${ isIdempotent ? "OR REPLACE " : ""}${isTemp ? "TEMP " : ""}VIEW ${vns.viewName(viewName)}`;
         } else if (
           emit.isMsSqlServerDialect(ctx.sqlDialect)
         ) {
           // deno-fmt-ignore
-          head = `CREATE ${ isIdempotent ? "OR ALTER " : ""}${isTemp ? "TEMP " : ""}VIEW ${ns.viewName(viewName)}`;
+          head = `CREATE ${ isIdempotent ? "OR ALTER " : ""}${isTemp ? "TEMP " : ""}VIEW ${vns.viewName(viewName)}`;
         }
         const create = `${head}${
           columnsList
             ? `(${
               columnsList.map((cn) =>
-                ns.viewColumnName({
+                cns.viewColumnName({
                   viewName,
                   columnName: cn.columnName,
                 })
