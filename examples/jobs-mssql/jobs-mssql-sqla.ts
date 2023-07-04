@@ -78,11 +78,25 @@ const jobPosition = gm.autoIncPkTable(
   { sqlNS: jobSchema },
 );
 
-const jobPositionStatusVW = SQLa.safeViewDefinition("vw_JobPositionStatus", {
-  code: z.number(),
-  value: z.string(),
-})` SELECT code,value FROM ${jobPositionStatusCtx};
-`;
+// const jobPositionStatusVW = SQLa.safeViewDefinition("vw_JobPositionStatus", {
+//   code: z.number(),
+//   value: z.string(),
+// })` SELECT code,value FROM ${jobPositionStatusCtx};
+// `;
+
+const jobPositionStatusVW = SQLa.safeViewDefinition(
+  "vw_JobPositionStatus",
+  {
+    code: z.number(),
+    value: z.string(),
+  },
+  {
+    embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+    sqlNS: jobSchema,
+    isIdempotent: true,
+  },
+)` SELECT code,value FROM ${jobPositionStatusCtx};
+ `;
 
 const allActiveJobPositionVW = SQLa.safeViewDefinition(
   "vw_JobPositionCurrent",
@@ -100,6 +114,11 @@ const allActiveJobPositionVW = SQLa.safeViewDefinition(
     question_answers: z.string(),
     posted_date: z.date().optional(),
     no_of_openings: z.number(),
+  },
+  {
+    embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+    sqlNS: jobSchema,
+    isIdempotent: true,
   },
 )`
 WITH CTE_JobPosition AS (
@@ -156,6 +175,10 @@ const allPastJobPositionVW = SQLa.safeViewDefinition("vw_JobPositionPast", {
   question_answers: z.string(),
   posted_date: z.date().optional(),
   no_of_openings: z.number(),
+}, {
+  embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+  sqlNS: jobSchema,
+  isIdempotent: true,
 })`
 WITH CTE_JobPosition AS (
   SELECT
@@ -211,6 +234,10 @@ const allFutureJobPositionVW = SQLa.safeViewDefinition("vw_JobPositionFuture", {
   question_answers: z.string(),
   posted_date: z.date().optional(),
   no_of_openings: z.number(),
+}, {
+  embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+  sqlNS: jobSchema,
+  isIdempotent: true,
 })`
 WITH CTE_JobPosition AS (
   SELECT
@@ -269,6 +296,11 @@ const allArchivedJobPositionVW = SQLa.safeViewDefinition(
     created_at: z.date(),
     no_of_openings: z.number(),
   },
+  {
+    embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+    sqlNS: jobSchema,
+    isIdempotent: true,
+  },
 )`
 WITH CTE_JobPosition AS (
   SELECT
@@ -324,6 +356,10 @@ const allDraftJobPositionVW = SQLa.safeViewDefinition("vw_JobPositionDraft", {
   question_answers: z.string(),
   created_at: z.date(),
   no_of_openings: z.number(),
+}, {
+  embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+  sqlNS: jobSchema,
+  isIdempotent: true,
 })`
 WITH CTE_JobPosition AS (
   SELECT
@@ -379,6 +415,10 @@ const allJobPositionsVW = SQLa.safeViewDefinition("vw_JobPositionAll", {
   question_answers: z.string(),
   posted_date: z.date().optional(),
   no_of_openings: z.number(),
+}, {
+  embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+  sqlNS: jobSchema,
+  isIdempotent: true,
 })`
 select job_position_id, position_title,
 description,
@@ -409,8 +449,6 @@ function sqlDDL() {
 
     IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'${jobSchema.sqlNamespace}.proc_Delete_JobPositions') AND type IN (N'P', N'PC'))
     drop PROCEDURE ${jobSchema.sqlNamespace}.proc_Delete_JobPositions;
-
-
 
     IF OBJECT_ID(N'${jobSchema.sqlNamespace}.${jobPosition.tableName}', N'U') IS NOT NULL
     drop table ${jobPosition.tableName};
@@ -446,9 +484,7 @@ function sqlDDL() {
 
     GO
 
-
     ALTER TABLE ${jobPosition.tableName} ADD FOREIGN KEY (position_status_code) REFERENCES ${jobPositionStatusCtx.tableName}(code);
-
     go
 
     CREATE PROCEDURE ${jobSchema.sqlNamespace}.[proc_Insert_JobPositions]

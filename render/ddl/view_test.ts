@@ -45,6 +45,32 @@ Deno.test("SQL Aide (SQLa) views", async (tc) => {
     },
   );
 
+  await tc.step(
+    "idempotent namespaced view with type-safe columns specified",
+    () => {
+      const view = mod.safeViewDefinition("synthetic_view", {
+        this: z.string(),
+        that: z.string(),
+        the_other: z.number(),
+      }, {
+        embeddedStsOptions: emit.typicalSqlTextSupplierOptions(),
+        sqlNS: sch.sqlSchemaDefn("synthetic_schema"),
+      })`
+      SELECT this, that, the_other
+        FROM table
+       WHERE something = 'true'`;
+
+      ta.assertEquals(
+        view.SQL(ctx),
+        uws(`
+         CREATE VIEW IF NOT EXISTS "synthetic_schema"."synthetic_view"("this", "that", "the_other") AS
+             SELECT this, that, the_other
+               FROM table
+              WHERE something = 'true'`),
+      );
+    },
+  );
+
   await tc.step("idempotent view with type-safe columns specified", () => {
     const view = mod.safeViewDefinition("synthetic_view", {
       this: z.string(),

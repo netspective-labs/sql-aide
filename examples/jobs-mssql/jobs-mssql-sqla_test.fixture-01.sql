@@ -8,8 +8,6 @@
     IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.proc_Delete_JobPositions') AND type IN (N'P', N'PC'))
     drop PROCEDURE dbo.proc_Delete_JobPositions;
 
-
-
     IF OBJECT_ID(N'dbo.job_position', N'U') IS NOT NULL
     drop table job_position;
 
@@ -61,7 +59,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
 
     GO
 
-    CREATE OR ALTER VIEW [vw_JobPositionCurrent]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionCurrent]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
     
     WITH CTE_JobPosition AS (
       SELECT
@@ -103,7 +101,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
     WHERE
       row_num > 0;
     GO
-    CREATE OR ALTER VIEW [vw_JobPositionPast]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionPast]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
     
     WITH CTE_JobPosition AS (
       SELECT
@@ -145,7 +143,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
     WHERE
       row_num > 0;
     GO
-    CREATE OR ALTER VIEW [vw_JobPositionFuture]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionFuture]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
     
     WITH CTE_JobPosition AS (
       SELECT
@@ -187,7 +185,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
     WHERE
       row_num > 0;
     GO
-    CREATE OR ALTER VIEW [vw_JobPositionDraft]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [created_at], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionDraft]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [created_at], [no_of_openings]) AS
     
     WITH CTE_JobPosition AS (
       SELECT
@@ -229,7 +227,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
     WHERE
       row_num > 0;
     GO
-    CREATE OR ALTER VIEW [vw_JobPositionArchive]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [created_at], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionArchive]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [created_at], [no_of_openings]) AS
     
     WITH CTE_JobPosition AS (
       SELECT
@@ -271,7 +269,7 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
     WHERE
       row_num > 0;
     GO
-    CREATE OR ALTER VIEW [vw_JobPositionAll]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionAll]([job_position_id], [position_title], [description], [grade], [official], [position_status_code], [position_status], [start_date], [end_date], [search_committee], [question_answers], [posted_date], [no_of_openings]) AS
     
     select job_position_id, position_title,
     description,
@@ -291,15 +289,13 @@ INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive'
 
     GO
 
-    CREATE OR ALTER VIEW [vw_JobPositionStatus]([code], [value]) AS
+    CREATE OR ALTER VIEW [dbo].[vw_JobPositionStatus]([code], [value]) AS
     SELECT code,value FROM [dbo].[job_position_status];
     ;
 
     GO
 
-
     ALTER TABLE job_position ADD FOREIGN KEY (position_status_code) REFERENCES job_position_status(code);
-
     go
 
     CREATE PROCEDURE dbo.[proc_Insert_JobPositions]
