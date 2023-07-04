@@ -11,7 +11,7 @@
   }
 
   entity "lineage_source" as lineage_source {
-      **lineage_source_id**: SERIAL
+      **lineage_source_id**: INTEGER
     --
     * lineage_source_type_id: TEXT
     * source_name: TEXT
@@ -22,11 +22,11 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "lineage_destination" as lineage_destination {
-      **lineage_destination_id**: SERIAL
+      **lineage_destination_id**: INTEGER
     --
     * lineage_dest_type_id: TEXT
     * dest_name: TEXT
@@ -37,7 +37,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "lineage_transform" as lineage_transform {
@@ -51,7 +51,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "lineage_graph_node" as lineage_graph_node {
@@ -67,7 +67,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   entity "data_lineage" as data_lineage {
@@ -83,7 +83,7 @@
       updated_by: TEXT
       deleted_at: TIMESTAMP
       deleted_by: TEXT
-      activity_log: JSONB
+      activity_log: TEXT
   }
 
   lineage_source |o..o{ lineage_graph_node

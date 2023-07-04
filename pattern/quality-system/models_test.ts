@@ -18,9 +18,7 @@ const relativeFileContent = (name: string) => {
 };
 
 type EmitContext = typeof ctx;
-const ctx = SQLa.typicalSqlEmitContext({
-  sqlDialect: SQLa.postgreSqlDialect(),
-});
+const ctx = SQLa.typicalSqlEmitContext();
 const gts = tp.governedTemplateState<
   tp.TypicalDomainQS,
   tp.TypicalDomainsQS,
@@ -116,7 +114,7 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     // improved to actually check the names of each table, view, etc.
     // deno-fmt-ignore
     const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-    ta.assertEquals(output, "13");
+    ta.assertEquals(output, "12");
   });
 
   // deno-lint-ignore require-await

@@ -195,10 +195,6 @@ export function sqlDDL() {
     -- TODO:SqlObjectComment
     ${allContentTables}
 
-    ${SQLa.typicalSqlQualitySystemContent(
-      gts.ddlOptions.sqlQualitySystemState,
-    ).sqlObjectsComments}
-
 
     --content views
     -- {allContentViews}
@@ -209,9 +205,7 @@ export function sqlDDL() {
 }
 
 if (import.meta.main) {
-  const ctx = SQLa.typicalSqlEmitContext({
-    sqlDialect: SQLa.postgreSqlDialect(),
-  });
+  const ctx = SQLa.typicalSqlEmitContext();
   typ.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
