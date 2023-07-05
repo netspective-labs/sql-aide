@@ -338,7 +338,7 @@
   entity "graph" as graph {
       **graph_id**: INTEGER
     --
-    * graph_nature_id: TEXT
+    * graph_nature_id: INTEGER
     * name: TEXT
       description: TEXT
       created_at: TIMESTAMP
@@ -355,7 +355,7 @@
     --
       parent_boundary_id: INTEGER
     * graph_id: INTEGER
-    * boundary_nature_id: TEXT
+    * boundary_nature_id: INTEGER
     * name: TEXT
       description: TEXT
       created_at: TIMESTAMP
@@ -457,7 +457,7 @@
       **raci_matrix_subject_boundary_id**: INTEGER
     --
     * boundary_id: INTEGER
-    * raci_matrix_subject_id: TEXT
+    * raci_matrix_subject_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -485,13 +485,13 @@
     --
     * organization_id: INTEGER
       asset_retired_date: DATE
-    * asset_status_id: TEXT
+    * asset_status_id: INTEGER
     * asset_tag: TEXT
     * name: TEXT
     * description: TEXT
-    * asset_type_id: TEXT
+    * asset_type_id: INTEGER
     * asset_workload_category: TEXT
-    * assignment_id: TEXT
+    * assignment_id: INTEGER
     * barcode_or_rfid_tag: TEXT
       installed_date: DATE
       planned_retirement_date: DATE
@@ -551,7 +551,7 @@
     --
     * title: TEXT
     * identifier: TEXT
-    * threat_source_type_id: TEXT
+    * threat_source_type_id: INTEGER
     * source_of_information: TEXT
     * capability: TEXT
     * intent: TEXT
@@ -573,7 +573,7 @@
     * threat_source_id: INTEGER
     * asset_id: INTEGER
     * identifier: TEXT
-    * threat_event_type_id: TEXT
+    * threat_event_type_id: INTEGER
     * event_classification: TEXT
     * source_of_information: TEXT
     * description: TEXT
@@ -589,7 +589,7 @@
   entity "asset_risk" as asset_risk {
       **asset_risk_id**: INTEGER
     --
-    * asset_risk_type_id: TEXT
+    * asset_risk_type_id: INTEGER
     * asset_id: INTEGER
     * threat_event_id: INTEGER
       relevance_id: TEXT
@@ -692,9 +692,9 @@
       **timesheet_id**: INTEGER
     --
     * date_of_work: TIMESTAMP
-    * is_billable_id: TEXT
+    * is_billable_id: INTEGER
     * number_of_hours: INTEGER
-    * time_entry_category_id: TEXT
+    * time_entry_category_id: INTEGER
     * timesheet_summary: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
@@ -752,10 +752,10 @@
   entity "security_incident_response_team" as security_incident_response_team {
       **security_incident_response_team_id**: INTEGER
     --
-      training_subject_id: TEXT
+      training_subject_id: INTEGER
     * person_id: INTEGER
     * organization_id: INTEGER
-      training_status_id: TEXT
+      training_status_id: INTEGER
       attended_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
@@ -769,10 +769,10 @@
   entity "awareness_training" as awareness_training {
       **awareness_training_id**: INTEGER
     --
-    * training_subject_id: TEXT
+    * training_subject_id: INTEGER
     * person_id: INTEGER
     * organization_id: INTEGER
-    * training_status_id: TEXT
+    * training_status_id: INTEGER
     * attended_date: DATE
       created_at: TIMESTAMP
       created_by: TEXT
@@ -788,11 +788,11 @@
     --
     * author_id: INTEGER
     * rating_given_to_id: INTEGER
-    * rating_value_id: TEXT
-      best_rating_id: TEXT
+    * rating_value_id: INTEGER
+      best_rating_id: INTEGER
     * rating_explanation: TEXT
     * review_aspect: TEXT
-      worst_rating_id: TEXT
+      worst_rating_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -876,10 +876,10 @@
       **audit_assertion_id**: INTEGER
     --
     * auditor_type_id: TEXT
-    * audit_purpose_id: TEXT
+    * audit_purpose_id: INTEGER
     * auditor_org_id: INTEGER
     * auditor_person_id: INTEGER
-    * auditor_status_type_id: TEXT
+    * auditor_status_type_id: INTEGER
     * scf_identifier: TEXT
     * auditor_notes: TEXT
     * auditor_artifacts: TEXT
@@ -899,13 +899,13 @@
     --
     * contract_from_id: INTEGER
     * contract_to_id: INTEGER
-      contract_status_id: TEXT
+      contract_status_id: INTEGER
     * document_reference: TEXT
-      payment_type_id: TEXT
-      periodicity_id: TEXT
+      payment_type_id: INTEGER
+      periodicity_id: INTEGER
     * start_date: TIMESTAMP
       end_date: TIMESTAMP
-      contract_type_id: TEXT
+      contract_type_id: INTEGER
       date_of_last_review: TIMESTAMP
       date_of_next_review: TIMESTAMP
       date_of_contract_review: TIMESTAMP
@@ -923,15 +923,15 @@
       **risk_register_id**: INTEGER
     --
     * description: TEXT
-    * risk_subject_id: TEXT
-    * risk_type_id: TEXT
+    * risk_subject_id: INTEGER
+    * risk_type_id: INTEGER
     * impact_to_the_organization: TEXT
-      rating_likelihood_id: TEXT
-      rating_impact_id: TEXT
-      rating_overall_risk_id: TEXT
+      rating_likelihood_id: INTEGER
+      rating_impact_id: INTEGER
+      rating_overall_risk_id: INTEGER
     * controls_in_place: TEXT
     * control_effectivenes: INTEGER
-      over_all_residual_risk_rating_id: TEXT
+      over_all_residual_risk_rating_id: INTEGER
     * mitigation_further_actions: TEXT
     * control_monitor_mitigation_actions_tracking_strategy: TEXT
       control_monitor_action_due_date: DATE
@@ -952,11 +952,11 @@
     * incident_date: DATE
     * time_and_time_zone: TIMESTAMP
     * asset_id: INTEGER
-    * category_id: TEXT
-    * sub_category_id: TEXT
+    * category_id: INTEGER
+    * sub_category_id: INTEGER
     * severity_id: TEXT
       priority_id: TEXT
-      internal_or_external_id: TEXT
+      internal_or_external_id: INTEGER
     * location: TEXT
     * it_service_impacted: TEXT
     * impacted_modules: TEXT
@@ -972,7 +972,7 @@
     * eradication_details: TEXT
     * business_impact: TEXT
     * lessons_learned: TEXT
-      status_id: TEXT
+      status_id: INTEGER
       closed_date: DATE
       reopened_time: TIMESTAMP
     * feedback_from_business: TEXT
@@ -1014,7 +1014,7 @@
       **raci_matrix_assignment_id**: INTEGER
     --
     * person_id: INTEGER
-    * subject_id: TEXT
+    * subject_id: INTEGER
     * activity_id: INTEGER
     * raci_matrix_assignment_nature_id: TEXT
       created_at: TIMESTAMP
@@ -1030,8 +1030,8 @@
       **person_skill_id**: INTEGER
     --
     * person_id: INTEGER
-    * skill_nature_id: TEXT
-    * skill_id: TEXT
+    * skill_nature_id: INTEGER
+    * skill_id: INTEGER
     * proficiency_scale_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
@@ -1061,7 +1061,7 @@
     --
     * key_performance_id: INTEGER
     * asset_id: INTEGER
-    * calendar_period_id: TEXT
+    * calendar_period_id: INTEGER
     * kpi_comparison_operator_id: TEXT
     * kpi_context: TEXT
     * kpi_lower_threshold_critical: TEXT
@@ -1079,7 +1079,7 @@
     * kpi_unit_of_measure: TEXT
     * kpi_value: TEXT
     * score: TEXT
-    * tracking_period_id: TEXT
+    * tracking_period_id: INTEGER
     * trend_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
