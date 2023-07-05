@@ -247,6 +247,19 @@ CREATE TABLE IF NOT EXISTS "person_type" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "party_role_type" (
+    "party_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
 
 
 --content views

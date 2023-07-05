@@ -343,6 +343,13 @@ export class PgDcpAssurance<
     };
   }
 
+  hasTable<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_table('${schemaName}', '${routineName}');`,
+    };
+  }
+
   lint(identity?: string) {
     return this.ec.emptyArgsReturnsSetOfTextSF(
       `lint_${identity ?? this.subjectArea}`,
