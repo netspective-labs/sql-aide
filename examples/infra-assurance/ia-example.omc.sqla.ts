@@ -1,28 +1,29 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
-import * as iam from "../../pattern/infra-assurance/mod.ts";
+import * as iam from "../../pattern/infra-assurance/models.ts";
 import * as udm from "../../pattern/udm/mod.ts";
 import * as z from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import * as emit from "../../render/emit/mod.ts";
+import * as typical from "../../pattern/typical/mod.ts";
 
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return $.path.relative(Deno.cwd(), absPath);
 };
 
-const { SQLa, ws } = iam.typical;
+const { SQLa, ws } = typical;
 
 export const ddlOptions = SQLa.typicalSqlTextSupplierOptions();
 export const ctx = SQLa.typicalSqlEmitContext();
 export const SQL = SQLa.SQL<Context>(ddlOptions);
 export type Context = typeof ctx;
 type EmitContext = typeof ctx;
-const { typical: tp } = iam;
+// const { typical: tp } = typical;
 
-const gts = tp.governedTemplateState<
-  iam.typical.TypicalDomainQS,
-  iam.typical.TypicalDomainsQS,
+const gts = typical.governedTemplateState<
+  typical.TypicalDomainQS,
+  typical.TypicalDomainsQS,
   EmitContext
 >();
 
@@ -412,92 +413,92 @@ const organizationToPerson = personToOrganizationRelation.insertDML({
 const personDetailsSkill = {
   reactJS: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "REACTJS",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "REACTJS" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   javaScript: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "JAVASCRIPT",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "JAVASCRIPT" }),
     proficiency_scale_id: "ADVANCED",
   }),
   hugo: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "HUGO",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "HUGO" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   deno: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "DENO",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "DENO" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   angular: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "ANGULAR",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "ANGULAR" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   typeScript: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "TYPESCRIPT",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "TYPESCRIPT" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   postgreSQL: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "POSTGRESQL",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "POSTGRESQL" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   mySQL: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "MYSQL",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "MYSQL" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   php: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "PHP",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "PHP" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   python: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "PYTHON",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "PYTHON" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   dotNet: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "DOT_NET",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "DOT_NET" }),
     proficiency_scale_id: "NA",
   }),
   oracle: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "ORACLE",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "ORACLE" }),
     proficiency_scale_id: "NA",
   }),
   java: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "JAVA",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "JAVA" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   jQuery: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "JQUERY",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "JQUERY" }),
     proficiency_scale_id: "ADVANCED",
   }),
   osQuery: iam.personSkill.insertDML({
     person_id: personDetails.personIdSS,
-    skill_nature_id: "SOFTWARE",
-    skill_id: "OSQUERY",
+    skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
+    skill_id: iam.skill.select({ code: "OSQUERY" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   ALL: () =>
@@ -528,10 +529,10 @@ const organizationToPersonAllRelations = {
 const awarenessTraining = {
   personDetails: iam.awarenessTraining
     .insertDML({
-      training_subject_id: "HIPAA",
+      training_subject_id: iam.trainingSubject.select({ code: "HIPAA" }),
       person_id: personDetails.personIdSS,
       organization_id: organizationDetails.organizationIdSS,
-      training_status_id: "YES",
+      training_status_id: iam.statusValues.select({ code: "YES" }),
       attended_date: new Date("2022-02-21T00:00:00.000Z"),
     }),
 
@@ -549,23 +550,25 @@ const personSecurityIncidentResponse = iam.securityIncidentResponseTeam
 const personRatingToOrganization = iam.rating.insertDML({
   author_id: personDetails.personIdSS,
   rating_given_to_id: organizationDetails.organizationIdSS,
-  rating_value_id: "FOUR",
-  best_rating_id: "FIVE",
+  rating_value_id: iam.ratingValue.select({ code: "FOUR" }),
+  best_rating_id: iam.ratingValue.select({ code: "FIVE" }),
   rating_explanation: "Good Service",
   review_aspect: "Satisfied",
-  worst_rating_id: "THREE",
+  worst_rating_id: iam.ratingValue.select({ code: "THREE" }),
 });
 
 const personToOrganizationGeneralContract = iam.contract.insertDML({
   contract_from_id: personDetails.partyIdSS,
   contract_to_id: organizationDetails.partyIdSS,
-  contract_status_id: "FINISHED",
+  contract_status_id: iam.contractStatus.select({ code: "FINISHED" }),
   document_reference: "google.com",
-  payment_type_id: "RENTS",
-  periodicity_id: "WEEKLY",
+  payment_type_id: iam.paymentType.select({ code: "RENTS" }),
+  periodicity_id: iam.periodicity.select({ code: "WEEKLY" }),
   start_date: new Date("2021-04-20T00:00:00.000Z"),
   end_date: new Date("2021-04-20T00:00:00.000Z"),
-  contract_type_id: "GENERAL_CONTRACT_FOR_SERVICES",
+  contract_type_id: iam.contractType.select({
+    code: "GENERAL_CONTRACT_FOR_SERVICES",
+  }),
   date_of_last_review: new Date("2021-04-20T00:00:00.000Z"),
   date_of_next_review: new Date("2021-04-20T00:00:00.000Z"),
   date_of_contract_review: new Date("2021-04-20T00:00:00.000Z"),
@@ -574,12 +577,12 @@ const personToOrganizationGeneralContract = iam.contract.insertDML({
 
 const personRiskRegister = iam.riskRegister.insertDML({
   description: "Risk description",
-  risk_subject_id: "TECHNICAL_RISK",
-  risk_type_id: "QUALITY",
+  risk_subject_id: iam.riskSubject.select({ code: "TECHNICAL_RISK" }),
+  risk_type_id: iam.riskType.select({ code: "QUALITY" }),
   impact_to_the_organization: "Impact to the organization",
-  rating_likelihood_id: "THREE",
-  rating_impact_id: "THREE",
-  rating_overall_risk_id: "THREE",
+  rating_likelihood_id: iam.ratingValue.select({ code: "THREE" }),
+  rating_impact_id: iam.ratingValue.select({ code: "THREE" }),
+  rating_overall_risk_id: iam.ratingValue.select({ code: "THREE" }),
   controls_in_place: "Try forgot password",
   control_effectivenes: 1,
   mitigation_further_actions: "Mitigation further actions",
@@ -592,13 +595,13 @@ const personRiskRegister = iam.riskRegister.insertDML({
 const assetDetail = iam.asset.insertDML({
   organization_id: organizationDetails.organizationIdSS,
   asset_retired_date: undefined,
-  asset_status_id: "IN_USE",
+  asset_status_id: iam.assetStatus.select({ code: "IN_USE" }),
   asset_tag: "",
   name: "Asset Name",
   description: "Service used for asset etc",
-  asset_type_id: "VIRTUAL_MACHINE",
+  asset_type_id: iam.assetType.select({ code: "VIRTUAL_MACHINE" }),
   asset_workload_category: "",
-  assignment_id: "IN_USE",
+  assignment_id: iam.assignment.select({ code: "IN_USE" }),
   barcode_or_rfid_tag: "",
   installed_date: new Date("2021-04-20T00:00:00.000Z"),
   planned_retirement_date: undefined,
@@ -614,7 +617,7 @@ const assetDetailAssetId = iam.asset.select(
   {
     name: "Asset Name",
     description: "Service used for asset etc",
-    asset_type_id: "VIRTUAL_MACHINE",
+    asset_type_id: iam.assetType.select({ code: "VIRTUAL_MACHINE" }),
   },
 );
 
@@ -623,11 +626,13 @@ const serverDownIncident = iam.incident.insertDML({
   incident_date: new Date("2021-04-20T00:00:00.000Z"),
   time_and_time_zone: new Date("2021-04-20T00:00:00.000Z"),
   asset_id: assetDetailAssetId,
-  category_id: "PERFORMANCE",
-  sub_category_id: "HARDWARE_FAILURE",
+  category_id: iam.incidentCategory.select({ code: "PERFORMANCE" }),
+  sub_category_id: iam.incidentSubCategory.select({ code: "HARDWARE_FAILURE" }),
   severity_id: "MAJOR",
   priority_id: "HIGH",
-  internal_or_external_id: "COMPLAINT",
+  internal_or_external_id: iam.incidentType.select({
+    code: "COMPLAINT",
+  }),
   location: "USA",
   it_service_impacted: "Application down",
   impacted_modules: "",
@@ -648,7 +653,7 @@ const serverDownIncident = iam.incident.insertDML({
   business_impact: "Application was completely down",
   lessons_learned:
     "We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications",
-  status_id: "CLOSED",
+  status_id: iam.incidentStatus.select({ code: "CLOSED" }),
   closed_date: undefined,
   reopened_time: undefined,
   feedback_from_business: "",
@@ -660,10 +665,14 @@ const serverDownIncident = iam.incident.insertDML({
 const serverDownIncidentRootCause = iam.incidentRootCause.insertDML({
   incident_id: iam.incident.select({
     title: "Server Down - Due to CPU utilization reached 100%",
-    sub_category_id: "HARDWARE_FAILURE",
+    sub_category_id: iam.incidentSubCategory.select({
+      code: "HARDWARE_FAILURE",
+    }),
     severity_id: "MAJOR",
     priority_id: "HIGH",
-    internal_or_external_id: "COMPLAINT",
+    internal_or_external_id: iam.incidentType.select({
+      code: "COMPLAINT",
+    }),
     location: "USA",
   }),
   source: "Server",
@@ -677,7 +686,22 @@ const serverDownIncidentRootCause = iam.incidentRootCause.insertDML({
   test_results: "Sample test result",
 });
 
-function sqlDDL() {
+export const sqlDDLValues = [
+  organizationDetails.seedDDL,
+  organizationAllPersons.ALL,
+  organizationToPersonAllRelations.ALL,
+  personDetailsSkill.ALL,
+  awarenessTraining.ALL,
+  personSecurityIncidentResponse,
+  personRatingToOrganization,
+  personToOrganizationGeneralContract,
+  personRiskRegister,
+  assetDetail,
+  serverDownIncident,
+  serverDownIncidentRootCause,
+];
+
+export function sqlDDL() {
   // deno-fmt-ignore
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
     ${iam.sqlDDL()}
@@ -696,32 +720,33 @@ function sqlDDL() {
 }
 
 if (import.meta.main) {
-  await tp.typicalCLI({
+  await typical.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
     prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
     prepareDiagram: () => {
-      return tp.diaPUML.plantUmlIE(ctx, function* () {
+      return typical.diaPUML.plantUmlIE(ctx, function* () {
         for (const table of iam.allContentTables) {
           if (SQLa.isGraphEntityDefinitionSupplier(table)) {
             yield table.graphEntityDefn();
           }
         }
-      }, tp.diaPUML.typicalPlantUmlIeOptions()).content;
+      }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
     },
-  }).commands.command("driver", tp.sqliteDriverCommand(sqlDDL, ctx)).command(
-    "test-fixtures",
-    new tp.cli.Command()
-      .description("Emit all test fixtures")
-      .action(async () => {
-        const CLI = relativeFilePath("./ia-example.omc.sqla.ts");
-        const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
-          relativeFilePath(`./ia-example.omc.sqla.fixture${extn}`)
-        );
-        Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
-        Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
-        Deno.writeTextFileSync(sh, await $`./${CLI} driver`.text());
-        [sql, puml, sh].forEach((f) => console.log(f));
-      }),
-  ).parse(Deno.args);
+  }).commands.command("driver", typical.sqliteDriverCommand(sqlDDL, ctx))
+    .command(
+      "test-fixtures",
+      new typical.cli.Command()
+        .description("Emit all test fixtures")
+        .action(async () => {
+          const CLI = relativeFilePath("./ia-example.omc.sqla.ts");
+          const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
+            relativeFilePath(`./ia-example.omc.sqla.fixture${extn}`)
+          );
+          Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
+          Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
+          Deno.writeTextFileSync(sh, await $`./${CLI} driver`.text());
+          [sql, puml, sh].forEach((f) => console.log(f));
+        }),
+    ).parse(Deno.args);
 }

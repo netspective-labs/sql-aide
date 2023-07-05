@@ -19,16 +19,21 @@ const relativeFileContent = (name: string) => {
 };
 
 const { gts } = udm;
-
+const graphNatureIdSelect = mod.graphNature.select({
+  code: "SERVICE",
+});
 const graphTableInsertion = mod.graph.insertDML({
   name: "text-value",
-  graph_nature_id: "SERVICE",
+  graph_nature_id: graphNatureIdSelect,
   description: "description",
 });
 
 const graphIdSelect = mod.graph.select(graphTableInsertion.insertable);
+const boundaryNatureIdSelect = mod.boundaryNature.select({
+  code: "REGULATORY_TAX_ID",
+});
 const taxIdBoundary = mod.boundary.insertDML({
-  boundary_nature_id: "REGULATORY_TAX_ID",
+  boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name",
   description: "test description",
   graph_id: graphIdSelect,
@@ -36,7 +41,7 @@ const taxIdBoundary = mod.boundary.insertDML({
 const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
 
 const primaryBoundary = mod.boundary.insertDML({
-  boundary_nature_id: "REGULATORY_TAX_ID",
+  boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name Self Test",
   description: "test description",
   parent_boundary_id: taxIdBoundaryIdSelect,
@@ -60,11 +65,13 @@ const raciMatrixInsertion = mod.raciMatrix.insertDML({
   consulted: "consulted",
   informed: "informed",
 });
-
+const raciMatrixSubjectIdSelect = mod.raciMatrixSubject.select({
+  code: "CURATION_WORKS",
+});
 const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
   .insertDML({
     boundary_id: mod.boundary.select({ name: "Boundery Name Self Test" }),
-    raci_matrix_subject_id: "CURATION_WORKS",
+    raci_matrix_subject_id: raciMatrixSubjectIdSelect,
   });
 
 const raciMatrixActivityInsertion = mod.raciMatrixActivity
