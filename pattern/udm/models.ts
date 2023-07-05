@@ -27,6 +27,7 @@ export const {
   text,
   textNullable,
   integer,
+  integerNullable,
   date,
   dateNullable,
   dateTime,
@@ -36,6 +37,8 @@ export const {
   floatNullable,
   bigFloat,
   bigFloatNullable,
+  uuid,
+  uuidNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
@@ -315,6 +318,7 @@ export const allContentTables: SQLa.TableDefinition<
   contactElectronic,
   contactLand,
   personType,
+  partyRoleType,
 ];
 
 export const vendorView = SQLa.safeViewDefinition(
