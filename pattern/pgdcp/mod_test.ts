@@ -26,6 +26,7 @@ Deno.test("PgDCP examples", async () => {
   ta.assertEquals(persisted.map((p) => [p.destFile, p.isExecutable]), [
     ["000_context.auto.psql", false],
     ["001_engine.auto.psql", false],
+    ["002_federated.auto.psql", false],
     ["driver.auto.psql", false],
   ]);
 });
