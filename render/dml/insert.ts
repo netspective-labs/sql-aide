@@ -153,7 +153,6 @@ export function typicalInsertValuesSqlPreparerSync<
   >,
 ) {
   const records = Array.isArray(irSupplier) ? irSupplier : [irSupplier];
-  // deno-lint-ignore ban-types
   const isIdenticallyShaped = r.isIdenticallyShaped(records as object[]);
 
   const { isColumnEmittable, emitColumn } = ispOptions ?? {};

@@ -1,6 +1,5 @@
 // import * as r from "../reflect/reflect.ts";
 
-// deno-lint-ignore ban-types
 export type UntypedObject = object;
 export type UntypedTabularRecordObject = UntypedObject;
 
@@ -17,14 +16,12 @@ export type CamelToSnakeCase<S extends string> = S extends
 // deep, 1:1 mapping of a SQL table-like object to its camelCase JS counterpart
 export type TabularRecordToObject<T> = {
   [K in keyof T as SnakeToCamelCase<string & K>]: T[K] extends Date ? T[K]
-    // deno-lint-ignore ban-types
     : (T[K] extends object ? TabularRecordToObject<T[K]> : T[K]);
 };
 
 // deep, 1:1 mapping of a camelCase JS object to its snake_case SQL-like counterpart
 export type ObjectToTabularRecord<T> = {
   [K in keyof T as CamelToSnakeCase<string & K>]: T[K] extends Date ? T[K]
-    // deno-lint-ignore ban-types
     : (T[K] extends object ? ObjectToTabularRecord<T[K]> : T[K]);
 };
 
@@ -204,7 +201,6 @@ export function transformTabularRecord<
  * @returns a clone of objects with property names converted to snake case
  */
 export function transformTabularRecords<
-  // deno-lint-ignore ban-types
   TableRecord extends object,
   TableObject extends TabularRecordToObject<TableRecord> =
     TabularRecordToObject<
@@ -233,7 +229,6 @@ export function transformTabularRecords<
  * @param rows the records to check
  * @returns `{ success: true }` if successful, `{ success: false, issues: [] }` on failure
  */
-// deno-lint-ignore ban-types
 export function isIdenticallyShaped<TableRecord extends object>(
   rows: TableRecord[],
 ) {

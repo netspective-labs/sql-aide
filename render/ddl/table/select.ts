@@ -56,13 +56,11 @@ export function tableSelectFactory<
     keyof OptionalInInsertableRecord
   >;
 
-  // deno-lint-ignore ban-types
   type requiredKeys<T extends object> = {
     [k in keyof T]: undefined extends T[k] ? never : k;
   }[keyof T];
 
   type addQuestionMarks<
-    // deno-lint-ignore ban-types
     T extends object,
     R extends keyof T = requiredKeys<T>,
   > // O extends keyof T = optionalKeys<T>
