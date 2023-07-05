@@ -66,7 +66,6 @@ export async function parse(
         try {
           // remove the starting #, convert to POJO, then let Zod validate it
           activeConnDescr = connectionDescriptorSchema.parse({
-            // deno-lint-ignore ban-types
             ...(JSON5.parse(jsonl) as object),
             srcLineNumber,
           });
