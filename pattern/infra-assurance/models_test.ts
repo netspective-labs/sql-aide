@@ -8,6 +8,8 @@ import * as tp from "../typical/mod.ts";
 import * as mod from "./models.ts";
 import * as udm from "../udm/mod.ts";
 
+const ctx = SQLa.typicalSqlEmitContext();
+
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return $.path.relative(Deno.cwd(), absPath);
@@ -189,7 +191,6 @@ function sqlDDL() {
 }
 
 if (import.meta.main) {
-  const ctx = SQLa.typicalSqlEmitContext();
   await tp.typicalCLI({
     resolve: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
@@ -234,7 +235,7 @@ if (import.meta.main) {
  * $ ./models_test.ts diagram --dest models_test.fixture.puml
  * $ ./models_test.ts driver --dest ./models_test.fixture.sh && chmod +x ./models_test.fixture.sh
  */
-Deno.test("Information Assurance Pattern", async (tc) => {
+Deno.test("Information Assurance Pattern CLI", async (tc) => {
   const CLI = relativeFilePath("./models_test.ts");
 
   await tc.step("CLI SQL content", async () => {
@@ -278,6 +279,16 @@ Deno.test("Information Assurance Pattern", async (tc) => {
   // deno-lint-ignore require-await
   await tc.step("Typescript SQL", async () => {
     const ctx = SQLa.typicalSqlEmitContext();
+    const output = sqlDDL().SQL(ctx);
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.sql"),
+    );
+  });
+});
+
+Deno.test("Infra Assurance Pattern Module", async (tc) => {
+  await tc.step("CLI SQL content", () => {
     const output = sqlDDL().SQL(ctx);
     ta.assertEquals(
       output,

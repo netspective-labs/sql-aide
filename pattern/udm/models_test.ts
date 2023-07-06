@@ -279,3 +279,13 @@ Deno.test("Information Assurance Pattern", async (tc) => {
     );
   });
 });
+
+Deno.test("Infra Assurance Pattern Module", async (tc) => {
+  await tc.step("CLI SQL content", () => {
+    const output = sqlDDL().SQL(ctx);
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.sql"),
+    );
+  });
+});
