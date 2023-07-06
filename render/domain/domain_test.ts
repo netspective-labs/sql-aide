@@ -43,6 +43,8 @@ Deno.test("SQLa domain factories", async (tc) => {
     ta.assert(ztsdFactory);
     ta.assert(ztsdFactory.anySDF);
     ta.assert(ztsdFactory.stringSDF);
+    ta.assert(ztsdFactory.arraySDF);
+    ta.assert(ztsdFactory.booleanSDF);
     ta.assert(ztsdFactory.numberSDF);
     ta.assert(ztsdFactory.detachFrom);
     ta.assert(ztsdFactory.from);
@@ -60,6 +62,9 @@ Deno.test("SQLa date format strategy", () => {
 Deno.test("SQLa domain from Zod Types", async (tc) => {
   const textSD = ztsdFactory.cacheableFrom(z.string(), {
     identity: "syntheticText",
+  });
+  const textArraySD = ztsdFactory.cacheableFrom(z.array(z.string()), {
+    identity: "syntheticTextArray",
   });
   const varCharSD = ztsdFactory.cacheableFrom(
     z.string(
@@ -90,6 +95,9 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   );
   const numberSD = ztsdFactory.cacheableFrom(z.number(), {
     identity: "syntheticNumber",
+  });
+  const booleanSD = ztsdFactory.cacheableFrom(z.boolean(), {
+    identity: "syntheticBoolean",
   });
 
   enum NativeEnumOrdinal {
@@ -125,6 +133,16 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       >
     >(
       textSD,
+    );
+    expectType<
+      d.SqlDomain<
+        z.ZodArray<z.ZodString>,
+        SyntheticContext,
+        "syntheticTextArray",
+        SyntheticDomainQS
+      >
+    >(
+      textArraySD,
     );
     expectType<
       d.SqlDomain<
@@ -172,6 +190,16 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     );
     expectType<
       d.SqlDomain<
+        z.ZodBoolean,
+        SyntheticContext,
+        "syntheticBoolean",
+        SyntheticDomainQS
+      >
+    >(
+      booleanSD,
+    );
+    expectType<
+      d.SqlDomain<
         z.ZodNativeEnum<typeof NativeEnumOrdinal>,
         SyntheticContext,
         "nativeEnumOrdinal",
@@ -190,12 +218,14 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
 
   await tc.step("SqlDomain identity", () => {
     ta.assertEquals(textSD.identity, "syntheticText");
+    ta.assertEquals(textArraySD.identity, "syntheticTextArray");
     ta.assertEquals(textOptionalSD.identity, "syntheticTextOptional");
     ta.assertEquals(
       textOptionalDefaultSD.identity,
       "syntheticTextOptionalDefault",
     );
     ta.assertEquals(numberSD.identity, "syntheticNumber");
+    ta.assertEquals(booleanSD.identity, "syntheticBoolean");
     ta.assertEquals(nativeEnumOrdinalSD.identity, "nativeEnumOrdinal");
     ta.assertEquals(zodEnumSD.identity, "syntheticZodEnum");
   });
@@ -249,6 +279,10 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       sqlDataType: domain.sqlDataType("create table column").SQL(ctx),
     });
     ta.assertEquals(types(textSD), { nullable: false, sqlDataType: "TEXT" });
+    ta.assertEquals(types(textArraySD), {
+      nullable: false,
+      sqlDataType: "TEXT[]",
+    });
     ta.assertEquals(types(varCharSD), {
       nullable: false,
       sqlDataType: "VARCHAR(47)",
@@ -268,6 +302,10 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(numberSD), {
       nullable: false,
       sqlDataType: "INTEGER",
+    });
+    ta.assertEquals(types(booleanSD), {
+      nullable: false,
+      sqlDataType: "BOOLEAN",
     });
     ta.assertEquals(types(nativeEnumOrdinalSD), {
       nullable: false,

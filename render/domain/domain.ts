@@ -386,6 +386,46 @@ export function zodArraySqlDomainFactory<
   };
 }
 
+export function zodBooleanSqlDomainFactory<
+  DomainsIdentity extends string,
+  Context extends tmpl.SqlEmitContext,
+  QualitySystem extends SqlDomainQS,
+>() {
+  const ztaSDF = zodTypeAnySqlDomainFactory<
+    Any,
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
+  return {
+    ...ztaSDF,
+    boolean: <
+      ZodType extends z.ZodType<z.ZodBoolean>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `BOOLEAN`;
+            }
+            return `BOOLEAN`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
+  };
+}
+
 export const zodSqlDomainRawCreateParams = (
   descrMeta: SqlDomainZodDescrMeta,
 ) => {
@@ -1051,6 +1091,11 @@ export function zodTypeSqlDomainFactory<
     Context,
     QualitySystem
   >();
+  const booleanSDF = zodBooleanSqlDomainFactory<
+    DomainsIdentity,
+    Context,
+    QualitySystem
+  >();
 
   const detachFrom = <ZodType extends z.ZodTypeAny>(zodType: ZodType): void => {
     delete (zodType as Any)["sqlDomain"];
@@ -1152,6 +1197,10 @@ export function zodTypeSqlDomainFactory<
     }
 
     switch (zodDef.typeName) {
+      case z.ZodFirstPartyTypeKind.ZodBoolean: {
+        return booleanSDF.boolean(zodType, init);
+      }
+
       case z.ZodFirstPartyTypeKind.ZodArray: {
         if (zodDefHook?.descrMeta) {
           if (isSqlDomainZodArrayDescr(zodDefHook.descrMeta)) {
@@ -1336,7 +1385,9 @@ export function zodTypeSqlDomainFactory<
   return {
     SQL_DOMAIN_HAS_NO_IDENTITY_FROM_SHAPE,
     anySDF,
+    arraySDF,
     stringSDF,
+    booleanSDF,
     numberSDF,
     dateSDF,
     enumSDF,
