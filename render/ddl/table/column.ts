@@ -226,8 +226,11 @@ export function typicalTableColumnDefnSQL<
       ? ` ${decorations.map((d) => d.SQL(ctx)).join(" ")}`
       : "";
     const notNull = isd.isNullable() ? "" : " NOT NULL";
-    const defaultValue = isd.sqlDefaultValue
-      ? ` DEFAULT ${isd.sqlDefaultValue("create table column").SQL(ctx)}`
+    const rawDefaultValue = isd.sqlDefaultValue
+      ? isd.sqlDefaultValue("create table column").SQL(ctx)
+      : "";
+    const defaultValue = rawDefaultValue.toString().trim().length > 0
+      ? ` DEFAULT ${rawDefaultValue}`
       : "";
     // deno-fmt-ignore
     return `${steOptions.indentation("define table column")}${columnName}${sqlDataType}${decoratorsSQL}${notNull}${defaultValue}`;
