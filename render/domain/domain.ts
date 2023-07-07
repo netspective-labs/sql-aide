@@ -410,6 +410,7 @@ export function zodBooleanSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
       },
     ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue();
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
@@ -418,6 +419,11 @@ export function zodBooleanSqlDomainFactory<
               return `BOOLEAN`;
             }
             return `BOOLEAN`;
+          },
+        }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            return defaultValue != undefined ? defaultValue : "";
           },
         }),
         parents: init?.parents,
