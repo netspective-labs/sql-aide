@@ -311,6 +311,19 @@ export function* dagNodesIterator<Node, NodeID>(
   const topologicalSort = topologicalSortSupplier(graph, identity, compare);
   const visited = new Set<Node>();
 
+  function isParallelizable(node: Node): boolean {
+    for (const edge of graph.edges) {
+      if (identity(edge.to) === identity(node)) {
+        const fromId = identity(edge.from);
+        if (!graph.edges.some((e) => identity(e.to) === fromId)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   // Iterate over the topological sort
   for (const node of topologicalSort) {
     yield {
@@ -318,6 +331,7 @@ export function* dagNodesIterator<Node, NodeID>(
       visited,
       ancestors: () => dagAncestors(graph, identity, node),
       deps: () => dagDependencies(graph, identity, node),
+      isParallelizable: () => isParallelizable(node),
     };
     visited.add(node);
   }

@@ -272,6 +272,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
     visited: string[];
     deps: string[];
     ancestors: string[];
+    isParallelizable: boolean;
   }[] = [];
   for (const entry of syntheticDagDF.nodesIterator(complexGraph)) {
     visited.push({
@@ -279,40 +280,58 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       visited: Array.from(entry.visited.values()),
       deps: entry.deps(),
       ancestors: entry.ancestors(),
+      isParallelizable: entry.isParallelizable(),
     });
   }
   ta.assertEquals(visited, [
-    { node: "A", visited: [], deps: [], ancestors: [] },
-    { node: "C", visited: ["A"], deps: ["A"], ancestors: ["A"] },
+    {
+      node: "A",
+      visited: [],
+      deps: [],
+      ancestors: [],
+      isParallelizable: true,
+    },
+    {
+      node: "C",
+      visited: ["A"],
+      deps: ["A"],
+      ancestors: ["A"],
+      isParallelizable: false,
+    },
     {
       node: "F",
       visited: ["A", "C"],
       deps: ["C"],
       ancestors: ["C", "A"],
+      isParallelizable: true,
     },
     {
       node: "L",
       visited: ["A", "C", "F"],
       deps: ["F"],
       ancestors: ["F", "C", "A"],
+      isParallelizable: true,
     },
     {
       node: "K",
       visited: ["A", "C", "F", "L"],
       deps: ["F"],
       ancestors: ["F", "C", "A"],
+      isParallelizable: true,
     },
     {
       node: "B",
       visited: ["A", "C", "F", "L", "K"],
       deps: ["A"],
       ancestors: ["A"],
+      isParallelizable: false,
     },
     {
       node: "E",
       visited: ["A", "C", "F", "L", "K", "B"],
       deps: ["B"],
       ancestors: ["B", "A"],
+      isParallelizable: true,
     },
     {
       node: "J",
@@ -327,6 +346,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["E"],
       ancestors: ["E", "B", "A"],
+      isParallelizable: true,
     },
     {
       node: "I",
@@ -342,6 +362,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["E"],
       ancestors: ["E", "B", "A"],
+      isParallelizable: true,
     },
     {
       node: "D",
@@ -358,6 +379,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["B", "C"],
       ancestors: ["B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "H",
@@ -375,6 +397,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["D"],
       ancestors: ["D", "B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "P",
@@ -393,6 +416,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["H"],
       ancestors: ["H", "D", "B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "O",
@@ -412,6 +436,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["H"],
       ancestors: ["H", "D", "B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "G",
@@ -432,6 +457,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["D"],
       ancestors: ["D", "B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "N",
@@ -453,6 +479,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["G"],
       ancestors: ["G", "D", "B", "A", "C"],
+      isParallelizable: true,
     },
     {
       node: "M",
@@ -475,6 +502,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
       ],
       deps: ["G"],
       ancestors: ["G", "D", "B", "A", "C"],
+      isParallelizable: true,
     },
   ]);
 });
