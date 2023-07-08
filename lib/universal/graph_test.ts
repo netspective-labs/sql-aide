@@ -13,31 +13,67 @@ const syntheticDagDF = mod.dagDepthFirst(
 Deno.test("DAG type-safe graph builder", async (tc) => {
   type Node = "A" | "B" | "C" | "D" | "E";
   const nodes: Array<Node> = ["A", "B", "C", "D", "E"];
-
-  await tc.step("node array, edges array", () => {
-    ta.assert(mod.graph<Node>(nodes, [
+  const expectedGraph = {
+    nodes: ["A", "B", "C", "D", "E"],
+    edges: [
       { from: "A", to: "B" },
       { from: "B", to: "C" },
       { from: "C", to: "A" },
-    ]));
+    ],
+  };
+
+  await tc.step("nodes array, edges array", () => {
+    ta.assertEquals(
+      mod.graph<Node>(nodes, [
+        { from: "A", to: "B" },
+        { from: "B", to: "C" },
+        { from: "C", to: "A" },
+      ]),
+      expectedGraph,
+    );
   });
 
-  await tc.step("node array, edges generator", () => {
-    ta.assert(mod.graph<Node>(nodes, function* () {
-      yield { from: "A", to: "B" };
-      yield { from: "B", to: "C" };
-      yield { from: "C", to: "A" };
-    }));
+  await tc.step("nodes array, edges generator", () => {
+    ta.assertEquals(
+      mod.graph<Node>(nodes, function* () {
+        yield { from: "A", to: "B" };
+        yield { from: "B", to: "C" };
+        yield { from: "C", to: "A" };
+      }),
+      expectedGraph,
+    );
   });
 
-  await tc.step("node generator, edges generator", () => {
-    ta.assert(mod.graph<Node>(function* () {
-      for (const n of nodes) yield n;
-    }, function* () {
-      yield { from: "A", to: "B" };
-      yield { from: "B", to: "C" };
-      yield { from: "C", to: "A" };
-    }));
+  await tc.step("nodes generator, edges generator", () => {
+    ta.assertEquals(
+      mod.graph<Node>(function* () {
+        for (const n of nodes) yield n;
+      }, function* () {
+        yield { from: "A", to: "B" };
+        yield { from: "B", to: "C" };
+        yield { from: "C", to: "A" };
+      }),
+      expectedGraph,
+    );
+  });
+
+  await tc.step("nodes inferred, edges generator", () => {
+    ta.assertEquals(
+      mod.edgesGraph<Node>(function* () {
+        yield { from: "A", to: "B" };
+        yield { from: "B", to: "C" };
+        yield { from: "C", to: "A" };
+      }),
+      {
+        // instead of all items in `nodes` we only have those referred to in edges
+        nodes: ["A", "B", "C"],
+        edges: [
+          { from: "A", to: "B" },
+          { from: "B", to: "C" },
+          { from: "C", to: "A" },
+        ],
+      },
+    );
   });
 });
 

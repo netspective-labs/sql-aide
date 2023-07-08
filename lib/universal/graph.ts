@@ -14,6 +14,12 @@ export interface Graph<Node> {
   readonly edges: Array<Edge<Node>>;
 }
 
+/**
+ * Build a graph from a set of nodes and edges
+ * @param nodesSupplier a function, generator or array of nodes
+ * @param edgesSupplier a function, generator or array of edges
+ * @returns a Graph instance
+ */
 export function graph<Node>(
   nodesSupplier:
     | Iterable<Node>
@@ -42,6 +48,37 @@ export function graph<Node>(
 
   const result: Graph<Node> = { nodes, edges };
   return invalidEdges.length > 0 ? { ...result, invalidEdges } : result;
+}
+
+/**
+ * Build a graph from a set of edges, inferring the nodes from the edges
+ * @param edgesSupplier a function, generator or array of edges
+ * @returns a Graph instance
+ */
+export function edgesGraph<Node>(
+  edgesSupplier:
+    | Iterable<Edge<Node>>
+    | ArrayLike<Edge<Node>>
+    | Generator<Edge<Node>>
+    | (() =>
+      | Iterable<Edge<Node>>
+      | ArrayLike<Edge<Node>>
+      | Generator<Edge<Node>>),
+) {
+  const edges = Array.from(
+    typeof edgesSupplier === "function" ? edgesSupplier() : edgesSupplier,
+  );
+
+  // create a set to keep unique nodes
+  const nodesSet = new Set<Node>();
+
+  // iterate over each edge and add 'from' and 'to' nodes to the set
+  for (const edge of edges) {
+    nodesSet.add(edge.from);
+    nodesSet.add(edge.to);
+  }
+
+  return graph<Node>(Array.from(nodesSet), edges);
 }
 
 /**
