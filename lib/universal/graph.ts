@@ -1,5 +1,5 @@
 /**
- * Interface Edge - Represents an edge in the graph with a `from` node and a `to` node
+ * Represents an edge in the graph with a `from` node and a `to` node
  */
 export interface Edge<Node> {
   readonly from: Node;
@@ -7,27 +7,56 @@ export interface Edge<Node> {
 }
 
 /**
- * Interface Graph - Represents a graph data structure with a list of nodes and edges
+ * Represents a graph data structure with a list of nodes and edges
  */
 export interface Graph<Node> {
   readonly nodes: Array<Node>;
   readonly edges: Array<Edge<Node>>;
 }
 
+export function graph<Node>(
+  nodesSupplier:
+    | Iterable<Node>
+    | ArrayLike<Node>
+    | Generator<Node>
+    | (() => Iterable<Node> | ArrayLike<Node> | Generator<Node>),
+  edgesSupplier:
+    | Iterable<Edge<Node>>
+    | ArrayLike<Edge<Node>>
+    | Generator<Edge<Node>>
+    | ((
+      nodes: Array<Node>,
+    ) => Iterable<Edge<Node>> | ArrayLike<Edge<Node>> | Generator<Edge<Node>>),
+) {
+  const nodes = Array.from(
+    typeof nodesSupplier === "function" ? nodesSupplier() : nodesSupplier,
+  );
+
+  const edges = Array.from(
+    typeof edgesSupplier === "function" ? edgesSupplier(nodes) : edgesSupplier,
+  );
+
+  const invalidEdges = edges.filter(
+    (edge) => !nodes.includes(edge.from) || !nodes.includes(edge.to),
+  );
+
+  const result: Graph<Node> = { nodes, edges };
+  return invalidEdges.length > 0 ? { ...result, invalidEdges } : result;
+}
+
 /**
- * Type NodeIdentitySupplier - A function that supplies the identity of a node.
- * Used to uniquely identify a node in the graph.
+ * A function that supplies the identity of a node. Used to uniquely identify a
+ * node in the graph.
  */
 export type NodeIdentitySupplier<Node, NodeID> = (n: Node) => NodeID;
 
 /**
- * Type NodeComparator - A function that compares two nodes.
- * Used for sorting and comparing nodes.
+ * A function that compares two nodes. Used for sorting and comparing nodes.
  */
 export type NodeComparator<Node> = (n1: Node, n2: Node) => number;
 
 /**
- * Function dagIsCyclical - Returns true if a cycle is detected in the directed acyclic graph.
+ * Returns true if a cycle is detected in the directed acyclic graph.
  * It uses depth-first search and keeps track of visited nodes and the recursion stack.
  * If a node is encountered that is already in the recursion stack, a cycle is detected.
  */
@@ -72,10 +101,10 @@ export function dagIsCyclicalDFS<Node, NodeID>(
 }
 
 /**
- * Function dagCycles - Returns all the nodes and edges that form cycles in the directed acyclic graph.
- * It uses depth-first search and keeps track of visited nodes and the recursion stack.
- * If a node is encountered that is already in the recursion stack, a cycle is detected and stored.
- * This function is more complex and can be computationally intensive as it has to find and store all cycles.
+ * Returns all the nodes and edges that form cycles in the directed acyclic
+ * graph. It uses depth-first search and keeps track of visited nodes and the
+ * recursion stack. If a node is encountered that is already in the recursion
+ * stack, a cycle is detected and stored.
  */
 export function dagCyclesDFS<Node, NodeID>(
   graph: Graph<Node>,
@@ -136,8 +165,9 @@ export function dagCyclesDFS<Node, NodeID>(
 }
 
 /**
- * Function dagTopologicalSort - Performs a topological sort on the directed acyclic graph and returns an array of nodes in sorted order.
- * It relies on the fact that a directed acyclic graph (DAG) can be sorted in a linear order.
+ * Performs a topological sort on the directed acyclic graph and returns an
+ * array of nodes in sorted order. It relies on the fact that a directed acyclic
+ * graph (DAG) can be sorted in a linear order.
  */
 export function dagTopologicalSortDFS<Node, NodeID>(
   graph: Graph<Node>,
@@ -172,10 +202,10 @@ export function dagTopologicalSortDFS<Node, NodeID>(
 }
 
 /**
- * Returns the dependencies and dependents of a given node
- * in a directed acyclic graph (DAG) based on a provided topological sort.
- * The function takes the graph, topological sort, and the target node as input.
- * It returns an object with `dependencies` and `dependents` properties.
+ * Returns the dependencies and dependents of a given node in a directed acyclic
+ * graph (DAG) based on a provided topological sort. The function takes the
+ * graph, topological sort, and the target node as input. It returns an object
+ * with `dependencies` and `dependents` properties.
  */
 export function dagDependencies<Node, NodeID>(
   graph: Graph<Node>,
@@ -187,7 +217,7 @@ export function dagDependencies<Node, NodeID>(
     compare: NodeComparator<Node>,
   ) => Array<Node>,
   targetNode: Node,
-): { dependencies: Array<Node>; dependents: Array<Node> } {
+): { readonly dependencies: Array<Node>; readonly dependents: Array<Node> } {
   const dependencies: Array<Node> = [];
   const dependents: Array<Node> = [];
   const visited: Set<NodeID> = new Set();
@@ -262,10 +292,16 @@ export const dagDepthFirst = <Node, NodeID>(
 export function graphPlantUmlDiagram<Node>(
   graph: Graph<Node>,
   pumlOptions: {
-    node: (node: Node) => { text: string; features?: string };
-    edge: (
+    readonly node: (
+      node: Node,
+    ) => { readonly text: string; readonly features?: string };
+    readonly edge: (
       edge: Edge<Node>,
-    ) => { fromText: string; toText: string; features?: string };
+    ) => {
+      readonly fromText: string;
+      readonly toText: string;
+      features?: string;
+    };
   },
 ): string {
   const nodeLines: string[] = [];

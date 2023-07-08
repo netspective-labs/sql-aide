@@ -10,9 +10,40 @@ const syntheticDagDF = mod.dagDepthFirst(
   syntheticNodeComparator,
 );
 
+Deno.test("DAG type-safe graph builder", async (tc) => {
+  type Node = "A" | "B" | "C" | "D" | "E";
+  const nodes: Array<Node> = ["A", "B", "C", "D", "E"];
+
+  await tc.step("node array, edges array", () => {
+    ta.assert(mod.graph<Node>(nodes, [
+      { from: "A", to: "B" },
+      { from: "B", to: "C" },
+      { from: "C", to: "A" },
+    ]));
+  });
+
+  await tc.step("node array, edges generator", () => {
+    ta.assert(mod.graph<Node>(nodes, function* () {
+      yield { from: "A", to: "B" };
+      yield { from: "B", to: "C" };
+      yield { from: "C", to: "A" };
+    }));
+  });
+
+  await tc.step("node generator, edges generator", () => {
+    ta.assert(mod.graph<Node>(function* () {
+      for (const n of nodes) yield n;
+    }, function* () {
+      yield { from: "A", to: "B" };
+      yield { from: "B", to: "C" };
+      yield { from: "C", to: "A" };
+    }));
+  });
+});
+
 Deno.test("DAG isCyclical should return true for a cyclic graph", () => {
   // Create a cyclic graph
-  const cyclicGraph: mod.Graph<string> = {
+  const cyclicGraph: mod.Graph<"A" | "B" | "C"> = {
     nodes: ["A", "B", "C"],
     edges: [
       { from: "A", to: "B" },
@@ -35,7 +66,7 @@ Deno.test("DAG isCyclical should return true for a cyclic graph", () => {
 
 Deno.test("DAG isCyclical should return false for an acyclic graph", () => {
   // Create an acyclic graph
-  const acyclicGraph: mod.Graph<string> = {
+  const acyclicGraph: mod.Graph<"A" | "B" | "C"> = {
     nodes: ["A", "B", "C"],
     edges: [
       { from: "A", to: "B" },
@@ -57,7 +88,7 @@ Deno.test("DAG isCyclical should return false for an acyclic graph", () => {
 
 Deno.test("DAG cycles should return the correct cycles in a graph", () => {
   // Create a graph with cycles
-  const graphWithCycles: mod.Graph<string> = {
+  const graphWithCycles: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
     nodes: ["A", "B", "C", "D", "E"],
     edges: [
       { from: "A", to: "B" },
@@ -86,7 +117,7 @@ Deno.test("DAG cycles should return the correct cycles in a graph", () => {
 
 Deno.test("DAG topologicalSort should return the nodes in the correct order", () => {
   // Create a graph for topological sorting
-  const graphForTopologicalSort: mod.Graph<string> = {
+  const graphForTopologicalSort: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
     nodes: ["A", "E", "B", "D", "C"],
     edges: [
       { from: "A", to: "B" },
@@ -113,7 +144,7 @@ Deno.test("DAG topologicalSort should return the nodes in the correct order", ()
 
 Deno.test("DAG dagDependencies should return the correct dependencies and dependents", () => {
   // Create a graph for testing
-  const graph: mod.Graph<string> = {
+  const graph: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
     nodes: ["A", "B", "C", "D", "E"],
     edges: [
       { from: "A", to: "B" },
@@ -142,9 +173,9 @@ Deno.test("DAG dagDependencies should return the correct dependencies and depend
   ta.assertEquals(result2.dependents, result.dependents);
 });
 
-Deno.test("DAG graphPlantUmlDiagram should generate the correct PlantUML diagram", () => {
+Deno.test("graphPlantUmlDiagram should generate the correct PlantUML diagram", () => {
   // Create a graph for testing
-  const graph: mod.Graph<string> = {
+  const graph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F"> = {
     nodes: ["A", "B", "C", "D", "E", "F"],
     edges: [
       { from: "A", to: "B" },
