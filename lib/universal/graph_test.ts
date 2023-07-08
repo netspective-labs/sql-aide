@@ -10,6 +10,29 @@ const syntheticDagDF = mod.dagDepthFirst(
   syntheticNodeComparator,
 );
 
+// deno-fmt-ignore
+const complexGraph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P"> = {
+  nodes: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"],
+  edges: [
+    { from: "A", to: "B" },
+    { from: "A", to: "C" },
+    { from: "B", to: "D" },
+    { from: "B", to: "E" },
+    { from: "C", to: "D" },
+    { from: "C", to: "F" },
+    { from: "D", to: "G" },
+    { from: "D", to: "H" },
+    { from: "E", to: "I" },
+    { from: "E", to: "J" },
+    { from: "F", to: "K" },
+    { from: "F", to: "L" },
+    { from: "G", to: "M" },
+    { from: "G", to: "N" },
+    { from: "H", to: "O" },
+    { from: "H", to: "P" },
+  ],
+};
+
 Deno.test("DAG type-safe graph builder", async (tc) => {
   type Node = "A" | "B" | "C" | "D" | "E";
   const nodes: Array<Node> = ["A", "B", "C", "D", "E"];
@@ -84,7 +107,7 @@ Deno.test("DAG isCyclical should return true for a cyclic graph", () => {
     edges: [
       { from: "A", to: "B" },
       { from: "B", to: "C" },
-      { from: "C", to: "A" },
+      { from: "C", to: "A" }, // cyclical
     ],
   };
 
@@ -101,38 +124,28 @@ Deno.test("DAG isCyclical should return true for a cyclic graph", () => {
 });
 
 Deno.test("DAG isCyclical should return false for an acyclic graph", () => {
-  // Create an acyclic graph
-  const acyclicGraph: mod.Graph<"A" | "B" | "C"> = {
-    nodes: ["A", "B", "C"],
-    edges: [
-      { from: "A", to: "B" },
-      { from: "B", to: "C" },
-    ],
-  };
-
   // Test the isCyclical function
   const isCyclical = mod.dagIsCyclicalDFS(
-    acyclicGraph,
+    complexGraph,
     syntheticNodeID,
     syntheticNodeComparator,
   );
   ta.assert(!isCyclical);
 
   // test the dagDepthFirst.isCyclical object is equivalent to the primary function
-  ta.assertEquals(syntheticDagDF.isCyclical(acyclicGraph), isCyclical);
+  ta.assertEquals(syntheticDagDF.isCyclical(complexGraph), isCyclical);
 });
 
 Deno.test("DAG cycles should return the correct cycles in a graph", () => {
-  // Create a graph with cycles
   const graphWithCycles: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
     nodes: ["A", "B", "C", "D", "E"],
     edges: [
       { from: "A", to: "B" },
       { from: "B", to: "C" },
-      { from: "C", to: "A" },
+      { from: "C", to: "A" }, // cycle
       { from: "C", to: "D" },
       { from: "D", to: "E" },
-      { from: "E", to: "C" },
+      { from: "E", to: "C" }, // cycle
     ],
   };
 
@@ -152,7 +165,6 @@ Deno.test("DAG cycles should return the correct cycles in a graph", () => {
 });
 
 Deno.test("DAG topologicalSort should return the nodes in the correct order", () => {
-  // Create a graph for topological sorting
   const graphForTopologicalSort: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
     nodes: ["A", "E", "B", "D", "C"],
     edges: [
@@ -178,57 +190,86 @@ Deno.test("DAG topologicalSort should return the nodes in the correct order", ()
   );
 });
 
-Deno.test("DAG dagDependencies should return the correct dependencies and dependents", () => {
-  // Create a graph for testing
-  const graph: mod.Graph<"A" | "B" | "C" | "D" | "E"> = {
-    nodes: ["A", "B", "C", "D", "E"],
+Deno.test("DAG numeric type instead of string like the others", () => {
+  const dagDF = mod.dagDepthFirst<number, number>(
+    (node) => node,
+    (a, b) => a - b,
+  );
+
+  const graph: mod.Graph<number> = {
+    nodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
     edges: [
-      { from: "A", to: "B" },
-      { from: "A", to: "C" },
-      { from: "B", to: "D" },
-      { from: "C", to: "D" },
-      { from: "D", to: "E" },
+      { from: 1, to: 2 },
+      { from: 1, to: 3 },
+      { from: 2, to: 4 },
+      { from: 2, to: 5 },
+      { from: 3, to: 5 },
+      { from: 4, to: 6 },
+      { from: 5, to: 7 },
+      { from: 6, to: 8 },
+      { from: 6, to: 9 },
+      { from: 7, to: 10 },
+      { from: 8, to: 11 },
+      { from: 9, to: 11 },
+      { from: 10, to: 12 },
+      { from: 11, to: 12 },
+      { from: 12, to: 13 },
+      { from: 13, to: 14 },
+      { from: 13, to: 15 },
+      { from: 14, to: 16 },
+      { from: 15, to: 16 },
     ],
   };
 
+  ta.assert(!dagDF.isCyclical(graph));
+  ta.assertEquals(dagDF.topologicalSort(graph), [
+    1,
+    3,
+    2,
+    5,
+    7,
+    10,
+    4,
+    6,
+    9,
+    8,
+    11,
+    12,
+    13,
+    15,
+    14,
+    16,
+  ]);
+});
+
+Deno.test("DAG dagDependencies should return the correct dependencies", () => {
   // Test the dagDependencies function
-  const result = mod.dagDependencies(
-    graph,
+  const dependencies = mod.dagDependencies(
+    complexGraph,
     syntheticNodeID,
     syntheticNodeComparator,
     mod.dagTopologicalSortDFS,
     "D",
   );
-
-  ta.assertEquals(result.dependencies.sort(), ["A", "B", "C"]);
-  ta.assertEquals(result.dependents, ["E"]);
+  ta.assertEquals(dependencies.sort(), ["B", "C"]);
 
   // Test the dagDepthFirst.deps function in object is equivalent to the primary function
-  const result2 = syntheticDagDF.deps(graph, "D");
-  ta.assertEquals(result2.dependencies.sort(), result.dependencies.sort());
-  ta.assertEquals(result2.dependents, result.dependents);
+  const result2 = syntheticDagDF.deps(complexGraph, "D");
+  ta.assertEquals(result2.sort(), dependencies.sort());
+});
+
+Deno.test("DAG dagAncestors should return the correct ancestors (all dependencies)", () => {
+  // Test the dagDependencies function
+  const ancestors = mod.dagAncestors(complexGraph, syntheticNodeID, "O");
+  ta.assertEquals(ancestors.sort(), ["A", "B", "C", "D", "H"]);
+
+  // Test the dagDepthFirst.deps function in object is equivalent to the primary function
+  const result2 = syntheticDagDF.ancestors(complexGraph, "O");
+  ta.assertEquals(result2.sort(), ancestors.sort());
 });
 
 Deno.test("graphPlantUmlDiagram should generate the correct PlantUML diagram", () => {
-  // Create a graph for testing
-  const graph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F"> = {
-    nodes: ["A", "B", "C", "D", "E", "F"],
-    edges: [
-      { from: "A", to: "B" },
-      { from: "A", to: "C" },
-      { from: "B", to: "D" },
-      { from: "B", to: "E" },
-      { from: "C", to: "D" },
-      { from: "C", to: "F" },
-      { from: "D", to: "E" },
-      { from: "D", to: "F" },
-      { from: "E", to: "F" },
-      { from: "F", to: "A" },
-    ],
-  };
-
-  // Generate the PlantUML diagram
-  const diagram = mod.graphPlantUmlDiagram(graph, {
+  const diagram = mod.graphPlantUmlDiagram(complexGraph, {
     node: (node) => ({ text: `rectangle ${node}` }),
     edge: (edge) => ({
       fromText: edge.from,
@@ -238,22 +279,40 @@ Deno.test("graphPlantUmlDiagram should generate the correct PlantUML diagram", (
 
   // Define the expected PlantUML diagram
   const expectedDiagram = `@startuml
+left to right direction
+
 rectangle A
 rectangle B
 rectangle C
 rectangle D
 rectangle E
 rectangle F
+rectangle G
+rectangle H
+rectangle I
+rectangle J
+rectangle K
+rectangle L
+rectangle M
+rectangle N
+rectangle O
+rectangle P
 A --> B
 A --> C
 B --> D
 B --> E
 C --> D
 C --> F
-D --> E
-D --> F
-E --> F
-F --> A
+D --> G
+D --> H
+E --> I
+E --> J
+F --> K
+F --> L
+G --> M
+G --> N
+H --> O
+H --> P
 @enduml`;
 
   // Compare the generated diagram with the expected diagram

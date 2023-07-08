@@ -1,9 +1,9 @@
 /**
  * Represents an edge in the graph with a `from` node and a `to` node
  */
-export interface Edge<Node> {
-  readonly from: Node;
-  readonly to: Node;
+export interface Edge<FromNode, ToNode> {
+  readonly from: FromNode;
+  readonly to: ToNode;
 }
 
 /**
@@ -11,7 +11,7 @@ export interface Edge<Node> {
  */
 export interface Graph<Node> {
   readonly nodes: Array<Node>;
-  readonly edges: Array<Edge<Node>>;
+  readonly edges: Array<Edge<Node, Node>>;
 }
 
 /**
@@ -27,12 +27,15 @@ export function graph<Node>(
     | Generator<Node>
     | (() => Iterable<Node> | ArrayLike<Node> | Generator<Node>),
   edgesSupplier:
-    | Iterable<Edge<Node>>
-    | ArrayLike<Edge<Node>>
-    | Generator<Edge<Node>>
+    | Iterable<Edge<Node, Node>>
+    | ArrayLike<Edge<Node, Node>>
+    | Generator<Edge<Node, Node>>
     | ((
       nodes: Array<Node>,
-    ) => Iterable<Edge<Node>> | ArrayLike<Edge<Node>> | Generator<Edge<Node>>),
+    ) =>
+      | Iterable<Edge<Node, Node>>
+      | ArrayLike<Edge<Node, Node>>
+      | Generator<Edge<Node, Node>>),
 ) {
   const nodes = Array.from(
     typeof nodesSupplier === "function" ? nodesSupplier() : nodesSupplier,
@@ -57,13 +60,13 @@ export function graph<Node>(
  */
 export function edgesGraph<Node>(
   edgesSupplier:
-    | Iterable<Edge<Node>>
-    | ArrayLike<Edge<Node>>
-    | Generator<Edge<Node>>
+    | Iterable<Edge<Node, Node>>
+    | ArrayLike<Edge<Node, Node>>
+    | Generator<Edge<Node, Node>>
     | (() =>
-      | Iterable<Edge<Node>>
-      | ArrayLike<Edge<Node>>
-      | Generator<Edge<Node>>),
+      | Iterable<Edge<Node, Node>>
+      | ArrayLike<Edge<Node, Node>>
+      | Generator<Edge<Node, Node>>),
 ) {
   const edges = Array.from(
     typeof edgesSupplier === "function" ? edgesSupplier() : edgesSupplier,
@@ -147,17 +150,17 @@ export function dagCyclesDFS<Node, NodeID>(
   graph: Graph<Node>,
   identity: NodeIdentitySupplier<Node, NodeID>,
   compare: NodeComparator<Node>,
-): Array<{ cycleNodes: Array<Node>; cycleEdges: Array<Edge<Node>> }> {
+): Array<{ cycleNodes: Array<Node>; cycleEdges: Array<Edge<Node, Node>> }> {
   const visited: Set<NodeID> = new Set();
   const recursionStack: Set<NodeID> = new Set();
   const cycleList: Array<
-    { cycleNodes: Array<Node>; cycleEdges: Array<Edge<Node>> }
+    { cycleNodes: Array<Node>; cycleEdges: Array<Edge<Node, Node>> }
   > = [];
 
   for (const node of graph.nodes) {
     if (!visited.has(identity(node))) {
       const cycleNodes: Array<Node> = [];
-      const cycleEdges: Array<Edge<Node>> = [];
+      const cycleEdges: Array<Edge<Node, Node>> = [];
       if (dagDFS(node, visited, recursionStack, cycleNodes, cycleEdges)) {
         cycleList.push({ cycleNodes, cycleEdges });
       }
@@ -169,7 +172,7 @@ export function dagCyclesDFS<Node, NodeID>(
     visited: Set<NodeID>,
     recursionStack: Set<NodeID>,
     cycleNodes: Array<Node>,
-    cycleEdges: Array<Edge<Node>>,
+    cycleEdges: Array<Edge<Node, Node>>,
   ): boolean {
     const nodeId = identity(node);
     visited.add(nodeId);
@@ -254,48 +257,72 @@ export function dagDependencies<Node, NodeID>(
     compare: NodeComparator<Node>,
   ) => Array<Node>,
   targetNode: Node,
-): { readonly dependencies: Array<Node>; readonly dependents: Array<Node> } {
-  const dependencies: Array<Node> = [];
-  const dependents: Array<Node> = [];
-  const visited: Set<NodeID> = new Set();
-
+) {
+  // Create a map of node ID to index in the topological sort
   const topologicalSort = topologicalSortSupplier(graph, identity, compare);
-  const nodeIndex: Map<NodeID, number> = new Map();
+
+  const nodeIndexMap = new Map<NodeID, number>();
+  const dependencies: Node[] = [];
+
+  // Create a map of node ID to index in the topological sort
   for (let i = 0; i < topologicalSort.length; i++) {
-    nodeIndex.set(identity(topologicalSort[i]), i);
-  }
-
-  // Traverse the topological sort starting from the target node
-  const targetIndex = nodeIndex.get(identity(targetNode));
-  if (typeof targetIndex === "number") {
-    for (let i = targetIndex - 1; i >= 0; i--) {
-      const node = topologicalSort[i];
-      const nodeId = identity(node);
-      visited.add(nodeId);
-      dependencies.push(node);
-    }
-
-    for (let i = targetIndex + 1; i < topologicalSort.length; i++) {
-      const node = topologicalSort[i];
-      const nodeId = identity(node);
-      visited.add(nodeId);
-      dependents.push(node);
-    }
-  }
-
-  // Check remaining nodes that are not visited
-  for (const node of graph.nodes) {
+    const node = topologicalSort[i];
     const nodeId = identity(node);
-    if (!visited.has(nodeId)) {
-      if (compare(node, targetNode) < 0) {
-        dependencies.push(node);
-      } else if (compare(node, targetNode) > 0) {
-        dependents.push(node);
+    nodeIndexMap.set(nodeId, i);
+  }
+
+  // Compute dependencies
+  const targetNodeId = identity(targetNode);
+  const targetIndex = nodeIndexMap.get(targetNodeId)!;
+  for (const edge of graph.edges) {
+    const fromId = identity(edge.from);
+    const toId = identity(edge.to);
+    const fromIndex = nodeIndexMap.get(fromId)!;
+    const toIndex = nodeIndexMap.get(toId)!;
+
+    if (toId === targetNodeId) {
+      dependencies.push(edge.from);
+    }
+
+    if (fromIndex < targetIndex && toIndex > targetIndex) {
+      dependencies.push(edge.from);
+    }
+  }
+
+  return dependencies;
+}
+
+/**
+ * Function dagAncestors - Computes all the dependencies (ancestors) of a given node in a DAG.
+ * It takes the graph, the node identity supplier, and the target node.
+ * Returns an array of all the ancestors (dependencies) of the specified node.
+ */
+export function dagAncestors<Node, NodeID>(
+  graph: Graph<Node>,
+  identity: (node: Node) => NodeID,
+  targetNode: Node,
+): Node[] {
+  const visited = new Set<Node>();
+  const ancestors: Node[] = [];
+
+  // Depth-first traversal to find all ancestors
+  function traverse(node: Node) {
+    visited.add(node);
+
+    const dependencies = graph.edges
+      .filter((edge) => identity(edge.to) === identity(node))
+      .map((edge) => edge.from);
+
+    for (const dependency of dependencies) {
+      if (!visited.has(dependency)) {
+        ancestors.push(dependency);
+        traverse(dependency);
       }
     }
   }
 
-  return { dependencies, dependents };
+  traverse(targetNode);
+  return ancestors;
 }
 
 /**
@@ -314,10 +341,12 @@ export const dagDepthFirst = <Node, NodeID>(
     isCyclical: (graph: Graph<Node>) =>
       dagIsCyclicalDFS(graph, identity, compare),
     cycles: (graph: Graph<Node>) => dagCyclesDFS(graph, identity, compare),
-    deps: (graph: Graph<Node>, node: Node) =>
-      dagDependencies(graph, identity, compare, dagTopologicalSortDFS, node),
     topologicalSort: (graph: Graph<Node>) =>
       dagTopologicalSortDFS(graph, identity, compare),
+    ancestors: (graph: Graph<Node>, node: Node) =>
+      dagAncestors(graph, identity, node),
+    deps: (graph: Graph<Node>, node: Node) =>
+      dagDependencies(graph, identity, compare, dagTopologicalSortDFS, node),
   };
 };
 
@@ -333,11 +362,11 @@ export function graphPlantUmlDiagram<Node>(
       node: Node,
     ) => { readonly text: string; readonly features?: string };
     readonly edge: (
-      edge: Edge<Node>,
+      edge: Edge<Node, Node>,
     ) => {
       readonly fromText: string;
       readonly toText: string;
-      features?: string;
+      readonly features?: string;
     };
   },
 ): string {
@@ -361,8 +390,8 @@ export function graphPlantUmlDiagram<Node>(
   }
 
   // Generate the PlantUML diagram
-  const diagram = `@startuml\n${nodeLines.join("\n")}\n${
-    edgeLines.join("\n")
-  }\n@enduml`;
+  const diagram = `@startuml\nleft to right direction\n\n${
+    nodeLines.join("\n")
+  }\n${edgeLines.join("\n")}\n@enduml`;
   return diagram;
 }
