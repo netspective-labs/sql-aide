@@ -242,53 +242,21 @@ export function dagTopologicalSortDFS<Node, NodeID>(
 }
 
 /**
- * Returns the dependencies and dependents of a given node in a directed acyclic
- * graph (DAG) based on a provided topological sort. The function takes the
- * graph, topological sort, and the target node as input. It returns an object
- * with `dependencies` and `dependents` properties.
+ * Computes the dependencies of a given node in a DAG. It takes the graph, the
+ * node identity supplier, and the target node. Returns an array of dependencies
+ * of the specified node.
  */
 export function dagDependencies<Node, NodeID>(
   graph: Graph<Node>,
   identity: NodeIdentitySupplier<Node, NodeID>,
-  compare: NodeComparator<Node>,
-  topologicalSortSupplier: (
-    graph: Graph<Node>,
-    identity: NodeIdentitySupplier<Node, NodeID>,
-    compare: NodeComparator<Node>,
-  ) => Array<Node>,
   targetNode: Node,
 ) {
-  // Create a map of node ID to index in the topological sort
-  const topologicalSort = topologicalSortSupplier(graph, identity, compare);
-
-  const nodeIndexMap = new Map<NodeID, number>();
   const dependencies: Node[] = [];
-
-  // Create a map of node ID to index in the topological sort
-  for (let i = 0; i < topologicalSort.length; i++) {
-    const node = topologicalSort[i];
-    const nodeId = identity(node);
-    nodeIndexMap.set(nodeId, i);
-  }
-
-  // Compute dependencies
-  const targetNodeId = identity(targetNode);
-  const targetIndex = nodeIndexMap.get(targetNodeId)!;
   for (const edge of graph.edges) {
-    const fromId = identity(edge.from);
-    const toId = identity(edge.to);
-    const fromIndex = nodeIndexMap.get(fromId)!;
-    const toIndex = nodeIndexMap.get(toId)!;
-
-    if (toId === targetNodeId) {
-      dependencies.push(edge.from);
-    }
-
-    if (fromIndex < targetIndex && toIndex > targetIndex) {
+    if (identity(edge.to) === identity(targetNode)) {
       dependencies.push(edge.from);
     }
   }
-
   return dependencies;
 }
 
@@ -301,7 +269,7 @@ export function dagAncestors<Node, NodeID>(
   graph: Graph<Node>,
   identity: (node: Node) => NodeID,
   targetNode: Node,
-): Node[] {
+) {
   const visited = new Set<Node>();
   const ancestors: Node[] = [];
 
@@ -326,6 +294,36 @@ export function dagAncestors<Node, NodeID>(
 }
 
 /**
+ * Function graphNodesIterator - Iterates each node in topological sort order and manages state for visited nodes and parallelizability.
+ * It takes the graph and the topological sort of the graph.
+ * Returns an asynchronous generator that provides the current node, whether it is parallelizable, and allows marking nodes as visited.
+ */
+export function* dagNodesIterator<Node, NodeID>(
+  graph: Graph<Node>,
+  identity: NodeIdentitySupplier<Node, NodeID>,
+  compare: NodeComparator<Node>,
+  topologicalSortSupplier: (
+    graph: Graph<Node>,
+    identity: NodeIdentitySupplier<Node, NodeID>,
+    compare: NodeComparator<Node>,
+  ) => Array<Node>,
+) {
+  const topologicalSort = topologicalSortSupplier(graph, identity, compare);
+  const visited = new Set<Node>();
+
+  // Iterate over the topological sort
+  for (const node of topologicalSort) {
+    yield {
+      node,
+      visited,
+      ancestors: () => dagAncestors(graph, identity, node),
+      deps: () => dagDependencies(graph, identity, node),
+    };
+    visited.add(node);
+  }
+}
+
+/**
  * Directed Acyclic Graph (DAG) depth-first algorithm bundle. This is the object
  * that should typically be used for DAG interactions. The `dag*` functions are
  * available when you need more flexibility.
@@ -339,14 +337,22 @@ export const dagDepthFirst = <Node, NodeID>(
 ) => {
   return {
     isCyclical: (graph: Graph<Node>) =>
-      dagIsCyclicalDFS(graph, identity, compare),
-    cycles: (graph: Graph<Node>) => dagCyclesDFS(graph, identity, compare),
+      dagIsCyclicalDFS<Node, NodeID>(graph, identity, compare),
+    cycles: (graph: Graph<Node>) =>
+      dagCyclesDFS<Node, NodeID>(graph, identity, compare),
     topologicalSort: (graph: Graph<Node>) =>
-      dagTopologicalSortDFS(graph, identity, compare),
+      dagTopologicalSortDFS<Node, NodeID>(graph, identity, compare),
     ancestors: (graph: Graph<Node>, node: Node) =>
-      dagAncestors(graph, identity, node),
+      dagAncestors<Node, NodeID>(graph, identity, node),
     deps: (graph: Graph<Node>, node: Node) =>
-      dagDependencies(graph, identity, compare, dagTopologicalSortDFS, node),
+      dagDependencies<Node, NodeID>(graph, identity, node),
+    nodesIterator: (graph: Graph<Node>) =>
+      dagNodesIterator<Node, NodeID>(
+        graph,
+        identity,
+        compare,
+        dagTopologicalSortDFS,
+      ),
   };
 };
 
@@ -394,4 +400,14 @@ export function graphPlantUmlDiagram<Node>(
     nodeLines.join("\n")
   }\n${edgeLines.join("\n")}\n@enduml`;
   return diagram;
+}
+
+export function typicalPlantUmlDiagram<Node>(graph: Graph<Node>) {
+  return graphPlantUmlDiagram(graph, {
+    node: (node) => ({ text: `rectangle ${node}` }),
+    edge: (edge) => ({
+      fromText: String(edge.from),
+      toText: String(edge.to),
+    }),
+  });
 }

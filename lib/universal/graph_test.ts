@@ -33,6 +33,10 @@ const complexGraph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I
   ],
 };
 
+// DEBUG HINT: Use PlantText.com to generate SVG from PlantUML output, it will
+//             allow you to visualize the DAG
+//console.log(mod.typicalPlantUmlDiagram(complexGraph));
+
 Deno.test("DAG type-safe graph builder", async (tc) => {
   type Node = "A" | "B" | "C" | "D" | "E";
   const nodes: Array<Node> = ["A", "B", "C", "D", "E"];
@@ -244,13 +248,7 @@ Deno.test("DAG numeric type instead of string like the others", () => {
 
 Deno.test("DAG dagDependencies should return the correct dependencies", () => {
   // Test the dagDependencies function
-  const dependencies = mod.dagDependencies(
-    complexGraph,
-    syntheticNodeID,
-    syntheticNodeComparator,
-    mod.dagTopologicalSortDFS,
-    "D",
-  );
+  const dependencies = mod.dagDependencies(complexGraph, syntheticNodeID, "D");
   ta.assertEquals(dependencies.sort(), ["B", "C"]);
 
   // Test the dagDepthFirst.deps function in object is equivalent to the primary function
@@ -266,6 +264,219 @@ Deno.test("DAG dagAncestors should return the correct ancestors (all dependencie
   // Test the dagDepthFirst.deps function in object is equivalent to the primary function
   const result2 = syntheticDagDF.ancestors(complexGraph, "O");
   ta.assertEquals(result2.sort(), ancestors.sort());
+});
+
+Deno.test("graphNodesIterator should generate iterable nodes", () => {
+  const visited: {
+    node: string;
+    visited: string[];
+    deps: string[];
+    ancestors: string[];
+  }[] = [];
+  for (const entry of syntheticDagDF.nodesIterator(complexGraph)) {
+    visited.push({
+      node: entry.node,
+      visited: Array.from(entry.visited.values()),
+      deps: entry.deps(),
+      ancestors: entry.ancestors(),
+    });
+  }
+  ta.assertEquals(visited, [
+    { node: "A", visited: [], deps: [], ancestors: [] },
+    { node: "C", visited: ["A"], deps: ["A"], ancestors: ["A"] },
+    {
+      node: "F",
+      visited: ["A", "C"],
+      deps: ["C"],
+      ancestors: ["C", "A"],
+    },
+    {
+      node: "L",
+      visited: ["A", "C", "F"],
+      deps: ["F"],
+      ancestors: ["F", "C", "A"],
+    },
+    {
+      node: "K",
+      visited: ["A", "C", "F", "L"],
+      deps: ["F"],
+      ancestors: ["F", "C", "A"],
+    },
+    {
+      node: "B",
+      visited: ["A", "C", "F", "L", "K"],
+      deps: ["A"],
+      ancestors: ["A"],
+    },
+    {
+      node: "E",
+      visited: ["A", "C", "F", "L", "K", "B"],
+      deps: ["B"],
+      ancestors: ["B", "A"],
+    },
+    {
+      node: "J",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+      ],
+      deps: ["E"],
+      ancestors: ["E", "B", "A"],
+    },
+    {
+      node: "I",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+      ],
+      deps: ["E"],
+      ancestors: ["E", "B", "A"],
+    },
+    {
+      node: "D",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+      ],
+      deps: ["B", "C"],
+      ancestors: ["B", "A", "C"],
+    },
+    {
+      node: "H",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+      ],
+      deps: ["D"],
+      ancestors: ["D", "B", "A", "C"],
+    },
+    {
+      node: "P",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+        "H",
+      ],
+      deps: ["H"],
+      ancestors: ["H", "D", "B", "A", "C"],
+    },
+    {
+      node: "O",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+        "H",
+        "P",
+      ],
+      deps: ["H"],
+      ancestors: ["H", "D", "B", "A", "C"],
+    },
+    {
+      node: "G",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+        "H",
+        "P",
+        "O",
+      ],
+      deps: ["D"],
+      ancestors: ["D", "B", "A", "C"],
+    },
+    {
+      node: "N",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+        "H",
+        "P",
+        "O",
+        "G",
+      ],
+      deps: ["G"],
+      ancestors: ["G", "D", "B", "A", "C"],
+    },
+    {
+      node: "M",
+      visited: [
+        "A",
+        "C",
+        "F",
+        "L",
+        "K",
+        "B",
+        "E",
+        "J",
+        "I",
+        "D",
+        "H",
+        "P",
+        "O",
+        "G",
+        "N",
+      ],
+      deps: ["G"],
+      ancestors: ["G", "D", "B", "A", "C"],
+    },
+  ]);
 });
 
 Deno.test("graphPlantUmlDiagram should generate the correct PlantUML diagram", () => {
