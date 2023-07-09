@@ -1,6 +1,22 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as mod from "./graph.ts";
 
+/**
+ * Generate a PlantUML server URL to render PlantUML source content in the
+ * browser. This is useful to visualize DAGs as PNG, SVG, etc.
+ * @param pumlContent the PlantUML source code
+ * @param serverUrl The server we want to render the URL for
+ * @returns a string which can be pasted into the browser to render PlantUML source
+ */
+// import * as pe from "npm:plantuml-encoder";
+// function plantUmlRenderUrl(
+//   pumlContent: string,
+//   serverUrl = "http://www.plantuml.com/plantuml/svg/",
+// ): string {
+//   const encodedSource = pe.encode(pumlContent);
+//   return `${serverUrl}${encodedSource}`;
+// }
+
 const syntheticNodeID: mod.NodeIdentitySupplier<string, string> = (node) =>
   node;
 const syntheticNodeComparator: mod.NodeComparator<string> = (a, b) =>
@@ -35,7 +51,13 @@ const complexGraph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I
 
 // DEBUG HINT: Use PlantText.com to generate SVG from PlantUML output, it will
 //             allow you to visualize the DAG
-//console.log(mod.typicalPlantUmlDiagram(complexGraph));
+// console.log(plantUmlRenderUrl(mod.typicalPlantUmlDiagram(complexGraph)));
+// console.log(
+//   plantUmlRenderUrl(
+//     mod.typicalPlantUmlDiagram(complexGraph),
+//     "http://planttext.com/api/plantuml/svg/",
+//   ),
+// );
 
 Deno.test("DAG type-safe graph builder", async (tc) => {
   type Node = "A" | "B" | "C" | "D" | "E";
