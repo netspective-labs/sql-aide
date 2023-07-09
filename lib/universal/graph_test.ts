@@ -194,7 +194,7 @@ Deno.test("DAG topologicalSort should return the nodes in the correct order", ()
   );
 });
 
-Deno.test("DAG numeric type instead of string like the others", () => {
+Deno.test("DAG numeric type instead of string", () => {
   const dagDF = mod.dagDepthFirst<number, number>(
     (node) => node,
     (a, b) => a - b,
@@ -266,240 +266,134 @@ Deno.test("DAG dagAncestors should return the correct ancestors (all dependencie
   ta.assertEquals(result2.sort(), ancestors.sort());
 });
 
-Deno.test("graphNodesIterator should generate iterable nodes", () => {
-  const visited: {
+Deno.test("DAG execution plan should generate iterable nodes", () => {
+  const executionPlan: {
     node: string;
-    visited: string[];
+    predecessors: string[];
     deps: string[];
     ancestors: string[];
     isParallelizable: boolean;
   }[] = [];
-  for (const entry of syntheticDagDF.nodesIterator(complexGraph)) {
-    visited.push({
+  for (const entry of syntheticDagDF.executionPlan(complexGraph)) {
+    executionPlan.push({
       node: entry.node,
-      visited: Array.from(entry.visited.values()),
+      predecessors: Array.from(entry.predecessors.values()),
       deps: entry.deps(),
       ancestors: entry.ancestors(),
       isParallelizable: entry.isParallelizable(),
     });
   }
-  ta.assertEquals(visited, [
+
+  // deno-fmt-ignore
+  ta.assertEquals(executionPlan, [
     {
       node: "A",
-      visited: [],
+      predecessors: [],
       deps: [],
       ancestors: [],
       isParallelizable: true,
     },
     {
       node: "C",
-      visited: ["A"],
+      predecessors: ["A"],
       deps: ["A"],
       ancestors: ["A"],
       isParallelizable: false,
     },
     {
       node: "F",
-      visited: ["A", "C"],
+      predecessors: ["A", "C"],
       deps: ["C"],
       ancestors: ["C", "A"],
       isParallelizable: true,
     },
     {
       node: "L",
-      visited: ["A", "C", "F"],
+      predecessors: ["A", "C", "F"],
       deps: ["F"],
       ancestors: ["F", "C", "A"],
       isParallelizable: true,
     },
     {
       node: "K",
-      visited: ["A", "C", "F", "L"],
+      predecessors: ["A", "C", "F", "L"],
       deps: ["F"],
       ancestors: ["F", "C", "A"],
       isParallelizable: true,
     },
     {
       node: "B",
-      visited: ["A", "C", "F", "L", "K"],
+      predecessors: ["A", "C", "F", "L", "K"],
       deps: ["A"],
       ancestors: ["A"],
       isParallelizable: false,
     },
     {
       node: "E",
-      visited: ["A", "C", "F", "L", "K", "B"],
+      predecessors: ["A", "C", "F", "L", "K", "B"],
       deps: ["B"],
       ancestors: ["B", "A"],
       isParallelizable: true,
     },
     {
       node: "J",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E" ],
       deps: ["E"],
       ancestors: ["E", "B", "A"],
       isParallelizable: true,
     },
     {
       node: "I",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J" ],
       deps: ["E"],
       ancestors: ["E", "B", "A"],
       isParallelizable: true,
     },
     {
       node: "D",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I" ],
       deps: ["B", "C"],
       ancestors: ["B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "H",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D" ],
       deps: ["D"],
       ancestors: ["D", "B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "P",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-        "H",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D", "H" ],
       deps: ["H"],
       ancestors: ["H", "D", "B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "O",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-        "H",
-        "P",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D", "H", "P" ],
       deps: ["H"],
       ancestors: ["H", "D", "B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "G",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-        "H",
-        "P",
-        "O",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D", "H", "P", "O" ],
       deps: ["D"],
       ancestors: ["D", "B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "N",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-        "H",
-        "P",
-        "O",
-        "G",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D", "H", "P", "O", "G" ],
       deps: ["G"],
       ancestors: ["G", "D", "B", "A", "C"],
       isParallelizable: true,
     },
     {
       node: "M",
-      visited: [
-        "A",
-        "C",
-        "F",
-        "L",
-        "K",
-        "B",
-        "E",
-        "J",
-        "I",
-        "D",
-        "H",
-        "P",
-        "O",
-        "G",
-        "N",
-      ],
+      predecessors: [ "A", "C", "F", "L", "K", "B", "E", "J", "I", "D", "H", "P", "O", "G", "N", ],
       deps: ["G"],
       ancestors: ["G", "D", "B", "A", "C"],
       isParallelizable: true,
@@ -509,6 +403,7 @@ Deno.test("graphNodesIterator should generate iterable nodes", () => {
 
 Deno.test("graphPlantUmlDiagram should generate the correct PlantUML diagram", () => {
   const diagram = mod.graphPlantUmlDiagram(complexGraph, {
+    diagramFeatures: `left to right direction\n`,
     node: (node) => ({ text: `rectangle ${node}` }),
     edge: (edge) => ({
       fromText: edge.from,

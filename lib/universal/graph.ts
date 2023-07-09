@@ -294,11 +294,12 @@ export function dagAncestors<Node, NodeID>(
 }
 
 /**
- * Function graphNodesIterator - Iterates each node in topological sort order and manages state for visited nodes and parallelizability.
- * It takes the graph and the topological sort of the graph.
- * Returns an asynchronous generator that provides the current node, whether it is parallelizable, and allows marking nodes as visited.
+ * Iterates each node in topological sort order and manages state for visited
+ * nodes and parallelizability. It takes the graph and the topological sort of
+ * the graph. Returns a generator that provides the current node, whether it is
+ * parallelizable, and marking nodes as visited (as "predecessors").
  */
-export function* dagNodesIterator<Node, NodeID>(
+export function* dagExecutionPlan<Node, NodeID>(
   graph: Graph<Node>,
   identity: NodeIdentitySupplier<Node, NodeID>,
   compare: NodeComparator<Node>,
@@ -309,7 +310,7 @@ export function* dagNodesIterator<Node, NodeID>(
   ) => Array<Node>,
 ) {
   const topologicalSort = topologicalSortSupplier(graph, identity, compare);
-  const visited = new Set<Node>();
+  const predecessors = new Set<Node>();
 
   function isParallelizable(node: Node): boolean {
     for (const edge of graph.edges) {
@@ -328,12 +329,12 @@ export function* dagNodesIterator<Node, NodeID>(
   for (const node of topologicalSort) {
     yield {
       node,
-      visited,
+      predecessors,
       ancestors: () => dagAncestors(graph, identity, node),
       deps: () => dagDependencies(graph, identity, node),
       isParallelizable: () => isParallelizable(node),
     };
-    visited.add(node);
+    predecessors.add(node);
   }
 }
 
@@ -360,8 +361,8 @@ export const dagDepthFirst = <Node, NodeID>(
       dagAncestors<Node, NodeID>(graph, identity, node),
     deps: (graph: Graph<Node>, node: Node) =>
       dagDependencies<Node, NodeID>(graph, identity, node),
-    nodesIterator: (graph: Graph<Node>) =>
-      dagNodesIterator<Node, NodeID>(
+    executionPlan: (graph: Graph<Node>) =>
+      dagExecutionPlan<Node, NodeID>(
         graph,
         identity,
         compare,
@@ -378,6 +379,7 @@ export const dagDepthFirst = <Node, NodeID>(
 export function graphPlantUmlDiagram<Node>(
   graph: Graph<Node>,
   pumlOptions: {
+    readonly diagramFeatures?: string;
     readonly node: (
       node: Node,
     ) => { readonly text: string; readonly features?: string };
@@ -410,14 +412,15 @@ export function graphPlantUmlDiagram<Node>(
   }
 
   // Generate the PlantUML diagram
-  const diagram = `@startuml\nleft to right direction\n\n${
-    nodeLines.join("\n")
-  }\n${edgeLines.join("\n")}\n@enduml`;
+  const diagram = `@startuml${
+    pumlOptions?.diagramFeatures ? `\n${pumlOptions.diagramFeatures}` : ""
+  }\n${nodeLines.join("\n")}\n${edgeLines.join("\n")}\n@enduml`;
   return diagram;
 }
 
 export function typicalPlantUmlDiagram<Node>(graph: Graph<Node>) {
   return graphPlantUmlDiagram(graph, {
+    diagramFeatures: `left to right direction\n`,
     node: (node) => ({ text: `rectangle ${node}` }),
     edge: (edge) => ({
       fromText: String(edge.from),
