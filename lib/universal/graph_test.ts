@@ -51,10 +51,10 @@ const complexGraph: mod.Graph<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I
 
 // DEBUG HINT: Use PlantText.com to generate SVG from PlantUML output, it will
 //             allow you to visualize the DAG
-// console.log(plantUmlRenderUrl(mod.typicalPlantUmlDiagram(complexGraph)));
+// console.log(plantUmlRenderUrl(syntheticDagDF.diagram(complexGraph)));
 // console.log(
 //   plantUmlRenderUrl(
-//     mod.typicalPlantUmlDiagram(complexGraph),
+//     syntheticDagDF.diagram(complexGraph),
 //     "http://planttext.com/api/plantuml/svg/",
 //   ),
 // );
@@ -72,36 +72,39 @@ Deno.test("DAG type-safe graph builder", async (tc) => {
   };
 
   await tc.step("nodes array, edges array", () => {
+    const graph = mod.graph<Node>(nodes, [
+      { from: "A", to: "B" },
+      { from: "B", to: "C" },
+      { from: "C", to: "A" },
+    ]);
     ta.assertEquals(
-      mod.graph<Node>(nodes, [
-        { from: "A", to: "B" },
-        { from: "B", to: "C" },
-        { from: "C", to: "A" },
-      ]),
+      { nodes: Array.from(graph.nodes), edges: Array.from(graph.edges) },
       expectedGraph,
     );
   });
 
   await tc.step("nodes array, edges generator", () => {
+    const graph = mod.graph<Node>(nodes, function* () {
+      yield { from: "A", to: "B" };
+      yield { from: "B", to: "C" };
+      yield { from: "C", to: "A" };
+    });
     ta.assertEquals(
-      mod.graph<Node>(nodes, function* () {
-        yield { from: "A", to: "B" };
-        yield { from: "B", to: "C" };
-        yield { from: "C", to: "A" };
-      }),
+      { nodes: Array.from(graph.nodes), edges: Array.from(graph.edges) },
       expectedGraph,
     );
   });
 
   await tc.step("nodes generator, edges generator", () => {
+    const graph = mod.graph<Node>(function* () {
+      for (const n of nodes) yield n;
+    }, function* () {
+      yield { from: "A", to: "B" };
+      yield { from: "B", to: "C" };
+      yield { from: "C", to: "A" };
+    });
     ta.assertEquals(
-      mod.graph<Node>(function* () {
-        for (const n of nodes) yield n;
-      }, function* () {
-        yield { from: "A", to: "B" };
-        yield { from: "B", to: "C" };
-        yield { from: "C", to: "A" };
-      }),
+      { nodes: Array.from(graph.nodes), edges: Array.from(graph.edges) },
       expectedGraph,
     );
   });

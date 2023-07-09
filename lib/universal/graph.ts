@@ -1,3 +1,40 @@
+/*
+ * This module provides functions for working with different types of graphs.
+ * As of July 2023 the focus for this module is on DAGs but more types can be
+ * added later.
+ *
+ * General Graph Interfaces:
+ * - Graph: Represents the graph structure containing nodes and edges.
+ * - Node: Represents a vertex in a DAG or node for any other kind of graph.
+ * - Edge: Represents a directed edge connecting two nodes in the graph.
+ * - NodeIdentitySupplier: A function that supplies a unique node identifier.
+ * - NodeComparator: A function that compares two nodes for equality.
+ *
+ * Graphs, Nodes, Edges, Identities, and Comparators should remain graph-type-
+ * indepenedent (meaning whether it's a DAG or any other kind of graph). The
+ * interfaces should be generic and type-safe and assume to be used in a
+ * functional composition model (not class-based). Classes may be created on
+ * top of functions if desired.
+ *
+ * Using the interfaces described above, this module provides functions for
+ * working with Directed Acyclic Graphs (DAGs). All DAG-specific functions are
+ * prefixed with `dag`. It includes operations such as topological sort, cycle
+ * detection, traversal, and computing dependencies and parallelizability of
+ * nodes.
+ */
+
+/**
+ * A function that supplies the identity of a node. Used to uniquely identify a
+ * node in the graph.
+ */
+export type NodeIdentitySupplier<Node, NodeID> = (n: Node) => NodeID;
+
+/**
+ * A function that compares two nodes. Used for sorting and comparing nodes.
+ * Returns -1 if n1 is "less than" n2, 0 if equal, +1 if "greater than".
+ */
+export type NodeComparator<Node> = (n1: Node, n2: Node) => number;
+
 /**
  * Represents an edge in the graph with a `from` node and a `to` node
  */
@@ -10,8 +47,8 @@ export interface Edge<FromNode, ToNode> {
  * Represents a graph data structure with a list of nodes and edges
  */
 export interface Graph<Node> {
-  readonly nodes: Array<Node>;
-  readonly edges: Array<Edge<Node, Node>>;
+  readonly nodes: Iterable<Node>;
+  readonly edges: Iterable<Edge<Node, Node>>;
 }
 
 /**
@@ -83,18 +120,6 @@ export function edgesGraph<Node>(
 
   return graph<Node>(Array.from(nodesSet), edges);
 }
-
-/**
- * A function that supplies the identity of a node. Used to uniquely identify a
- * node in the graph.
- */
-export type NodeIdentitySupplier<Node, NodeID> = (n: Node) => NodeID;
-
-/**
- * A function that compares two nodes. Used for sorting and comparing nodes.
- * Returns -1 if n1 is "less than" n2, 0 if equal, +1 if "greater than".
- */
-export type NodeComparator<Node> = (n1: Node, n2: Node) => number;
 
 /**
  * Returns true if a cycle is detected in the graph. It uses depth-first search
@@ -271,6 +296,7 @@ export function dagAncestors<Node, NodeID>(
   identity: (node: Node) => NodeID,
   targetNode: Node,
 ) {
+  const edges = Array.from(graph.edges);
   const visited = new Set<Node>();
   const ancestors: Node[] = [];
 
@@ -278,7 +304,7 @@ export function dagAncestors<Node, NodeID>(
   function traverse(node: Node) {
     visited.add(node);
 
-    const dependencies = graph.edges
+    const dependencies = edges
       .filter((edge) => identity(edge.to) === identity(node))
       .map((edge) => edge.from);
 
@@ -292,6 +318,39 @@ export function dagAncestors<Node, NodeID>(
 
   traverse(targetNode);
   return ancestors;
+}
+
+/**
+ * A parallelizable node in a DAG is one that can be executed concurrently with
+ * other tasks, offering the opportunity for parallel execution and potential
+ * performance improvements.
+ *
+ * In a DAG, nodes represent tasks or operations, and edges represent
+ * dependencies between the tasks. The dependencies determine the order in which
+ * the tasks need to be executed. However, some nodes in the graph may not have
+ * any dependencies or have dependencies that can be satisfied concurrently.
+ *
+ * These nodes are considered parallelizable because they can be executed
+ * simultaneously without affecting the correctness or order of execution of
+ * other nodes.
+ */
+export function dagIsNodeParallelizable<Node, NodeID>(
+  graph: Graph<Node>,
+  identity: NodeIdentitySupplier<Node, NodeID>,
+  targetNode: Node,
+) {
+  const edges = Array.from(graph.edges);
+
+  for (const edge of graph.edges) {
+    if (identity(edge.to) === identity(targetNode)) {
+      const fromId = identity(edge.from);
+      if (!edges.some((e) => identity(e.to) === fromId)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -313,19 +372,6 @@ export function* dagExecutionPlan<Node, NodeID>(
   const topologicalSort = topologicalSortSupplier(graph, identity, compare);
   const predecessors = new Set<Node>();
 
-  function isParallelizable(node: Node): boolean {
-    for (const edge of graph.edges) {
-      if (identity(edge.to) === identity(node)) {
-        const fromId = identity(edge.from);
-        if (!graph.edges.some((e) => identity(e.to) === fromId)) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
   // Iterate over the topological sort
   for (const node of topologicalSort) {
     yield {
@@ -333,10 +379,64 @@ export function* dagExecutionPlan<Node, NodeID>(
       predecessors,
       ancestors: () => dagAncestors(graph, identity, node),
       deps: () => dagDependencies(graph, identity, node),
-      isParallelizable: () => isParallelizable(node),
+      isParallelizable: () => dagIsNodeParallelizable(graph, identity, node),
     };
     predecessors.add(node);
   }
+}
+
+export function dagExecutionPlantUmlDiagram<Node, NodeID>(
+  graph: Graph<Node>,
+  identity: NodeIdentitySupplier<Node, NodeID>,
+  compare: NodeComparator<Node>,
+  topologicalSortSupplier: (
+    graph: Graph<Node>,
+    identity: NodeIdentitySupplier<Node, NodeID>,
+    compare: NodeComparator<Node>,
+  ) => Array<Node>,
+): string {
+  const topologicalSort = topologicalSortSupplier(graph, identity, compare);
+  const nodeLines: string[] = [];
+  const edgeLines: string[] = [];
+
+  for (const node of topologicalSort) {
+    const text = identity(node);
+    const isP = dagIsNodeParallelizable(graph, identity, node);
+    const nodeLine = `${isP ? `label` : "queue"} dag${text} as "${text}"`;
+    nodeLines.push(nodeLine);
+  }
+
+  if (topologicalSort.length > 1) {
+    edgeLines.push(`DAG --> dag${identity(topologicalSort[0])}`);
+    for (let i = 0; i < topologicalSort.length - 1; i++) {
+      const node = topologicalSort[i];
+      // deno-fmt-ignore
+      const edgeLine = `dag${identity(node)} --> dag${identity(topologicalSort[i+1])}`;
+      edgeLines.push(edgeLine);
+    }
+  }
+
+  for (const node of graph.nodes) {
+    const text = identity(node);
+    const nodeLine = `rectangle g${text} as "${text}"`;
+    nodeLines.push(nodeLine);
+  }
+
+  let first = true;
+  for (const edge of graph.edges) {
+    if (first) {
+      edgeLines.push(`Graph --> g${identity(edge.from)}`);
+      first = false;
+    }
+    const edgeLine = `g${identity(edge.from)} --> g${identity(edge.to)}`;
+    edgeLines.push(edgeLine);
+  }
+
+  // Generate the PlantUML diagram
+  const diagram = `@startuml\nleft to right direction\n${
+    nodeLines.join("\n")
+  }\n${edgeLines.join("\n")}\n@enduml`;
+  return diagram;
 }
 
 /**
@@ -364,6 +464,13 @@ export const dagDepthFirst = <Node, NodeID>(
       dagDependencies<Node, NodeID>(graph, identity, node),
     executionPlan: (graph: Graph<Node>) =>
       dagExecutionPlan<Node, NodeID>(
+        graph,
+        identity,
+        compare,
+        dagTopologicalSortDFS,
+      ),
+    diagram: (graph: Graph<Node>) =>
+      dagExecutionPlantUmlDiagram(
         graph,
         identity,
         compare,
