@@ -92,13 +92,14 @@ export type NodeIdentitySupplier<Node, NodeID> = (n: Node) => NodeID;
 
 /**
  * A function that compares two nodes. Used for sorting and comparing nodes.
+ * Returns -1 if n1 is "less than" n2, 0 if equal, +1 if "greater than".
  */
 export type NodeComparator<Node> = (n1: Node, n2: Node) => number;
 
 /**
- * Returns true if a cycle is detected in the directed acyclic graph.
- * It uses depth-first search and keeps track of visited nodes and the recursion stack.
- * If a node is encountered that is already in the recursion stack, a cycle is detected.
+ * Returns true if a cycle is detected in the graph. It uses depth-first search
+ * and keeps track of visited nodes and the recursion stack. If a node is
+ * encountered that is already in the recursion stack, a cycle is detected.
  */
 export function dagIsCyclicalDFS<Node, NodeID>(
   graph: Graph<Node>,
@@ -141,10 +142,10 @@ export function dagIsCyclicalDFS<Node, NodeID>(
 }
 
 /**
- * Returns all the nodes and edges that form cycles in the directed acyclic
- * graph. It uses depth-first search and keeps track of visited nodes and the
- * recursion stack. If a node is encountered that is already in the recursion
- * stack, a cycle is detected and stored.
+ * Returns all the nodes and edges that form cycles in the graph. It uses depth-
+ * first search and keeps track of visited nodes and the recursion stack. If a
+ * node is encountered that is already in the recursion stack, a cycle is
+ * detected and stored.
  */
 export function dagCyclesDFS<Node, NodeID>(
   graph: Graph<Node>,
