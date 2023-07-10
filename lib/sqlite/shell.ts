@@ -226,3 +226,90 @@ export async function executeSqliteUA(
     }
   }
 }
+
+/**
+ * Wrap the provided SQL into a SQLite bash script which will first load the
+ * file into an in-memory SQLite database then dump that SQL into a file-based
+ * SQLite database. We do the interim step because complex SQL will load
+ * faster with this two-step process. This is especially in SQLite because
+ * insert DMLs often use something like this, note `SELECT` for values.
+ *
+ * INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by")
+ *      VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'),
+ *              (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'),
+ *              'ORGANIZATION_TO_PERSON', 'VENDOR', NULL);
+ *
+ * Because SQLite does not have any scripting language, if we want to use pure
+ * SQL we must "lookup" references as select statements. When those select
+ * statements are looked up in memory they're very fast but on disk it's slow.
+ * So, we run the first step in memory and then emit the output to disk.
+ *
+ * @param ss SQL supplier
+ * @param ctx active Context
+ * @returns text suitable for emitting to STDOUT or saving a text file
+ */
+export function sqliteMemToFileBashScript(
+  ss: FlexibleSqlTextSupplierSync,
+  scriptName = "driver.sh",
+) {
+  const unindent = (indentation: string, text: string): string =>
+    text.replace(new RegExp(`^${indentation}`, "gm"), "");
+
+  const indent = (text: string, spaces: string | number): string => {
+    const indentation = typeof spaces === "string"
+      ? spaces
+      : " ".repeat(spaces);
+    return text.replace(/^/gm, indentation);
+  };
+
+  // deno-fmt-ignore
+  return unindent("    ", `
+    #!/bin/bash
+
+    destroy_first=0
+    db_file=""
+
+    # Parse command-line options
+    for arg in "$@"
+    do
+        case $arg in
+            --destroy-first)
+                destroy_first=1
+                shift # Remove --destroy-first from processing
+                ;;
+            *)
+                db_file=$1
+                shift # Remove database filename from processing
+                break # Stop processing after the filename so we can pass the rest into final SQLite DB
+                ;;
+        esac
+    done
+
+    # Check if the database file parameter is supplied
+    if [ -z "$db_file" ]
+    then
+        echo "No database file supplied. Usage: ./${scriptName} [--destroy-first] <database_file> [<sqlite3 arguments>...]"
+        exit 1
+    fi
+
+    # If the destroy_first flag is set, delete the database file
+    if [ $destroy_first -eq 1 ] && [ -f "$db_file" ]; then
+        rm "$db_file"
+    fi
+
+    SQL=$(cat <<-EOF
+    ${/* we indent because there's an outer `unindent` */ sqlTextList(ss).map(SQL => indent(SQL, "    "))}
+    -- the .dump in the last line is necessary because we load into :memory:
+    -- first because performance is better and then emit all the SQL for saving
+    -- into the destination file, e.g. when insert DML uses (select x from y where a = b))
+    .dump
+    EOF
+    )
+
+    # Create an in-memory SQLite database, load the first pass for optimal
+    # performance then export the in-memory database to the given file; this
+    # two phase approach works because the last line in the SQL is '.dump'.
+    # All arguments after <database_file> will be passed into the final DB.
+    sqlite3 "$db_file" "$(echo "$SQL" | sqlite3 ":memory:")" "\${@}"
+  `);
+}
