@@ -473,7 +473,9 @@ export function routineArgsSQL<
       ns.storedRoutineArgName(arg.identity)
     } ${arg.sqlDataType("stored routine arg").SQL(ctx)}${
       arg.sqlDefaultValue
-        ? ` = ${arg.sqlDefaultValue("stored routine arg").SQL(ctx)}`
+        ? arg.sqlDefaultValue("stored routine arg").SQL(ctx)
+          ? ` = ${arg.sqlDefaultValue("stored routine arg").SQL(ctx)}`
+          : ""
         : ""
     }`
   ).join(", ");

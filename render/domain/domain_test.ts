@@ -99,6 +99,28 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   const booleanSD = ztsdFactory.cacheableFrom(z.boolean(), {
     identity: "syntheticBoolean",
   });
+  const booleanDefaultSD = ztsdFactory.cacheableFrom(
+    z.boolean().default(true),
+    {
+      identity: "syntheticBoolean",
+    },
+  );
+  const integerDefaultSD = ztsdFactory.cacheableFrom(
+    z.number().int().default(0),
+    {
+      identity: "syntheticIntegerDefault",
+    },
+  );
+  const floatDefaultSD = ztsdFactory.cacheableFrom(
+    z.number(
+      d.zodSqlDomainRawCreateParams(
+        d.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+      ),
+    ).default(0),
+    {
+      identity: "syntheticIntegerDefault",
+    },
+  );
 
   enum NativeEnumOrdinal {
     NativeEnumOrdinal_1,
@@ -314,6 +336,34 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(zodEnumSD), {
       nullable: false,
       sqlDataType: "TEXT",
+    });
+  });
+
+  await tc.step("SqlDomain default values for SQL types", () => {
+    const { ctx } = sqlGen();
+    const types = (
+      domain: d.SqlDomain<Any, SyntheticContext, Any, SyntheticDomainQS>,
+    ) => ({
+      sqlDataType: domain.sqlDataType("create table column").SQL(ctx),
+      sqlDefaultValue: domain.sqlDefaultValue
+        ? domain.sqlDefaultValue("create table column")?.SQL(ctx)
+        : undefined,
+    });
+    ta.assertEquals(types(textOptionalDefaultSD), {
+      sqlDataType: "TEXT",
+      sqlDefaultValue: "'syntheticTextOptionalDefault-defaultValue'",
+    });
+    ta.assertEquals(types(booleanDefaultSD), {
+      sqlDataType: "BOOLEAN",
+      sqlDefaultValue: "true",
+    });
+    ta.assertEquals(types(integerDefaultSD), {
+      sqlDataType: "INTEGER",
+      sqlDefaultValue: "0",
+    });
+    ta.assertEquals(types(floatDefaultSD), {
+      sqlDataType: "REAL",
+      sqlDefaultValue: "0",
     });
   });
 });
