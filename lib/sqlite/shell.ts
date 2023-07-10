@@ -1,51 +1,10 @@
+import {
+  flexibleTextList as sqlTextList,
+  FlexibleTextSupplierSync as FlexibleSqlTextSupplierSync,
+  flexibleTextType as sqlTextTypeMessage,
+} from "../universal/flexible-text.ts";
+
 export const inMemorySqliteDB = ":memory:" as const;
-
-export type FlexibleSqlText =
-  | string
-  | { readonly fileSystemPath: string }
-  | Iterable<string>
-  | ArrayLike<string>
-  | Generator<string>;
-
-export type FlexibleSqlTextSupplierSync =
-  | FlexibleSqlText
-  | (() => FlexibleSqlText);
-
-/**
- * Accept a flexible source of SQL such as a string, a file system path, an
- * array of strings or a TypeScript Generator and convert them to a string
- * array.
- * @param supplier flexible source of SQL text
- * @returns a resolved string array of SQL that should be executed
- */
-const sqlTextList = (supplier: FlexibleSqlTextSupplierSync): string[] =>
-  typeof supplier === "function"
-    ? sqlTextList(supplier())
-    : typeof supplier === "string"
-    ? [supplier]
-    : (typeof supplier === "object" && "fileSystemPath" in supplier
-      ? [Deno.readTextFileSync(supplier.fileSystemPath)]
-      : Array.from(supplier));
-
-/**
- * Accept a flexible source of SQL such as a string, a file system path, an
- * array of strings or a TypeScript Generator and create a human-friendly
- * message of the supplier type
- * @param supplier flexible source of SQL text
- * @returns a string that explains the type of SQL provided
- */
-const sqlTextTypeMessage = (
-  sqlSupplier:
-    | Parameters<typeof sqlTextList>[0]
-    | (() => Parameters<typeof sqlTextList>[0]),
-): string =>
-  typeof sqlSupplier === "function"
-    ? sqlTextTypeMessage(sqlSupplier())
-    : typeof sqlSupplier === "string"
-    ? `SQL text`
-    : (typeof sqlSupplier === "object" && "fileSystemPath" in sqlSupplier
-      ? `SQL file ${sqlSupplier.fileSystemPath}`
-      : `SQL text array`);
 
 /**
  * Using `sqlite3` or equivalent shell-accessible SQLite command, load SQL into
