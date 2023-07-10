@@ -48,3 +48,19 @@ Deno.test(`SQLite create in memory, emit SQL, and go back into memory should suc
   ta.assertEquals(result.dest.code, 0);
   ta.assertEquals(result.dest.stdout(), "1\n");
 });
+
+Deno.test(`SQLite CLI wrapper to create in memory, emit SQL, and go back into memory should succeed${isCICDMsg}`, async () => {
+  if (isCICD) return;
+  const result = await mod.executeSqliteUA(":memory:", syntheticSqlDDL, {
+    destDbSQL: uws(`
+      insert into synthetic_table VALUES ('test', 1);
+      select count(*) from synthetic_table;
+    `),
+  });
+  ta.assert(result);
+  ta.assert("inMemory" in result);
+  ta.assertEquals(result.inMemory.code, 0);
+  ta.assert(result.dest);
+  ta.assertEquals(result.dest.code, 0);
+  ta.assertEquals(result.dest.stdout(), "1\n");
+});

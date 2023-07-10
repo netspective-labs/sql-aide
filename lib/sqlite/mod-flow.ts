@@ -5,10 +5,6 @@ import * as flow from "../flow/mod.ts";
 import * as mod from "./mod.ts";
 
 export function flowCLI(args?: Parameters<typeof flow.cliInfrastructure>[0]) {
-  const report = ({ verbose }: { verbose?: boolean }) => {
-    if (verbose) return (message: string) => console.log(message);
-    return undefined;
-  };
   const clii = flow.cliInfrastructure({
     ...args,
     resolveURI: (specifier) =>
@@ -23,8 +19,12 @@ export function flowCLI(args?: Parameters<typeof flow.cliInfrastructure>[0]) {
         .option("--dest=<name>", "the destination database path", { required: true })
         .option("--sql-src=<SQL>", "the src of SQL that should be passed into destination", { required: true })
         .option("--no-optimization", "don't load the SQL into memory first")
-        .option("--remove-sql-src-first", "if the src file should be deleted before executing SQL")
-        .action(async (options) => await sh.executeSqliteCLI({ ...options, report: report(options) })))
+        .option("--remove-dest-first", "if the src file should be deleted before executing SQL")
+        .action(
+          async (options) => await sh.executeSqliteUA(
+            options.dest,
+            { fileSystemPath: options.sqlSrc },
+            { ...options, report: clii.reportCLI(options) })))
       .command("sql", clii.command()
         .command("inspect", clii.command()
           .description("Emit SQLite schema inspection SQL")

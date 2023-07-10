@@ -3,6 +3,13 @@ import { cliffy } from "./deps.ts";
 export type DryRunnable = { readonly dryRun: boolean };
 export type VerboseCapable = { readonly verbose: boolean };
 
+export type Reportable = {
+  readonly dryRun?: (message: string) => void;
+  readonly verbose?: (message: string) => void;
+  readonly log?: (message: string) => void;
+  readonly error?: (message: string, error?: Error) => void;
+};
+
 /**
  * Prepare the Cliffy CLI infrastructure with all the typical commands and
  * options.
@@ -41,6 +48,20 @@ export function cliInfrastructure(args?: {
       .command("help", new cliffy.HelpCommand().global())
       .command("completions", new cliffy.CompletionsCommand()),
     command: () => new cliffy.Command(),
+    reportCLI: (
+      options: Partial<DryRunnable> & Partial<VerboseCapable>,
+    ): Reportable => {
+      return {
+        dryRun: options?.dryRun
+          ? ((message: string) => console.log(message))
+          : undefined,
+        verbose: options?.verbose
+          ? ((message: string) => console.log(message))
+          : undefined,
+        log: (message: string) => console.log(message),
+        error: (message: string) => console.error(message),
+      };
+    },
   };
 }
 
