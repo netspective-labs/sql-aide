@@ -240,6 +240,7 @@ export function zodStringSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
       },
     ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue?.();
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
@@ -248,6 +249,16 @@ export function zodStringSqlDomainFactory<
               return `NVARCHAR(MAX)`;
             }
             return `TEXT`;
+          },
+        }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            const defaultValueTransformed = defaultValue != undefined
+              ? _ctx.sqlTextEmitOptions.quotedLiteral(defaultValue)
+              : undefined;
+            return defaultValueTransformed != undefined
+              ? defaultValueTransformed[1]
+              : "";
           },
         }),
         parents: init?.parents,
@@ -423,7 +434,7 @@ export function zodBooleanSqlDomainFactory<
         }),
         sqlDefaultValue: () => ({
           SQL: (_ctx: Context) => {
-            return defaultValue != undefined ? defaultValue : "";
+            return defaultValue != undefined ? defaultValue.toString() : "";
           },
         }),
         parents: init?.parents,
@@ -590,9 +601,15 @@ export function zodNumberSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
       },
     ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue?.();
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            return defaultValue != undefined ? defaultValue.toString() : "";
+          },
+        }),
       };
     },
     integerNullable: <
@@ -621,12 +638,18 @@ export function zodNumberSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
       },
     ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue?.();
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
             if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) return "FLOAT";
             return "REAL";
+          },
+        }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            return defaultValue != undefined ? defaultValue.toString() : "";
           },
         }),
       };

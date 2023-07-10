@@ -368,7 +368,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
             -- no SQL lint issues (typicalSqlTextLintManager)
 
             CREATE TABLE "synthetic_table_with_uaod_pk" (
-                "ua_on_demand_primary_key" TEXT PRIMARY KEY NOT NULL,
+                "ua_on_demand_primary_key" TEXT PRIMARY KEY NOT NULL DEFAULT 'ON_DEMAND_PK',
                 "text" TEXT NOT NULL,
                 "text_nullable" TEXT,
                 "int" INTEGER NOT NULL,

@@ -28,6 +28,7 @@ export function governedDomains<
   // either ZodBaggage or SQLa.zodSqlDomainRawCreateParams().
   return {
     sdf,
+    textArray: z.array(z.string()),
     text: z.string,
     textNullable: () => z.string().optional(),
 
