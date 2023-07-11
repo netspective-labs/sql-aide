@@ -21,25 +21,25 @@ export type ViewColumnDefn<
 export interface ViewDefinition<
   ViewName extends string,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 > extends emit.SqlTextSupplier<Context> {
   readonly isValid: boolean;
   readonly viewName: ViewName;
   readonly isTemp?: boolean;
   readonly isIdempotent?: boolean;
+  readonly domains: ViewColumnDefn<ViewName, Any, Any, Context, DomainQS>[];
 }
 
 export function isViewDefinition<
   ViewName extends string,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   o: unknown,
-): o is ViewDefinition<ViewName, Context> {
+): o is ViewDefinition<ViewName, Context, DomainQS> {
   const isViewDefn = safety.typeGuard<
-    ViewDefinition<ViewName, Context>
-  >(
-    "viewName",
-    "SQL",
-  );
+    ViewDefinition<ViewName, Context, DomainQS>
+  >("viewName", "SQL");
   return isViewDefn(o);
 }
 
@@ -63,6 +63,7 @@ export interface ViewDefnOptions<
 export function viewDefinition<
   ViewName extends string,
   Context extends emit.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
 >(
   viewName: ViewName,
   vdOptions?:
@@ -78,13 +79,14 @@ export function viewDefinition<
     const ssPartial = ss.untypedSelect<Any, Context>({ embeddedSQL });
     const selectStmt = ssPartial(literals, ...expressions);
     const viewDefn:
-      & ViewDefinition<ViewName, Context>
+      & ViewDefinition<ViewName, Context, DomainQS>
       & emit.SqlSymbolSupplier<Context>
       & emit.SqlTextLintIssuesPopulator<Context> = {
         isValid: selectStmt.isValid,
         viewName,
         isTemp,
         isIdempotent,
+        domains: [], // in unsafe, the domains are not known
         populateSqlTextLintIssues: (lintIssues, steOptions) =>
           selectStmt.populateSqlTextLintIssues(lintIssues, steOptions),
         sqlSymbol: (ctx) =>
@@ -195,13 +197,14 @@ export function safeViewDefinitionCustom<
 
   const { isTemp, isIdempotent = true } = vdOptions ?? {};
   const viewDefn:
-    & ViewDefinition<ViewName, Context>
+    & ViewDefinition<ViewName, Context, DomainQS>
     & emit.SqlSymbolSupplier<Context>
     & emit.SqlTextLintIssuesPopulator<Context> = {
       isValid: selectStmt.isValid,
       viewName,
       isTemp,
       isIdempotent,
+      domains: columnsList,
       populateSqlTextLintIssues: (lis, steOptions) =>
         selectStmt.populateSqlTextLintIssues?.(lis, steOptions),
       sqlSymbol: (ctx) =>

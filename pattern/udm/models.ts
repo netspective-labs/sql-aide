@@ -346,7 +346,11 @@ export const vendorView = SQLa.safeViewDefinition(
   INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_ADDRESS')
   WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON'`;
 
-export const allContentViews: SQLa.ViewDefinition<Any, EmitContext>[] = [
+export const allContentViews: SQLa.ViewDefinition<
+  Any,
+  EmitContext,
+  SQLa.SqlDomainQS
+>[] = [
   vendorView,
 ];
 

@@ -463,7 +463,10 @@ export function governedModel<
       & SQLa.ViewDefnOptions<ViewName, Any, Any, Context>
       & Partial<SQLa.EmbeddedSqlSupplier>,
   ) {
-    return SQLa.viewDefinition<ViewName, Context>(viewName, vdOptions);
+    return SQLa.viewDefinition<ViewName, Context, DomainQS>(
+      viewName,
+      vdOptions,
+    );
   }
 
   function safeView<
@@ -540,7 +543,7 @@ export function governedTemplateState<
     SQLa.TableDefinition<Any, Context, DomainQS>
   >();
   const viewsDeclared = new Set<
-    SQLa.ViewDefinition<Any, Context>
+    SQLa.ViewDefinition<Any, Context, DomainQS>
   >();
 
   // deno-fmt-ignore
@@ -548,7 +551,7 @@ export function governedTemplateState<
     if (SQLa.isTableDefinition<Any, Context, DomainQS>(sts)) {
       tablesDeclared.add(sts);
     }
-    if (SQLa.isViewDefinition<Any, Context>(sts)) {
+    if (SQLa.isViewDefinition<Any, Context, DomainQS>(sts)) {
       viewsDeclared.add(sts);
     }
   }

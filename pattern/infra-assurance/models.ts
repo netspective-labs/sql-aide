@@ -1950,7 +1950,11 @@ const contractView = SQLa.safeViewDefinition(
   INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
   INNER JOIN periodicity p on p.code = ct.periodicity_id`;
 
-export const allContentViews: SQLa.ViewDefinition<Any, udm.EmitContext>[] = [
+export const allContentViews: SQLa.ViewDefinition<
+  Any,
+  udm.EmitContext,
+  SQLa.SqlDomainQS
+>[] = [
   securityResponseTeamView,
   awarenessTrainingView,
   personSkillView,

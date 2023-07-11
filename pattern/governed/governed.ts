@@ -383,7 +383,7 @@ export class GovernedTemplateState<
   public tablesDeclared = new Set<
     SQLa.TableDefinition<Any, Context, DomainQS>
   >();
-  public viewsDeclared = new Set<SQLa.ViewDefinition<Any, Context>>();
+  public viewsDeclared = new Set<SQLa.ViewDefinition<Any, Context, DomainQS>>();
 
   public context(inherit?: Partial<Context>) {
     return SQLa.typicalSqlEmitContext(inherit) as Context;
@@ -412,7 +412,7 @@ export class GovernedTemplateState<
     if (SQLa.isTableDefinition<Any, Context, DomainQS>(sts)) {
       this.tablesDeclared.add(sts);
     }
-    if (SQLa.isViewDefinition<Any, Context>(sts)) {
+    if (SQLa.isViewDefinition<Any, Context, DomainQS>(sts)) {
       this.viewsDeclared.add(sts);
     }
   }
@@ -654,7 +654,10 @@ export class GovernedIM<
       & SQLa.ViewDefnOptions<ViewName, Any, Any, Context>
       & Partial<SQLa.EmbeddedSqlSupplier>,
   ) {
-    return SQLa.viewDefinition<ViewName, Context>(viewName, vdOptions);
+    return SQLa.viewDefinition<ViewName, Context, DomainQS>(
+      viewName,
+      vdOptions,
+    );
   }
 
   safeView<
