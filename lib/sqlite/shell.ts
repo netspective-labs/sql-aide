@@ -222,8 +222,7 @@ export function sqliteMemToFileBashScript(
   };
 
   // deno-fmt-ignore
-  return unindent("    ", `
-    #!/bin/bash
+  return unindent("    ", `#!/bin/bash
 
     destroy_first=0
     db_file=""
