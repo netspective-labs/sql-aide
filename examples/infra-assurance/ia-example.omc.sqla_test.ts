@@ -40,8 +40,8 @@ Deno.test("Infra Assurance CLI", async (tc) => {
     );
   });
 
-  await tc.step("CLI driver content", async () => {
-    const output = await $`./${CLI} driver`.text();
+  await tc.step("CLI bash script generator content", async () => {
+    const output = await $`./${CLI} bash`.text();
     ta.assertEquals(
       output,
       relativeFileContent("./ia-example.omc.sqla.fixture.sh"),

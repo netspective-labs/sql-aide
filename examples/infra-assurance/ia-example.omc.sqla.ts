@@ -1,9 +1,10 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
+import * as z from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import * as sqliteCLI from "../../lib/sqlite/cli.ts";
 import * as iam from "../../pattern/infra-assurance/models.ts";
 import * as udm from "../../pattern/udm/mod.ts";
-import * as z from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import * as emit from "../../render/emit/mod.ts";
 import * as typical from "../../pattern/typical/mod.ts";
 
@@ -720,20 +721,25 @@ export function sqlDDL() {
 }
 
 if (import.meta.main) {
-  await typical.typicalCLI({
-    resolve: (specifier) =>
+  const CLI = sqliteCLI.typicalCLI({
+    resolveURI: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
-    prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
-    prepareDiagram: () => {
-      return typical.diaPUML.plantUmlIE(ctx, function* () {
-        for (const table of iam.allContentTables) {
-          if (SQLa.isGraphEntityDefinitionSupplier(table)) {
-            yield table.graphEntityDefn();
+    defaultSql: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
+  });
+
+  await CLI.commands
+    .command(
+      "diagram",
+      sqliteCLI.diagramCommand(CLI.clii, () => {
+        return typical.diaPUML.plantUmlIE(ctx, function* () {
+          for (const table of iam.allContentTables) {
+            if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+              yield table.graphEntityDefn();
+            }
           }
-        }
-      }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
-    },
-  }).commands.command("driver", typical.sqliteDriverCommand(sqlDDL, ctx))
+        }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
+      }),
+    )
     .command(
       "test-fixtures",
       new typical.cli.Command()
@@ -745,7 +751,7 @@ if (import.meta.main) {
           );
           Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
           Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
-          Deno.writeTextFileSync(sh, await $`./${CLI} driver`.text());
+          Deno.writeTextFileSync(sh, await $`./${CLI} bash`.text());
           [sql, puml, sh].forEach((f) => console.log(f));
         }),
     ).parse(Deno.args);
