@@ -22,7 +22,7 @@ done
 # Check if the database file parameter is supplied
 if [ -z "$db_file" ]
 then
-    echo "No database file supplied. Usage: ./your_script.sh [--destroy-first] <database_file> [<sqlite3 arguments>...]"
+    echo "No database file supplied. Usage: ./driver.sh [--destroy-first] <database_file> [<sqlite3 arguments>...]"
     exit 1
 fi
 
