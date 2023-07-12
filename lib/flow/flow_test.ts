@@ -34,8 +34,8 @@ Deno.test("simple class-based Workflow DAG engine executed in linear order", asy
       this.executed.push({ step: "simpleStep3" });
     }
 
-    simpleStepFour() {
-      this.executed.push({ step: "simpleStepFour" });
+    "simpleStep-four"() {
+      this.executed.push({ step: "simpleStep-four" });
     }
   }
 
@@ -47,7 +47,7 @@ Deno.test("simple class-based Workflow DAG engine executed in linear order", asy
     "simpleStep1",
     "simpleStep_two",
     "simpleStep3",
-    "simpleStepFour",
+    "simpleStep-four",
   ]);
 
   const workflow = new SimpleWorkflow();
@@ -57,7 +57,7 @@ Deno.test("simple class-based Workflow DAG engine executed in linear order", asy
     { step: "simpleStep1" },
     { step: "simpleStep_two" },
     { step: "simpleStep3" },
-    { step: "simpleStepFour" },
+    { step: "simpleStep-four" },
   ]);
 });
 
@@ -69,12 +69,24 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
   type StepID = mod.FlowShapeStep<ComplexWorkflow>;
 
   class ComplexWorkflow {
-    readonly executed: { step: "constructor" | StepID }[] = [];
+    readonly executed: {
+      step:
+        | "constructor"
+        | "beforeAllOtherSteps"
+        | "afterAllOtherSteps"
+        | StepID;
+    }[] = [];
     protected step1Result:
       | ReturnType<typeof ComplexWorkflow.prototype.step1>
       | undefined;
     constructor() {
       this.executed.push({ step: "constructor" });
+    }
+
+    @fd.init()
+    // deno-lint-ignore require-await
+    async beforeAllOtherSteps() {
+      this.executed.push({ step: "beforeAllOtherSteps" });
     }
 
     @fd.dependsOn("step3")
@@ -109,6 +121,12 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
     @fd.disregard()
     ignoreThisMethod() {
       this.executed.push({ step: "ignoreThisMethod" });
+    }
+
+    @fd.finalize()
+    // deno-lint-ignore require-await
+    async afterAllOtherSteps() {
+      this.executed.push({ step: "afterAllOtherSteps" });
     }
   }
 
@@ -176,10 +194,12 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
   });
   ta.assertEquals(workflow.executed, [
     { step: "constructor" },
+    { step: "beforeAllOtherSteps" },
     { step: "step3" },
     { step: "step1" },
     { step: "step2" },
     { step: "step4" },
     { step: "step5" },
+    { step: "afterAllOtherSteps" },
   ]);
 });
