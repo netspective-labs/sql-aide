@@ -15,7 +15,8 @@ export type FlowShapeStep<Workflow> = {
 }[keyof Workflow];
 
 /**
- * Defines TypeScript functions which can be used to decorate flows and steps.
+ * Defines TypeScript functions which can be used to decorate functions and
+ * introspect the shape and steps.
  */
 export class FlowDescriptor<
   Workflow,
@@ -48,25 +49,27 @@ export class FlowDescriptor<
    * Extract the flow steps and object shape of a Workflow
    * @param workflow the prototype of a class
    */
-  structure(workflow: Workflow) {
-    const flowShape: FlowShape = {} as Any;
-    const flowSteps: FlowStep<Workflow>[] = [];
+  introspect(workflow: Workflow) {
+    const introspectedShape: FlowShape = {} as Any;
+    const introspectedSteps: FlowStep<Workflow>[] = [];
     for (const pn of Object.getOwnPropertyNames(workflow)) {
       if (pn == "constructor") continue;
       if (this.disregardProps.get(pn as PropertyName)) continue;
 
       const pd = Object.getOwnPropertyDescriptor(workflow, pn);
+      if (typeof pd?.value !== "function") continue;
+
       const wfStepID = pn as PropertyName;
       if (pd) {
         const stepMetaData = { wfStepID, ...pd } as unknown as FlowStep<
           Workflow
         >;
-        flowSteps.push(stepMetaData);
-        (flowShape as Any)[wfStepID] = stepMetaData;
+        introspectedSteps.push(stepMetaData);
+        (introspectedShape as Any)[wfStepID] = stepMetaData;
       }
     }
 
-    return { flowShape, flowSteps };
+    return { introspectedShape, introspectedSteps };
   }
 
   /**
@@ -196,17 +199,20 @@ export type FlowDagStepContext<Workflow> =
   };
 
 /**
- * Prepare the DAG operations for a graph.
- * @param graph Nodes and edges
- * @returns DAG operations and steps for the given graph
+ * Prepare the DAG task-based operations for a workflow instance.
+ * @param workflow class instance or prototype to generate the DAG from
+ * @param descriptor decorators and other descriptors for the given workflow
+ * @returns DAG graph and operations and steps for the given workflow
  */
-export function flowDAG<
+export function tasksDAG<
   Workflow,
-  StepID extends FlowShapeStep<Workflow> = FlowShapeStep<
-    Workflow
-  >,
->(graph: g.Graph<FlowStep<Workflow, StepID>>) {
-  const ops = g.dagDepthFirst<FlowStep<Workflow, StepID>, StepID>(
+>(workflow: Workflow, descriptor: FlowDescriptor<Workflow>) {
+  const lintResults: { readonly message: string }[] = [];
+
+  const ops = g.dagDepthFirst<
+    FlowStep<Workflow, FlowShapeStep<Workflow>>,
+    FlowShapeStep<Workflow>
+  >(
     (node) => node.wfStepID,
     (a, b) => {
       if (typeof a.wfStepID === "symbol" || typeof b.wfStepID === "symbol") {
@@ -234,12 +240,63 @@ export function flowDAG<
     },
   );
 
+  const nodes: FlowStep<Workflow, FlowShapeStep<Workflow>>[] = [];
+  const edges: g.Edge<
+    FlowStep<Workflow, FlowShapeStep<Workflow>>,
+    FlowStep<Workflow, FlowShapeStep<Workflow>>
+  >[] = [];
+
+  const graph = { nodes, edges };
+  const { introspectedSteps, introspectedShape } = descriptor.introspect(
+    workflow,
+  );
+
+  for (const node of introspectedSteps) {
+    nodes.push(node);
+  }
+
+  for (const dep of descriptor.dependencies) {
+    const node = introspectedShape[dep.propertyKey];
+    const dependsOn = introspectedShape[dep.dependsOn];
+    if (dependsOn) {
+      edges.push({ from: dependsOn, to: node });
+    } else {
+      lintResults.push({
+        message: `invalid dependency: ${String(dep.dependsOn)} in ${
+          String(node.wfStepID)
+        }`,
+      });
+    }
+  }
+
+  for (let i = 0; i < introspectedSteps.length; i++) {
+    const current = introspectedSteps[i];
+    if (edges.find((e) => e.from.wfStepID == current.wfStepID)) continue;
+
+    let n = i + 1;
+    while (n < introspectedSteps.length) {
+      const next = introspectedSteps[n];
+      if (!edges.find((e) => e.from.wfStepID == next.wfStepID)) {
+        edges.push({ from: current, to: next });
+        break;
+      }
+      n++;
+    }
+  }
+
+  if (ops.isCyclical(graph)) {
+    lintResults.push({ message: `Cycles detected in graph` });
+  }
+
   return {
+    lintResults,
     graph,
     ops,
     dagSteps: ops.topologicalSort(graph),
     isCyclical: () => ops.isCyclical(graph),
     cycles: () => ops.cycles(graph),
+    introspectedSteps,
+    introspectedShape,
   };
 }
 
@@ -392,13 +449,7 @@ export class Engine<
     Workflow
   >,
 > {
-  readonly flowSteps: ReturnType<
-    FlowDescriptor<Workflow>["structure"]
-  >["flowSteps"];
-  readonly flowShape: ReturnType<
-    FlowDescriptor<Workflow>["structure"]
-  >["flowShape"];
-  readonly DAG: ReturnType<typeof flowDAG<Workflow, FlowShapeStep<Workflow>>>;
+  readonly DAG: ReturnType<typeof tasksDAG<Workflow>>;
   readonly lintResults: { readonly message: string }[];
 
   constructor(
@@ -412,56 +463,11 @@ export class Engine<
       StepContext
     >,
   ) {
-    this.lintResults = [...descriptor.lintResults];
-
-    const nodes: FlowStep<Workflow, FlowShapeStep<Workflow>>[] = [];
-    const edges: g.Edge<
-      FlowStep<Workflow, FlowShapeStep<Workflow>>,
-      FlowStep<Workflow, FlowShapeStep<Workflow>>
-    >[] = [];
-
-    const graph = { nodes, edges };
-    const { flowSteps, flowShape } = descriptor.structure(workflow);
-    this.flowSteps = flowSteps;
-    this.flowShape = flowShape;
-
-    for (const node of flowSteps) {
-      nodes.push(node);
-    }
-
-    for (const dep of descriptor.dependencies) {
-      const node = flowShape[dep.propertyKey];
-      const dependsOn = flowShape[dep.dependsOn];
-      if (dependsOn) {
-        edges.push({ from: dependsOn, to: node });
-      } else {
-        this.lintResults.push({
-          message: `invalid dependency: ${String(dep.dependsOn)} in ${
-            String(node.wfStepID)
-          }`,
-        });
-      }
-    }
-
-    for (let i = 0; i < flowSteps.length; i++) {
-      const current = flowSteps[i];
-      if (edges.find((e) => e.from.wfStepID == current.wfStepID)) continue;
-
-      let n = i + 1;
-      while (n < flowSteps.length) {
-        const next = flowSteps[n];
-        if (!edges.find((e) => e.from.wfStepID == next.wfStepID)) {
-          edges.push({ from: current, to: next });
-          break;
-        }
-        n++;
-      }
-    }
-
-    this.DAG = flowDAG<Workflow, FlowShapeStep<Workflow>>(graph);
-    if (this.DAG.isCyclical()) {
-      this.lintResults.push({ message: `Cycles detected in graph` });
-    }
+    this.DAG = tasksDAG<Workflow>(workflow, descriptor);
+    this.lintResults = [
+      ...descriptor.lintResults,
+      ...this.DAG.lintResults,
+    ];
   }
 
   get isValid() {
@@ -484,7 +490,7 @@ export class Engine<
     });
 
     // each step might have different call args from decoration decls
-    const callArgs = this.flowSteps.map((_step) => ((
+    const callArgs = this.DAG.introspectedSteps.map((_step) => ((
       stepCtx: StepContext,
       prevExecResult: Any,
     ) => [stepCtx, prevExecResult]));
