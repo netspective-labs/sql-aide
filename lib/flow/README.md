@@ -42,6 +42,9 @@ more.
   - [x] Flow classes do not not require any base classes or inheritence (though
         does support inheritable workflows).
   - [ ] Flow classes can be unit tested independently of the Flow framework
+  - [ ] Flow runs should be able to be "dry-runnable"
+  - [ ] Flow runs should be able to report their execution status, progress,
+        etc. (`verbose` mode)
 - [x] Each flow step is a synchronous or asynchronous class method.
 - [x] Each flow step may have one or more decorators that can specify aspects.
 - [x] Each flow can have one or more initialization methods declared by

@@ -551,9 +551,14 @@ export class Engine<
     };
     const flowCtx = prepareFlowCtx(staticCtx);
 
+    // Give the opportunity for an external event handler to do any pre-processing
+    // or abort the workflow; abort only if the return value is `false`.
     const handle = await ee.beforeWorkflow(flowCtx);
     if (typeof handle === "boolean" && handle === false) return;
 
+    // Now give an opportunity for any `@init`-style decorators in our instance
+    // to do any pre-processing or abort the workflow; abort only if the return
+    // value for any init method is `false`.
     for (
       const init of this.descriptor.initProps.sort((a, b) =>
         a.priority - b.priority
@@ -564,6 +569,9 @@ export class Engine<
       if (typeof handle === "boolean" && handle === false) return;
     }
 
+    // At this point all initializations and pre-processing are complete; now
+    // we loop through each DAG topologically sorted step and attempt to execute
+    // the functions associated with each step.
     for (let step = 0; step < dagSteps.length; step++) {
       const prevStepState = step > 0
         ? runState.stepsExecuted[step - 1]
@@ -587,6 +595,11 @@ export class Engine<
       const rsExecStatic = { index: step, stepCtx };
       stepsExecuted[step] = { status: "initial", ...rsExecStatic };
 
+      // Tt this point all of our state management for the current step is
+      // setup so we're ready to execute; before we execute, given an opportunity
+      // for any external listeners to do any pre-processing for the specific
+      // step and ascertain whether the workflow should be interrupted for any
+      // reason.
       const runStep = await ee.beforeStep<FlowShapeStep<Workflow> & string>(
         String(current.wfStepID) as Any,
         stepCtx,
@@ -597,12 +610,15 @@ export class Engine<
         break;
       }
 
+      // Now step-specific pre-processing is complete and we're sure no interruption
+      // has been requested so we wrap our execution in a try/catch block and run
+      // the function.
       const prevStepResult = prevStepState
         ? runState.stepResult(prevStepState)
         : undefined;
       try {
-        // each method has the following signature:
-        // step(ctx: StepContext, ...injecteArgs, prevExecResult: Error | PreviousStepResult)
+        // Each method has the following signature:
+        //    step(ctx: StepContext, ...injecteArgs, prevExecResult: Error | PreviousStepResult)
         const execResult = await ((instance as Any)[current.wfStepID] as Any)
           .call(instance, ...callArgs[step](stepCtx, prevStepResult));
         stepsExecuted[step] = {
@@ -611,7 +627,9 @@ export class Engine<
           execResult,
         };
       } catch (execError) {
-        runState.erroredOutAtStep = stepCtx;
+        // If we get any exceptions we have two choices: either trap and continue
+        // processing the other steps or, if an external error event listener wants
+        // us to abort we'll stop processing and fall out of the steps loop.
         const abortOnError = await ee.afterError<
           FlowShapeStep<Workflow> & string
         >(
@@ -636,6 +654,9 @@ export class Engine<
         }
       }
 
+      // At this point execution, interruption, and error detection is complete;
+      // give an opportunity for any external listeners to do any post-processing
+      // for the specific step.
       await ee.afterStep<FlowShapeStep<Workflow> & string, Any>(
         String(current.wfStepID) as Any,
         stepsExecuted[step],
@@ -643,6 +664,10 @@ export class Engine<
       );
     }
 
+    // At this point we've either completed all steps or an interruption/abort
+    // request has been detected. runState.stepsExecuted contains the state of
+    // executions. Now give an opportunity for any `@finalize`-style decorators
+    // in our instance to do any post-processing.
     const finalCtx = { ...flowCtx, ...runStateSupplier };
     for (
       const final of this.descriptor.finalizeProps.sort((a, b) =>
@@ -654,6 +679,9 @@ export class Engine<
         finalCtx,
       );
     }
+
+    // finally, give the opportunity for an external event handler to do any
+    // post-processing
     await ee.afterWorkflow(finalCtx);
   }
 
