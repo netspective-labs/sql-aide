@@ -1,8 +1,8 @@
 ---
-title: How to start contributing
+title: Your First Contribution
 ---
 
-# Your First Contribution
+<!-- # Your First Contribution -->
 
 Welcome to SQLa (SQL Aide)! We're thrilled that you're interested in making your
 first contribution to our open-source project. Here are some suggestions on how

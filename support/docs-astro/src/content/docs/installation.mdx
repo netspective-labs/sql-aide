@@ -1,7 +1,6 @@
 ---
 title: Installation
 ---
-<!-- import { Callout, Steps } from 'nextra-theme-docs' -->
 
 SQLa (SQL Aide) is designed to be lightweight and easily accessible, with no
 need for local installations or dependencies other than Deno, a secure runtime
@@ -12,7 +11,6 @@ few lines of code.
 
 Here's how to install and import SQLa using Deno:
 
-<Steps>
 ### Install Deno (single binary)
 
 If you haven't already, install Deno by following the instructions specific to
@@ -35,10 +33,11 @@ version (pinning versions is highly recommended, though). This line of code
 imports the SQLa module from the remote source, making all its functionality
 available for use in your project.
 
-<Callout>
+:::note
   Explore the [file system and directory structure guide](architecture/directory-structure/) to learn more about
   what modules you can import into your models.
-</Callout>
+:::
+
 
 ### Start building your database models
 
@@ -46,7 +45,6 @@ With SQLa imported, you can start utilizing its features to generate SQL
 statements, define database schemas, and more. Refer to the SQLa documentation
 and examples to explore the available functionality and unleash the power of
 SQLa in your project.
-</Steps>
 
 By leveraging Deno's unique deployment model, SQLa eliminates the need for local
 installations and dependencies, making it incredibly lightweight and accessible.

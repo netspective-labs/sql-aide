@@ -3,37 +3,29 @@ title: Directory Structure
 description: A guide in my new Starlight docs site.
 
 ---
-<!-- import { Callout, FileTree } from 'nextra-theme-docs' -->
-
-<!-- # Directory Structure -->
-
-<Callout>
+:::note
   This guide describes the directory of the SQLa source repo and none of the
   structures are imposed on your own SQL or Typescript files. You are free to
   follow any structure conventions.
-</Callout>
+:::
 
 ## Important Top-level Directories
 
-<FileTree>
-  <FileTree.Folder name="SQLa Repo" defaultOpen>
-    <FileTree.Folder name="examples" />
-    <FileTree.Folder name="lib" />
-    <FileTree.Folder name="pattern" />
-    <FileTree.Folder name="render" />
-    <FileTree.Folder name="support" />
-    <FileTree.File name="deps-test.ts" />
-    <FileTree.File name="deps.ts" />
-  </FileTree.Folder>
-</FileTree>
+- SQLa Repo
+  - examples/
+  - lib/
+  - pattern/
+  - render/
+  - support/
+  - deps-test.ts
+  - deps.ts
+
 
 ## Examples
 
-<FileTree>
-  <FileTree.Folder name="SQLa Repo" defaultOpen>
-    <FileTree.Folder name="examples" defaultOpen />
-  </FileTree.Folder>
-</FileTree>
+- SQLa Repo
+  - examples
+
 
 The `examples` directory in the SQLa source code repository serves as a valuable resource for developers looking to explore and understand the capabilities of SQLa (SQL Aide). It contains a collection of practical examples that demonstrate various aspects of SQLa's functionality, showcasing its power and flexibility in generating SQL code.
 
@@ -47,21 +39,16 @@ By leveraging the `examples` directory, you can accelerate your learning journey
 
 ## `Lib`
 
-<FileTree>
-  <FileTree.Folder name="SQLa Repo" defaultOpen>
-    <FileTree.Folder name="lib" defaultOpen>
-        <FileTree.Folder name="osquery" />
-        <FileTree.Folder name="pre-process" defaultOpen>
-            <FileTree.Folder name="psql" />
-        </FileTree.Folder>
-        <FileTree.Folder name="sql" defaultOpen>
-            <FileTree.Folder name="pg" />
-            <FileTree.Folder name="sqlite" />
-        </FileTree.Folder>
-        <FileTree.Folder name="universal" />
-    </FileTree.Folder>
-  </FileTree.Folder>
-</FileTree>
+- SQLa Repo
+    - lib
+        - osquery
+        - pre-process
+            - psql
+        - sql
+            - pg
+            - sqlite
+        - universal
+
 
 The ``lib`` directory in the SQLa source code repository encompasses several subdirectories that contribute to the functionality and versatility of SQLa (SQL Aide). Each subdirectory serves a specific purpose and enhances different aspects of SQL generation and database-related tasks. Let's explore the subdirectories within the `lib` directory:
 
@@ -85,16 +72,13 @@ Take advantage of the resources within the `lib` directory to streamline your SQ
 
 ## `Pattern` Directory
 
-<FileTree>
-  <FileTree.Folder name="SQLa Repo" defaultOpen>
-    <FileTree.Folder name="pattern" defaultOpen>
-        <FileTree.Folder name="configuration" />
-        <FileTree.Folder name="data-vault" />
-        <FileTree.Folder name="observability" />
-        <FileTree.Folder name="typical" />
-    </FileTree.Folder>
-  </FileTree.Folder>
-</FileTree>
+- SQLa Repo
+  - pattern
+    - configuration
+    - data-vault
+    - observability
+    - typical
+
 
 The pattern directory in the SQLa source code repository serves a distinct purpose compared to the examples and `lib` directories. While the `examples` directory is primarily for learning and exploration, and the `lib` directory contains code that can be used as-is or built upon, the pattern directory focuses on providing underlying models and templates that need to be assembled and composed with consumer `lib`raries to be useful. Let's delve into the details:
 
@@ -128,25 +112,20 @@ When working with the pattern directory, developers should leverage these patter
 
 ## Render Directory
 
-<FileTree>
-  <FileTree.Folder name="SQLa Repo" defaultOpen>
-    <FileTree.Folder name="render" defaultOpen>
-        <FileTree.Folder name="ddl" defaultOpen>
-            <FileTree.Folder name="table" />
-        </FileTree.Folder>
-        <FileTree.Folder name="diagram" />
-        <FileTree.Folder name="dialect" defaultOpen>
-            <FileTree.Folder name="pg" />
-        </FileTree.Folder>
-        <FileTree.Folder name="dml" />
-        <FileTree.Folder name="domain" />
-        <FileTree.Folder name="dql" />
-        <FileTree.Folder name="emit" />
-        <FileTree.Folder name="pl" />
-        <FileTree.File name="graph.ts" />
-    </FileTree.Folder>
-  </FileTree.Folder>
-</FileTree>
+- SQLa Repo
+    - render
+        - ddl
+            - table
+        - diagram
+        - dialect
+            - pg
+        - dml
+        - domain
+        - dql
+        - emit
+        - pl
+        - graph.ts
+
 
 The `render` directory in the SQLa source code repository contains the core SQL generation TypeScript modules. It serves as the foundation for SQLa's SQL generation capabilities, providing essential tools for composing and generating SQL statements. Let's explore the subdirectories within the `render` directory in alphabetical order:
 
