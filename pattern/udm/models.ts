@@ -1,6 +1,5 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import * as ws from "../../lib/universal/whitespace.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typ from "../typical/mod.ts";
 import * as govn from "./governance.ts";
@@ -374,20 +373,4 @@ export function sqlDDL() {
     -- seed Data
     ${allReferenceTables.map(e => e.seedDML).flat()}
     `;
-}
-
-if (import.meta.main) {
-  const ctx = SQLa.typicalSqlEmitContext();
-  typ.typicalCLI({
-    resolve: (specifier) =>
-      specifier ? import.meta.resolve(specifier) : import.meta.url,
-    prepareSQL: () => ws.unindentWhitespace(sqlDDL().SQL(ctx)),
-    prepareDiagram: () => {
-      // "executing" the following will fill gm.tablesDeclared but we don't
-      // care about the SQL output, just the state management (tablesDeclared)
-      sqlDDL().SQL(ctx);
-      return gts.pumlERD(ctx).content;
-    },
-  }).commands.command("driver", typ.sqliteDriverCommand(sqlDDL, ctx))
-    .parse(Deno.args);
 }
