@@ -1,7 +1,6 @@
 ---
 title: Why DCP
 ---
-<!-- import { Callout } from 'nextra/components' -->
 
 ## PostgreSQL Data Computing Platform (PgDCP)
 
@@ -31,7 +30,7 @@ The overall objective for PgDCP is to reduce the number of tools that a
 developer needs to know down to just PostgreSQL and `psql` along with SQL and
 PL/* hosted languages for all services.
 
-<Callout>
+:::note
 **Stateless, non-data-centric services, are out of scope and are not proper
 candidates for PgDCP.**
 
@@ -41,4 +40,4 @@ stateful, data-centric services and applications that can leverage SQL natively.
 If a custom micro service is completely stateless and does not have anything to
 do with reading, processing or writing structured data, another architecture
 should be considered.
-</Callout>
+:::

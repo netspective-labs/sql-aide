@@ -1,7 +1,6 @@
 ---
 title: SQLpp
 ---
-<!-- import { Callout, Steps } from 'nextra-theme-docs' -->
 
 # `SQLpp` - SQL Preprocessor
 
@@ -9,13 +8,13 @@ title: SQLpp
 designed for pre-processing SQL files. Its functionality mirrors a subset of the
 meta-commands provided by PostgreSQL's `psql` utility.
 
-<Callout>
+:::note
 **Why SQLpp when we have SQLa**? Full-fledged SQL generators like SQLa, while
 powerful, can often be overwhelming due to their complexity, especially for
 DBAs who already know `psql` or developers who don't know Typescript. SQLa may
 be overkill for simpler tasks where existing SQL files already contain working
 SQL code and you just need simple declarative variable replacements.
-</Callout>
+:::
 
 `psql` is a terminal-based front-end to PostgreSQL. It enables users to type in
 SQL queries interactively, issue them to PostgreSQL, and see the query results.
@@ -84,23 +83,23 @@ $ lib/pre-process/mod.ts psql lib/sql/pg/upsert.sql
 $ lib/pre-process/mod.ts psql lib/sql/pg/upsert.sql --set.unit_test_schema=some_other_schema
 ```
 
-<Callout>
+:::note
   _Dialects_ other than `psql` (e.g. Microsoft's `sqlcmd`, MySQL's client meta
   commands or ORACLE's SQL Loader) could also be implemented to allow SQL
   templates compatibility across databases. If you have ideas please consider
   contributing them or creating issues to make suggestions.
-</Callout>
+:::
 
 ## `psql`-style Usage
 
 Preprocess text in a way that `psql` would. Specifically, allow `\set` variables
 to be defined in the source and overridden via CLI.
 
-<Callout>
+:::note
   Currently SQLpp only supports a subset of `psql` meta commands but it is
   extensible so more meta commands may be added. If you need other meta commands
   you can contribute them or create tickets for suggested additions.
-</Callout>
+:::
 
 ## `\include`
 

@@ -1,5 +1,5 @@
 ---
-title: Polyglot but SQL-first
+title: SQL-first Polyglot
 ---
 
 

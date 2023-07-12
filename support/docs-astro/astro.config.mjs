@@ -13,7 +13,7 @@ export default defineConfig({
     starlight({
       title: "SQL Aide (SQLa) Documentation",
       social: {
-        github: "https://github.com/withastro/starlight",
+        github: "https://github.com/netspective-labs/sql-aide",
       },
       sidebar: [
         { label: "Welcome", link: "/" },
