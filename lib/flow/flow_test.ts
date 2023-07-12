@@ -13,7 +13,7 @@ import * as mod from "./flow.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-Deno.test("simple class-based Workflow DAG engine", async () => {
+Deno.test("simple class-based Workflow DAG engine executed in linear order", async () => {
   class SimpleWorkflow {
     readonly executed: { step: "constructor" | keyof SimpleWorkflow }[] = [];
     constructor() {
@@ -39,10 +39,7 @@ Deno.test("simple class-based Workflow DAG engine", async () => {
     }
   }
 
-  const engine = new mod.Engine<SimpleWorkflow>(
-    SimpleWorkflow.prototype,
-    mod.decorators<SimpleWorkflow>().metaData,
-  );
+  const engine = new mod.Engine<SimpleWorkflow>(SimpleWorkflow.prototype);
 
   ta.assertEquals(engine.lintResults.length, 0);
   ta.assert(engine.isValid);
@@ -64,12 +61,12 @@ Deno.test("simple class-based Workflow DAG engine", async () => {
   ]);
 });
 
-Deno.test("complex class-based Workflow DAG engine", async () => {
+Deno.test("complex class-based Workflow DAG engine executed in topological", async () => {
   // these are the workflow class decorators (`wcd`) and you can name it anything
-  const cw = mod.decorators<ComplexWorkflow>();
-  type WorkflowContext = mod.EngineWorkflowContext<ComplexWorkflow>;
-  type StepContext = mod.EngineWorkflowStepContext<ComplexWorkflow>;
-  type StepID = mod.WorkflowShapeStep<ComplexWorkflow>;
+  const fd = new mod.FlowDescriptor<ComplexWorkflow>();
+  type WorkflowContext = mod.FlowDagContext<ComplexWorkflow>;
+  type StepContext = mod.FlowDagStepContext<ComplexWorkflow>;
+  type StepID = mod.FlowShapeStep<ComplexWorkflow>;
 
   class ComplexWorkflow {
     readonly executed: { step: "constructor" | StepID }[] = [];
@@ -80,7 +77,7 @@ Deno.test("complex class-based Workflow DAG engine", async () => {
       this.executed.push({ step: "constructor" });
     }
 
-    @cw.dependsOn("step3")
+    @fd.dependsOn("step3")
     step1() {
       this.executed.push({ step: "step1" });
       return { isSpecial: true, value: 100 };
@@ -109,7 +106,7 @@ Deno.test("complex class-based Workflow DAG engine", async () => {
       this.executed.push({ step: "step5" });
     }
 
-    @cw.disregard()
+    @fd.disregard()
     ignoreThisMethod() {
       this.executed.push({ step: "ignoreThisMethod" });
     }
@@ -126,7 +123,7 @@ Deno.test("complex class-based Workflow DAG engine", async () => {
 
   const engine = new mod.Engine<ComplexWorkflow, WorkflowContext, StepContext>(
     ComplexWorkflow.prototype,
-    cw.metaData,
+    fd,
     {
       eventEmitter: {
         beforeWorkflow: (_ctx) => {

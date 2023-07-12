@@ -3,77 +3,132 @@ import * as g from "../universal/graph.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export type WorkflowShapeStep<Workflow> = {
+/**
+ * Interface which accepts a Workflow class or object and limits the keys to
+ * just functions (basically every function is a Workflow _step_). If the
+ * Workflow class or object has other properties that are not functions those
+ * will be kept out of the type-safe shape.
+ */
+export type FlowShapeStep<Workflow> = {
   [K in keyof Workflow]: Workflow[K] extends (...args: Any[]) => Any ? K
     : never;
 }[keyof Workflow];
 
-export function decorators<
+/**
+ * Defines TypeScript functions which can be used to decorate flows and steps.
+ */
+export class FlowDescriptor<
   Workflow,
-  PropertyName extends WorkflowShapeStep<Workflow> = WorkflowShapeStep<
-    Workflow
-  >,
->() {
-  const lintResults: { readonly message: string }[] = [];
-  const disregardProps = new Map<PropertyName, PropertyDescriptor>();
-  const dependencies: {
+  FlowShape extends {
+    [K in FlowShapeStep<Workflow>]: FlowStep<Workflow>;
+  } = {
+    [K in FlowShapeStep<Workflow>]: FlowStep<Workflow>;
+  },
+  PropertyName extends keyof FlowShape = keyof FlowShape,
+> {
+  readonly lintResults: { readonly message: string }[] = [];
+  readonly disregardProps = new Map<PropertyName, PropertyDescriptor>();
+  readonly dependencies: {
     propertyKey: PropertyName;
     dependsOn: PropertyName;
     descriptor: PropertyDescriptor;
   }[] = [];
 
-  const disregard = () => {
-    return function (
-      _target: Workflow,
-      propertyKey: PropertyName,
-      descriptor: PropertyDescriptor,
-    ) {
-      disregardProps.set(propertyKey, descriptor);
-    };
-  };
+  /**
+   * Extract the flow steps and object shape of a Workflow
+   * @param workflow the prototype of a class
+   */
+  structure(workflow: Workflow) {
+    const flowShape: FlowShape = {} as Any;
+    const flowSteps: FlowStep<Workflow>[] = [];
+    for (const pn of Object.getOwnPropertyNames(workflow)) {
+      if (pn == "constructor") continue;
+      if (this.disregardProps.get(pn as PropertyName)) continue;
 
-  const dependsOn = (dependsOn: PropertyName) => {
-    return function (
+      const pd = Object.getOwnPropertyDescriptor(workflow, pn);
+      const wfStepID = pn as PropertyName;
+      if (pd) {
+        const stepMetaData = { wfStepID, ...pd } as unknown as FlowStep<
+          Workflow
+        >;
+        flowSteps.push(stepMetaData);
+        (flowShape as Any)[wfStepID] = stepMetaData;
+      }
+    }
+
+    return { flowShape, flowSteps };
+  }
+
+  /**
+   * Decorate a function with `@disregard` if it should not be treated as a flow
+   * step. TODO: figure out how to remove _disregarded_ functions from
+   * FlowShapeStep<Workflow>
+   * @returns flow step dectorator
+   */
+  disregard() {
+    return (
       _target: Workflow,
       propertyKey: PropertyName,
       descriptor: PropertyDescriptor,
-    ) {
+    ) => {
+      this.disregardProps.set(propertyKey, descriptor);
+    };
+  }
+
+  /**
+   * Decorate a flow step function with `@dependsOn('step')` to instruct the DAG
+   * to make the function a _dependent_ (for topological sorting order) of the
+   * function called `step`.
+   * @param dependsOn name of a function in the Workflow
+   * @returns flow step dectorator
+   */
+  dependsOn(dependsOn: PropertyName) {
+    return (
+      _target: Workflow,
+      propertyKey: PropertyName,
+      descriptor: PropertyDescriptor,
+    ) => {
       if (propertyKey == dependsOn) {
-        lintResults.push({
+        this.lintResults.push({
           message: `[dependsOn] circular dependency detected in ${
             String(propertyKey)
           }: ${String(dependsOn)}`,
         });
       }
-      dependencies.push({ propertyKey, dependsOn, descriptor });
+      this.dependencies.push({ propertyKey, dependsOn, descriptor });
     };
-  };
-
-  return {
-    dependsOn,
-    disregard,
-    metaData: {
-      lintResults,
-      dependencies,
-      disregardProps,
-    },
-  };
+  }
 }
 
-export type WorkflowStep<
+export type FlowStep<
   Workflow,
-  StepID extends WorkflowShapeStep<Workflow> = WorkflowShapeStep<Workflow>,
+  StepID extends FlowShapeStep<Workflow> = FlowShapeStep<Workflow>,
 > =
   & { readonly wfStepID: StepID }
   & PropertyDescriptor;
 
-export function workflowDAG<
+export type FlowDagContext<Workflow> = {
+  readonly dagSteps: FlowStep<Workflow>[];
+  readonly flow: Workflow;
+  readonly last: number;
+};
+
+export type FlowDagStepContext<Workflow> =
+  & FlowDagContext<Workflow>
+  & {
+    readonly current: FlowStep<Workflow>;
+    readonly previous?: FlowDagStepContext<Workflow>;
+    readonly next?: FlowStep<Workflow>;
+    readonly index: number;
+  };
+
+export function flowDAG<
   Workflow,
-  StepID extends WorkflowShapeStep<Workflow> = WorkflowShapeStep<
+  StepID extends FlowShapeStep<Workflow> = FlowShapeStep<
     Workflow
   >,
->(graph: g.Graph<WorkflowStep<Workflow, StepID>>) {
-  const ops = g.dagDepthFirst<WorkflowStep<Workflow, StepID>, StepID>(
+>(graph: g.Graph<FlowStep<Workflow, StepID>>) {
+  const ops = g.dagDepthFirst<FlowStep<Workflow, StepID>, StepID>(
     (node) => node.wfStepID,
     (a, b) => {
       if (typeof a.wfStepID === "symbol" || typeof b.wfStepID === "symbol") {
@@ -110,76 +165,70 @@ export function workflowDAG<
   };
 }
 
-export type EngineWorkflowContext<Workflow> = {
-  readonly dagSteps: WorkflowStep<Workflow>[];
-  readonly flow: Workflow;
-  readonly last: number;
-};
-
-export type EngineWorkflowStepContext<Workflow> =
-  & EngineWorkflowContext<Workflow>
-  & {
-    readonly current: WorkflowStep<Workflow>;
-    readonly previous?: EngineWorkflowStepContext<Workflow>;
-    readonly next?: WorkflowStep<Workflow>;
-    readonly index: number;
-  };
-
 export type EngineEvents<
   Workflow,
-  WorkflowContext extends EngineWorkflowContext<Workflow>,
-  StepContext extends EngineWorkflowStepContext<Workflow>,
+  WorkflowContext extends FlowDagContext<Workflow>,
+  StepContext extends FlowDagStepContext<Workflow>,
 > = {
   readonly beforeWorkflow: (
     ctx: WorkflowContext,
   ) => void | false | Promise<void | false>;
   readonly beforeStep: <
-    StepID extends string & WorkflowShapeStep<Workflow>,
+    StepID extends string & FlowShapeStep<Workflow>,
   >(
     stepID: `${StepID}`,
-    ctx: StepContext,
+    ctx:
+      & StepContext
+      & EngineRunStateSupplier<Workflow, Any, WorkflowContext, StepContext>,
   ) => void | "interrupt" | Promise<void | "interrupt">;
   readonly afterInterrupt: <
-    StepID extends string & WorkflowShapeStep<Workflow>,
+    StepID extends string & FlowShapeStep<Workflow>,
   >(
     stepID: `${StepID}`,
-    ctx: StepContext,
+    ctx:
+      & StepContext
+      & EngineRunStateSupplier<Workflow, Any, WorkflowContext, StepContext>,
   ) => void | Promise<void>;
   readonly afterError: <
-    StepID extends string & WorkflowShapeStep<Workflow>,
+    StepID extends string & FlowShapeStep<Workflow>,
   >(
     stepID: `${StepID}`,
     error: Error,
-    ctx: StepContext,
+    ctx:
+      & StepContext
+      & EngineRunStateSupplier<Workflow, Any, WorkflowContext, StepContext>,
   ) => void | "continue" | "abort" | Promise<void | "continue" | "abort">;
   readonly afterStep: <
-    StepID extends string & WorkflowShapeStep<Workflow>,
+    StepID extends string & FlowShapeStep<Workflow>,
     Result,
   >(
     stepID: `${StepID}`,
     result: Error | Result,
-    ctx: StepContext,
+    ctx:
+      & StepContext
+      & EngineRunStateSupplier<Workflow, Any, WorkflowContext, StepContext>,
   ) => void | Promise<void>;
   readonly afterWorkflow: (
-    ctx: WorkflowContext & {
-      readonly interruptedAt?: StepContext;
-      readonly erroredOutAt?: StepContext;
-    },
+    ctx:
+      & WorkflowContext
+      & EngineRunStateSupplier<Workflow, Any, WorkflowContext, StepContext>,
   ) => void | Promise<void>;
 };
 
 export interface EngineOptions<
   Workflow,
-  WorkflowContext extends EngineWorkflowContext<Workflow> =
-    EngineWorkflowContext<Workflow>,
-  StepContext extends EngineWorkflowStepContext<Workflow> =
-    EngineWorkflowStepContext<Workflow>,
+  WorkflowContext extends FlowDagContext<Workflow> = FlowDagContext<
+    Workflow
+  >,
+  StepContext extends FlowDagStepContext<Workflow> = FlowDagStepContext<
+    Workflow
+  >,
 > {
-  readonly prepareWorkflowCtx?: (
-    suggested: EngineWorkflowContext<Workflow>,
+  readonly prepareFlowCtx?: (
+    suggested: FlowDagContext<Workflow>,
   ) => WorkflowContext;
   readonly prepareStepCtx?: (
-    suggested: EngineWorkflowStepContext<Workflow>,
+    suggested: FlowDagStepContext<Workflow>,
   ) => StepContext;
   readonly eventEmitter?: EngineEvents<
     Workflow,
@@ -188,67 +237,81 @@ export interface EngineOptions<
   >;
 }
 
+export interface EngineRunState<
+  Workflow,
+  PreviousResult,
+  WorkflowContext extends FlowDagContext<Workflow>,
+  StepContext extends FlowDagStepContext<Workflow>,
+> {
+  readonly prepareFlowCtx: (
+    suggested: FlowDagContext<Workflow>,
+  ) => WorkflowContext;
+  readonly prepareStepCtx: (
+    suggested: FlowDagStepContext<Workflow>,
+  ) => StepContext;
+  readonly eventEmitter: EngineEvents<Workflow, WorkflowContext, StepContext>;
+  previousStepCtx: StepContext | undefined;
+  previousStepCallResult: PreviousResult | undefined;
+  previousStepCallError: Error | undefined;
+  interruptedAtStep: StepContext | undefined;
+  erroredOutAtStep: StepContext | undefined;
+}
+
+export interface EngineRunStateSupplier<
+  Workflow,
+  PreviousResult,
+  WorkflowContext extends FlowDagContext<Workflow>,
+  StepContext extends FlowDagStepContext<Workflow>,
+> {
+  readonly engineRunState: () => EngineRunState<
+    Workflow,
+    PreviousResult,
+    WorkflowContext,
+    StepContext
+  >;
+}
+
 export class Engine<
   Workflow,
-  WorkflowContext extends EngineWorkflowContext<Workflow> =
-    EngineWorkflowContext<Workflow>,
-  StepContext extends EngineWorkflowStepContext<Workflow> =
-    EngineWorkflowStepContext<Workflow>,
-  StepID extends WorkflowShapeStep<Workflow> = WorkflowShapeStep<
+  WorkflowContext extends FlowDagContext<Workflow> = FlowDagContext<
+    Workflow
+  >,
+  StepContext extends FlowDagStepContext<Workflow> = FlowDagStepContext<
     Workflow
   >,
 > {
-  readonly flowStepsMetaData: WorkflowStep<Workflow, StepID>[];
-  readonly flowStepsMetaDataDict: Record<
-    StepID,
-    WorkflowStep<Workflow, StepID>
-  >;
-  readonly DAG: ReturnType<typeof workflowDAG<Workflow, StepID>>;
+  readonly DAG: ReturnType<typeof flowDAG<Workflow, FlowShapeStep<Workflow>>>;
   readonly lintResults: { readonly message: string }[];
 
   constructor(
-    readonly flowSteps: Workflow,
-    readonly metaData: ReturnType<
-      typeof decorators<Workflow, StepID>
-    >["metaData"],
-    readonly options?: EngineOptions<Workflow, WorkflowContext, StepContext>,
+    readonly workflow: Workflow,
+    readonly descriptor: FlowDescriptor<Workflow> = new FlowDescriptor<
+      Workflow
+    >(),
+    readonly options?: EngineOptions<
+      Workflow,
+      WorkflowContext,
+      StepContext
+    >,
   ) {
-    this.lintResults = [...metaData.lintResults];
-    this.flowStepsMetaDataDict = {} as Any;
-    this.flowStepsMetaData = [];
+    this.lintResults = [...descriptor.lintResults];
 
-    const { disregardProps, dependencies } = metaData;
-    for (const pn of Object.getOwnPropertyNames(this.flowSteps)) {
-      if (pn == "constructor") continue;
-      if (disregardProps.get(pn as StepID)) continue;
-
-      const pd = Object.getOwnPropertyDescriptor(
-        this.flowSteps,
-        pn,
-      );
-
-      const wfStepID = pn as StepID;
-      if (pd) {
-        const stepMetaData = { wfStepID, ...pd };
-        this.flowStepsMetaData.push(stepMetaData);
-        this.flowStepsMetaDataDict[wfStepID] = stepMetaData;
-      }
-    }
-
-    const nodes: WorkflowStep<Workflow, StepID>[] = [];
+    const nodes: FlowStep<Workflow, FlowShapeStep<Workflow>>[] = [];
     const edges: g.Edge<
-      WorkflowStep<Workflow, StepID>,
-      WorkflowStep<Workflow, StepID>
+      FlowStep<Workflow, FlowShapeStep<Workflow>>,
+      FlowStep<Workflow, FlowShapeStep<Workflow>>
     >[] = [];
-    const graph = { nodes, edges };
 
-    for (const node of this.flowStepsMetaData) {
+    const graph = { nodes, edges };
+    const { flowSteps, flowShape } = descriptor.structure(workflow);
+
+    for (const node of flowSteps) {
       nodes.push(node);
     }
 
-    for (const dep of dependencies) {
-      const node = this.flowStepsMetaDataDict[dep.propertyKey];
-      const dependsOn = this.flowStepsMetaDataDict[dep.dependsOn];
+    for (const dep of descriptor.dependencies) {
+      const node = flowShape[dep.propertyKey];
+      const dependsOn = flowShape[dep.dependsOn];
       if (dependsOn) {
         edges.push({ from: dependsOn, to: node });
       } else {
@@ -260,13 +323,13 @@ export class Engine<
       }
     }
 
-    for (let i = 0; i < this.flowStepsMetaData.length; i++) {
-      const current = this.flowStepsMetaData[i];
+    for (let i = 0; i < flowSteps.length; i++) {
+      const current = flowSteps[i];
       if (edges.find((e) => e.from.wfStepID == current.wfStepID)) continue;
 
       let n = i + 1;
-      while (n < this.flowStepsMetaData.length) {
-        const next = this.flowStepsMetaData[n];
+      while (n < flowSteps.length) {
+        const next = flowSteps[n];
         if (!edges.find((e) => e.from.wfStepID == next.wfStepID)) {
           edges.push({ from: current, to: next });
           break;
@@ -275,7 +338,7 @@ export class Engine<
       }
     }
 
-    this.DAG = workflowDAG<Workflow, StepID>(graph);
+    this.DAG = flowDAG<Workflow, FlowShapeStep<Workflow>>(graph);
     if (this.DAG.isCyclical()) {
       this.lintResults.push({ message: `Cycles detected in graph` });
     }
@@ -293,7 +356,7 @@ export class Engine<
       throw new Error(`Workflow must be a class instance`);
     }
 
-    const pwc = this.options?.prepareWorkflowCtx ??
+    const pfc = this.options?.prepareFlowCtx ??
       ((suggested) => suggested as WorkflowContext);
     const psc = this.options?.prepareStepCtx ??
       ((suggested) => suggested as StepContext);
@@ -307,56 +370,79 @@ export class Engine<
     });
     const { dagSteps } = this.DAG;
 
-    const staticCtx: EngineWorkflowContext<Workflow> = {
+    const runState: EngineRunState<
+      Workflow,
+      Any,
+      WorkflowContext,
+      StepContext
+    > = {
+      prepareFlowCtx: pfc,
+      prepareStepCtx: psc,
+      eventEmitter: ee,
+      previousStepCtx: undefined,
+      previousStepCallResult: undefined,
+      interruptedAtStep: undefined,
+      previousStepCallError: undefined,
+      erroredOutAtStep: undefined,
+    };
+    const runStateSupplier: EngineRunStateSupplier<
+      Workflow,
+      Any,
+      WorkflowContext,
+      StepContext
+    > = {
+      engineRunState: () => runState,
+    };
+
+    const staticCtx: FlowDagContext<Workflow> = {
       dagSteps,
       flow: instance,
       last: dagSteps.length - 1,
     };
-    const handle = await ee.beforeWorkflow(pwc(staticCtx));
+    const handle = await ee.beforeWorkflow(pfc(staticCtx));
     if (typeof handle === "boolean" && handle === false) return;
 
-    let prevCtx: StepContext | undefined = undefined;
-    let prevCallResult: Any = undefined;
-
-    let interruptedAt: StepContext | undefined = undefined;
-
-    let prevCallError: Error | undefined = undefined;
-    let erroredOutAt: StepContext | undefined = undefined;
     for (let i = 0; i < dagSteps.length; i++) {
       const [previous, current, next] = [
-        i > 0 ? prevCtx : undefined,
+        i > 0 ? runState.previousStepCtx : undefined,
         dagSteps[i],
         i < staticCtx.last ? dagSteps[i + 1] : undefined,
       ];
 
-      const eventCtx = psc({ ...staticCtx, index: i, previous, current, next });
-      prevCtx = eventCtx;
+      const eventCtx = {
+        ...psc({ ...staticCtx, index: i, previous, current, next }),
+        ...runStateSupplier,
+      };
+      runState.previousStepCtx = eventCtx;
 
-      const runStep = await ee.beforeStep<StepID & string>(
+      const runStep = await ee.beforeStep<FlowShapeStep<Workflow> & string>(
         String(current.wfStepID) as Any,
         eventCtx,
       );
       if (runStep === "interrupt") {
-        interruptedAt = eventCtx;
+        runState.interruptedAtStep = eventCtx;
         break;
       }
 
       try {
         // each method has the following signature:
         // step(ctx: StepContext, pipe: Error | )
-        prevCallResult = await ((instance as Any)[current.wfStepID] as Any)
-          .call(
-            instance,
-            eventCtx,
-            prevCallError ?? prevCallResult,
-          );
+        runState.previousStepCallResult =
+          await ((instance as Any)[current.wfStepID] as Any)
+            .call(
+              instance,
+              eventCtx,
+              runState.previousStepCallError ?? runState.previousStepCallResult,
+            );
 
         // if the previous step errored out but this one succeeded, we already
         // reported it so reset the state
-        prevCallError = undefined;
+        runState.previousStepCallError = undefined;
       } catch (err) {
-        erroredOutAt = eventCtx;
-        const abortOnError = await ee.afterError<StepID & string>(
+        runState.erroredOutAtStep = eventCtx;
+        const abortOnError = await ee.afterError<
+          FlowShapeStep<Workflow> & string
+        >(
           String(current.wfStepID) as Any,
           err,
           eventCtx,
@@ -364,17 +450,17 @@ export class Engine<
         if (abortOnError === "abort") {
           break;
         }
-        prevCallError = err;
+        runState.previousStepCallError = err;
       }
 
-      await ee.afterStep<StepID & string, Any>(
+      await ee.afterStep<FlowShapeStep<Workflow> & string, Any>(
         String(current.wfStepID) as Any,
-        prevCallError ?? prevCallResult,
+        runState.previousStepCallError ?? runState.previousStepCallResult,
         eventCtx,
       );
     }
 
-    await ee.afterWorkflow({ ...pwc(staticCtx), interruptedAt, erroredOutAt });
+    await ee.afterWorkflow({ ...pfc(staticCtx), ...runStateSupplier });
   }
 
   static isClass<T>(instance: Any): instance is T {
