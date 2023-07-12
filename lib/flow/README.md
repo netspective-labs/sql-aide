@@ -7,7 +7,7 @@ loading into a database. It handles task scheduling, dependencies, retries,and
 more using an Aspect-oriented Programming (AOP) style using dependency
 injections.
 
-## Core Strategy
+## Core Capabilities
 
 - Each flow is defined as a set of type-safe TypeScript modules that can operate
   independently as a CLI or as a library to be included by other flows in a DAG.
@@ -29,7 +29,9 @@ injections.
 - Flow steps must be able to store their own Quality System (documentation)
   content such as descriptions, lineage, stewardship, etc.
 
-## Flow Runner Status
+## Flow Engine Status
+
+SQLa Flow supports multiple engine types, depending on workflow needs.
 
 - [x] Each flow can be executed as a standalone Deno script
 - [x] Each flow can be scheduled using `cron` or other external utilities
@@ -37,6 +39,19 @@ injections.
   - [ ] Can have a built-in scheduler via `croner` or similar
   - [ ] Can be executed via a _sensor_, like a file watcher or S3 watcher check
         an API regularly, etc..
+- [ ] The flow engine can manage secrets outside of the flow instances so that
+      sensitive values and data are not seen by all developers; allow the
+      secrets to managed in a type-safe way using Zod schemas
+
+### Task-based Engine
+
+- [x] Task-based Flow Engine treats each function property in a class as a
+      workflow step. This is similar to how Apache Airflow works.
+
+### Asset-based Engine Status
+
+- [ ] Asset-based Flow Engine treats each function property in a class as an
+      asset preparation function. This is similar to how Dagster works.
 
 ## Flow Class Status
 
@@ -67,9 +82,6 @@ injections.
 - [x] Flow execution has complete observability of all initialization, execution
       of steps, errors, and finalization through EventEmitter pattern
   - [ ] EventEmitter allows unlimited typed listeners for each flow step
-- [ ] The flow engine can manage secrets outside of the flow instances so that
-      sensitive values and data are not seen by all developers; allow the
-      secrets to managed in a type-safe way using Zod schemas
 - [ ] Each flow step can request value of Environment variables to be injected
       as function arguments or available in the stepCtx object.
 - [ ] Each flow step can provide decorator to specify what happens on error
