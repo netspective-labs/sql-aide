@@ -348,6 +348,8 @@ export interface EngineRunState<
   readonly prepareStepCtx: (
     suggested: FlowDagStepContext<Workflow>,
   ) => StepContext;
+  readonly callArgs:
+    ((stepCtx: StepContext, prevExecResult: ExecResult) => Array<Any>)[];
   readonly eventEmitter: EngineEvents<Workflow, WorkflowContext, StepContext>;
   readonly stepsExecuted: EngineRunStepState<
     Workflow,
@@ -390,6 +392,12 @@ export class Engine<
     Workflow
   >,
 > {
+  readonly flowSteps: ReturnType<
+    FlowDescriptor<Workflow>["structure"]
+  >["flowSteps"];
+  readonly flowShape: ReturnType<
+    FlowDescriptor<Workflow>["structure"]
+  >["flowShape"];
   readonly DAG: ReturnType<typeof flowDAG<Workflow, FlowShapeStep<Workflow>>>;
   readonly lintResults: { readonly message: string }[];
 
@@ -414,6 +422,8 @@ export class Engine<
 
     const graph = { nodes, edges };
     const { flowSteps, flowShape } = descriptor.structure(workflow);
+    this.flowSteps = flowSteps;
+    this.flowShape = flowShape;
 
     for (const node of flowSteps) {
       nodes.push(node);
@@ -473,12 +483,19 @@ export class Engine<
       afterWorkflow: () => {},
     });
 
+    // each step might have different call args from decoration decls
+    const callArgs = this.flowSteps.map((_step) => ((
+      stepCtx: StepContext,
+      prevExecResult: Any,
+    ) => [stepCtx, prevExecResult]));
+
     const runState: EngineRunState<
       Workflow,
       Any,
       WorkflowContext,
       StepContext
     > = {
+      callArgs,
       descriptor: this.descriptor,
       prepareFlowCtx,
       prepareStepCtx,
@@ -519,7 +536,13 @@ export class Engine<
 
     const { runState, runStateSupplier } = await this.prepareRunState();
     const { dagSteps } = this.DAG;
-    const { prepareFlowCtx, prepareStepCtx, eventEmitter: ee } = runState;
+    const {
+      callArgs,
+      prepareFlowCtx,
+      prepareStepCtx,
+      eventEmitter: ee,
+      stepsExecuted,
+    } = runState;
 
     const staticCtx: FlowDagContext<Workflow> = {
       dagSteps,
@@ -561,22 +584,15 @@ export class Engine<
         }),
         ...runStateSupplier,
       };
-      runState.stepsExecuted[step] = {
-        index: step,
-        status: "initial",
-        stepCtx,
-      };
+      const rsExecStatic = { index: step, stepCtx };
+      stepsExecuted[step] = { status: "initial", ...rsExecStatic };
 
       const runStep = await ee.beforeStep<FlowShapeStep<Workflow> & string>(
         String(current.wfStepID) as Any,
         stepCtx,
       );
       if (runStep === "interrupt") {
-        runState.stepsExecuted[step] = {
-          index: step,
-          status: "interrupted",
-          stepCtx,
-        };
+        stepsExecuted[step] = { status: "interrupted", ...rsExecStatic };
         runState.interruptedAtStep = stepCtx;
         break;
       }
@@ -586,13 +602,12 @@ export class Engine<
         : undefined;
       try {
         // each method has the following signature:
-        // step(ctx: StepContext, pipe: Error | )
+        // step(ctx: StepContext, ...injecteArgs, prevExecResult: Error | PreviousStepResult)
         const execResult = await ((instance as Any)[current.wfStepID] as Any)
-          .call(instance, stepCtx, prevStepResult);
-        runState.stepsExecuted[step] = {
-          index: step,
+          .call(instance, ...callArgs[step](stepCtx, prevStepResult));
+        stepsExecuted[step] = {
+          ...rsExecStatic,
           status: "successful",
-          stepCtx,
           execResult,
         };
       } catch (execError) {
@@ -605,19 +620,17 @@ export class Engine<
           stepCtx,
         );
         if (abortOnError === "abort") {
-          runState.stepsExecuted[step] = {
-            index: step,
+          stepsExecuted[step] = {
+            ...rsExecStatic,
             status: "aborted",
-            stepCtx,
             execError,
           };
           runState.erroredOutAtStep = stepCtx;
           break;
         } else {
-          runState.stepsExecuted[step] = {
-            index: step,
+          stepsExecuted[step] = {
+            ...rsExecStatic,
             status: "indeterminate",
-            stepCtx,
             execError,
           };
         }
@@ -625,11 +638,12 @@ export class Engine<
 
       await ee.afterStep<FlowShapeStep<Workflow> & string, Any>(
         String(current.wfStepID) as Any,
-        runState.stepsExecuted[step],
+        stepsExecuted[step],
         stepCtx,
       );
     }
 
+    const finalCtx = { ...flowCtx, ...runStateSupplier };
     for (
       const final of this.descriptor.finalizeProps.sort((a, b) =>
         a.priority - b.priority
@@ -637,11 +651,10 @@ export class Engine<
     ) {
       await ((instance as Any)[final.propertyKey] as Any).call(
         instance,
-        flowCtx,
+        finalCtx,
       );
     }
-
-    await ee.afterWorkflow({ ...flowCtx, ...runStateSupplier });
+    await ee.afterWorkflow(finalCtx);
   }
 
   static isClass<T>(instance: Any): instance is T {

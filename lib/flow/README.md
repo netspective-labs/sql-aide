@@ -39,23 +39,26 @@ more.
 ## Flow Class Status
 
 - [x] Each flow is a TypeScript class
-  - [ ] Flow classes do not not require any base classes or inheritence (though
+  - [x] Flow classes do not not require any base classes or inheritence (though
         does support inheritable workflows).
   - [ ] Flow classes can be unit tested independently of the Flow framework
 - [x] Each flow step is a synchronous or asynchronous class method.
 - [x] Each flow step may have one or more decorators that can specify aspects.
-- [ ] Each flow can have one or more initialization methods declared by
+- [x] Each flow can have one or more initialization methods declared by
       decorators; initialization can also occur in flow class constructor but
       since constructors cannot be asynchronous you can use decorated async
       methods when required
-  - [ ] ??Flow initialization can inject database connections and store them as
-        instance properties
-  - [ ] ??Flow initialization can inject files or content being watched
+- [ ] Flow instance property decorators can inject values from Engine
+  - [ ] Flow initialization can inject database connections (with pooling) and
+        store them as instance properties
+  - [ ] Flow initialization can inject files or content being watched
 - [x] Each flow step class method is called in linear order unless it has a
       dependency decorator. If there are any dependencies the flow will become a
       DAG that is toplogically sorted and executed.
-- [ ] Each flow step can optionally inject database connections as a parameter
-- [ ] Each flow step can optionally inject files or content being watched
+- [ ] Each flow step can optionally inject arguments into function call
+  - [ ] Each flow step can optionally inject database connections (with pooling)
+        as a parameter
+  - [ ] Each flow step can optionally inject files or content being watched
 - [x] Each flow step has a common set of arguments
   - [x] The current flow state and step context is the first argument.
   - [x] The previous step's result (either an Error or its `return` statement
@@ -68,7 +71,7 @@ more.
   - [ ] Supply a different result
   - [ ] Retries
   - [ ] Timeouts
-- [ ] Each flow can one or more finalization methods delcared by decorators.
+- [x] Each flow can one or more finalization methods delcared by decorators.
 - [x] Flow execution has complete observability of all initialization, execution
       of steps, errors, and finalization through EventEmitter pattern
   - [ ] EventEmitter allows unlimited typed listeners for each flow step

@@ -103,6 +103,7 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
       this.executed.push({ step: ctx.current.wfStepID });
       if (step1Result instanceof Error) throw step1Result;
       this.step1Result = step1Result;
+      ta.assertEquals(this.step1Result, { isSpecial: true, value: 100 });
     }
 
     // deno-lint-ignore require-await
