@@ -35,21 +35,24 @@ injections.
 - [x] Each flow can be scheduled using `cron` or other external utilities
 - [ ] Each flow can be executed as a daemon/service
   - [ ] Can have a built-in scheduler via `croner` or similar
-  - [ ] Can be executed via a `sensor` like a file watcher.
+  - [ ] Can be executed via a _sensor_, like a file watcher or S3 watcher check
+        an API regularly, etc..
 
 ## Flow Class Status
 
 - [x] Each flow is a TypeScript class
   - [x] Flow classes do not not require any base classes or inheritence (though
         does support inheritable workflows).
+  - [ ] Flow classes can use TypeScript imports and support dependencies at the
+        flow level not just at the step level
   - [ ] Flow classes can be unit tested independently of the Flow framework
   - [ ] Flow runs should be able to be "dry-runnable" so it will just "document"
         what it will do instead of actually running the steps
   - [ ] Flow runs should be able to report their execution status, progress,
         etc. (`verbose` mode) as Open Telemetry traces, logs, and metrics
-- [x] Each flow step is a synchronous or asynchronous class method.
+- [x] Each flow step is a _synchronous_ or _asynchronous_ class method.
 - [x] Each flow step may have one or more decorators that can specify aspects.
-- [x] Each flow can have one or more initialization methods declared by
+- [x] Each flow can have one or more _initialization_ methods declared by
       decorators; initialization can also occur in flow class constructor but
       since constructors cannot be asynchronous you can use decorated async
       methods when required
@@ -65,7 +68,8 @@ injections.
       of steps, errors, and finalization through EventEmitter pattern
   - [ ] EventEmitter allows unlimited typed listeners for each flow step
 - [ ] The flow engine can manage secrets outside of the flow instances so that
-      sensitive values and data are not seen by all developers
+      sensitive values and data are not seen by all developers; allow the
+      secrets to managed in a type-safe way using Zod schemas
 - [ ] Each flow step can request value of Environment variables to be injected
       as function arguments or available in the stepCtx object.
 - [ ] Each flow step can provide decorator to specify what happens on error
