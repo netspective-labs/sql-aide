@@ -539,10 +539,11 @@ export function zodJsonSqlDomainFactory<
 export type SqlDomainZodNumberDescr = SqlDomainZodDescrMeta & {
   readonly isFloat: boolean;
   readonly isBigFloat: boolean;
+  readonly isSerial: boolean;
 };
 
 export function sqlDomainZodNumberDescr(
-  options: Pick<SqlDomainZodNumberDescr, "isFloat" | "isBigFloat">,
+  options: Pick<SqlDomainZodNumberDescr, "isFloat" | "isBigFloat" | "isSerial">,
 ): SqlDomainZodNumberDescr {
   return {
     isSqlDomainZodDescrMeta: true,
@@ -557,6 +558,7 @@ export function isSqlDomainZodNumberDescr<
     "isSqlDomainZodDescrMeta",
     "isFloat",
     "isBigFloat",
+    "isSerial",
   );
   return isSDZND(o);
 }
@@ -625,6 +627,30 @@ export function zodNumberSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
+      };
+    },
+    serial: <
+      ZodType extends z.ZodType<number, z.ZodNumberDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) return "SERIAL";
+            else if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return "INT IDENTITY(1,1)";
+            }
+            return "INTEGER AUTOINCREMENT";
+          },
+        }),
       };
     },
     float: <
@@ -1273,11 +1299,15 @@ export function zodTypeSqlDomainFactory<
       case z.ZodFirstPartyTypeKind.ZodNumber: {
         if (zodDefHook?.descrMeta) {
           if (isSqlDomainZodNumberDescr(zodDefHook.descrMeta)) {
-            return zodDefHook.descrMeta.isBigFloat
-              ? numberSDF.bigFloat(zodType, init)
-              : zodDefHook.descrMeta.isFloat
-              ? numberSDF.float(zodType, init)
-              : numberSDF.integer(zodType, init);
+            if (zodDefHook.descrMeta.isSerial) {
+              return numberSDF.serial(zodType, init);
+            } else if (zodDefHook.descrMeta.isBigFloat) {
+              return numberSDF.bigFloat(zodType, init);
+            } else if (zodDefHook.descrMeta.isFloat) {
+              return numberSDF.float(zodType, init);
+            } else {
+              return numberSDF.integer(zodType, init);
+            }
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodNumber ${

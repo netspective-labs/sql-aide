@@ -114,7 +114,11 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   const floatDefaultSD = ztsdFactory.cacheableFrom(
     z.number(
       d.zodSqlDomainRawCreateParams(
-        d.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+        d.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
       ),
     ).default(0),
     {

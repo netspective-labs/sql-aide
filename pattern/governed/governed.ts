@@ -63,7 +63,11 @@ export class GovernedDomains<
   float() {
     return z.number(
       SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
       ),
     );
   }
@@ -71,7 +75,11 @@ export class GovernedDomains<
   floatNullable() {
     return z.number(
       SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: false }),
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
       ),
     ).optional();
   }
@@ -79,7 +87,11 @@ export class GovernedDomains<
   bigFloat() {
     return z.number(
       SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: true }),
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: true,
+          isSerial: false,
+        }),
       ),
     );
   }
@@ -87,11 +99,25 @@ export class GovernedDomains<
   bigFloatNullable() {
     return z.number(
       SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodNumberDescr({ isFloat: true, isBigFloat: true }),
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: true,
+          isSerial: false,
+        }),
       ),
     ).optional();
   }
-
+  serial() {
+    return z.number(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: false,
+          isBigFloat: false,
+          isSerial: true,
+        }),
+      ),
+    ).optional();
+  }
   jsonText() {
     return z.string(
       SQLa.zodSqlDomainRawCreateParams(
