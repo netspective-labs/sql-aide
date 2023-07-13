@@ -36,6 +36,16 @@ export type PgDcpExtensionDefns = {
     "ltree",
     PgDcpEmitContext
   >;
+  readonly pgjwt: pgSQLa.ExtensionDefinition<
+    "dcp_extensions",
+    "pgjwt",
+    PgDcpEmitContext
+  >;
+  readonly pgcrypto: pgSQLa.ExtensionDefinition<
+    "dcp_extensions",
+    "pgcrypto",
+    PgDcpEmitContext
+  >;
   // TODO:
   // this.pgTapExtn = this.extension("pgtap");
   // this.mvStatsExtn = this.extension("mv_stats");
@@ -157,6 +167,8 @@ export class PgDcpEmitCoordinator<
       }),
       extnDefns: (define, schemas) => ({
         ltree: define(schemas.dcp_extensions, "ltree"),
+        pgjwt: define(schemas.dcp_extensions, "pgjwt"),
+        pgcrypto: define(schemas.dcp_extensions, "pgcrypto"),
       }),
       pgDomainDefns: (pgdf, schemas) => ({
         execution_host_identity: pgdf.pgDomainDefn(
@@ -347,6 +359,34 @@ export class PgDcpAssurance<
     return {
       // deno-fmt-ignore
       SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_table('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasRole<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_role('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasUser<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_user('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasntRole<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.hasnt_role('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasntUser<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.hasnt_user('${schemaName}', '${routineName}');`,
     };
   }
 

@@ -9,7 +9,7 @@ type Any = any;
 export class PgDcpContext {
   readonly state = pgdcp.pgDcpState(import.meta, {
     principal: "dcp_context",
-    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy"],
+    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy", "dcp_assurance"],
   });
 
   readonly subjectArea: string;

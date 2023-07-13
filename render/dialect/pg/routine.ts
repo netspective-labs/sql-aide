@@ -628,11 +628,11 @@ export function dropStoredProcedure<
   };
 }
 
-// deno-lint-ignore no-empty-interface
 export interface StoredFunctionDefnOptions<
   RoutineName extends string,
   Context extends tmpl.SqlEmitContext,
 > extends StoredRoutineDefnOptions<RoutineName, Context> {
+  readonly privilegesSQL?: tmpl.SqlTextSupplier<Context>;
 }
 
 export function storedFunction<
@@ -730,10 +730,11 @@ export function storedFunction<
             ctx,
             steOptions,
           );
+          const privilegesSQL = sfOptions?.privilegesSQL?.SQL(ctx);
           const sqlText = steOptions.indentation(
             "create routine",
             // deno-fmt-ignore
-            `CREATE${isIdempotent ? ` OR REPLACE` : ""} FUNCTION ${ns.storedRoutineName(routineName)}(${argsSQL}) RETURNS ${returnsSQL} AS ${hbSep}\n${bodySqlText}\n${hbSep} ${langSQL};`,
+            `CREATE${isIdempotent ? ` OR REPLACE` : ""} FUNCTION ${ns.storedRoutineName(routineName)}(${argsSQL}) RETURNS ${returnsSQL} AS ${hbSep}\n${bodySqlText}\n${hbSep} ${langSQL}${privilegesSQL?` ${privilegesSQL}`:""};`,
           );
           return sfOptions?.before
             ? ctx.embeddedSQL<Context>(sfOptions?.embeddedStsOptions)`${[
