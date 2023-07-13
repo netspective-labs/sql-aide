@@ -18,15 +18,16 @@ CREATE TABLE IF NOT EXISTS "metric_label" (
     FOREIGN KEY("metric_id") REFERENCES "metric"("metric_id")
 );
 
-CREATE TABLE IF NOT EXISTS "metric_value" (
-    "metric_value_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE "metric_value" (
+    "metric_value_id" INTEGER AUTOINCREMENT,
     "metric_label_id" INTEGER NOT NULL,
     "timestamp" TIMESTAMP NOT NULL,
     "value" REAL NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
-    FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
-);
+    FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id"),
+    CONSTRAINT metric_value_pkey PRIMARY KEY (metric_value_id, timestamp)
+)PARTITION BY RANGE ("timestamp");
 
 CREATE TABLE IF NOT EXISTS "metric_histogram_bucket" (
     "metric_histogram_bucket_id" INTEGER PRIMARY KEY AUTOINCREMENT,

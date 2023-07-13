@@ -39,13 +39,35 @@ export function metricsGovn<Context extends SQLa.SqlEmitContext>(
     ...housekeeping.columns,
   });
 
-  const metricValue = table(names.tableName("metric_value"), {
-    metric_value_id: keys.autoIncPrimaryKey(),
-    metric_label_id: metricLabel.references.metric_label_id(),
-    timestamp: domains.dateTime(),
-    value: domains.float(),
-    ...housekeeping.columns,
-  });
+  const metricValue = SQLa.tableDefinition(
+    "metric_value",
+    {
+      metric_value_id: domains.serial(), //
+      metric_label_id: metricLabel.references.metric_label_id(),
+      timestamp: domains.dateTime(),
+      value: domains.float(),
+      ...housekeeping.columns,
+    },
+    {
+      sqlPartial: (destination) => {
+        if (destination == "after all column definitions") {
+          return [
+            {
+              SQL: () =>
+                `CONSTRAINT metric_value_pkey PRIMARY KEY (metric_value_id, timestamp)`,
+            },
+          ];
+        }
+        if (destination == "after table definition") {
+          return [
+            {
+              SQL: () => `PARTITION BY RANGE ("timestamp")`,
+            },
+          ];
+        }
+      },
+    },
+  );
 
   const histogramBucket = table(names.tableName("metric_histogram_bucket"), {
     metric_histogram_bucket_id: keys.autoIncPrimaryKey(),
@@ -115,6 +137,7 @@ export function metricsPlPgSqlRoutines(ess: SQLa.EmbeddedSqlSupplier) {
     label_key_param: d.text(),
     label_value_param: d.text(),
     timestamp_param: d.dateTime(),
+    created_by_param: d.text(),
   });
   // destructuring argsSD.sdSchema { argsSD: { sdSchema: a } } is a convenient
   // way of getting all the arguments into `a`
@@ -135,17 +158,17 @@ export function metricsPlPgSqlRoutines(ess: SQLa.EmbeddedSqlSupplier) {
     partition_start := date_trunc('month', ${a.timestamp_param});
     partition_end := partition_start + INTERVAL '1 month';
 
-    SELECT id INTO metric_id_selected FROM metric WHERE name = ${a.metric_name_param};
+    SELECT metric_id INTO metric_id_selected FROM metric WHERE name = ${a.metric_name_param};
 
     IF metric_id_selected IS NULL THEN
       RAISE EXCEPTION 'Metric % does not exist.', ${a.metric_name_param};
     END IF;
 
-    SELECT id INTO metric_label_id_selected FROM metric_label WHERE metric_id = metric_id_selected AND label_key = ${a.label_key_param} AND label_value = ${a.label_value_param};
+    SELECT metric_id INTO metric_label_id_selected FROM metric_label WHERE metric_id = metric_id_selected AND label_key = ${a.label_key_param} AND label_value = ${a.label_value_param};
 
     IF metric_label_id_selected IS NULL THEN
-      INSERT INTO metric_label (metric_id, label_key, label_value) VALUES (metric_id_selected, ${a.label_key_param}, ${a.label_value_param})
-      RETURNING id INTO metric_label_id_selected;
+      INSERT INTO metric_label (metric_id, label_key, label_value, created_at, created_by) VALUES (metric_id_selected, ${a.label_key_param}, ${a.label_value_param}, ${a.timestamp_param}, ${a.created_by_param})
+      RETURNING metric_id INTO metric_label_id_selected;
     END IF;
 
     BEGIN
@@ -153,8 +176,7 @@ export function metricsPlPgSqlRoutines(ess: SQLa.EmbeddedSqlSupplier) {
     EXCEPTION WHEN duplicate_table THEN
       -- Do nothing, the partition already exists
     END;
-
-    EXECUTE format('INSERT INTO %I (metric_label_id, timestamp, value) VALUES ($1, $2, $3);', partition_name) USING metric_label_id_selected, ${a.timestamp_param}, ${a.value_param};
+    EXECUTE format('INSERT INTO %I (metric_label_id, timestamp, value, created_at, created_by) VALUES ($1, $2, $3, $4, $5);', partition_name) USING metric_label_id_selected, ${a.timestamp_param}, ${a.value_param}, ${a.timestamp_param}, ${a.created_by_param};
   END;`;
 
   return {

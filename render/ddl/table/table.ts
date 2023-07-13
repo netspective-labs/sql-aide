@@ -45,7 +45,7 @@ export interface TableDefnOptions<
   readonly isIdempotent?: boolean;
   readonly isTemp?: boolean;
   readonly sqlPartial?: (
-    destination: "after all column definitions",
+    destination: "after all column definitions" | "after table definition",
   ) => tmpl.SqlTextSupplier<Context>[] | undefined;
   readonly sqlNS?: tmpl.SqlNamespaceSupplier;
   readonly constraints?: <
@@ -357,13 +357,17 @@ export function tableDefinition<
         const decoratorsSQL = [...afterColumnDefnsSS, ...afterCDs].map((sts) =>
           sts.SQL(ctx)
         ).join(`,\n${indent}`);
+        const afterTableDefn =
+          tdOptions?.sqlPartial?.("after table definition") ?? [];
+        const tableDecoratorsSQL = afterTableDefn.map((sts) => sts.SQL(ctx))
+          .join(`,\n${indent}`);
 
         const { isTemp, isIdempotent } = tdOptions ?? {};
         // deno-fmt-ignore
         const result = `${steOptions.indentation("create table")}CREATE ${isTemp ? 'TEMP ' : ''}TABLE ${isIdempotent && !tmpl.isMsSqlServerDialect(ctx.sqlDialect) ? "IF NOT EXISTS " : ""}${ns.tableName(tableName)} (\n` +
         columnDefnsSS.map(cdss => cdss.SQL(ctx)).join(",\n") +
         (decoratorsSQL.length > 0 ? `,\n${indent}${decoratorsSQL}` : "") +
-        `\n)`;
+        `\n)${tableDecoratorsSQL}`;
         return result;
       },
       graphEntityDefn,
