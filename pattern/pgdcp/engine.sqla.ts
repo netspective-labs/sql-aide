@@ -6,15 +6,18 @@ import * as pgdcp from "./pgdcp.ts";
 export class PgDcpEngine {
   protected constructor() {}
 
-  readonly state = pgdcp.pgDcpState(import.meta, { subjectArea: "engine" });
+  readonly state = pgdcp.pgDcpState(import.meta, {
+    subjectArea: "engine",
+    schemas: ["dcp_extensions"],
+  });
 
   content() {
-    const { ec } = this.state;
+    const { ec, schemas } = this.state;
     const { sqlNamespace: extnsSchemaName } = ec.schemaDefns.dcp_extensions;
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
-
+      ${schemas}
       -- make sure everybody can use everything in the extensions schema
       grant usage on schema ${extnsSchemaName} to public;
       grant execute on all functions in schema ${extnsSchemaName} to public;

@@ -27,6 +27,7 @@ Deno.test("PgDCP examples", async () => {
     ["000_context.auto.psql", false],
     ["001_engine.auto.psql", false],
     ["002_federated.auto.psql", false],
+    ["003_shield.auto.psql", false],
     ["driver.auto.psql", false],
   ]);
 });

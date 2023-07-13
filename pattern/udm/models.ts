@@ -38,6 +38,10 @@ export const {
   bigFloatNullable,
   uuid,
   uuidNullable,
+  ulid,
+  ulidNullable,
+  jsonText,
+  jsonTextNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
