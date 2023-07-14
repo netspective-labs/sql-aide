@@ -46,6 +46,11 @@ export type PgDcpExtensionDefns = {
     "pgcrypto",
     PgDcpEmitContext
   >;
+  readonly semver: pgSQLa.ExtensionDefinition<
+    "dcp_extensions",
+    "semver",
+    PgDcpEmitContext
+  >;
   // TODO:
   // this.pgTapExtn = this.extension("pgtap");
   // this.mvStatsExtn = this.extension("mv_stats");
@@ -169,6 +174,7 @@ export class PgDcpEmitCoordinator<
         ltree: define(schemas.dcp_extensions, "ltree"),
         pgjwt: define(schemas.dcp_extensions, "pgjwt"),
         pgcrypto: define(schemas.dcp_extensions, "pgcrypto"),
+        semver: define(schemas.dcp_extensions, "semver"),
       }),
       pgDomainDefns: (pgdf, schemas) => ({
         execution_host_identity: pgdf.pgDomainDefn(
@@ -359,6 +365,20 @@ export class PgDcpAssurance<
     return {
       // deno-fmt-ignore
       SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_table('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasType<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_type('${schemaName}', '${routineName}');`,
+    };
+  }
+
+  hasExtension<RoutineName>(schemaName: SchemaName, routineName: RoutineName) {
+    return {
+      // deno-fmt-ignore
+      SQL: () => `RETURN NEXT ${this.aeSchema.sqlNamespace}.has_extension('${schemaName}', '${routineName}');`,
     };
   }
 
