@@ -15,6 +15,8 @@ export * from "./engine.sqla.ts";
 export * from "./federated.sqla.ts";
 export * from "./shield.sqla.ts";
 export * from "./event.sqla.ts";
+export * from "./postgraphile.sqla.ts";
+export * from "./graphql.sqla.ts";
 
 // this file doubles as a CLI to emit all files or as a module index if using
 // it in Deno. everything below this is only used when being called as a main
@@ -27,6 +29,7 @@ import * as fed from "./federated.sqla.ts";
 import * as s from "./shield.sqla.ts";
 import * as ev from "./event.sqla.ts";
 import * as pg from "./postgraphile.sqla.ts";
+import * as gr from "./graphql.sqla.ts";
 
 export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const context = c.PgDcpContext.init();
@@ -35,6 +38,7 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const shield = s.PgDcpShield.init();
   const event = ev.PgDcpEvent.init();
   const postgraphile = pg.PgDcpPostgrpahile.init();
+  const graphql = gr.PgDcpGraphql.init();
   return {
     importMeta: import.meta,
     sources: [
@@ -44,6 +48,7 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
       shield.content().persistableSQL,
       event.content().persistableSQL,
       postgraphile.content().persistableSQL,
+      graphql.content().persistableSQL,
     ],
   };
 };
