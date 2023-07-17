@@ -42,6 +42,8 @@ export const {
   ulidNullable,
   jsonText,
   jsonTextNullable,
+  boolean,
+  booleanNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
 
