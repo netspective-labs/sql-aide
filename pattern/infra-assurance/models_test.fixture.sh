@@ -1478,7 +1478,7 @@ CREATE VIEW IF NOT EXISTS "person_skill_view"("person_name", "skill", "proficien
     SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
     FROM person_skill ps
     INNER JOIN person p ON p.person_id = ps.person_id
-    INNER JOIN skill s ON s.code = ps.skill_id
+    INNER JOIN skill s ON s.skill_id = ps.skill_id
     INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id,person_name,s.value,proficiency;
 CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "incident_date", "asset_name", "category", "severity", "priority", "internal_or_external", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by", "reported_to", "brief_description", "detailed_description", "assigned_to", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status", "closed_date", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "root_cause_of_the_issue", "probability_of_issue", "testing_for_possible_root_cause_analysis", "solution", "likelihood_of_risk", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results") AS
     SELECT i.title AS incident,i.incident_date,ast.name as asset_name,ic.value AS category,s.value AS severity,
@@ -1492,14 +1492,14 @@ CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "inciden
     irc.solution,p5.value AS likelihood_of_risk,irc.modification_of_the_reported_issue,irc.testing_for_modified_issue,irc.test_results
     FROM incident i
     INNER JOIN asset ast ON ast.asset_id = i.asset_id
-    INNER JOIN incident_category ic ON ic.code = i.category_id
+    INNER JOIN incident_category ic ON ic.incident_category_id = i.category_id
     INNER JOIN severity s ON s.code = i.severity_id
     INNER JOIN priority p ON p.code = i.priority_id
-    INNER JOIN incident_type it ON it.code = i.internal_or_external_id
+    INNER JOIN incident_type it ON it.incident_type_id = i.internal_or_external_id
     INNER JOIN person p1 ON p1.person_id = i.reported_by_id
     INNER JOIN person p2 ON p2.person_id = i.reported_to_id
     INNER JOIN person p3 ON p3.person_id = i.assigned_to_id
-    INNER JOIN incident_status ist ON ist.code = i.status_id
+    INNER JOIN incident_status ist ON ist.incident_status_id = i.status_id
     LEFT JOIN incident_root_cause irc ON irc.incident_id = i.incident_id
     LEFT JOIN priority p4 ON p4.code = irc.probability_id
     LEFT JOIN priority p5 ON p5.code = irc.likelihood_of_risk_id;
@@ -1508,7 +1508,7 @@ CREATE VIEW IF NOT EXISTS "raci_matrix_assignment_view"("person_name", "subject"
     rman.value AS assignment_nature
     FROM raci_matrix_assignment rma
     INNER JOIN person p ON p.person_id = rma.person_id
-    INNER JOIN raci_matrix_subject rms on rms.code = rma.subject_id
+    INNER JOIN raci_matrix_subject rms on rms.raci_matrix_subject_id = rma.subject_id
     INNER JOIN raci_matrix_activity rmac on rmac.raci_matrix_activity_id = rma.activity_id
     INNER JOIN raci_matrix_assignment_nature rman on rman.code = rma.raci_matrix_assignment_nature_id;
 CREATE VIEW IF NOT EXISTS "security_impact_analysis_view"("vulnerability", "security_risk", "security_threat", "impact_of_risk", "proposed_controls", "impact_level", "risk_level", "existing_controls", "priority", "reported_date", "reported_by", "responsible_by") AS
@@ -1555,13 +1555,13 @@ CREATE VIEW IF NOT EXISTS "key_performance_indicator_view"("kpi_lower_threshold_
     t.value AS trend
     FROM key_performance_indicator kpi
     INNER JOIN asset ast ON ast.asset_id = kpi.asset_id
-    INNER JOIN asset_type at ON at.code = ast.asset_type_id
+    INNER JOIN asset_type at ON at.asset_type_id = ast.asset_type_id
     INNER JOIN key_performance kp ON kp.key_performance_id = kpi.key_performance_id
-    INNER JOIN calendar_period cp ON cp.code = kpi.calendar_period_id
+    INNER JOIN calendar_period cp ON cp.calendar_period_id = kpi.calendar_period_id
     INNER JOIN comparison_operator co ON co.code = kpi.kpi_comparison_operator_id
     INNER JOIN kpi_measurement_type kmt ON kmt.code = kpi.kpi_measurement_type_id
     INNER JOIN kpi_status ks ON ks.code = kpi.kpi_status_id
-    INNER JOIN tracking_period tp ON tp.code = kpi.tracking_period_id
+    INNER JOIN tracking_period tp ON tp.tracking_period_id = kpi.tracking_period_id
     INNER JOIN trend t ON t.code = kpi.trend_id;
 CREATE VIEW IF NOT EXISTS "attestation_view"("attestation", "attestation_explain", "attested_on", "expires_on", "person_name", "foreign_integration", "assertion", "assertion_explain", "assertion_expires_on", "assertion_expires_poam", "boundary") AS
     SELECT
@@ -1608,7 +1608,7 @@ CREATE VIEW IF NOT EXISTS "vender_view"("name", "email", "address", "state", "ci
     INNER JOIN party pr ON pr.party_id = prl.party_id
     INNER JOIN contact_electronic e ON e.party_id = pr.party_id AND e.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_EMAIL')
     INNER JOIN contact_land l ON l.party_id = pr.party_id AND l.contact_type_id = (SELECT contact_type_id FROM contact_type WHERE code='OFFICIAL_ADDRESS')
-    WHERE prl.party_role_id = 'VENDOR' AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON';
+    WHERE prl.party_role_id = (SELECT party_role_id FROM party_role WHERE code='VENDOR') AND prl.relation_type_id = 'ORGANIZATION_TO_PERSON';
 CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment_type", "contract_status", "contract_type", "document_reference", "periodicity", "start_date", "end_date", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval") AS
     SELECT
     p1.party_name as contract_by,
