@@ -129,6 +129,7 @@ export interface SqlObjectNames {
   readonly storedRoutineName: (name: string) => string;
   readonly storedRoutineArgName: (name: string) => string;
   readonly storedRoutineReturns: (name: string) => string;
+  readonly triggerName: (triggerName: string) => string;
 }
 
 export const isSqlObjectNames = safety.typeGuard<SqlObjectNames>(
@@ -157,6 +158,7 @@ export function qualifiedNamingStrategy(
     storedRoutineName: (name) => q(ns.storedRoutineName(name)),
     storedRoutineArgName: (name) => q(ns.storedRoutineArgName(name)),
     storedRoutineReturns: (name) => q(ns.storedRoutineReturns(name)),
+    triggerName: (name) => q(ns.triggerName(name)),
   };
 }
 
@@ -208,7 +210,8 @@ export interface SqlTextEmitOptions {
       | "define type field"
       | "create view select statement"
       | "create routine"
-      | "create routine body",
+      | "create routine body"
+      | "create trigger",
     content?: string,
   ) => string;
 }
@@ -283,6 +286,7 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
     storedRoutineName: (name) => `"${name}"`,
     storedRoutineArgName: (name) => `"${name}"`,
     storedRoutineReturns: (name) => `"${name}"`,
+    triggerName: (triggerName) => `"${triggerName}"`,
   };
 
   const bareIdentifiersNS: SqlObjectNames = {
@@ -308,6 +312,7 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
     storedRoutineName: (name) => name,
     storedRoutineArgName: (name) => name,
     storedRoutineReturns: (name) => name,
+    triggerName: (name) => name,
   };
 
   const result: SqlObjectNamesSupplier = (
@@ -348,6 +353,7 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
     storedRoutineName: (name) => `[${name}]`,
     storedRoutineArgName: (name) => `[${name}]`,
     storedRoutineReturns: (name) => `[${name}]`,
+    triggerName: (name) => `[${name}]`,
   };
 
   const bareIdentifiersNS: SqlObjectNames = {
@@ -373,6 +379,7 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
     storedRoutineName: (name) => name,
     storedRoutineArgName: (name) => name,
     storedRoutineReturns: (name) => name,
+    triggerName: (name) => name,
   };
 
   const result: SqlObjectNamesSupplier = (
@@ -430,6 +437,10 @@ export function typicalSqlTextEmitOptions(): SqlTextEmitOptions {
 
         case "create routine body":
           indent = "  ";
+          break;
+
+        case "create trigger":
+          indent = "";
           break;
       }
       if (content) {
