@@ -37,7 +37,7 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const federated = fed.PgDcpFederated.init();
   const shield = s.PgDcpShield.init();
   const event = ev.PgDcpEvent.init();
-  const postgraphile = pg.PgDcpPostgrpahile.init();
+  const postgraphile = pg.PgDcpPostgraphile.init();
   const graphql = gr.PgDcpGraphql.init();
   return {
     importMeta: import.meta,
