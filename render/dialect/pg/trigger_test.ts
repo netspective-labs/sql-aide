@@ -42,14 +42,15 @@ Deno.test("SQL Aide (SQLa) triggers", async (tc) => {
       {
         embeddedStsOptions: emit.typicalSqlTextSupplierOptions(),
         before: (triggerName) => mod.dropTrigger(triggerName),
+        quoteIdentifiers: false,
       },
     );
     ta.assertEquals(
       trigger.SQL(ctx),
       uws(`
           DROP TRIGGER IF EXISTS "synthetic_trigger";
-          CREATE TRIGGER "synthetic_trigger"
-          AFTER INSERT ON "synthetic_table1"
+          CREATE TRIGGER synthetic_trigger
+          AFTER INSERT ON synthetic_table1
           FOR EACH ROW
           BEGIN
             EXECUTE FUNCTION synthetic_trigger_fun();

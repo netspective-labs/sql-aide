@@ -26,10 +26,11 @@ export interface SqlTriggerDefnOptions<
 > extends emit.SqlTextSupplierOptions<Context> {
   readonly embeddedStsOptions: emit.SqlTextSupplierOptions<Context>;
   readonly before?: (
-    viewName: TypeName,
+    triggerName: TypeName,
     vdOptions: SqlTriggerDefnOptions<TypeName, Context>,
   ) => emit.SqlTextSupplier<Context>;
   readonly sqlNS?: emit.SqlNamespaceSupplier;
+  readonly quoteIdentifiers?: boolean;
 }
 
 export function sqlTriggerDefinition<
@@ -47,7 +48,11 @@ export function sqlTriggerDefinition<
     triggerName,
     SQL: (ctx) => {
       const { sqlTextEmitOptions: steOptions } = ctx;
-      const ns = ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true });
+      const ns = ctx.sqlNamingStrategy(ctx, {
+        quoteIdentifiers: stdOptions?.quoteIdentifiers != undefined
+          ? stdOptions.quoteIdentifiers
+          : true,
+      });
       const ctfi = steOptions.indentation("create trigger");
       const event = Array.isArray(events) ? events.join(" OR ") : events;
       const create = steOptions.indentation(

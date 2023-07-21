@@ -3,7 +3,7 @@
 import { persistContent as pc, pgSQLa, SQLa, zod as z } from "./deps.ts";
 import * as pgdcp from "./pgdcp.ts";
 
-export class PgDcpPostgrpahile {
+export class PgDcpPostgraphile {
   protected constructor() {}
 
   readonly state = pgdcp.pgDcpState(import.meta, {
@@ -150,12 +150,12 @@ export class PgDcpPostgrpahile {
   }
 
   static init() {
-    return new PgDcpPostgrpahile();
+    return new PgDcpPostgraphile();
   }
 }
 
 if (import.meta.main) {
-  const postgraphile = PgDcpPostgrpahile.init();
+  const postgraphile = PgDcpPostgraphile.init();
   const content = postgraphile.content();
   console.log(content.psqlText.SQL(postgraphile.state.ec.sqlEmitContext()));
 }
