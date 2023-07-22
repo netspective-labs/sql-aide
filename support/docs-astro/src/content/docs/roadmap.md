@@ -190,6 +190,8 @@ These engines / dialects are supported:
         tests
 - [ ] [DuckDB](https://duckdb.org/) in-process SQL OLAP database management
       system
+- [ ] [Clickhouse](https://clickhouse.com/blog/extracting-converting-querying-local-files-with-sql-clickhouse-local)
+      SQL OLAP database management system
 - [ ] [SurrealDB](https://surrealdb.com/)
 - [ ] [dbt](https://www.getdbt.com/) artifacts for transformations = [ ]
       [libSQL](https://github.com/libsql/libsql) with
