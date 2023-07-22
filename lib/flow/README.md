@@ -29,6 +29,15 @@ injections.
 - Flow steps must be able to store their own Quality System (documentation)
   content such as descriptions, lineage, stewardship, etc.
 
+## Flow Infrastructure Status
+
+- [x] Flow _core_ has no external dependencies
+- [ ] Flow uses [Effect](https://www.effect.website/docs/quickstart)
+      ([GitHub](https://github.com/Effect-TS/effect)) for more complex workflows
+- [ ] Flow uses [ts-pattern](https://github.com/gvergnaud/ts-pattern) for
+      exhaustive Pattern Matching library, with smart type inference
+- [ ] Flow uses Prolog consults for logic programming (and graph resolution)
+
 ## Flow Engine Status
 
 SQLa Flow supports multiple engine types, depending on workflow needs.
@@ -90,6 +99,8 @@ SQLa Flow supports multiple engine types, depending on workflow needs.
   - [x] The previous step's result (either an Error or its `return` statement
         value) is the second argument
 - [x] Each flow can one or more finalization methods delcared by decorators.
+- [ ] Each flow step can be a shell command like in
+      [TShellOut](https://github.com/linkdd/tshellout) _pipes_
 - [ ] Each flow step can request value of Environment variables to be injected
       as function arguments or available in the stepCtx object.
 - [ ] Each flow step can provide decorator to specify what happens on error
@@ -118,6 +129,10 @@ SQLa Flow supports multiple engine types, depending on workflow needs.
       long-running steps
 - [ ] Each flow step can provide an interruption decorator to specify
       preconditions.
+- [ ] Each flow step can operate in a container similar to
+      [Snakemake](https://snakemake.github.io/) (consider
+      [Kubevirt](https://www.cncf.io/blog/2023/07/11/kubevirt-v1-0-has-landed/))
+      when containers need to be run in parallel or be more scalable
 
 ## Flow Quality System
 
