@@ -125,6 +125,16 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       identity: "syntheticIntegerDefault",
     },
   );
+  const semverSD = ztsdFactory.cacheableFrom(
+    z.string(
+      d.zodSqlDomainRawCreateParams(
+        d.sqlDomainZodStringDescr({ isSemver: true }),
+      ),
+    ),
+    {
+      identity: "syntheticSemver",
+    },
+  );
 
   enum NativeEnumOrdinal {
     NativeEnumOrdinal_1,
@@ -240,6 +250,16 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
         SyntheticDomainQS
       >
     >(zodEnumSD);
+    expectType<
+      d.SqlDomain<
+        z.ZodString,
+        SyntheticContext,
+        "syntheticSemver",
+        SyntheticDomainQS
+      >
+    >(
+      semverSD,
+    );
   });
 
   await tc.step("SqlDomain identity", () => {
@@ -340,6 +360,10 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(zodEnumSD), {
       nullable: false,
       sqlDataType: "TEXT",
+    });
+    ta.assertEquals(types(semverSD), {
+      nullable: false,
+      sqlDataType: "semver",
     });
   });
 
