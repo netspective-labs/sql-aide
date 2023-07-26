@@ -164,6 +164,13 @@ export function governedDomains<
 
     selfRef: <ZTA extends z.ZodTypeAny>(zodType: ZTA) =>
       SQLa.selfRef<ZTA, Context, DomainQS, DomainsQS>(zodType, sdf),
+
+    semver: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isSemver: true }),
+        ),
+      ),
   };
 }
 

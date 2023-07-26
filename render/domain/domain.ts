@@ -179,13 +179,18 @@ export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
   readonly isJsonText?: boolean;
 } & {
   readonly isVarChar?: boolean;
+} & {
+  readonly isSemver?: boolean;
 };
 export type SqlDomainZodArrayDescr = SqlDomainZodDescrMeta & {
   readonly isArray?: boolean;
 };
 
 export function sqlDomainZodStringDescr(
-  options: Pick<SqlDomainZodStringDescr, "isJsonText" | "isVarChar">,
+  options: Pick<
+    SqlDomainZodStringDescr,
+    "isJsonText" | "isVarChar" | "isSemver"
+  >,
 ): SqlDomainZodStringDescr {
   return {
     isSqlDomainZodDescrMeta: true,
@@ -197,7 +202,8 @@ export function isSqlDomainZodStringDescr<
   SDZND extends SqlDomainZodStringDescr,
 >(o: unknown): o is SDZND {
   const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
-  return isSDZSD(o) && ("isJsonText" in o || "isVarChar" in o);
+  return isSDZSD(o) &&
+    ("isJsonText" in o || "isVarChar" in o || "isSemver" in o);
 }
 
 export function sqlDomainZodArrayDescr(
@@ -349,6 +355,27 @@ export function zodStringSqlDomainFactory<
             return `TEXT /* ${JSON.stringify(
               tmpl.dialectState(ctx.sqlDialect)
             )} */`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
+    semver: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (_ctx: Context) => {
+            return `semver`;
           },
         }),
         parents: init?.parents,
@@ -1281,7 +1308,9 @@ export function zodTypeSqlDomainFactory<
               ? stringSDF.jsonString(zodType, init)
               : (zodDefHook.descrMeta.isVarChar
                 ? stringSDF.varChar(zodType, init)
-                : stringSDF.string(zodType, init));
+                : (zodDefHook.descrMeta.isSemver
+                  ? stringSDF.semver(zodType, init)
+                  : stringSDF.string(zodType, init)));
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${

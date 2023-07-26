@@ -217,6 +217,14 @@ export class GovernedDomains<
   selfRef<ZTA extends z.ZodTypeAny>(zodType: ZTA) {
     return SQLa.selfRef<ZTA, Context, DomainQS, DomainsQS>(zodType, this.sdf);
   }
+
+  semver() {
+    return z.string(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodStringDescr({ isSemver: true }),
+      ),
+    );
+  }
 }
 
 export function housekeepingMinimal<
