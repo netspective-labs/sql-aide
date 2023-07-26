@@ -31,6 +31,8 @@ Deno.test("PgDCP examples", async () => {
     ["004_event.auto.psql", false],
     ["005_postgraphile.auto.psql", false],
     ["006_graphql.auto.psql", false],
+    ["007_version.auto.psql", false],
+    ["008_pg-stat-statements.auto.psql", false],
     ["driver.auto.psql", false],
   ]);
 });

@@ -30,6 +30,8 @@ import * as s from "./shield.sqla.ts";
 import * as ev from "./event.sqla.ts";
 import * as pg from "./postgraphile.sqla.ts";
 import * as gr from "./graphql.sqla.ts";
+import * as ver from "./version.sqla.ts";
+import * as pgss from "./pg-stat-statements.sqla.ts";
 
 export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const context = c.PgDcpContext.init();
@@ -39,6 +41,8 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const event = ev.PgDcpEvent.init();
   const postgraphile = pg.PgDcpPostgraphile.init();
   const graphql = gr.PgDcpGraphql.init();
+  const version = ver.PgDcpVersion.init();
+  const pgStatStatements = pgss.PgDcpPgStatStatements.init();
   return {
     importMeta: import.meta,
     sources: [
@@ -49,6 +53,8 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
       event.content().persistableSQL,
       postgraphile.content().persistableSQL,
       graphql.content().persistableSQL,
+      version.content().persistableSQL,
+      pgStatStatements.content().persistableSQL,
     ],
   };
 };

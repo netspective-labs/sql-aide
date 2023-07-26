@@ -56,6 +56,11 @@ export type PgDcpExtensionDefns = {
     "plpython3u",
     PgDcpEmitContext
   >;
+  readonly pg_stat_statements: pgSQLa.ExtensionDefinition<
+    "dcp_extensions",
+    "pg_stat_statements",
+    PgDcpEmitContext
+  >;
   // TODO:
   // this.pgTapExtn = this.extension("pgtap");
   // this.mvStatsExtn = this.extension("mv_stats");
@@ -181,6 +186,10 @@ export class PgDcpEmitCoordinator<
         pgcrypto: define(schemas.dcp_extensions, "pgcrypto"),
         semver: define(schemas.dcp_extensions, "semver"),
         plpython3u: define(schemas.dcp_extensions, "plpython3u"),
+        pg_stat_statements: define(
+          schemas.dcp_extensions,
+          "pg_stat_statements",
+        ),
       }),
       pgDomainDefns: (pgdf, schemas) => ({
         execution_host_identity: pgdf.pgDomainDefn(
