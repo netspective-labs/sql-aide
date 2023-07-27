@@ -61,6 +61,11 @@ export type PgDcpExtensionDefns = {
     "pg_stat_statements",
     PgDcpEmitContext
   >;
+  readonly pgtap: pgSQLa.ExtensionDefinition<
+    "dcp_extensions",
+    "pgtap",
+    PgDcpEmitContext
+  >;
   // TODO:
   // this.pgTapExtn = this.extension("pgtap");
   // this.mvStatsExtn = this.extension("mv_stats");
@@ -190,6 +195,7 @@ export class PgDcpEmitCoordinator<
           schemas.dcp_extensions,
           "pg_stat_statements",
         ),
+        pgtap: define(schemas.dcp_extensions, "pgtap"),
       }),
       pgDomainDefns: (pgdf, schemas) => ({
         execution_host_identity: pgdf.pgDomainDefn(
