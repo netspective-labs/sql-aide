@@ -17,6 +17,8 @@ export * from "./shield.sqla.ts";
 export * from "./event.sqla.ts";
 export * from "./postgraphile.sqla.ts";
 export * from "./graphql.sqla.ts";
+export * from "./version.sqla.ts";
+export * from "./pg-stat-statements.sqla.ts";
 
 // this file doubles as a CLI to emit all files or as a module index if using
 // it in Deno. everything below this is only used when being called as a main
