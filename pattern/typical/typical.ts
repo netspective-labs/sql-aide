@@ -28,6 +28,26 @@ export function governedDomains<
   // either ZodBaggage or SQLa.zodSqlDomainRawCreateParams().
   return {
     sdf,
+    floatArray: () =>
+      z.array(z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({
+            isFloat: true,
+            isBigFloat: false,
+            isSerial: false,
+          }),
+        ),
+      )),
+    floatArrayNullable: () =>
+      z.array(z.number(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodNumberDescr({
+            isFloat: true,
+            isBigFloat: false,
+            isSerial: false,
+          }),
+        ),
+      )).optional(),
     textArray: z.array(z.string()),
     text: z.string,
     textNullable: () => z.string().optional(),
