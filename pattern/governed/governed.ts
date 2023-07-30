@@ -28,6 +28,30 @@ export class GovernedDomains<
     return z.array(z.string());
   }
 
+  floatArray() {
+    return z.array(z.number(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
+      ),
+    ));
+  }
+
+  floatArrayNullable() {
+    return z.array(z.number(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
+      ),
+    )).optional();
+  }
+
   text() {
     return z.string();
   }

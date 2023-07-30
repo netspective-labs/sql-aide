@@ -66,6 +66,20 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   const textArraySD = ztsdFactory.cacheableFrom(z.array(z.string()), {
     identity: "syntheticTextArray",
   });
+  const floatArraySD = ztsdFactory.cacheableFrom(
+    z.array(z.number(
+      d.zodSqlDomainRawCreateParams(
+        d.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
+      ),
+    )),
+    {
+      identity: "syntheticFloatArray",
+    },
+  );
   const varCharSD = ztsdFactory.cacheableFrom(
     z.string(
       d.zodSqlDomainRawCreateParams(
@@ -122,7 +136,21 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       ),
     ).default(0),
     {
-      identity: "syntheticIntegerDefault",
+      identity: "syntheticFloatDefault",
+    },
+  );
+  const floatOptionalSD = ztsdFactory.cacheableFrom(
+    z.number(
+      d.zodSqlDomainRawCreateParams(
+        d.sqlDomainZodNumberDescr({
+          isFloat: true,
+          isBigFloat: false,
+          isSerial: false,
+        }),
+      ),
+    ).optional(),
+    {
+      identity: "syntheticFloatOptional",
     },
   );
   const semverSD = ztsdFactory.cacheableFrom(
@@ -265,6 +293,7 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
   await tc.step("SqlDomain identity", () => {
     ta.assertEquals(textSD.identity, "syntheticText");
     ta.assertEquals(textArraySD.identity, "syntheticTextArray");
+    ta.assertEquals(floatArraySD.identity, "syntheticFloatArray");
     ta.assertEquals(textOptionalSD.identity, "syntheticTextOptional");
     ta.assertEquals(
       textOptionalDefaultSD.identity,
@@ -328,6 +357,18 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
     ta.assertEquals(types(textArraySD), {
       nullable: false,
       sqlDataType: "TEXT[]",
+    });
+    ta.assertEquals(types(floatArraySD), {
+      nullable: false,
+      sqlDataType: "REAL[]",
+    });
+    ta.assertEquals(types(floatOptionalSD), {
+      nullable: true,
+      sqlDataType: "REAL",
+    });
+    ta.assertEquals(types(floatDefaultSD), {
+      nullable: false,
+      sqlDataType: "REAL",
     });
     ta.assertEquals(types(varCharSD), {
       nullable: false,
