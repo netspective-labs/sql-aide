@@ -8,7 +8,9 @@ type Any = any;
 
 export function syntheticSchema() {
   const gm = mod.GovernedIM.typical();
+  const gmAuditable = mod.GovernedIM.auditable();
   const { domains: sd, tcFactory: tcf, keys, housekeeping } = gm;
+  const { housekeeping: housekeepingAuditable } = gmAuditable;
 
   enum HostType {
     linux, // code is text, value is a number
@@ -58,8 +60,10 @@ export function syntheticSchema() {
     resources_memoized_count: sd.integer(),
     running_average: sd.float(),
     running_average_big: sd.bigFloat(),
+    resource_utilization: sd.floatArray(),
+    build_performance_metrics: sd.floatArrayNullable(),
     notes: sd.varCharNullable(39),
-    ...housekeeping.columns,
+    ...housekeepingAuditable.columns,
   });
 
   const publServerService = gm.autoIncPkTable("publ_server_service", {
@@ -236,9 +240,16 @@ const fixtureSQL = ws.unindentWhitespace(`
       "resources_memoized_count" INTEGER NOT NULL,
       "running_average" REAL NOT NULL,
       "running_average_big" REAL NOT NULL,
+      "resource_utilization" REAL[] NOT NULL,
+      "build_performance_metrics" REAL[],
       "notes" VARCHAR(39),
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
+      "updated_at" TIMESTAMP,
+      "updated_by" TEXT,
+      "deleted_at" TIMESTAMP,
+      "deleted_by" TEXT,
+      "activity_log" TEXT,
       FOREIGN KEY("publ_host_id") REFERENCES "publ_host"("publ_host_id"),
       FOREIGN KEY("build_event_type") REFERENCES "build_event_type"("code")
   );
@@ -349,9 +360,16 @@ const fixturePUML = `@startuml IE
     * resources_memoized_count: INTEGER
     * running_average: REAL
     * running_average_big: REAL
+    * resource_utilization: REAL[]
+      build_performance_metrics: REAL[]
       notes: VARCHAR(39)
       created_at: TIMESTAMP
       created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
   }
 
   entity "publ_server_service" as publ_server_service {

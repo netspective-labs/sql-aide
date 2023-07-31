@@ -66,6 +66,8 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     resources_memoized_count: sd.integer(),
     running_average: sd.float(),
     running_average_big: sd.bigFloat(),
+    resource_utilization: sd.floatArray(),
+    build_performance_metrics: sd.floatArrayNullable(),
     notes: sd.varCharNullable(39),
     ...housekeeping.columns,
   });
@@ -256,6 +258,8 @@ const fixtureSQL = ws.unindentWhitespace(`
       "resources_memoized_count" INTEGER NOT NULL,
       "running_average" REAL NOT NULL,
       "running_average_big" REAL NOT NULL,
+      "resource_utilization" REAL[] NOT NULL,
+      "build_performance_metrics" REAL[],
       "notes" VARCHAR(39),
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -394,6 +398,8 @@ const fixturePUML = `@startuml IE
     * resources_memoized_count: INTEGER
     * running_average: REAL
     * running_average_big: REAL
+    * resource_utilization: REAL[]
+      build_performance_metrics: REAL[]
       notes: VARCHAR(39)
       created_at: TIMESTAMP
       created_by: TEXT
