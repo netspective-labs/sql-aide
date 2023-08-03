@@ -1,5 +1,7 @@
 ---
 title: Zod Type Baggage
+sidebar:
+  order: 6
 ---
 
 <!-- ## Zod Type Baggage -->

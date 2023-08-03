@@ -1,5 +1,7 @@
 ---
 title: Multiple Zod Tables with Dialects and Naming
+sidebar:
+  order: 4
 ---
 
 ```typescript filename="examples/getting-started/04-zod-table-pk-fk-tmpl-dialects.sqla.ts"

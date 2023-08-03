@@ -1,5 +1,7 @@
 ---
 title: Defense in Depth
+sidebar:
+  order: 4
 ---
 
 # Information Assurance and Security _in the Database_

@@ -1,5 +1,7 @@
 ---
 title: psql Aide
+sidebar:
+  order: 2
 ---
 
 <!-- # `psql` Aide -->

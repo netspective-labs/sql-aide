@@ -1,5 +1,7 @@
 ---
 title: Your First Contribution
+sidebar:
+  order: 2
 ---
 
 <!-- # Your First Contribution -->

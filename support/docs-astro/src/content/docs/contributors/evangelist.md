@@ -1,5 +1,7 @@
 ---
 title: Evangelists Needed
+sidebar:
+  order: 3
 ---
 
 # SQL Aide Developer Evangelist

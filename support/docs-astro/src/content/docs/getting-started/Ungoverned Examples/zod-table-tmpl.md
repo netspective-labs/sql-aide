@@ -1,5 +1,7 @@
 ---
 title: Single Zod Table (with template)
+sidebar:
+  order: 2
 ---
 
 ```typescript filename="examples/getting-started/02-zod-table-tmpl.sqla.ts"

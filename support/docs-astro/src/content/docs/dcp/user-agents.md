@@ -1,5 +1,7 @@
 ---
 title: Excel-first UI
+sidebar:
+  order: 9
 ---
 
 # Microsoft Excel-first UX but client-independent

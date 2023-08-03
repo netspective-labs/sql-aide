@@ -1,5 +1,7 @@
 ---
 title: Contributors Needed
+sidebar:
+  order: 1
 ---
 
 <!-- # Contributors -->

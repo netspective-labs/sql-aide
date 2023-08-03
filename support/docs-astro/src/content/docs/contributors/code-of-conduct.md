@@ -1,5 +1,7 @@
 ---
 title: Code of Conduct
+sidebar:
+  order: 5
 ---
 
 

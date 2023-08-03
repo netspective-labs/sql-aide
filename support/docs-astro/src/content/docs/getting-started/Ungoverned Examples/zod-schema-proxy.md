@@ -1,5 +1,7 @@
 ---
 title: Zod Schema Proxy
+sidebar:
+  order: 7
 ---
 
 <!-- ## Zod Schema Proxy -->

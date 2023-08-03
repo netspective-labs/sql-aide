@@ -1,5 +1,7 @@
 ---
 title: Bring Compute to Data
+sidebar:
+  order: 2
 ---
 
 # Fear the Movement of Data! (FMD!)

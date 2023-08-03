@@ -1,5 +1,7 @@
 ---
 title: Experimentation
+sidebar:
+  order: 10
 ---
 
 # Friendlier and Safer Experimentation

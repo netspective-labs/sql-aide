@@ -1,5 +1,7 @@
 ---
 title: Type Safety
+sidebar:
+  order: 8
 ---
 
 # Client Application-friendly Type-safety _in the Database_

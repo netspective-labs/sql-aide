@@ -1,5 +1,7 @@
 ---
 title: Contributors Guide
+sidebar:
+  order: 4
 ---
 
 <!-- # Contribution Guidelines -->

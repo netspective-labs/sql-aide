@@ -1,5 +1,7 @@
 ---
 title: Observability
+sidebar:
+  order: 7
 ---
 
 # Integrated Observability for Health, Metrics and Traceability _in the Database_

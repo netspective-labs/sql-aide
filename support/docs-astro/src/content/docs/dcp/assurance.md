@@ -1,5 +1,7 @@
 ---
 title: Assurance
+sidebar:
+  order: 6
 ---
 
 # Assurance as Code _in the Database_

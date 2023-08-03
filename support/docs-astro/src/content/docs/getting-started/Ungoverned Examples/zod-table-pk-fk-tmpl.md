@@ -1,5 +1,7 @@
 ---
 title: Multiple Zod Tables (with Foreign Keys)
+sidebar:
+  order: 3
 ---
 
 ```typescript filename="examples/getting-started/03-zod-table-pk-fk-tmpl.sqla.ts"

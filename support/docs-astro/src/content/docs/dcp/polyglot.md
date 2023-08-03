@@ -1,5 +1,7 @@
 ---
 title: SQL-first Polyglot
+sidebar:
+  order: 3
 ---
 
 

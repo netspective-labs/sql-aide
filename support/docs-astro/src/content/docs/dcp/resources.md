@@ -1,5 +1,7 @@
 ---
 title: Resources
+sidebar:
+  order: 12
 ---
 
 ## PgDCP Engineering Resources

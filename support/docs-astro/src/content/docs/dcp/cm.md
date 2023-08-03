@@ -1,5 +1,7 @@
 ---
 title: Change Management
+sidebar:
+  order: 5
 ---
 
 # Deliberate and Disciplined Change Management _in the Database_
