@@ -136,6 +136,54 @@ Deno.test("keysValues should create indexed KV pairs pointing to a single object
   );
 });
 
+Deno.test("entityKeysValues should create entity and indexed KV pairs pointing to a single object", () => {
+  const user: User = {
+    name: "John",
+    address: { city: "New York", state: "NY" },
+  };
+
+  // console.log(
+  //   mod.entityKeysValues(
+  //     user,
+  //     { scopeKeys: () => ["user"], identityKeys: (e) => [e.name] },
+  //   ),
+  // );
+
+  ta.assertEquals(
+    mod.entityKeysValues(
+      user,
+      { scopeKeys: () => ["user"], identityKeys: (e) => [e.name] },
+    ),
+    [
+      {
+        keys: ["user", "$ENTITY_ID", "John"],
+        value: { name: "John", address: { city: "New York", state: "NY" } },
+      },
+      { keys: ["user", "$ENTITY_PROP", "John", "name"], value: "John" },
+      {
+        keys: ["user", "$ENTITY_PROP", "John", "address", "city"],
+        value: "New York",
+      },
+      {
+        keys: ["user", "$ENTITY_PROP", "John", "address", "state"],
+        value: "NY",
+      },
+      {
+        keys: ["user", "$PROP_INDEX", "name", "John", "John"],
+        value: { name: "John", address: { city: "New York", state: "NY" } },
+      },
+      {
+        keys: ["user", "$PROP_INDEX", "address", "city", "New York", "John"],
+        value: { name: "John", address: { city: "New York", state: "NY" } },
+      },
+      {
+        keys: ["user", "$PROP_INDEX", "address", "state", "NY", "John"],
+        value: { name: "John", address: { city: "New York", state: "NY" } },
+      },
+    ],
+  );
+});
+
 Deno.test("entityKeys should return keys mapping for an object", () => {
   const user: User = {
     name: "John",
@@ -145,7 +193,7 @@ Deno.test("entityKeys should return keys mapping for an object", () => {
     },
   };
 
-  const unscoped = mod.entityKeys(user);
+  const unscoped = mod.entityShapedKeys(user);
   expectType<
     { name: mod.KeySpace; address: { city: mod.KeySpace; state: mod.KeySpace } }
   >(
@@ -159,7 +207,7 @@ Deno.test("entityKeys should return keys mapping for an object", () => {
     },
   });
 
-  ta.assertEquals(mod.entityKeys(user, ["user"]), {
+  ta.assertEquals(mod.entityShapedKeys(user, ["user"]), {
     name: ["user", "name"],
     address: {
       city: ["user", "address", "city"],
@@ -168,7 +216,7 @@ Deno.test("entityKeys should return keys mapping for an object", () => {
   });
 
   ta.assertEquals(
-    mod.entityKeys(user, [], { keys: (keys) => ["user", 123, ...keys] }),
+    mod.entityShapedKeys(user, [], { keys: (keys) => ["user", 123, ...keys] }),
     {
       name: ["user", 123, "name"],
       address: {

@@ -53,27 +53,72 @@ export function keysValues<Keys extends KeySpace, Value>(
   return result;
 }
 
-export type EntityKeys<T, Keys extends KeySpace> = {
-  [K in keyof T]: T[K] extends object ? EntityKeys<T[K], Keys> : Keys;
+export const entityIndexNature = [
+  "ENTITY_ID", // uniquely indexes the entity identity
+  "ENTITY_PROP", // unique indexes of each entity's property name
+  "PROP_INDEX", // secondary indexes of each entity's property name which references the full object
+] as const;
+export type EntityIndexNature = typeof entityIndexNature[number];
+
+export function entityKeysValues<
+  Entity extends object,
+  Keys extends KeySpace = KeySpace,
+>(entity: Entity, options?: {
+  readonly scopeKeys?: (entity: Entity) => KeySpacePart[];
+  readonly identityKeys?: (entity: Entity) => KeySpacePart[];
+  readonly indexKeys?: (
+    nature: EntityIndexNature,
+    scopeKeys: KeySpacePart[],
+  ) => Keys;
+}) {
+  const indexKeys = options?.indexKeys ??
+    ((nature, scopeKeys) => [...scopeKeys, `$${nature}`]);
+
+  const scopeKeys = options?.scopeKeys?.(entity) ?? [];
+  const entityIdKeys = options?.identityKeys?.(entity) ??
+    [JSON.stringify(entity)];
+
+  const entityKV: KeysValue<KeySpacePart[], Entity> = {
+    keys: [...indexKeys("ENTITY_ID", scopeKeys), ...entityIdKeys],
+    value: entity,
+  };
+
+  const propValueKVs = keysValues(entity, [
+    ...indexKeys("ENTITY_PROP", scopeKeys),
+    ...entityIdKeys,
+  ]);
+  const entityIndexKVs = keysValues(
+    entity,
+    indexKeys("PROP_INDEX", scopeKeys),
+    {
+      keys: (keys, value) => [...keys, value, ...entityIdKeys] as Keys,
+      value: () => entity,
+    },
+  );
+  return [entityKV, ...propValueKVs, ...entityIndexKVs];
+}
+
+export type EntityShapedKeys<T, Keys extends KeySpace> = {
+  [K in keyof T]: T[K] extends object ? EntityShapedKeys<T[K], Keys> : Keys;
 };
 
-export function entityKeys<
-  T extends Record<string, Any>,
+export function entityShapedKeys<
+  Entity extends Record<string, Any>,
   Keys extends KeySpace,
 >(
-  obj: T,
+  entity: Entity,
   prefix: KeySpace = [],
   options?: {
     readonly keys?: (keys: KeySpacePart[], value: unknown) => Keys;
   },
-): EntityKeys<T, Keys> {
+): EntityShapedKeys<Entity, Keys> {
   const result: Any = {};
-  for (const key in obj) {
-    if (typeof obj[key] === "object" && obj[key] !== null) {
-      result[key] = entityKeys(obj[key], prefix.concat(key), options);
+  for (const key in entity) {
+    if (typeof entity[key] === "object" && entity[key] !== null) {
+      result[key] = entityShapedKeys(entity[key], prefix.concat(key), options);
     } else {
       const keys = prefix.concat(key);
-      result[key] = options?.keys?.(keys, obj[key]) ?? keys;
+      result[key] = options?.keys?.(keys, entity[key]) ?? keys;
     }
   }
   return result;
