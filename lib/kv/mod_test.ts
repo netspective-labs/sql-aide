@@ -184,7 +184,8 @@ Deno.test("entityKeysValues should create entity and indexed KV pairs pointing t
   );
 });
 
-Deno.test("entityKeys should return keys mapping for an object", () => {
+Deno.test("entityIndexKeys should return keys mapping for an object", () => {
+  const entityID = "John";
   const user: User = {
     name: "John",
     address: {
@@ -193,36 +194,56 @@ Deno.test("entityKeys should return keys mapping for an object", () => {
     },
   };
 
-  const unscoped = mod.entityShapedKeys(user);
+  const eik = mod.entityIndexKeys(user, { scopeKeys: () => ["user"] });
   expectType<
-    { name: mod.KeySpace; address: { city: mod.KeySpace; state: mod.KeySpace } }
-  >(
-    unscoped,
-  );
-  ta.assertEquals(unscoped, {
-    name: ["name"],
-    address: {
-      city: ["address", "city"],
-      state: ["address", "state"],
-    },
-  });
-
-  ta.assertEquals(mod.entityShapedKeys(user, ["user"]), {
-    name: ["user", "name"],
-    address: {
-      city: ["user", "address", "city"],
-      state: ["user", "address", "state"],
-    },
-  });
-
-  ta.assertEquals(
-    mod.entityShapedKeys(user, [], { keys: (keys) => ["user", 123, ...keys] }),
     {
-      name: ["user", 123, "name"],
+      name: {
+        entityID: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+        entityProp: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+        propIndex: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+      };
       address: {
-        city: ["user", 123, "address", "city"],
-        state: ["user", 123, "address", "state"],
-      },
-    },
-  );
+        city: {
+          entityID: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+          entityProp: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+          propIndex: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+        };
+        state: {
+          entityID: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+          entityProp: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+          propIndex: (...idKeys: mod.KeySpacePart[]) => mod.KeySpace;
+        };
+      };
+    }
+  >(eik);
+
+  ta.assertEquals([
+    eik.name.entityID(entityID),
+    eik.name.entityProp(entityID),
+    eik.name.propIndex(entityID),
+  ], [
+    ["user", "$ENTITY_ID", "John"],
+    ["user", "$ENTITY_PROP", "John", "name"],
+    ["user", "$PROP_INDEX", "name", "John"],
+  ]);
+
+  ta.assertEquals([
+    eik.address.city.entityID(entityID),
+    eik.address.city.entityProp(entityID),
+    eik.address.city.propIndex(entityID),
+  ], [
+    ["user", "$ENTITY_ID", "John"],
+    ["user", "$ENTITY_PROP", "John", "address", "city"],
+    ["user", "$PROP_INDEX", "address", "city", "John"],
+  ]);
+
+  ta.assertEquals([
+    eik.address.state.entityID(entityID),
+    eik.address.state.entityProp(entityID),
+    eik.address.state.propIndex(entityID),
+  ], [
+    ["user", "$ENTITY_ID", "John"],
+    ["user", "$ENTITY_PROP", "John", "address", "state"],
+    ["user", "$PROP_INDEX", "address", "state", "John"],
+  ]);
 });

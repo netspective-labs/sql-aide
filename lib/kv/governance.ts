@@ -98,28 +98,65 @@ export function entityKeysValues<
   return [entityKV, ...propValueKVs, ...entityIndexKVs];
 }
 
-export type EntityShapedKeys<T, Keys extends KeySpace> = {
-  [K in keyof T]: T[K] extends object ? EntityShapedKeys<T[K], Keys> : Keys;
+export interface IndexSuppliers<Keys extends KeySpace> {
+  readonly entityID: (...idKeys: KeySpacePart[]) => Keys;
+  readonly entityProp: (...idKeys: KeySpacePart[]) => Keys;
+  readonly propIndex: (...idKeys: KeySpacePart[]) => Keys;
+}
+
+export type EntityIndexKeys<T, Keys extends KeySpace> = {
+  [K in keyof T]: T[K] extends object ? EntityIndexKeys<T[K], Keys>
+    : IndexSuppliers<Keys>;
 };
 
-export function entityShapedKeys<
+export function entityIndexKeys<
   Entity extends Record<string, Any>,
   Keys extends KeySpace,
 >(
   entity: Entity,
-  prefix: KeySpace = [],
   options?: {
-    readonly keys?: (keys: KeySpacePart[], value: unknown) => Keys;
+    readonly scopeKeys?: (entity: Entity) => KeySpacePart[];
+    readonly indexKeys?: (
+      nature: EntityIndexNature,
+      scopeKeys: KeySpacePart[],
+    ) => Keys;
   },
-): EntityShapedKeys<Entity, Keys> {
-  const result: Any = {};
-  for (const key in entity) {
-    if (typeof entity[key] === "object" && entity[key] !== null) {
-      result[key] = entityShapedKeys(entity[key], prefix.concat(key), options);
-    } else {
-      const keys = prefix.concat(key);
-      result[key] = options?.keys?.(keys, entity[key]) ?? keys;
+) {
+  const indexKeys = options?.indexKeys ??
+    ((nature, scopeKeys) => [...scopeKeys, `$${nature}`]);
+
+  function buildKeys(
+    entity: Entity,
+    prefix: KeySpacePart[] = [],
+  ): EntityIndexKeys<Entity, Keys> {
+    const result: Any = {};
+    for (const key in entity) {
+      if (typeof entity[key] === "object" && entity[key] !== null) {
+        result[key] = buildKeys(entity[key], prefix.concat(key));
+      } else {
+        const scopeKeys = options?.scopeKeys?.(entity) ?? [];
+        const pathKeys = prefix.concat(key);
+        const suppliers: IndexSuppliers<Keys> = {
+          entityID: (...idKeys) =>
+            [...indexKeys("ENTITY_ID", scopeKeys), ...idKeys] as Keys,
+          entityProp: (...idKeys) =>
+            [
+              ...indexKeys("ENTITY_PROP", scopeKeys),
+              ...idKeys,
+              ...pathKeys,
+            ] as Keys,
+          propIndex: (...idKeys) =>
+            [
+              ...indexKeys("PROP_INDEX", scopeKeys),
+              ...pathKeys,
+              ...idKeys,
+            ] as Keys,
+        };
+        result[key] = suppliers;
+      }
     }
+    return result;
   }
-  return result;
+
+  return buildKeys(entity);
 }
