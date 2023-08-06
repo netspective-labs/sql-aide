@@ -10,3 +10,19 @@ more manageable structure for storage in a key-value (KV) store.
 
 * `entityKeys` returns sn object with the same shape as the input but values are
   keys (arrays of path parts).
+
+# TODO
+
+- [ ] Review [deno-kv-sqlite](https://github.com/jsejcksn/deno-kv-sqlite)
+      Key-Value storage backed by SQLite to see if we want to incorporate that
+      style into SQLa (but generalize it so that it can be backed by any SQL
+      database)
+- [ ] Review [kvdex](https://github.com/oliver-oloughlin/kvdex) Database wrapper
+      for Deno KV to see if we can apply an SQL layer on top
+- [ ] Review [deno-kv-plus](https://github.com/Kycermann/deno-kv-plus)
+      Transactions that commit without overwriting one another, for Deno KV. If
+      we went end up using Deno KV as a store we might want to use this or
+      integrate it into SQLa
+- [ ] Review [denokv-graphql](https://github.com/vwkd/denokv-graphql) GraphQL
+      bindings for Deno KV as a potential replacement for SQL in case SQL on top
+      of Deno KV is too hard.
