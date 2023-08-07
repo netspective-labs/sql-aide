@@ -19,11 +19,23 @@ export type StructuredCloneable =
   | Array<StructuredCloneable>
   | { [key: string]: StructuredCloneable };
 
+/**
+ * A single keys-value pair which consists of an array of keys and a value.
+ */
 export type KeysValue<Keys, Value> = {
   readonly keys: Keys;
   readonly value: Value;
 };
 
+/**
+ * Takes an object and converts it into an array of key-value pairs. It flattens
+ * nested structures into a list of key paths, and customizes keys using the
+ * `keys` callback.
+ * @param input - The object to extract keys and values from.
+ * @param keysPrefix - An array of keys to prefix to all extracted keys.
+ * @param options - Options to configure the keys extraction.
+ * @returns An array of keys-value pairs extracted from the object.
+ */
 export function keysValues<Keys extends KeySpace, Value>(
   input: Record<string, Any>,
   keysPrefix: KeySpacePart[] = [],
@@ -51,112 +63,4 @@ export function keysValues<Keys extends KeySpace, Value>(
   }
 
   return result;
-}
-
-export const entityIndexNature = [
-  "ENTITY_ID", // uniquely indexes the entity identity
-  "ENTITY_PROP", // unique indexes of each entity's property name
-  "PROP_INDEX", // secondary indexes of each entity's property name which references the full object
-] as const;
-export type EntityIndexNature = typeof entityIndexNature[number];
-
-export function entityKeysValues<
-  Entity extends object,
-  Keys extends KeySpace = KeySpace,
->(entity: Entity, options?: {
-  readonly scopeKeys?: (entity: Entity) => KeySpacePart[];
-  readonly identityKeys?: (entity: Entity) => KeySpacePart[];
-  readonly indexKeys?: (
-    nature: EntityIndexNature,
-    scopeKeys: KeySpacePart[],
-  ) => Keys;
-}) {
-  const indexKeys = options?.indexKeys ??
-    ((nature, scopeKeys) => [...scopeKeys, `$${nature}`]);
-
-  const scopeKeys = options?.scopeKeys?.(entity) ?? [];
-  const entityIdKeys = options?.identityKeys?.(entity) ??
-    [JSON.stringify(entity)];
-
-  const entityKV: KeysValue<KeySpacePart[], Entity> = {
-    keys: [...indexKeys("ENTITY_ID", scopeKeys), ...entityIdKeys],
-    value: entity,
-  };
-
-  const propValueKVs = keysValues(entity, [
-    ...indexKeys("ENTITY_PROP", scopeKeys),
-    ...entityIdKeys,
-  ]);
-  const entityIndexKVs = keysValues(
-    entity,
-    indexKeys("PROP_INDEX", scopeKeys),
-    {
-      keys: (keys, value) => [...keys, value, ...entityIdKeys] as Keys,
-      value: () => entity,
-    },
-  );
-  return [entityKV, ...propValueKVs, ...entityIndexKVs];
-}
-
-export interface IndexSuppliers<Keys extends KeySpace> {
-  readonly entityID: (...idKeys: KeySpacePart[]) => Keys;
-  readonly entityProp: (...idKeys: KeySpacePart[]) => Keys;
-  readonly propIndex: (...idKeys: KeySpacePart[]) => Keys;
-}
-
-export type EntityIndexKeys<T, Keys extends KeySpace> = {
-  [K in keyof T]: T[K] extends object ? EntityIndexKeys<T[K], Keys>
-    : IndexSuppliers<Keys>;
-};
-
-export function entityIndexKeys<
-  Entity extends Record<string, Any>,
-  Keys extends KeySpace,
->(
-  entity: Entity,
-  options?: {
-    readonly scopeKeys?: (entity: Entity) => KeySpacePart[];
-    readonly indexKeys?: (
-      nature: EntityIndexNature,
-      scopeKeys: KeySpacePart[],
-    ) => Keys;
-  },
-) {
-  const indexKeys = options?.indexKeys ??
-    ((nature, scopeKeys) => [...scopeKeys, `$${nature}`]);
-
-  function buildKeys(
-    entity: Entity,
-    prefix: KeySpacePart[] = [],
-  ): EntityIndexKeys<Entity, Keys> {
-    const result: Any = {};
-    for (const key in entity) {
-      if (typeof entity[key] === "object" && entity[key] !== null) {
-        result[key] = buildKeys(entity[key], prefix.concat(key));
-      } else {
-        const scopeKeys = options?.scopeKeys?.(entity) ?? [];
-        const pathKeys = prefix.concat(key);
-        const suppliers: IndexSuppliers<Keys> = {
-          entityID: (...idKeys) =>
-            [...indexKeys("ENTITY_ID", scopeKeys), ...idKeys] as Keys,
-          entityProp: (...idKeys) =>
-            [
-              ...indexKeys("ENTITY_PROP", scopeKeys),
-              ...idKeys,
-              ...pathKeys,
-            ] as Keys,
-          propIndex: (...idKeys) =>
-            [
-              ...indexKeys("PROP_INDEX", scopeKeys),
-              ...pathKeys,
-              ...idKeys,
-            ] as Keys,
-        };
-        result[key] = suppliers;
-      }
-    }
-    return result;
-  }
-
-  return buildKeys(entity);
 }

@@ -13,8 +13,6 @@ more manageable structure for storage in a key-value (KV) store.
 
 # TODO
 
-- [ ] Implement `versionedEntityKeysValues` which is the same as
-      `entityKeysValues` except it creates immutable append only KV pairs
 - [ ] Review [deno-kv-sqlite](https://github.com/jsejcksn/deno-kv-sqlite)
       Key-Value storage backed by SQLite to see if we want to incorporate that
       style into SQLa (but generalize it so that it can be backed by any SQL
