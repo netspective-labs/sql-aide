@@ -5,11 +5,11 @@
 \set uq_constraint 'BEGIN IF EXISTS(SELECT FROM information_schema.constraint_column_usage WHERE table_name = ''test_table_other'' AND table_schema = ':'unit_test_schema''  AND constraint_name = ''uq_description'') THEN RAISE NOTICE ''Constraint "fk_uq_descriptionid" already exists. Skipping.''; ELSE ALTER TABLE ':unit_test_schema'.test_table_other ADD CONSTRAINT uq_description UNIQUE (description); END IF; END;'
 \set fk_constraint 'BEGIN IF EXISTS(SELECT FROM information_schema.constraint_column_usage WHERE table_name = ''test_table_other'' AND table_schema = ':'unit_test_schema''  AND constraint_name = ''fk_id'') THEN RAISE NOTICE ''Constraint "fk_id" already exists. Skipping.''; ELSE ALTER TABLE unit_test_schema.test_table ADD CONSTRAINT fk_id FOREIGN KEY (id) REFERENCES ' :unit_test_schema'.test_table_other(id); END IF; END;'
 \set policy 'BEGIN CREATE POLICY test_policy ON ' :unit_test_schema'.test_table FOR ALL TO test_role USING (age > 18) WITH CHECK (age > 18); EXCEPTION WHEN duplicate_object THEN RAISE NOTICE ''Policy already exists. Ignoring...''; END;'
-
 -- Search path does not usually require coded symbols but when run through psql the set variables
-SET search_path to :'extensions_schema',:'ddl_schema';
+SET search_path TO :'extensions_schema', :'ddl_schema';
 
 CREATE SCHEMA IF NOT EXISTS :ddl_schema;
+
 
 /*
 This function takes a schema name as input and returns metadata information about the tables, columns, indexes,
@@ -22,442 +22,506 @@ the necessary metadata.
 
 Overall, this function is designed to provide comprehensive schema information, enabling users to retrieve a detailed overview
 of the structure and characteristics of database objects within a specified schema.
-*/
-CREATE OR REPLACE FUNCTION :ddl_schema.get_schema_metadata (schema_name text)
-      RETURNS json
-      AS $$
-  DECLARE
-      result json;
-  BEGIN
-                  SELECT
-                      json_agg(json_build_object('table_name', table_name, 'columns', (
-                                  SELECT
-                                      json_agg(json_build_object('column_name', column_name, 'data_type', data_type, 'is_nullable', is_nullable, 'character_maximum_length', character_maximum_length, 'numeric_precision', numeric_precision, 'numeric_scale', numeric_scale))
-                              FROM information_schema.columns
-                              WHERE
-                                  table_schema = schema_name
-                                  AND table_name = t.table_name), 'indexes', (
-                                  SELECT
-                                      json_agg(json_build_object('index_name', index_name, 'index_columns', index_columns, 'is_unique', index_is_unique, 'is_primary', index_is_primary))
-                                  FROM (
-                                      SELECT
-                                          i.relname AS index_name, array_agg(a.attname) AS index_columns, bool_or(idx.indisunique) AS index_is_unique, bool_or(idx.indisprimary) AS index_is_primary FROM pg_index idx
-                                      JOIN pg_class t ON t.oid = idx.indrelid
-                                      JOIN pg_class i ON i.oid = idx.indexrelid
-                                      JOIN pg_attribute a ON a.attrelid = t.oid
-                                          AND a.attnum = ANY (idx.indkey)
-                                      WHERE
-                                          t.relkind = 'r'::"char"
-                                          AND t.relname NOT LIKE 'pg_%'
-                                          AND t.relname NOT LIKE 'sql_%'
-                                          AND idx.indisprimary = FALSE
-                                          AND t.relnamespace = (
-                                              SELECT
-                                                  oid
-                                              FROM pg_namespace
-                                              WHERE
-                                                  nspname = schema_name)
-                                      GROUP BY i.relname) AS indexes), 'constraints', (
-                                      SELECT
-                                          json_agg(json_build_object('constraint_name', constraint_name, 'constraint_type', constraint_type, 'table_name', table_name, 'columns', columns))
-                                      FROM (
-                                          SELECT
-                                              tc.constraint_name, tc.constraint_type, tc.table_name, array_agg(kcu.column_name) AS columns FROM information_schema.table_constraints tc
-                                      LEFT JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-                                          AND tc.table_schema = kcu.table_schema
-                                          AND tc.table_name = kcu.table_name
-                                      WHERE
-                                          tc.table_schema = schema_name GROUP BY tc.constraint_name, tc.constraint_type, tc.table_name) AS constraints), 'check_constraints', (
-                                      SELECT
-                                          json_agg(json_build_object('constraint_name', constraint_name, 'table_name', table_name, 'check_clause', check_clause))
-                                      FROM information_schema.check_constraints
-                                      WHERE
-                                          constraint_schema = schema_name), 'table_comments', (
-                                          SELECT
-                                              json_agg(json_build_object('table_name', c.relname, 'comment', pg_catalog.obj_description(c.oid, 'pg_class')))
-                                          FROM pg_class c
-                                          JOIN pg_namespace n ON c.relnamespace = n.oid
-                                      WHERE
-                                          n.nspname = schema_name
-                                          AND c.relkind = 'r'::"char"), 'foreign_keys', (
-                                          SELECT
-                                              json_agg(json_build_object('constraint_name', conname, 'table_name', conrelid::regclass, 'foreign_table_name', confrelid::regclass, 'columns', (
-                                                          SELECT
-                                                              json_agg(json_build_object('column_name', pa.attname, 'foreign_column_name', confkey[array_position(conkey, pa.attnum)]))
-                                                      FROM pg_constraint pc
-                                                      JOIN pg_attribute pa ON pc.conrelid = pa.attrelid
-                                                          AND pa.attnum = ANY (pc.conkey)
-                                                  WHERE
-                                                      pc.oid = c.oid
-                                                      AND pc.confrelid = confrelid))) AS result FROM pg_constraint
-                                          JOIN pg_class c ON conrelid = c.oid
-                                          JOIN pg_namespace n ON c.relnamespace = n.oid
-                                      WHERE
-                                          n.nspname = schema_name
-                                          AND contype = 'f'), 'triggers', (
-                                          SELECT
-                                              json_agg(json_build_object('trigger_name', tgname, 'event', tgtype::text, 'event_object_table', relname, 'action_statement', tgdeferrable || ' ' || tginitdeferred || ' ' || tgenabled || ' ' || pg_get_triggerdef(pg_trigger.oid)))
-                                          FROM pg_trigger
-                                          JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid
-                                          JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-                                      WHERE
-                                          pg_namespace.nspname = schema_name), 'sequences', (
-                                          SELECT
-                                              json_agg(json_build_object('sequence_name', sequence_name, 'data_type', data_type, 'start_value', start_value, 'minimum_value', minimum_value, 'maximum_value', maximum_value, 'increment', INCREMENT, 'cycle_option', cycle_option))
-                                          FROM information_schema.sequences
-                                      WHERE
-                                          sequence_schema = schema_name), 'materialized_views', (
-                                          SELECT
-                                              json_agg(json_build_object('view_name', matviewname, 'definition', pg_get_viewdef(c.oid)))
-                                          FROM pg_matviews m
-                                          JOIN pg_class c ON m.matviewname = c.relname
-                                      WHERE
-                                          c.relnamespace = (
-                                              SELECT
-                                                  oid
-                                              FROM pg_namespace
-                                          WHERE
-                                              nspname = schema_name)), 'rules', (
-                                      SELECT
-                                          json_agg(json_build_object('trigger_name', tgname, 'event', tgtype::text, 'condition', pg_get_triggerdef(pg_trigger.oid), 'action', pg_get_triggerdef(pg_trigger.oid, TRUE)))
-                                      FROM pg_trigger
-                                      JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid
-                                      JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-                                  WHERE
-                                      pg_namespace.nspname = schema_name), 'table_partitions', (
-                                      SELECT
-                                          json_agg(json_build_object('table_name', parent.relname, 'partition_name', child.relname, 'partition_expression', pg_get_expr(child.relpartbound, child.oid), 'partition_method', CASE WHEN child.relkind = 'p' THEN
-                                                  'LIST'
-                                              WHEN child.relkind = 'r' THEN
-                                                  'RANGE'
-                                              ELSE
-                                                  'UNKNOWN'
-                                              END))
-                                      FROM pg_class parent
-                                      JOIN pg_inherits ON parent.oid = pg_inherits.inhparent
-                                      JOIN pg_class child ON pg_inherits.inhrelid = child.oid
-                                      JOIN pg_namespace ON parent.relnamespace = pg_namespace.oid
-                                  WHERE
-                                      pg_namespace.nspname = schema_name
-                                      AND parent.relkind = 'r'
-                                      AND child.relkind = 'p'), 'table_statistics', (
-                                      SELECT
-                                          json_agg(json_build_object('table_name', relname, 'total_rows', reltuples, 'total_pages', relpages))
-                                      FROM pg_class
-                                  WHERE
-                                      relnamespace = (
-                                          SELECT
-                                              oid
-                                          FROM pg_namespace
-                                      WHERE
-                                          nspname = schema_name)
-                                  AND relkind = 'r'::"char"), 'extended_statistics', (
-                                  SELECT
-                                      json_agg(json_build_object('statistic_name', t.attname, 'table_name', t.tablename, 'statistics', (
-                                                  SELECT
-                                                      json_agg(json_build_object('null_fraction', null_frac, 'distinct_values', n_distinct, 'most_common_values', most_common_vals, 'most_common_frequencies', most_common_freqs, 'histogram_bounds', histogram_bounds, 'correlation', correlation))
-                                              FROM pg_stats
-                                          WHERE
-                                              pg_stats.schemaname = schema_name
-                                              AND pg_stats.tablename = t.tablename
-                                              AND pg_stats.attname = t.attname)))
-                                  FROM pg_stats t
-                              WHERE
-                                  t.schemaname = schema_name), 'table_inheritance', (
-                                  SELECT
-                                      json_agg(json_build_object('table_name', inh.relname, 'parent_table_name', parent.relname))
-                                  FROM pg_class inh
-                                  JOIN pg_inherits i ON inh.oid = i.inhrelid
-                                  JOIN pg_class parent ON i.inhparent = parent.oid
-                              WHERE
-                                  inh.relnamespace = (
-                                      SELECT
-                                          oid
-                                      FROM pg_namespace
-                                  WHERE
-                                      nspname = schema_name)), 'collations', (
-                              SELECT
-                                  json_agg(json_build_object('collation_name', collname, 'schema', collnamespace::regnamespace, 'data_type', collprovider::regproc))
-                              FROM pg_collation
-                          WHERE
-                              collnamespace = (
-                                  SELECT
-                                      oid
-                                  FROM pg_namespace
-                              WHERE
-                                  nspname = schema_name)), 'domains', (
-                          SELECT
-                              json_agg(json_build_object('domain_name', domain_name, 'data_type', data_type, 'default_value', domain_default, 'constraints', (
-                                          SELECT
-                                              json_agg(json_build_object('constraint_name', constraint_name, 'constraint_type', 'domain'))
-                                      FROM information_schema.domain_constraints
-                                  WHERE
-                                      domain_schema = schema_name
-                                      AND domain_name = d.domain_name)))
-                          FROM information_schema.domains d
-                      WHERE
-                          domain_schema = schema_name), 'user_defined_types', (
-                          SELECT
-                              json_agg(json_build_object('type_name', typname, 'schema', typnamespace::regnamespace, 'internal_type', typbasetype::regtype, 'input_function', typinput::regprocedure, 'output_function', typoutput::regprocedure))
-                          FROM pg_type
-                      WHERE
-                          typnamespace = (
-                              SELECT
-                                  oid
-                              FROM pg_namespace
-                          WHERE
-                              nspname = schema_name)
-                      AND typtype = 'd'), 'operators', (
-                      SELECT
-                          json_agg(json_build_object('operator_name', oprname, 'schema', oprnamespace::regnamespace, 'left_operand_type', oprleft::regtype, 'right_operand_type', oprright::regtype, 'operator_function', oprcode::regprocedure))
-                      FROM pg_operator
-                  WHERE
-                      oprnamespace = (
-                          SELECT
-                              oid
-                          FROM pg_namespace
-                      WHERE
-                          nspname = schema_name)), 'operator_classes', (
-                  SELECT
-                      json_agg(json_build_object('class_name', opcname, 'schema', opcnamespace::regnamespace, 'access_method', amname, 'operators', (
-                                  SELECT
-                                      json_agg(json_build_object('operator_name', op.oprname, 'left_operand_type', op.oprleft::regtype, 'right_operand_type', op.oprright::regtype))
-                              FROM pg_amop amop
-                              JOIN pg_operator op ON amop.amopopr = op.oid
-                          WHERE
-                              amop.amopfamily = opc.oid)))
-                  FROM pg_opclass opc
-                  JOIN pg_am am ON opc.opcmethod = am.oid
-              WHERE
-                  opcnamespace = (
-                      SELECT
-                          oid
-                      FROM pg_namespace
-                  WHERE
-                      nspname = schema_name)), 'operator_families', (
-              SELECT
-                  json_agg(json_build_object('family_name', opfname, 'schema', opfnamespace::regnamespace, 'access_method', amname, 'operator_classes', (
-                              SELECT
-                                  json_agg(json_build_object('class_name', opc.opfname, 'schema', opc.opfnamespace::regnamespace))
-                          FROM pg_opfamily opc
-                      WHERE
-                          opc.opfmethod = opf.oid)))
-              FROM pg_opfamily opf
-              JOIN pg_am am ON opf.opfmethod = am.oid
-          WHERE
-              opfnamespace = (
-                  SELECT
-                      oid
-                  FROM pg_namespace
-              WHERE
-                  nspname = schema_name)), 'extension_objects', (
-          SELECT
-              json_agg(json_build_object('object_name', extname, 'object_type', 'extension', 'schema', oid::regnamespace, 'extension_name', extname))
-          FROM pg_extension objects
-      WHERE
-          oid = (
-              SELECT
-                  oid
-              FROM pg_namespace
-          WHERE
-              nspname = schema_name))))
-  FROM information_schema.tables t
-  WHERE
-      table_schema = schema_name INTO result;
-      RETURN result;
-  END;
-  $$
-  LANGUAGE plpgsql;
-
--- Function to retrieve metadata about the database
--- Returns a JSON object containing details about the database, schemas, tables, columns, indexes, constraints, and more.
-
-CREATE OR REPLACE FUNCTION :ddl_schema.get_database_metadata ()
+ */
+CREATE OR REPLACE FUNCTION :ddl_schema.get_schema_metadata(schema_name text)
     RETURNS json
     AS $$
 DECLARE
     result json;
 BEGIN
-
     SELECT
-        json_build_object('database_details', (
+        json_object_agg(table_name, json_build_object('columns',(
+                    SELECT
+                        json_object_agg(column_name, json_build_object('data_type', data_type, 'is_nullable', is_nullable, 'character_maximum_length', character_maximum_length, 'numeric_precision', numeric_precision, 'numeric_scale', numeric_scale, 'column_comment',(
+                                    SELECT
+                                        pg_catalog.col_description(a.attrelid, a.attnum)
+                                FROM pg_attribute a
+                                JOIN pg_class c ON a.attrelid = c.oid
+                                JOIN pg_namespace n ON c.relnamespace = n.oid
+                                WHERE
+                                    n.nspname = schema_name
+                                    AND c.relkind = 'r'::"char"
+                                    AND c.relname = tl.table_name
+                                    AND a.attnum > 0
+                                    AND a.attname = column_name), 'default_value',(
+                                SELECT
+                                    pg_get_expr(adbin, adrelid) AS default_value FROM pg_class c
+                                JOIN pg_attribute a ON a.attrelid = c.oid
+                                LEFT JOIN pg_attrdef ad ON ad.adrelid = c.oid
+                                    AND ad.adnum = a.attnum
+                                JOIN pg_namespace n ON c.relnamespace = n.oid
+                                WHERE
+                                    n.nspname = schema_name
+                                    AND c.relname = tl.table_name
+                                    AND a.attname = column_name)))
+                        FROM information_schema.columns
+                        WHERE
+                            table_schema = schema_name
+                            AND table_name = tl.table_name), 'indexes',(
+                            SELECT
+                                json_object_agg(index_name, json_build_object('index_columns', index_columns, 'is_unique', index_is_unique, 'is_primary', index_is_primary))
+                            FROM (
+                                SELECT
+                                    i.relname AS index_name, array_agg(a.attname) AS index_columns, bool_or(idx.indisunique) AS index_is_unique, bool_or(idx.indisprimary) AS index_is_primary FROM pg_index idx
+                                JOIN pg_class t ON t.oid = idx.indrelid
+                                JOIN pg_class i ON i.oid = idx.indexrelid
+                                JOIN pg_attribute a ON a.attrelid = t.oid
+                                    AND a.attnum = ANY (idx.indkey)
+                                WHERE
+                                    t.relkind = 'r'::"char"
+                                    AND t.relname NOT LIKE 'pg_%'
+                                    AND t.relname NOT LIKE 'sql_%'
+                                    AND idx.indisprimary = FALSE
+                                    AND t.relname = tl.table_name
+                                    AND t.relnamespace =(
+                                        SELECT
+                                            oid
+                                        FROM pg_namespace
+                                        WHERE
+                                            nspname = schema_name)
+                                GROUP BY i.relname) AS indexes), 'constraints',(
+                                SELECT
+                                    json_object_agg(constraint_name, json_build_object('constraint_type', constraint_type, 'table_name', table_name, 'columns', columns))
+                                FROM (
+                                    SELECT
+                                        tc.constraint_name, tc.constraint_type, tc.table_name, array_agg(DISTINCT kcu.column_name) AS columns FROM information_schema.table_constraints tc
+                                LEFT JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+                                    AND tc.table_schema = kcu.table_schema
+                                    AND tc.table_name = kcu.table_name
+                                JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+                                    AND ccu.table_schema = tc.table_schema
+                                WHERE
+                                    tc.constraint_type != 'FOREIGN KEY'
+                                    AND tc.table_name = tl.table_name
+                                    AND tc.table_schema = schema_name GROUP BY tc.constraint_name, tc.constraint_type, tc.table_name) AS constraints), 'table_comments',(
+                                SELECT
+                                    json_build_object('comment', pg_catalog.obj_description(c.oid, 'pg_class'))
+                                FROM pg_class c
+                                JOIN pg_namespace n ON c.relnamespace = n.oid
+                                WHERE
+                                    n.nspname = schema_name
+                                    AND c.relkind = 'r'::"char"
+                                    AND c.relname = tl.table_name), 'foreign_keys',(
+                                    SELECT
+                                        json_object_agg(constraint_name, json_build_object('constraint_type', constraint_type, 'table_name', table_name, 'column', column_name, 'foreign_table', foreign_table))
+                                    FROM (
+                                        SELECT
+                                            tc.constraint_name, tc.constraint_type, tc.table_name, kcu.column_name, ccu.table_name AS foreign_table -- Include foreign table name
+                                        FROM information_schema.table_constraints tc
+                                    LEFT JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+                                        AND tc.table_schema = kcu.table_schema
+                                        AND tc.table_name = kcu.table_name
+                                    JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+                                        AND ccu.table_schema = tc.table_schema
+                                WHERE
+                                    tc.constraint_type = 'FOREIGN KEY'
+                                    AND tc.table_name = tl.table_name
+                                    AND tc.table_schema = schema_name GROUP BY tc.constraint_name, tc.constraint_type, tc.table_name, ccu.table_name, kcu.column_name) AS fk_constraints), 'triggers',(
+                            SELECT
+                                json_object_agg(tgname, json_build_object('event', tgtype::text, 'event_object_table', relname, 'action_statement', tgdeferrable || ' ' || tginitdeferred || ' ' || tgenabled || ' ' || pg_get_triggerdef(pg_trigger.oid)))
+                            FROM pg_trigger
+                            JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid
+                            JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                        WHERE
+                            pg_namespace.nspname = schema_name
+                            AND pg_class.relname = tl.table_name
+                            AND tgname NOT LIKE 'RI_%'), 'sequences',(
+                            SELECT
+                                json_object_agg(sequence_name, json_build_object('data_type', data_type, 'start_value', start_value, 'minimum_value', minimum_value, 'maximum_value', maximum_value, 'increment', INCREMENT, 'cycle_option', cycle_option))
+                            FROM information_schema.sequences
+                        WHERE
+                            sequence_schema = schema_name), 'rules',(
+                            SELECT
+                                json_object_agg(tgname, json_build_object('event', tgtype::text, 'condition', pg_get_triggerdef(pg_trigger.oid), 'action', pg_get_triggerdef(pg_trigger.oid, TRUE)))
+                            FROM pg_trigger
+                            JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid
+                            JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                        WHERE
+                            pg_namespace.nspname = schema_name
+                            AND pg_class.relname = tl.table_name), 'table_partitions',(
+                            SELECT
+                                json_object_agg(parent.relname, json_build_object('partition_name', child.relname, 'partition_expression', pg_get_expr(child.relpartbound, child.oid), 'partition_method', CASE WHEN child.relkind = 'p' THEN
+                                        'LIST'
+                                    WHEN child.relkind = 'r' THEN
+                                        'RANGE'
+                                    ELSE
+                                        'UNKNOWN'
+                                    END))
+                            FROM pg_class parent
+                            JOIN pg_inherits ON parent.oid = pg_inherits.inhparent
+                            JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+                            JOIN pg_namespace ON parent.relnamespace = pg_namespace.oid
+                        WHERE
+                            pg_namespace.nspname = schema_name
+                            AND parent.relkind = 'r'
+                            AND child.relkind = 'p'), 'table_statistics',(
+                            SELECT
+                                json_object_agg(relname, json_build_object('total_rows', reltuples, 'total_pages', relpages))
+                            FROM pg_class
+                        WHERE
+                            relnamespace =(
+                                SELECT
+                                    oid
+                                FROM pg_namespace
+                            WHERE
+                                nspname = schema_name)
+                        AND pg_class.relname = tl.table_name
+                        AND relkind = 'r'::"char"), 'extended_statistics',(
+                        SELECT
+                            json_object_agg(t.attname, json_build_object('table_name', t.tablename, 'statistics',(
+                                        SELECT
+                                            json_object_agg(null_frac, json_build_object('distinct_values', n_distinct, 'most_common_values', most_common_vals, 'most_common_frequencies', most_common_freqs, 'histogram_bounds', histogram_bounds, 'correlation', correlation))
+                                    FROM pg_stats
+                                WHERE
+                                    pg_stats.schemaname = schema_name
+                                    AND pg_stats.tablename = t.tablename
+                                    AND pg_stats.attname = t.attname)))
+                        FROM pg_stats t
+                    WHERE
+                        t.schemaname = schema_name), 'table_inheritance',(
+                        SELECT
+                            json_object_agg(inh.relname, json_build_object('parent_table_name', parent.relname))
+                        FROM pg_class inh
+                        JOIN pg_inherits i ON inh.oid = i.inhrelid
+                        JOIN pg_class parent ON i.inhparent = parent.oid
+                    WHERE
+                        inh.relnamespace =(
+                            SELECT
+                                oid
+                            FROM pg_namespace
+                        WHERE
+                            nspname = schema_name)), 'collations',(
+                    SELECT
+                        json_object_agg(collname, json_build_object('schema', collnamespace::regnamespace, 'data_type', collprovider::regproc))
+                    FROM pg_collation
+                WHERE
+                    collnamespace =(
+                        SELECT
+                            oid
+                        FROM pg_namespace
+                    WHERE
+                        nspname = schema_name)), 'domains',(
                 SELECT
-                    json_build_object('host', (
+                    json_object_agg(domain_name, json_build_object('data_type', data_type, 'default_value', domain_default, 'constraints',(
+                                SELECT
+                                    json_object_agg(constraint_name, json_build_object('constraint_type', 'domain'))
+                            FROM information_schema.domain_constraints
+                        WHERE
+                            domain_schema = schema_name
+                            AND domain_name = d.domain_name)))
+                FROM information_schema.domains d
+            WHERE
+                domain_schema = schema_name), 'user_defined_types',(
+                SELECT
+                    json_object_agg(typname, json_build_object('schema', typnamespace::regnamespace, 'internal_type', typbasetype::regtype, 'input_function', typinput::regprocedure, 'output_function', typoutput::regprocedure))
+                FROM pg_type
+            WHERE
+                typnamespace =(
+                    SELECT
+                        oid
+                    FROM pg_namespace
+                WHERE
+                    nspname = schema_name)
+            AND typtype = 'd'), 'operators',(
+            SELECT
+                json_object_agg(oprname, json_build_object('schema', oprnamespace::regnamespace, 'left_operand_type', oprleft::regtype, 'right_operand_type', oprright::regtype, 'operator_function', oprcode::regprocedure))
+            FROM pg_operator
+        WHERE
+            oprnamespace =(
+                SELECT
+                    oid
+                FROM pg_namespace
+            WHERE
+                nspname = schema_name)), 'operator_classes',(
+        SELECT
+            json_object_agg(opcname, json_build_object('schema', opcnamespace::regnamespace, 'access_method', amname, 'operators',(
+                        SELECT
+                            json_object_agg(op.oprname, json_build_object('left_operand_type', op.oprleft::regtype, 'right_operand_type', op.oprright::regtype))
+                    FROM pg_amop amop
+                    JOIN pg_operator op ON amop.amopopr = op.oid
+                WHERE
+                    amop.amopfamily = opc.oid)))
+        FROM pg_opclass opc
+        JOIN pg_am am ON opc.opcmethod = am.oid
+    WHERE
+        opcnamespace =(
+            SELECT
+                oid
+            FROM pg_namespace
+        WHERE
+            nspname = schema_name)), 'operator_families',(
+    SELECT
+        json_object_agg(opfname, json_build_object('schema', opfnamespace::regnamespace, 'access_method', amname, 'operator_classes',(
+                    SELECT
+                        json_object_agg(opc.opfname, json_build_object('schema', opc.opfnamespace::regnamespace))
+                FROM pg_opfamily opc
+            WHERE
+                opc.opfmethod = opf.oid)))
+    FROM pg_opfamily opf
+    JOIN pg_am am ON opf.opfmethod = am.oid
+WHERE
+    opfnamespace =(
+        SELECT
+            oid
+        FROM pg_namespace
+    WHERE
+        nspname = schema_name)), 'extension_objects',(
+    SELECT
+        json_object_agg(extname, json_build_object('object_type', 'extension', 'schema', oid::regnamespace, 'extension_name', extname))
+    FROM pg_extension objects
+WHERE
+    oid =(
+        SELECT
+            oid
+        FROM pg_namespace
+    WHERE
+        nspname = schema_name))))
+    FROM
+        information_schema.tables tl
+    WHERE
+        table_schema = schema_name
+        AND table_type <> 'VIEW' INTO result;
+    RETURN result;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Function to retrieve metadata about the database
+-- Returns a JSON object containing details about the database, schemas, tables, columns, indexes, constraints, and more.
+CREATE OR REPLACE FUNCTION :ddl_schema.get_schema_metadata_views(schema_name text)
+    RETURNS json
+    AS $$
+DECLARE
+    result json;
+BEGIN
+    WITH top_level_views AS (
+        SELECT
+            viewname,
+            pg_get_viewdef(c.oid) AS definition
+        FROM
+            pg_views v
+            JOIN pg_class c ON v.viewname = c.relname
+        WHERE
+            c.relnamespace =(
+                SELECT
+                    oid
+                FROM
+                    pg_namespace
+                WHERE
+                    nspname = schema_name)
+),
+view_columns AS (
+    SELECT
+        table_name,
+        column_name,
+        data_type,
+        is_nullable
+    FROM
+        information_schema.columns
+    WHERE
+        table_schema = schema_name
+        AND table_name IN (
+            SELECT
+                viewname
+            FROM
+                top_level_views)
+),
+view_column_agg AS (
+    SELECT
+        table_name,
+        json_object_agg(column_name, json_build_object('column_name', column_name, 'data_type', data_type, 'is_nullable', is_nullable)) AS columns
+FROM
+    view_columns
+GROUP BY
+    table_name
+)
+SELECT
+    json_object_agg(viewname, json_build_object('definition', definition, 'columns', columns))
+FROM
+    top_level_views
+    LEFT JOIN view_column_agg ON top_level_views.viewname = view_column_agg.table_name INTO result;
+    RETURN result;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Function to retrieve metadata about the database views
+-- Returns a JSON object containing details about the views.
+CREATE OR REPLACE FUNCTION :ddl_schema.get_database_metadata()
+    RETURNS json
+    AS $$
+DECLARE
+    result json;
+BEGIN
+    SELECT
+        json_build_object('database',(
+                SELECT
+                    json_build_object('host',(
                             SELECT
                                 reset_val
                             FROM pg_settings
                             WHERE
-                                name = 'listen_addresses'), 'port', (
+                                name = 'listen_addresses'), 'port',(
                             SELECT
                                 reset_val
                             FROM pg_settings
                         WHERE
-                            name = 'port'), 'database_name', (
+                            name = 'port'), 'database_name',(
                         SELECT
-                            current_database()), 'schemas', (
+                            current_database()), 'schemas',(
                 SELECT
-                    json_build_object('schema_details', (
-                            SELECT
-                                json_agg(json_build_object('schema_name', s.nspname, 'table_details', (
-                                            SELECT
-                                                *
-                                            FROM get_schema_metadata (s.nspname))))
-                    FROM pg_catalog.pg_namespace s
-                    JOIN pg_catalog.pg_user u ON u.usesysid = s.nspowner
-                WHERE
-                    nspname NOT IN ('information_schema', 'pg_catalog', 'public')
-                    AND nspname NOT LIKE 'pg_toast%'
-                    AND nspname NOT LIKE 'pg_temp_%')))))) INTO result;
+                    (
+                        SELECT
+                            json_object_agg(s.nspname, json_build_object('tables',(
+                                        SELECT
+                                            *
+                                        FROM get_schema_metadata(s.nspname)), 'views',(
+                                SELECT
+                                    *
+                                FROM get_schema_metadata_views(s.nspname))))
+            FROM pg_catalog.pg_namespace s
+            JOIN pg_catalog.pg_user u ON u.usesysid = s.nspowner
+        WHERE
+            nspname NOT IN ('information_schema', 'pg_catalog', 'unit_test_schema', 'dcp_lib', 'dcp_extensions')
+            AND nspname NOT LIKE 'pg_toast%'
+            AND nspname NOT LIKE 'pg_temp_%'))))) INTO result;
     RETURN result;
 END;
 $$
-LANGUAGE plpgsql set search_path to :ddl_schema;
+LANGUAGE plpgsql
+SET search_path TO :ddl_schema;
 
 -- Prepare database for unit testing
-
 BEGIN;
-
 CREATE SCHEMA IF NOT EXISTS :extensions_schema;
-
-CREATE EXTENSION IF NOT EXISTS pgtap
-	SCHEMA :extensions_schema;
-
+CREATE EXTENSION IF NOT EXISTS pgtap SCHEMA :extensions_schema;
 CREATE SCHEMA IF NOT EXISTS :unit_test_schema;
-
-
 -- Create a table
-CREATE TABLE IF NOT EXISTS :unit_test_schema.test_table (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50),
-    age INT,
-    email VARCHAR(100)
+CREATE TABLE IF NOT EXISTS :unit_test_schema.test_table(
+    id serial PRIMARY KEY,
+    name varchar(50),
+    age int,
+    email varchar(100)
 );
-
 -- Create an index
-CREATE INDEX IF NOT EXISTS idx_name ON :unit_test_schema.test_table (name);
-
+CREATE INDEX IF NOT EXISTS idx_name ON :unit_test_schema.test_table(name);
 -- Create a table
-CREATE TABLE IF NOT EXISTS :unit_test_schema.test_table_other (
-    id INT PRIMARY KEY,
-    description TEXT
+CREATE TABLE IF NOT EXISTS :unit_test_schema.test_table_other(
+    id int PRIMARY KEY,
+    description text
 );
-
 -- Add a unique constraint
 DO :'uq_constraint';
-
 -- Add a foreign key constraint
 DO :'fk_constraint';
-
 -- Create a partitioned table
-CREATE TABLE IF NOT EXISTS :unit_test_schema.partitioned_table (
-    id INT,
-    name VARCHAR(50)
-) PARTITION BY RANGE (id);
-
+CREATE TABLE IF NOT EXISTS :unit_test_schema.partitioned_table(
+    id int,
+    name varchar(50)
+)
+PARTITION BY RANGE (id);
 -- Create a table comment
 COMMENT ON TABLE :unit_test_schema.test_table IS 'This is a sample table';
-
 -- Create a column comment
 COMMENT ON COLUMN :unit_test_schema.test_table.name IS 'The name of the person';
-
 -- Create a function
 CREATE OR REPLACE FUNCTION :unit_test_schema.test_function()
-RETURNS TRIGGER AS $$
+    RETURNS TRIGGER
+    AS $$
 BEGIN
     -- Perform some actions here
     -- Example: Set a default value for the name column
     NEW.name := COALESCE(NEW.name, 'Testing');
-
     -- Return the modified row
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
-
+$$
+LANGUAGE plpgsql;
 -- DROP TRIGGER IF EXISTS test_trigger ON :unit_test_schema.test_table;
 DO :'create_trigger';
-
 -- Create a sequence
-CREATE SEQUENCE if not exists :unit_test_schema.test_sequence
-START WITH 1
+CREATE SEQUENCE IF NOT EXISTS :unit_test_schema.test_sequence START WITH 1
 INCREMENT BY 1
-NO MAXVALUE
-NO CYCLE;
-
+NO MAXVALUE NO CYCLE;
 -- Create a view
-CREATE or replace VIEW :unit_test_schema.test_view AS
-    SELECT id, name
-    FROM :unit_test_schema.test_table
-    WHERE age > 18;
-
+CREATE OR REPLACE VIEW :unit_test_schema.test_view AS
+SELECT
+    id,
+    name
+FROM
+    :unit_test_schema.test_table
+WHERE
+    age > 18;
 -- Create a materialized view
-CREATE MATERIALIZED VIEW if not exists :unit_test_schema.test_materialized_view AS
-    SELECT id, name
-    FROM :unit_test_schema.test_table
-    WHERE age > 18
-WITH DATA;
-
+CREATE MATERIALIZED VIEW IF NOT EXISTS :unit_test_schema.test_materialized_view AS
+SELECT
+    id,
+    name
+FROM
+    :unit_test_schema.test_table
+WHERE
+    age > 18 WITH DATA;
 -- Create a rule
-CREATE or replace RULE test_rule AS
-ON INSERT TO :unit_test_schema.test_table
-DO INSTEAD
+CREATE OR REPLACE RULE test_rule AS ON INSERT TO :unit_test_schema.test_table
+    DO INSTEAD
     INSERT INTO :unit_test_schema.test_table_other
-    VALUES (NEW.id, NEW.name);
-
-DO
-$do$
+        VALUES (
+            NEW.id, NEW.name
+);
+DO $do$
 BEGIN
-   IF EXISTS (
-      SELECT FROM pg_catalog.pg_roles
-      WHERE  rolname = 'test_role') THEN
-
-      RAISE NOTICE 'Role "test_role" already exists. Skipping.';
-   ELSE
-      CREATE ROLE test_role ;
-   END IF;
+    IF EXISTS(
+        SELECT
+        FROM
+            pg_catalog.pg_roles
+        WHERE
+            rolname = 'test_role') THEN
+    RAISE NOTICE 'Role "test_role" already exists. Skipping.';
+ELSE
+    CREATE ROLE test_role;
+END IF;
 END
 $do$;
-
-ALTER TABLE :unit_test_schema.test_table ENABLE ROW LEVEL security;
+ALTER TABLE :unit_test_schema.test_table ENABLE ROW LEVEL SECURITY;
 -- Create a policy
-
 DO :'policy';
-
 -- Create statistics
-
-CREATE STATISTICS IF NOT EXISTS test_statistics (dependencies) ON id, name FROM :unit_test_schema.test_table;
-
-CREATE OR REPLACE FUNCTION :unit_test_schema.test_get_metadata(schema_name text default :'ddl_schema')
- RETURNS SETOF text
- LANGUAGE plpgsql
-AS $function$
+CREATE STATISTICS IF NOT EXISTS test_statistics(dependencies) ON id, name FROM :unit_test_schema.test_table;
+CREATE OR REPLACE FUNCTION :unit_test_schema.test_get_metadata(schema_name text DEFAULT :'ddl_schema')
+    RETURNS SETOF text
+    LANGUAGE plpgsql
+    AS $function$
 BEGIN
-  RETURN NEXT has_function(schema_name,'get_schema_metadata','get_schema_metadata available in'|| schema_name ||' schema');
-  RETURN NEXT has_function(schema_name,'get_database_metadata','get_database_metadata available'|| schema_name ||'schema');
-  RETURN NEXT can(schema_name,ARRAY['get_schema_metadata','get_database_metadata'] );
-  RETURN NEXT function_lang_is( schema_name,'get_schema_metadata', ARRAY['text'],'plpgsql' ,'function language is plpgsql');
-  RETURN NEXT function_lang_is( schema_name, 'get_database_metadata', 'plpgsql', 'function language is plpgsql' );
-  RETURN NEXT function_returns(schema_name,'get_schema_metadata','json','get_schema_metadata returns a JSON');
-  RETURN NEXT function_returns(schema_name,'get_database_metadata','json','get_database_metadata returns a JSON');
-  RETURN NEXT results_eq('SELECT get_schema_metadata::jsonb   from  '||  schema_name ||'.get_schema_metadata(''unit_test_schema'')',
-  'select outputdata::jsonb from unit_test_schema.get_schema_metadata_expected_output','data matches' );
-  RETURN NEXT results_eq('SELECT get_database_metadata::jsonb   from '||  schema_name ||'.get_database_metadata()',
-  'select outputdata::jsonb from unit_test_schema.get_database_metadata_expected_output','data matches' );
+    RETURN NEXT has_function(schema_name, 'get_schema_metadata', 'get_schema_metadata available in' || schema_name || ' schema');
+    RETURN NEXT has_function(schema_name, 'get_database_metadata', 'get_database_metadata available' || schema_name || 'schema');
+    RETURN NEXT can(schema_name, ARRAY['get_schema_metadata', 'get_database_metadata']);
+    RETURN NEXT function_lang_is(schema_name, 'get_schema_metadata', ARRAY['text'], 'plpgsql', 'function language is plpgsql');
+    RETURN NEXT function_lang_is(schema_name, 'get_database_metadata', 'plpgsql', 'function language is plpgsql');
+    RETURN NEXT function_returns(schema_name, 'get_schema_metadata', 'json', 'get_schema_metadata returns a JSON');
+    RETURN NEXT function_returns(schema_name, 'get_database_metadata', 'json', 'get_database_metadata returns a JSON');
+    RETURN NEXT results_eq('SELECT get_schema_metadata::jsonb   from  ' || schema_name || '.get_schema_metadata(''unit_test_schema'')', 'select outputdata::jsonb from unit_test_schema.get_schema_metadata_expected_output', 'data matches');
+    RETURN NEXT results_eq('SELECT get_database_metadata::jsonb   from ' || schema_name || '.get_database_metadata()', 'select outputdata::jsonb from unit_test_schema.get_database_metadata_expected_output', 'data matches');
 END;
-$function$
-;
-
+$function$;
 END;
-
-CREATE TABLE IF NOT EXISTS :unit_test_schema.get_database_metadata_expected_output(outputdata json);
-
-CREATE TABLE IF NOT EXISTS :unit_test_schema.get_schema_metadata_expected_output(outputdata json);
-
+CREATE TABLE IF NOT EXISTS :unit_test_schema.get_database_metadata_expected_output(
+    outputdata json
+);
+CREATE TABLE IF NOT EXISTS :unit_test_schema.get_schema_metadata_expected_output(
+    outputdata json
+);
 TRUNCATE TABLE :unit_test_schema.get_database_metadata_expected_output;
-INSERT INTO :unit_test_schema.get_database_metadata_expected_output select * from :ddl_schema.get_database_metadata();
-
+INSERT INTO :unit_test_schema.get_database_metadata_expected_output
+SELECT
+    *
+FROM
+    :ddl_schema.get_database_metadata();
 TRUNCATE TABLE :unit_test_schema.get_schema_metadata_expected_output;
-INSERT INTO :unit_test_schema.get_schema_metadata_expected_output select * from :ddl_schema.get_schema_metadata('unit_test_schema');
-
+INSERT INTO :unit_test_schema.get_schema_metadata_expected_output
+SELECT
+    *
+FROM
+    :ddl_schema.get_schema_metadata('unit_test_schema');
 
 /*
 You should get a unit test result as below -
@@ -478,10 +542,8 @@ You should get a unit test result as below -
 │ ok 1 - unit_test_schema.test_get_metadata                 │
 │ 1..1                                                      │
 └───────────────────────────────────────────────────────────┘
-*/
-
-SELECT * from runtests(:'unit_test_schema'::name, 'test_get_metadata');
-
-
-
-
+ */
+SELECT
+    *
+FROM
+    runtests(:'unit_test_schema'::name, 'test_get_metadata');
