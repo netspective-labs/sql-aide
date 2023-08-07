@@ -13,6 +13,7 @@ more manageable structure for storage in a key-value (KV) store.
 
 # TODO
 
+- [ ] Use [ulid](https://deno.land/x/ulid) as default identity strategy
 - [ ] Review [deno-kv-sqlite](https://github.com/jsejcksn/deno-kv-sqlite)
       Key-Value storage backed by SQLite to see if we want to incorporate that
       style into SQLa (but generalize it so that it can be backed by any SQL
