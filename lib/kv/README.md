@@ -8,8 +8,8 @@ more manageable structure for storage in a key-value (KV) store.
   It flattens nested structures into a list of key paths, and assigns a version
   number to each distinct path if requested.
 
-* `entityKeys` returns sn object with the same shape as the input but values are
-  keys (arrays of path parts).
+* `typicalEntityKV` returns an object which accepts a typed object and returns
+  several utility functions.
 
 # TODO
 
@@ -24,6 +24,7 @@ more manageable structure for storage in a key-value (KV) store.
       Transactions that commit without overwriting one another, for Deno KV. If
       we went end up using Deno KV as a store we might want to use this or
       integrate it into SQLa
-- [ ] Review [denokv-graphql](https://github.com/vwkd/denokv-graphql) GraphQL
-      bindings for Deno KV as a potential replacement for SQL in case SQL on top
-      of Deno KV is too hard.
+- [ ] Review [graphql-yoga](https://github.com/dotansimha/graphql-yoga) and
+      [denokv-graphql](https://github.com/vwkd/denokv-graphql) GraphQL bindings
+      for Deno KV as a potential replacement for SQL in case SQL on top of Deno
+      KV is too hard.
