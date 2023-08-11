@@ -209,6 +209,42 @@ export class PgDcpShield {
     END IF;
     RETURN 1;`;
 
+    const createAllPrivilegesDcpSchemaTableRole = pgSQLa.storedProcedure(
+      "create_all_privileges_dcp_schema_table_role",
+      {
+        dcp_schema_name: z.string(),
+        table_name: z.string(),
+        role_name: z.string(),
+      },
+      (name, args, _) => pgSQLa.typedPlPgSqlBody(name, args, this.ctx),
+      {
+        embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+        autoBeginEnd: false,
+        isIdempotent: false,
+        sqlNS: dcpLibSchema,
+      },
+    )`call ${lQR(`create_role_if_not_exists`)}(role_name);
+      EXECUTE FORMAT('GRANT ALL PRIVILEGES ON TABLE %I.%I TO %I', dcp_schema_name, table_name, role_name);
+    `;
+
+    const createReadOnlyPrivilegesDcpSchemaTableRole = pgSQLa.storedProcedure(
+      "create_read_only_privileges_dcp_schema_table_role",
+      {
+        dcp_schema_name: z.string(),
+        table_name: z.string(),
+        role_name: z.string(),
+      },
+      (name, args, _) => pgSQLa.typedPlPgSqlBody(name, args, this.ctx),
+      {
+        embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+        autoBeginEnd: false,
+        isIdempotent: false,
+        sqlNS: dcpLibSchema,
+      },
+    )`call ${lQR(`create_role_if_not_exists`)}(role_name);
+      EXECUTE FORMAT('GRANT SELECT ON TABLE %I.%I TO %I', dcp_schema_name, table_name, role_name);
+    `;
+
     const authenticateApiPgNative = pgSQLa.storedFunction(
       "authenticate_api_pg_native",
       {
@@ -350,6 +386,10 @@ export class PgDcpShield {
       ${revokeAllPrivilegesDcpSchemaRole}
 
       ${dropRoleAndUserIfExists}
+
+      ${createAllPrivilegesDcpSchemaTableRole}
+
+      ${createReadOnlyPrivilegesDcpSchemaTableRole}
 
       ${authenticateApiPgNative}
 
