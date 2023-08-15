@@ -2,15 +2,6 @@ export interface FileSystemEntry<CanonicalPath> {
   readonly canonicalPath: CanonicalPath;
 }
 
-export interface FileSystemEntryPathParts<CanonicalPath>
-  extends FileSystemEntry<CanonicalPath> {
-  readonly root: string; // E.g., '/' or 'c:'
-  readonly dir: string; // E.g., '/home/user/dir' or 'c:\path\dir'
-  readonly base: string; // E.g., 'index.html'
-  readonly ext: string; // E.g., '.html'
-  readonly name: string; // E.g., 'index'
-}
-
 export interface File<Entry> {
   readonly fsEntry: Entry;
   readonly reader: () => { read: (p: Uint8Array) => Promise<number | null> }; // Returns an object that matches the Deno.Reader interface
@@ -59,12 +50,4 @@ export interface MutableDirectory<Entry, File> extends Directory<Entry, File> {
 export interface FileSystem<Entry, File, Directory> {
   readonly file: (path: Entry) => File;
   readonly directory: (path?: Entry) => Directory;
-}
-
-export interface Content<Entry> extends File<Entry> {
-  readonly content: () => Promise<Uint8Array>;
-}
-
-export interface TextContent<Entry> extends Content<Entry> {
-  readonly text: () => Promise<string>;
 }

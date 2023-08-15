@@ -1,13 +1,12 @@
 import {
-  Content,
   Directory,
   File,
   FileSystem,
   FileSystemEntry,
   MutableDirectory,
   MutableFile,
-  TextContent,
 } from "./governance.ts";
+import { Content, TextContent } from "./content.ts";
 
 export type MemoryFsEntry = FileSystemEntry<string>;
 

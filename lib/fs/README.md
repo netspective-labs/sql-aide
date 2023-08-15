@@ -59,6 +59,9 @@ const file = fs.file({ canonicalPath: "/path/within/zip/file.txt" });
 
 - `governance.ts`: This file defines the core interfaces for the VFS. It lays
   out the contract that all file systems must adhere to.
+- `content.ts`: Content-specific (e.g. binary vs. text) interfaces and helpers.
+- `entry.ts`: File system entry interfaces and helpers (like finding path
+  parts).
 - `local-fs.ts`: Implementation of the local file system. Allows for interaction
   with files and directories on your machine.
 - `memory-fs.ts`: Provides an in-memory file system. Useful for temporary
@@ -126,6 +129,9 @@ or similar set of modules.
 
 # Roadmap
 
+- Implement AWS S3, OneDrive, and other "managed services" functionality with a
+  `ManagedFileSystem` implementation base and subclasses for anything that
+  requires REST services.
 - Implement SQL interface like
   [github.com/FSou1/fsquery](https://github.com/FSou1/fsquery) which is a
   TypeScript library like Rust-based
@@ -142,9 +148,6 @@ or similar set of modules.
 - Implement events infrastructure for type-safe listeners.
 - Implement plugins infrastructure for transformation pipelines (using
   `SQLa Flow` or other means).
-- Implement AWS S3, OneDrive, and other "managed services" functionality with a
-  `ManagedFileSystem` implementation base and subclasses for anything that
-  requires REST services.
 - Add a `walk` function to each FileSystem implementation that would walk all
   the entries and invoke a callback function for each entry.
 - Add `watch` functionality for directories and files to call events when

@@ -1,14 +1,13 @@
+import JSZip from "npm:jszip";
 import {
-  Content,
   Directory,
   File,
   FileSystem,
   FileSystemEntry,
   MutableDirectory,
   MutableFile,
-  TextContent,
 } from "./governance.ts";
-import JSZip from "npm:jszip";
+import { Content, TextContent } from "./content.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
