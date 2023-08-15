@@ -113,25 +113,35 @@ for await (const file of dir.files()) {
 }
 ```
 
-Extending: The library is designed to be extensible. If you have a unique file
-system requirement, you can implement the core interfaces from governance.ts to
+# Extending
+
+The library is designed to be extensible. If you have a unique file system
+requirement, you can implement the core interfaces from `governance.ts` to
 create your custom file system.
+
+Be careful and only introduce functions into `governance.ts` are not merely for
+convenience but for actual functionality that needs to be supported across all
+`FileSystem`s. If you need convenience wrappers, put those into an `fs-aide.ts`
+or similar set of modules.
 
 # Roadmap
 
 - Implement SQL interface like
   [github.com/FSou1/fsquery](https://github.com/FSou1/fsquery) which is a
-  TypeScript library like Rust-based; the best implementation would be to create
-  a `select` function which would accept a `FileSystem` instance and an SQL
-  query and return all entries that match
-  [github.com/jhspetersson/fselect](https://github.com/jhspetersson/fselect)
+  TypeScript library like Rust-based
+  [github.com/jhspetersson/fselect](https://github.com/jhspetersson/fselect);
+  the best implementation would be to create a `select` function which would
+  accept a `FileSystem` instance and an SQL query and return all entries that
+  match.
 - Implement `nature` interface which would use filename extensions and other
-  meta data to indicate the nature of a file
+  meta data to indicate the nature of a file.
 - Implement `stat` or similar interface which would provide information like
   size, last modified, etc.
-- Implement events infrastructure for type-safe listeners
+- Implement content addressable hashes so that two files' content could be
+  compared across file systems.
+- Implement events infrastructure for type-safe listeners.
 - Implement plugins infrastructure for transformation pipelines (using
-  `SQLa Flow` or other means)
+  `SQLa Flow` or other means).
 - Implement AWS S3, OneDrive, and other "managed services" functionality with a
   `ManagedFileSystem` implementation base and subclasses for anything that
   requires REST services.
@@ -143,9 +153,9 @@ create your custom file system.
   an instance of any of those and provide convenience functions like:
   - `netspective-labs/aide/fs/fs-tabular.ts` (for retriving CSVs and other
     tabular data elements) and for taking SQL and other results and storing them
-    as data assets
-  - move, copy, sync, etc. functionality that would work between FileSystems as
-    well as within
+    as data assets.
+  - `move`, `copy`, `sync`, etc. functionality that would work between
+    FileSystems as well as within.
 - Consider porting from older Netspective Aide `lib/fs` package:
   - `netspective-labs/aide/fs/fs-tree.ts` to support file system trees.
   - `netspective-labs/aide/fs/fs-route.ts` to support file system routes.
