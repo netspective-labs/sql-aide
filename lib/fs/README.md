@@ -119,18 +119,38 @@ create your custom file system.
 
 # Roadmap
 
+- Implement SQL interface like
+  [github.com/FSou1/fsquery](https://github.com/FSou1/fsquery) which is a
+  TypeScript library like Rust-based; the best implementation would be to create
+  a `select` function which would accept a `FileSystem` instance and an SQL
+  query and return all entries that match
+  [github.com/jhspetersson/fselect](https://github.com/jhspetersson/fselect)
+- Implement `nature` interface which would use filename extensions and other
+  meta data to indicate the nature of a file
+- Implement `stat` or similar interface which would provide information like
+  size, last modified, etc.
+- Implement events infrastructure for type-safe listeners
+- Implement plugins infrastructure for transformation pipelines (using
+  `SQLa Flow` or other means)
 - Implement AWS S3, OneDrive, and other "managed services" functionality with a
   `ManagedFileSystem` implementation base and subclasses for anything that
   requires REST services.
 - Add a `walk` function to each FileSystem implementation that would walk all
   the entries and invoke a callback function for each entry.
+- Add `watch` functionality for directories and files to call events when
+  content changes.
 - Add File, Directory, and FileSystem _Aide_ wrapper objects that would accept
   an instance of any of those and provide convenience functions like:
   - `netspective-labs/aide/fs/fs-tabular.ts` (for retriving CSVs and other
-    tabular data elements)
+    tabular data elements) and for taking SQL and other results and storing them
+    as data assets
   - move, copy, sync, etc. functionality that would work between FileSystems as
     well as within
-- Consider porting `netspective-labs/aide/fs/fs-tree.ts` to support file system
-  trees.
-- Consider porting `netspective-labs/aide/fs/fs-route.ts` to support file system
-  routes.
+- Consider porting from older Netspective Aide `lib/fs` package:
+  - `netspective-labs/aide/fs/fs-tree.ts` to support file system trees.
+  - `netspective-labs/aide/fs/fs-route.ts` to support file system routes.
+- Review
+  [github.com/AliBasicCoder/fs-pro](https://github.com/AliBasicCoder/fs-pro) for
+  missing features and add them.
+- Add GraphQL interface for servers.
+- Implement as FUSE for servers.
