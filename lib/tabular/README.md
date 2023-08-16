@@ -94,9 +94,9 @@ console.log(data);
 
 Output, notice the header was removed and used for the property keys:
 
-```json
+```typescript
 [
   { Name: "John", Age: 28, Birthday: Date.parse("1995-06-15") },
-  { Name: "Doe", Age: 30, Birthday: Date.parse("1993-01-20") }
-]
+  { Name: "Doe", Age: 30, Birthday: Date.parse("1993-01-20") },
+];
 ```
