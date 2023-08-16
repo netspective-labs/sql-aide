@@ -1,27 +1,14 @@
 import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
-import { detectedValueNature, safeContent } from "./mod.ts";
+import { detectedValueNature } from "./value.ts";
+import { toTypeScriptCode } from "./ts-content.ts";
 
-Deno.test("determineType function", () => {
-  assertEquals(detectedValueNature("true").nature, "boolean");
-  assertEquals(detectedValueNature("on").nature, "boolean");
-  assertEquals(detectedValueNature("yes").nature, "boolean");
-  assertEquals(detectedValueNature("false").nature, "boolean");
-  assertEquals(detectedValueNature("off").nature, "boolean");
-  assertEquals(detectedValueNature("no").nature, "boolean");
-  assertEquals(detectedValueNature("123").nature, "number");
-  assertEquals(detectedValueNature("123n").nature, "bigint");
-  assertEquals(detectedValueNature("{Red}").nature, "union");
-  assertEquals(detectedValueNature("2022-01-01").nature, "Date");
-  assertEquals(detectedValueNature("John Doe").nature, "string");
-});
-
-Deno.test("safeContent with async generator function", async () => {
+Deno.test("toTypeScriptCode with async generator function", async () => {
   async function* rowsGenerator() {
     yield ["name", "color", "isActive", "birthdate", "type"];
     yield ["John", "{Red}", "true", "1998-05-12", "undefined"];
     yield ["Doe", "{Green}", "false", "March 15, 1993", "something else"];
   }
-  const result = await safeContent(
+  const result = await toTypeScriptCode(
     rowsGenerator(),
     {
       rowTypeName: "Person",
@@ -35,6 +22,10 @@ Deno.test("safeContent with async generator function", async () => {
               value.trim().length == 0 || value == "undefined"
                 ? "undefined"
                 : `"${value}"`,
+            transform: (value) =>
+              value.trim().length == 0 || value == "undefined"
+                ? undefined
+                : value,
           };
         }
         return detectedValueNature(value);

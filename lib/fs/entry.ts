@@ -1,4 +1,4 @@
-import { path } from "../../deps.ts";
+import { path } from "./deps.ts";
 import { FileSystemEntry } from "./governance.ts";
 
 export interface FileSystemEntryPathParts<CanonicalPath>

@@ -1,0 +1,11 @@
+"First Name","Last Name",Age,"Email Address",City,"Favorite Quote",Salary,Date Joined,Is Active,Website
+John,Doe,25,johndoe@example.com,New York,"Life is what happens when you're busy making other plans.",55000,2023-01-15,True,www.johndoe.com
+Jane,Smith,30,janesmith@example.com,Los Angeles,"To be or not to be, that is the question.",60000,2022-05-10,False,www.janesmith.net
+Alice,Johnson,28,alicej@example.com,Chicago,"With great power, comes great responsibility.",62000,2021-08-20,True,www.alicejohnson.org
+Bob,Williams,32,bobw@example.com,Houston,"It's not about how hard you hit, but how hard you can get hit and keep moving forward.",58000,2020-12-01,False,www.bobwilliams.biz
+Charlie,Brown,29,charlieb@example.com,Phoenix,"To succeed in life, you need two things: ignorance and confidence.",57000,2019-07-05,True,www.charliebrown.net
+Daisy,Miller,27,daisym@example.com,Philadelphia,"In the end, we only regret the chances we didn't take.",59000,2023-03-10,True,www.daisymiller.com
+Eve,White,31,evew@example.com,San Antonio,"The only thing we have to fear is fear itself, and spiders.",61000,2021-11-25,False,www.evewhite.org
+Frank,Black,33,frankb@example.com,San Diego,"You miss 100% of the shots you don't take.",64000,2022-04-15,True,www.frankblack.net
+Grace,Hall,26,graceh@example.com,Dallas,"Life is 10% what happens to us and 90% how we react to it.",56000,2020-09-30,False,www.gracehall.biz
+Henry,Adams,34,henrya@example.com,San Jose,"The best way to predict the future is to create it.",65000,2019-02-20,True,www.henryadams.org

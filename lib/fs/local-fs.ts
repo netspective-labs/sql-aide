@@ -19,14 +19,30 @@ export class LocalFile
   }
 
   reader() {
+    let file: Deno.FsFile | undefined = undefined;
     return {
       read: async (p: Uint8Array): Promise<number | null> => {
-        const file = await Deno.open(this.fsEntry.canonicalPath, {
-          read: true,
-        });
-        const bytesRead = await file.read(p);
-        file.close();
-        return bytesRead;
+        if (!file) {
+          file = await Deno.open(this.fsEntry.canonicalPath, {
+            read: true,
+          });
+        }
+        return await file.read(p);
+      },
+      readSync: (p: Uint8Array): number | null => {
+        if (!file) {
+          file = Deno.openSync(this.fsEntry.canonicalPath, {
+            read: true,
+          });
+        }
+        return file.readSync(p);
+      },
+      // deno-lint-ignore require-await
+      close: async () => {
+        if (file) file.close();
+      },
+      closeSync: () => {
+        if (file) file.close();
       },
     };
   }
@@ -43,15 +59,32 @@ export class LocalFile
 export class LocalMutableFile extends LocalFile
   implements MutableFile<LocalFsEntry> {
   writer() {
+    let file: Deno.FsFile | undefined = undefined;
     return {
       write: async (p: Uint8Array): Promise<number> => {
-        const file = await Deno.open(this.fsEntry.canonicalPath, {
-          write: true,
-          create: true,
-        });
-        const bytesWritten = await file.write(p);
-        file.close();
-        return bytesWritten;
+        if (!file) {
+          file = await Deno.open(this.fsEntry.canonicalPath, {
+            write: true,
+            create: true,
+          });
+        }
+        return await file.write(p);
+      },
+      writeSync: (p: Uint8Array): number => {
+        if (!file) {
+          file = Deno.openSync(this.fsEntry.canonicalPath, {
+            write: true,
+            create: true,
+          });
+        }
+        return file.writeSync(p);
+      },
+      // deno-lint-ignore require-await
+      close: async () => {
+        if (file) file.close();
+      },
+      closeSync: () => {
+        if (file) file.close();
       },
     };
   }

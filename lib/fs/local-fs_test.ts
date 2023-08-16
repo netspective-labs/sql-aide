@@ -77,6 +77,7 @@ Deno.test("LocalFile read content", async () => {
   const buffer = new Uint8Array(textFromTextMethod.length); // if it's too long, it will be zero-padded
   await reader.read(buffer);
   const textFromReader = new TextDecoder().decode(buffer).trim();
+  await reader.close();
 
   // Assert that all methods return the same result
   assertEquals(textFromContent, "This is file 0");
@@ -94,6 +95,7 @@ Deno.test("LocalMutableFile write content", async () => {
   const writer = file.writer();
   const newText = "Updated content";
   await writer.write(new TextEncoder().encode(newText));
+  await writer.close();
   const updatedContent = await Deno.readTextFile(
     testResources.fsEntry("file1.txt").canonicalPath,
   );
@@ -126,6 +128,7 @@ Deno.test("MutableLocalDirectory add file and directory", async () => {
   const newFile = new LocalMutableFile(testResources.fsEntry("newFile.txt"));
   const writer = newFile.writer();
   await writer.write(new TextEncoder().encode("This is a new file"));
+  await writer.close();
   await mutableDir.add(newFile);
 
   // Verify the new file was added

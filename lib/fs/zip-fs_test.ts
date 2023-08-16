@@ -1,4 +1,4 @@
-import { path } from "../../deps.ts";
+import { path } from "./deps.ts";
 import { assert, assertEquals } from "./deps-test.ts";
 import { ZipFile, ZipFS } from "./zip-fs.ts";
 import JSZip from "npm:jszip";

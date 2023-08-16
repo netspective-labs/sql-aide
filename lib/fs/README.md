@@ -167,3 +167,5 @@ or similar set of modules.
   missing features and add them.
 - Add GraphQL interface for servers.
 - Implement as FUSE for servers.
+- Add stress tests to test memory, performance, etc. to ensure no FS handle
+  leaks, memory leaks, etc.
