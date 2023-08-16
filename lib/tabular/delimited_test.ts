@@ -2,8 +2,8 @@ import { StringReader } from "https://deno.land/std@0.198.0/io/string_reader.ts"
 import { assertEquals } from "./deps-test.ts";
 import {
   delimitedText,
-  TabularContentObjBuilderContext,
-  toObjectContext,
+  TabularContentObjStrategy,
+  tcObjectStrategy,
 } from "./delimited.ts";
 import { autoDetectValueNatures } from "./value.ts";
 
@@ -13,7 +13,7 @@ John,Doe,25,johndoe@example.com,New York,"Life is what happens when you're busy 
 Jane,Smith,30,janesmith@example.com,Los Angeles,"To be or not to be, that is the question.",60000,2022-05-10,False,www.janesmith.net
 Henry,Adams,34,henrya@example.com,San Jose,"The best way to predict the future is to create it.",65000,2019-02-20,True,www.henryadams.org`;
 
-Deno.test("delimtedText", async () => {
+Deno.test("delimitedText", async () => {
   type Row = {
     "First Name": string;
     "Last Name": string;
@@ -26,10 +26,11 @@ Deno.test("delimtedText", async () => {
     "Is Active": boolean;
     Website: string;
   };
-  const dt = delimitedText<Row, TabularContentObjBuilderContext<Row>>(
+  const dt = delimitedText<Row, TabularContentObjStrategy<Row>>(
     new StringReader(csvFixture01),
     {
-      context: () => toObjectContext({ valueNatures: autoDetectValueNatures }),
+      strategy: () =>
+        tcObjectStrategy({ valueNatures: autoDetectValueNatures }),
     },
   );
   const rows = await dt.rows();

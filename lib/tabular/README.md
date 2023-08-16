@@ -12,8 +12,9 @@ explanation of the major parts of the module.
   values into a desired format and emit them as TypeScript types/values.
 - **Tabular Content**: Helps in reading tabular data as streams or as promises
   that resolve to arrays.
-- **Context Builder**: Helps in the transformation of tabular rows into objects
-  with named properties, possibly with typed values.
+- **Tabular Content Strategy**: Helps in the transformation of tabular rows into
+  structured rows such as objects with named properties, possibly with typed
+  values.
 
 This module is a powerful utility for developers dealing with tabular data,
 offering a unique mix of type detection, transformation, and tabular data
@@ -41,22 +42,22 @@ given "123" it'll detect the nature as "number".
 For a given sample row of data, this function tries to detect the nature of each
 cell.
 
-### TabularContent & TabularContentBuilderContext
+### TabularContent & TabularContentStrategy
 
 These interfaces encapsulate tabular content and provide methods to process that
-content, both as asynchronous streams and as promises. The Builder Context
-interfaces help in processing the tabular rows, potentially turning them into
-typed objects.
+content, both as asynchronous streams and as promises. The Strategy interfaces
+help in processing the tabular rows, potentially turning them into typed
+objects.
 
-### transformIterable(iterator, ctx)
+### transformIterable(iterator, strategy)
 
 This function transforms an asynchronous iterable of asynchronous iterables
-using a factory function provided via context (`ctx`). This is particularly
-useful for turning rows of cells into other forms.
+using a factory function provided via strategy (`strategy`). This is
+particularly useful for turning rows of cells into other forms.
 
-### toObjectContext(options?)
+### tcObjectStrategy(options?)
 
-This function provides a context instance that can transform tabular rows
+This function provides a strategy instance that can transform tabular rows
 (arrays of strings) into objects. It relies on detected value natures and column
 headers to do so.
 
@@ -82,7 +83,7 @@ columns, and process it into an array of objects:
 ```typescript
 const file = await Deno.open("path_to_csv");
 const tabularContent = delimitedText(file, {
-  context: toObjectContext({
+  strategy: tcObjectStrategy({
     propNames: (headerRow) => headerRow.map((h) => h.trim()),
     valueNatures: autoDetectValueNatures,
   }),

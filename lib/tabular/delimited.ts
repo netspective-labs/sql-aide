@@ -9,7 +9,7 @@ export interface TabularContent<Row> {
   readonly rows: () => Promise<Row[]>;
 }
 
-export interface TabularContentBuilderContext<Row> {
+export interface TabularContentStrategy<Row> {
   factory: (cells: string[]) => Row;
   encountered?: (
     ir: IteratorResult<Row>,
@@ -36,10 +36,10 @@ export interface TabularContentBuilderContext<Row> {
  */
 function transformIterable<
   Output,
-  Context extends TabularContentBuilderContext<Output>,
+  Strategy extends TabularContentStrategy<Output>,
 >(
   iterator: AsyncIterable<AsyncIterable<string>>,
-  ctx: Context,
+  strategy: Strategy,
 ): AsyncIterable<Output> {
   return {
     [Symbol.asyncIterator]() {
@@ -50,7 +50,7 @@ function transformIterable<
           async function recursableNext(): Promise<IteratorResult<Output>> {
             const outerResult = await outerIterator.next();
             if (outerResult.done) {
-              ctx.done?.();
+              strategy.done?.();
               return { value: undefined, done: true };
             }
 
@@ -64,13 +64,13 @@ function transformIterable<
               innerValues.push(value);
             }
 
-            let ir = { value: ctx.factory(innerValues), done: false };
-            let encResult = ctx.encountered?.(ir, innerValues, false);
+            let ir = { value: strategy.factory(innerValues), done: false };
+            let encResult = strategy.encountered?.(ir, innerValues, false);
 
-            // sometimes the ctx factory might change and require reprocessing
+            // sometimes the strategy factory might change and require reprocessing
             if (encResult === "reprocess") {
-              ir = { value: ctx.factory(innerValues), done: false };
-              encResult = ctx.encountered?.(ir, innerValues, true);
+              ir = { value: strategy.factory(innerValues), done: false };
+              encResult = strategy.encountered?.(ir, innerValues, true);
             }
 
             // if we need to skip this record then go to the next one (the usual
@@ -89,8 +89,8 @@ function transformIterable<
   };
 }
 
-export interface TabularContentObjBuilderContext<Row>
-  extends TabularContentBuilderContext<Row> {
+export interface TabularContentObjStrategy<Row>
+  extends TabularContentStrategy<Row> {
   propNames: string[];
   valueNatures?: ValueNature[];
   encountered: (
@@ -102,13 +102,13 @@ export interface TabularContentObjBuilderContext<Row>
 }
 
 /**
- * delimitedText Context instance which transforms each row from a text array
+ * delimitedText strategy instance which transforms each row from a text array
  * to an object whose props are the column names from the first row and value
  * is either a string or a typed `ValueNature` transformed value
  * @param options property names and value transformation suppliers
- * @returns a Context instance that can be passed into delimitedText options `context` parameter
+ * @returns a strategy instance that can be passed into delimitedText options `strategy` parameter
  */
-export function toObjectContext<Row>(
+export function tcObjectStrategy<Row>(
   options?: {
     propNames?: (headerRow: string[]) => string[];
     valueNatures?: (sampleRow: string[]) => ValueNature[];
@@ -119,7 +119,7 @@ export function toObjectContext<Row>(
   let propNames: string[] = [];
   let valueNatures: ValueNature[] | undefined;
   let rowIndex = 0;
-  const ctx: TabularContentObjBuilderContext<Row> = {
+  const strategy: TabularContentObjStrategy<Row> = {
     propNames,
     factory: (cells) => cells as Row,
     encountered: (ir, cells, isReprocessing) => {
@@ -127,8 +127,8 @@ export function toObjectContext<Row>(
       if (rowIndex == 0) {
         headerRow = ir.value;
         propNames = options?.propNames?.(headerRow) ?? headerRow;
-        ctx.propNames = propNames;
-        ctx.factory = (cells) => {
+        strategy.propNames = propNames;
+        strategy.factory = (cells) => {
           const instance: Record<string, unknown> = {};
           for (let hc = 0; hc < headerRow.length; hc++) {
             const name = propNames[hc];
@@ -146,9 +146,9 @@ export function toObjectContext<Row>(
       // detect the value types
       if (rowIndex == 1 && !isReprocessing) {
         valueNatures = options?.valueNatures?.(cells);
-        ctx.valueNatures = valueNatures;
+        strategy.valueNatures = valueNatures;
         if (valueNatures) {
-          ctx.factory = (cells) => {
+          strategy.factory = (cells) => {
             const instance: Record<string, unknown> = {};
             for (let hc = 0; hc < headerRow.length; hc++) {
               const name = propNames[hc];
@@ -163,59 +163,63 @@ export function toObjectContext<Row>(
       rowIndex++;
     },
   };
-  return ctx;
+  return strategy;
 }
 
 export function delimitedText<
   Row,
-  Context extends TabularContentBuilderContext<Row>,
+  Strategy extends TabularContentStrategy<Row>,
 >(
   source: Deno.Reader & Partial<Deno.Closer>,
   options?: Partial<t.CommonCSVReaderOptions> & {
-    readonly context?: () => Context;
+    readonly strategy?: () => Strategy;
   },
 ): TabularContent<Row> {
-  const context = options?.context ??
+  const strategySupplier = options?.strategy ??
     (() => {
-      const ctx: TabularContentBuilderContext<Row> = {
+      const strategy: TabularContentStrategy<Row> = {
         factory: (cells) => cells as Row,
       };
-      return ctx as Context;
+      return strategy as Strategy;
     });
 
   const rowsStream = () => {
     return {
-      stream: transformIterable<Row, Context>(
+      stream: transformIterable<Row, Strategy>(
         t.readCSV(source, options),
-        context(),
+        strategySupplier(),
       ),
       close: source.close,
     };
   };
 
   const rows = async () => {
-    const ctx = context();
+    const strategy = strategySupplier();
     const result: Row[] = [];
     for await (const untypedRow of t.readCSV(source, options)) {
       const cells: string[] = [];
       for await (const cell of untypedRow) {
         cells.push(cell);
       }
-      let row = ctx.factory(cells);
-      let encResult = ctx.encountered?.(
+      let row = strategy.factory(cells);
+      let encResult = strategy.encountered?.(
         { value: row, done: false },
         cells,
         false,
       );
       if (encResult == "reprocess") {
-        row = ctx.factory(cells);
-        encResult = ctx.encountered?.({ value: row, done: false }, cells, true);
+        row = strategy.factory(cells);
+        encResult = strategy.encountered?.(
+          { value: row, done: false },
+          cells,
+          true,
+        );
       }
       if (encResult !== "skip") {
         result.push(row);
       }
     }
-    ctx.done?.();
+    strategy.done?.();
     source.close?.();
     return result;
   };
