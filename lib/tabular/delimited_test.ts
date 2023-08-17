@@ -26,7 +26,7 @@ type RowFixture01 = {
   Website: string;
 };
 
-const jsonFixture01 = [
+const jsonFixture01: RowFixture01[] = [
   {
     "First Name": "John",
     "Last Name": "Doe",

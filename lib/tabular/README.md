@@ -100,3 +100,13 @@ Output, notice the header was removed and used for the property keys:
   { Name: "Doe", Age: 30, Birthday: Date.parse("1993-01-20") },
 ];
 ```
+
+# TODOs
+
+- Generate bulk SQL insert statements from CSV/delimited rows by importing into
+  DuckDB and doing a `.dump`
+- Allow merging, joining, splitting, cleaning, and other CSV functions using
+  DuckDB
+- Add reverse of `ValueNature.transform` which takes a JS object value and
+  converts it back to delimited text (so that we can take something in RAM and
+  write it out to a CSV, for example)
