@@ -129,6 +129,9 @@ or similar set of modules.
 
 # Roadmap
 
+- Switch to
+  [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
+  native instead of relying on Deno Reader/Writer.
 - Implement AWS S3, OneDrive, and other "managed services" functionality with a
   `ManagedFileSystem` implementation base and subclasses for anything that
   requires REST services.
