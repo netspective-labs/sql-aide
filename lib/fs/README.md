@@ -139,6 +139,8 @@ or similar set of modules.
   the best implementation would be to create a `select` function which would
   accept a `FileSystem` instance and an SQL query and return all entries that
   match.
+- Create a new supplier for `udi-pgp-sqld` which embeds Deno and the virtual
+  file system module to allow SQL access to all content across all file systems
 - Implement `nature` interface which would use filename extensions and other
   meta data to indicate the nature of a file.
 - Implement `stat` or similar interface which which accepts `nature` or other
