@@ -167,7 +167,11 @@ or similar set of modules.
 - Review
   [github.com/AliBasicCoder/fs-pro](https://github.com/AliBasicCoder/fs-pro) for
   missing features and add them.
-- Add GraphQL interface for servers.
-- Implement as FUSE for servers.
+- Add tRPC interface for TypeScript clients so that front-end frameworks can use
+  type-safe capabilities.
+- Add GraphQL interface for non-TypeScript clients so that any language can use
+  type-safe capabilities.
+- Implement as FUSE for servers so that a single FUSE instance could use
+  libraries for multiple FileSystems.
 - Add stress tests to test memory, performance, etc. to ensure no FS handle
   leaks, memory leaks, etc.
