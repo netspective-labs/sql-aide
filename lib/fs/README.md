@@ -18,11 +18,6 @@ applications.
 - **Extensibility**: Designed with extensibility in mind, you can easily add
   more file system types in the future.
 
-## Installation
-
-[Provide installation instructions, e.g., how to import the library in a
-project.]
-
 ## Quick Start
 
 ### Local File System
