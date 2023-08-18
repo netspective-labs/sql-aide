@@ -1,5 +1,29 @@
-export interface FileSystemEntry<CanonicalPath, Descriptor> {
+export interface CanonicalPathSupplier<CanonicalPath> {
   readonly canonicalPath: CanonicalPath;
+}
+
+export function isCanonicalPathSupplier<CanonicalPath>(
+  o: unknown,
+  isCP?: (cp: unknown) => cp is CanonicalPath,
+): o is CanonicalPathSupplier<CanonicalPath> {
+  if (o && typeof o === "object" && "canonicalPath" in o) {
+    if (isCP) return isCP(o.canonicalPath);
+    return true;
+  }
+  return false;
+}
+
+export function isCanonicalPathTextSupplier(
+  o: unknown,
+): o is CanonicalPathSupplier<string> {
+  return isCanonicalPathSupplier<string>(
+    o,
+    (cp): cp is string => typeof cp === "string" ? true : false,
+  );
+}
+
+export interface FileSystemEntry<CanonicalPath, Descriptor>
+  extends CanonicalPathSupplier<CanonicalPath> {
   readonly descriptor?: () => Promise<Descriptor>;
   readonly descriptorSync?: () => Descriptor;
 }
