@@ -2,8 +2,9 @@ import JSZip from "npm:jszip";
 import {
   Directory,
   File,
-  FileSystem,
   FileSystemEntry,
+  FlatFileSystem,
+  HierarchicalFileSystem,
   MutableDirectory,
   MutableFile,
 } from "./governance.ts";
@@ -180,7 +181,9 @@ export class ZipMutableDirectory extends ZipDirectory
 }
 
 export class ZipFS
-  implements FileSystem<ZipFileSystemEntry, ZipFile, ZipDirectory> {
+  implements
+    FlatFileSystem<ZipFileSystemEntry, ZipFile>,
+    HierarchicalFileSystem<ZipFileSystemEntry, ZipFile, ZipDirectory> {
   constructor(readonly jsZip: JSZip) {}
 
   zipFsFileEntry(path: string) {

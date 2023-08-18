@@ -1,8 +1,9 @@
 import {
   Directory,
   File,
-  FileSystem,
   FileSystemEntry,
+  FlatFileSystem,
+  HierarchicalFileSystem,
   MutableDirectory,
   MutableFile,
 } from "./governance.ts";
@@ -114,7 +115,9 @@ export class MemoryMutableDirectory extends MemoryDirectory
 }
 
 export class MemoryFileSystem
-  implements FileSystem<MemoryFsEntry, MemoryFile, MemoryDirectory> {
+  implements
+    FlatFileSystem<MemoryFsEntry, MemoryFile>,
+    HierarchicalFileSystem<MemoryFsEntry, MemoryFile, MemoryDirectory> {
   file(path: MemoryFsEntry): MemoryFile {
     return new MemoryFile(path);
   }

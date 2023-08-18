@@ -50,7 +50,11 @@ export interface MutableDirectory<Entry, File> extends Directory<Entry, File> {
   ) => Promise<boolean | number>;
 }
 
-export interface FileSystem<Entry, File, Directory> {
+export interface FlatFileSystem<Entry, File> {
+  readonly file: (path: Entry) => File;
+}
+
+export interface HierarchicalFileSystem<Entry, File, Directory> {
   readonly file: (path: Entry) => File;
   readonly directory: (path?: Entry) => Directory;
 }

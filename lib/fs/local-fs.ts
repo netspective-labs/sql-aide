@@ -1,8 +1,9 @@
 import {
   Directory,
   File,
-  FileSystem,
   FileSystemEntry,
+  FlatFileSystem,
+  HierarchicalFileSystem,
   MutableDirectory,
   MutableFile,
 } from "./governance.ts";
@@ -174,7 +175,9 @@ export class LocalMutableDirectory extends LocalDirectory
 }
 
 export class LocalFileSystem
-  implements FileSystem<LocalFsEntry, LocalFile, LocalDirectory> {
+  implements
+    FlatFileSystem<LocalFsEntry, LocalFile>,
+    HierarchicalFileSystem<LocalFsEntry, LocalFile, LocalDirectory> {
   file(path: LocalFsEntry): LocalFile {
     return new LocalFile(path);
   }

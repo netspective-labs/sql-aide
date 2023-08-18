@@ -132,6 +132,15 @@ or similar set of modules.
 - Implement AWS S3, OneDrive, and other "managed services" functionality with a
   `ManagedFileSystem` implementation base and subclasses for anything that
   requires REST services.
+- Implement `GitHubFileSystem` and downloadable `GitHubAsset` (files). Start
+  with flat filesystem then add `GitHubDirectory` for hierarchical organizations
+  and repos. Use Fetch to download GitHub assets. For example:
+  `await (await fetch(url)).body?.pipeTo(Deno.stdout.writable)`. See
+  `netspective-labs/aide/task/github.ts` for good pattern. We can also do
+  similar for almost any web asset by creating a general purpose `WebFileSystem`
+  where the any file may be downloaded as a URL.
+- Add utility methods to update file permissions (e.g. executables) so that we
+  can implement `GitHubBinary` in addition to `GitHubAsset`.
 - Implement SQL interface like
   [github.com/FSou1/fsquery](https://github.com/FSou1/fsquery) which is a
   TypeScript library like Rust-based
