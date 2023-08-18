@@ -5,6 +5,7 @@ import {
   LocalMutableDirectory,
   LocalMutableFile,
 } from "./local-fs.ts";
+import { streamFromText, textFromStream } from "./content.ts";
 
 async function generateTestFiles(testDirRootPath: string, depth: number) {
   // Check if the directory already exists and remove it
@@ -73,11 +74,7 @@ Deno.test("LocalFile read content", async () => {
   const textFromTextMethod = await file.text();
 
   // Using reader method
-  const reader = file.reader();
-  const buffer = new Uint8Array(textFromTextMethod.length); // if it's too long, it will be zero-padded
-  await reader.read(buffer);
-  const textFromReader = new TextDecoder().decode(buffer).trim();
-  await reader.close();
+  const textFromReader = await textFromStream(await file.readable());
 
   // Assert that all methods return the same result
   assertEquals(textFromContent, "This is file 0");
@@ -91,11 +88,11 @@ Deno.test("LocalFile read content", async () => {
 Deno.test("LocalMutableFile write content", async () => {
   const testResources = await generateTestFiles("./testDir", 2);
 
-  const file = new LocalMutableFile(testResources.fsEntry("file1.txt"));
-  const writer = file.writer();
   const newText = "Updated content";
-  await writer.write(new TextEncoder().encode(newText));
-  await writer.close();
+  const file = new LocalMutableFile(testResources.fsEntry("file1.txt"));
+  await streamFromText(newText).pipeTo(
+    await file.writable(),
+  );
   const updatedContent = await Deno.readTextFile(
     testResources.fsEntry("file1.txt").canonicalPath,
   );
@@ -126,9 +123,9 @@ Deno.test("MutableLocalDirectory add file and directory", async () => {
 
   // Add a new file
   const newFile = new LocalMutableFile(testResources.fsEntry("newFile.txt"));
-  const writer = newFile.writer();
-  await writer.write(new TextEncoder().encode("This is a new file"));
-  await writer.close();
+  await streamFromText("This is a new file").pipeTo(
+    await newFile.writable(),
+  );
   await mutableDir.add(newFile);
 
   // Verify the new file was added

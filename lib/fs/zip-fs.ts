@@ -22,72 +22,54 @@ export class ZipFileSystemEntry implements FileSystemEntry<string> {
 
 export class ZipFile
   implements
-    File<ZipFileSystemEntry>,
+    File<ZipFileSystemEntry, Uint8Array>,
     Content<ZipFileSystemEntry>,
     TextContent<ZipFileSystemEntry> {
   readonly fsEntry: ZipFileSystemEntry;
+  readonly fileInFsZip: JSZip.JSZipObject | null;
 
-  constructor(protected zip: JSZip, path: string) {
+  constructor(protected fsZipFile: JSZip, path: string) {
     this.fsEntry = new ZipFileSystemEntry(path);
+    this.fileInFsZip = this.fsZipFile.file(this.fsEntry.canonicalPath);
   }
 
-  reader(): { read: (p: Uint8Array) => Promise<number | null> } {
-    const file = this.zip.file(this.fsEntry.canonicalPath);
-    if (!file) throw new Error("File not found");
-
-    const nodeStream = file.nodeStream();
-    let streamEnded = false;
-
-    return {
-      read: (p: Uint8Array) => {
-        return new Promise((resolve, reject) => {
-          if (streamEnded) return null;
-
-          nodeStream.once("data", (chunk: Uint8Array) => {
-            const bytesRead = Math.min(chunk.length, p.length);
-            p.set(chunk.slice(0, bytesRead));
-            if (bytesRead < chunk.length) {
-              nodeStream.unshift(chunk.slice(bytesRead));
-            }
-            resolve(bytesRead);
-          });
-
-          nodeStream.once("end", () => {
-            streamEnded = true;
-            resolve(null);
-          });
-
-          nodeStream.once("error", (err: Error) => {
-            reject(err);
-          });
-        });
-      },
-    };
+  // deno-lint-ignore require-await
+  async readable() {
+    if (!this.fileInFsZip) {
+      throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
+    }
+    return this.fileInFsZip.nodeStream();
   }
 
   async content(): Promise<Uint8Array> {
-    const file = this.zip.file(this.fsEntry.canonicalPath);
-    if (!file) throw new Error("File not found");
-    return await file.async("uint8array");
+    if (!this.fileInFsZip) {
+      throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
+    }
+    return await this.fileInFsZip.async("uint8array");
   }
 
   async text(): Promise<string> {
-    const file = this.zip.file(this.fsEntry.canonicalPath);
-    if (!file) throw new Error("File not found");
-    return await file.async("text");
+    if (!this.fileInFsZip) {
+      throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
+    }
+    return await this.fileInFsZip.async("text");
   }
 }
 
 export class ZipMutableFile extends ZipFile
-  implements MutableFile<ZipFileSystemEntry> {
-  writer(): { write: (p: Uint8Array) => Promise<number> } {
-    return {
-      // deno-lint-ignore require-await
-      write: async (p: Uint8Array) => {
-        this.zip.file(this.fsEntry.canonicalPath, p);
-        return p.length;
+  implements MutableFile<ZipFileSystemEntry, Uint8Array> {
+  // deno-lint-ignore require-await
+  async writable() {
+    let chunks = new Uint8Array(0);
+
+    return new WritableStream<Uint8Array>({
+      write(chunk) {
+        chunks = new Uint8Array([...chunks, ...chunk]);
       },
-    };
+      close: () => {
+        this.fsZipFile.file(this.fsEntry.canonicalPath, chunks);
+      },
+    });
   }
 }
 

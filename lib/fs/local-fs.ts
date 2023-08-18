@@ -12,39 +12,17 @@ export type LocalFsEntry = FileSystemEntry<string>;
 
 export class LocalFile
   implements
-    File<LocalFsEntry>,
+    File<LocalFsEntry, Uint8Array>,
     Content<LocalFsEntry>,
     TextContent<LocalFsEntry> {
   constructor(readonly fsEntry: LocalFsEntry) {
   }
 
-  reader() {
-    let file: Deno.FsFile | undefined = undefined;
-    return {
-      read: async (p: Uint8Array): Promise<number | null> => {
-        if (!file) {
-          file = await Deno.open(this.fsEntry.canonicalPath, {
-            read: true,
-          });
-        }
-        return await file.read(p);
-      },
-      readSync: (p: Uint8Array): number | null => {
-        if (!file) {
-          file = Deno.openSync(this.fsEntry.canonicalPath, {
-            read: true,
-          });
-        }
-        return file.readSync(p);
-      },
-      // deno-lint-ignore require-await
-      close: async () => {
-        if (file) file.close();
-      },
-      closeSync: () => {
-        if (file) file.close();
-      },
-    };
+  async readable() {
+    const fsFile = await Deno.open(this.fsEntry.canonicalPath, {
+      read: true,
+    });
+    return fsFile.readable;
   }
 
   async content(): Promise<Uint8Array> {
@@ -57,36 +35,13 @@ export class LocalFile
 }
 
 export class LocalMutableFile extends LocalFile
-  implements MutableFile<LocalFsEntry> {
-  writer() {
-    let file: Deno.FsFile | undefined = undefined;
-    return {
-      write: async (p: Uint8Array): Promise<number> => {
-        if (!file) {
-          file = await Deno.open(this.fsEntry.canonicalPath, {
-            write: true,
-            create: true,
-          });
-        }
-        return await file.write(p);
-      },
-      writeSync: (p: Uint8Array): number => {
-        if (!file) {
-          file = Deno.openSync(this.fsEntry.canonicalPath, {
-            write: true,
-            create: true,
-          });
-        }
-        return file.writeSync(p);
-      },
-      // deno-lint-ignore require-await
-      close: async () => {
-        if (file) file.close();
-      },
-      closeSync: () => {
-        if (file) file.close();
-      },
-    };
+  implements MutableFile<LocalFsEntry, Uint8Array> {
+  async writable() {
+    const fsFile = await Deno.open(this.fsEntry.canonicalPath, {
+      write: true,
+      create: true,
+    });
+    return fsFile.writable;
   }
 }
 
@@ -179,15 +134,8 @@ export class LocalMutableDirectory extends LocalDirectory
             write: true,
             create: true,
           });
-          const reader = entry.reader();
-          const buffer = new Uint8Array(this.bufferSize);
-          let bytesRead: number | null = null;
-          do {
-            bytesRead = await reader.read(buffer);
-            if (bytesRead !== null && bytesRead > 0) {
-              await destFile.write(buffer.subarray(0, bytesRead));
-            }
-          } while (bytesRead !== null && bytesRead > 0);
+          const srcStream = await entry.readable();
+          srcStream.pipeTo(destFile.writable);
           destFile.close();
 
           return true; // File created and written to successfully

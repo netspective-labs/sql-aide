@@ -5,11 +5,11 @@ import {
   MemoryMutableDirectory,
   MemoryMutableFile,
 } from "./memory-fs.ts";
+import { streamFromText, textFromStream } from "./content.ts";
 
 Deno.test("MemoryFile read content", async () => {
   const file = new MemoryMutableFile({ canonicalPath: "/file0.txt" });
-  const writer = file.writer();
-  await writer.write(new TextEncoder().encode("This is file 0"));
+  await streamFromText("This is file 0").pipeTo(await file.writable());
 
   // Using content method
   const content = await file.content();
@@ -19,10 +19,7 @@ Deno.test("MemoryFile read content", async () => {
   const textFromTextMethod = await file.text();
 
   // Using reader method
-  const reader = file.reader();
-  const buffer = new Uint8Array(textFromTextMethod.length); // if longer, then zero padded
-  await reader.read(buffer);
-  const textFromReader = new TextDecoder().decode(buffer).trim();
+  const textFromReader = await textFromStream(await file.readable());
 
   // Assert that all methods return the same result
   assertEquals(textFromContent, "This is file 0");
@@ -32,9 +29,9 @@ Deno.test("MemoryFile read content", async () => {
 
 Deno.test("MemoryMutableFile write content", async () => {
   const file = new MemoryMutableFile({ canonicalPath: "/file1.txt" });
-  const writer = file.writer();
+
   const newText = "Updated content";
-  await writer.write(new TextEncoder().encode(newText));
+  await streamFromText(newText).pipeTo(await file.writable());
   const updatedContent = await file.text();
   assertEquals(updatedContent, newText);
 });

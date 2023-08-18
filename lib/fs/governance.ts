@@ -2,13 +2,14 @@ export interface FileSystemEntry<CanonicalPath> {
   readonly canonicalPath: CanonicalPath;
 }
 
-export interface File<Entry> {
+export interface File<Entry, StreamContent> {
   readonly fsEntry: Entry;
-  readonly reader: () => { read: (p: Uint8Array) => Promise<number | null> }; // Returns an object that matches the Deno.Reader interface
+  readonly readable: () => Promise<ReadableStream<StreamContent>>;
 }
 
-export interface MutableFile<Entry> extends File<Entry> {
-  readonly writer: () => { write: (p: Uint8Array) => Promise<number> }; // Returns an object that matches the Deno.Writer interface
+export interface MutableFile<Entry, StreamContent>
+  extends File<Entry, StreamContent> {
+  readonly writable: () => Promise<WritableStream<StreamContent>>;
 }
 
 export interface Directory<Entry, File> {

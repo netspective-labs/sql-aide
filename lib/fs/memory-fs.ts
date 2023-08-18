@@ -12,24 +12,21 @@ export type MemoryFsEntry = FileSystemEntry<string>;
 
 export class MemoryFile
   implements
-    File<MemoryFsEntry>,
+    File<MemoryFsEntry, Uint8Array>,
     Content<MemoryFsEntry>,
     TextContent<MemoryFsEntry> {
   protected inMemData: Uint8Array = new Uint8Array();
 
   constructor(public readonly fsEntry: MemoryFsEntry) {}
 
-  reader() {
-    let offset = 0;
-    return {
-      // deno-lint-ignore require-await
-      read: async (p: Uint8Array) => {
-        const bytesRead = this.inMemData.slice(offset, offset + p.length);
-        p.set(bytesRead);
-        offset += bytesRead.length;
-        return bytesRead.length ? bytesRead.length : null;
+  // deno-lint-ignore require-await
+  async readable() {
+    return new ReadableStream({
+      start: (controller) => {
+        controller.enqueue(this.inMemData);
+        controller.close();
       },
-    };
+    });
   }
 
   // deno-lint-ignore require-await
@@ -44,15 +41,14 @@ export class MemoryFile
 }
 
 export class MemoryMutableFile extends MemoryFile
-  implements MutableFile<MemoryFsEntry> {
-  writer() {
-    return {
-      // deno-lint-ignore require-await
-      write: async (p: Uint8Array) => {
-        this.inMemData = new Uint8Array([...this.inMemData, ...p]);
-        return p.length;
+  implements MutableFile<MemoryFsEntry, Uint8Array> {
+  // deno-lint-ignore require-await
+  async writable() {
+    return new WritableStream<Uint8Array>({
+      write: (chunk) => {
+        this.inMemData = new Uint8Array([...this.inMemData, ...chunk]);
       },
-    };
+    });
   }
 }
 
