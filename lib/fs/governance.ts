@@ -19,7 +19,7 @@ export interface Directory<Entry, File> {
       readonly factory?: (file: File) => Content;
       readonly filter?: (encountered: Content) => false | Content;
     },
-  ) => AsyncGenerator<Content>;
+  ) => AsyncIterable<Content>;
   readonly subdirectories: (
     options?: {
       readonly factory?: (
@@ -29,7 +29,7 @@ export interface Directory<Entry, File> {
         encountered: Directory<Entry, File>,
       ) => false | Directory<Entry, File>;
     },
-  ) => AsyncGenerator<Directory<Entry, File>>;
+  ) => AsyncIterable<Directory<Entry, File>>;
   readonly entries: (
     options?: {
       readonly factory?: (
@@ -39,7 +39,7 @@ export interface Directory<Entry, File> {
         encountered: File | Directory<Entry, File>,
       ) => false | (File | Directory<Entry, File>);
     },
-  ) => AsyncGenerator<File | Directory<Entry, File>>;
+  ) => AsyncIterable<File | Directory<Entry, File>>;
 }
 
 export interface MutableDirectory<Entry, File> extends Directory<Entry, File> {

@@ -60,7 +60,7 @@ export class MemoryDirectory implements Directory<MemoryFsEntry, MemoryFile> {
 
   async *files<Content extends MemoryFile>(
     options?: Parameters<Directory<MemoryFsEntry, Content>["files"]>[0],
-  ): AsyncGenerator<Content> {
+  ): AsyncIterable<Content> {
     for (const entry of this.inMemEntries) {
       if (entry instanceof MemoryFile) {
         let file = entry as Content;
@@ -78,7 +78,7 @@ export class MemoryDirectory implements Directory<MemoryFsEntry, MemoryFile> {
     options?: Parameters<
       Directory<MemoryFsEntry, MemoryFile>["subdirectories"]
     >[0],
-  ): AsyncGenerator<Directory<MemoryFsEntry, MemoryFile>> {
+  ): AsyncIterable<Directory<MemoryFsEntry, MemoryFile>> {
     for (const entry of this.inMemEntries) {
       let dir = entry as Directory<MemoryFsEntry, MemoryFile>;
       if (options?.factory) {
@@ -92,7 +92,7 @@ export class MemoryDirectory implements Directory<MemoryFsEntry, MemoryFile> {
 
   async *entries(
     options?: Parameters<Directory<MemoryFsEntry, MemoryFile>["entries"]>[0],
-  ): AsyncGenerator<MemoryFile | Directory<MemoryFsEntry, MemoryFile>> {
+  ): AsyncIterable<MemoryFile | Directory<MemoryFsEntry, MemoryFile>> {
     for (const entry of this.inMemEntries) {
       const instance = options?.factory ? options.factory(entry) : entry;
       if (!options?.filter || options.filter(instance) !== false) {
