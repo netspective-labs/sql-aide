@@ -2,6 +2,7 @@ import { assert, assertEquals } from "./deps-test.ts";
 import {
   LocalDirectory,
   LocalFile,
+  localFsEntry,
   LocalMutableDirectory,
   LocalMutableFile,
 } from "./local-fs.ts";
@@ -29,7 +30,7 @@ async function generateTestFiles(testDirRootPath: string, depth: number) {
       await Deno.remove(testDirRootPath, { recursive: true });
     },
     fsEntry: function (relativePath: string) {
-      return { canonicalPath: `${testDirRootPath}/${relativePath}` };
+      return localFsEntry(`${testDirRootPath}/${relativePath}`);
     },
   };
 

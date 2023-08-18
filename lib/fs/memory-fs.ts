@@ -8,7 +8,7 @@ import {
 } from "./governance.ts";
 import { Content, TextContent } from "./content.ts";
 
-export type MemoryFsEntry = FileSystemEntry<string>;
+export type MemoryFsEntry = FileSystemEntry<string, unknown>;
 
 export class MemoryFile
   implements

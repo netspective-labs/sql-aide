@@ -12,11 +12,21 @@ import { Content, TextContent } from "./content.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export class ZipFileSystemEntry implements FileSystemEntry<string> {
+export class ZipFileSystemEntry
+  implements FileSystemEntry<string, JSZip.JSZipObject | null> {
   readonly canonicalPath: string;
 
-  constructor(path: string) {
-    this.canonicalPath = path;
+  constructor(readonly jso: JSZip.JSZipObject | null, canonicalPath: string) {
+    this.canonicalPath = jso?.name ?? canonicalPath;
+  }
+
+  // deno-lint-ignore require-await
+  async descriptor() {
+    return this.jso;
+  }
+
+  descriptorSync() {
+    return this.jso;
   }
 }
 
@@ -26,33 +36,32 @@ export class ZipFile
     Content<ZipFileSystemEntry>,
     TextContent<ZipFileSystemEntry> {
   readonly fsEntry: ZipFileSystemEntry;
-  readonly fileInFsZip: JSZip.JSZipObject | null;
 
   constructor(protected fsZipFile: JSZip, path: string) {
-    this.fsEntry = new ZipFileSystemEntry(path);
-    this.fileInFsZip = this.fsZipFile.file(this.fsEntry.canonicalPath);
+    const fileInFsZip = this.fsZipFile.file(path);
+    this.fsEntry = new ZipFileSystemEntry(fileInFsZip, path);
   }
 
   // deno-lint-ignore require-await
   async readable() {
-    if (!this.fileInFsZip) {
+    if (!this.fsEntry.jso) {
       throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
     }
-    return this.fileInFsZip.nodeStream();
+    return this.fsEntry.jso.nodeStream();
   }
 
   async content(): Promise<Uint8Array> {
-    if (!this.fileInFsZip) {
+    if (!this.fsEntry.jso) {
       throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
     }
-    return await this.fileInFsZip.async("uint8array");
+    return await this.fsEntry.jso.async("uint8array");
   }
 
   async text(): Promise<string> {
-    if (!this.fileInFsZip) {
+    if (!this.fsEntry.jso) {
       throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
     }
-    return await this.fileInFsZip.async("text");
+    return await this.fsEntry.jso.async("text");
   }
 }
 
@@ -77,7 +86,7 @@ export class ZipDirectory implements Directory<ZipFileSystemEntry, ZipFile> {
   readonly fsEntry: ZipFileSystemEntry;
 
   constructor(protected zip: JSZip, path: string) {
-    this.fsEntry = new ZipFileSystemEntry(path);
+    this.fsEntry = new ZipFileSystemEntry(null, path);
   }
 
   async *files<Content extends ZipFile>(
@@ -173,6 +182,14 @@ export class ZipMutableDirectory extends ZipDirectory
 export class ZipFS
   implements FileSystem<ZipFileSystemEntry, ZipFile, ZipDirectory> {
   constructor(readonly jsZip: JSZip) {}
+
+  zipFsFileEntry(path: string) {
+    return new ZipFileSystemEntry(this.jsZip.file(path), path);
+  }
+
+  zipFsDirEntry(path: string) {
+    return new ZipFileSystemEntry(null, path);
+  }
 
   file(path: ZipFileSystemEntry): ZipFile {
     return new ZipFile(this.jsZip, path.canonicalPath);

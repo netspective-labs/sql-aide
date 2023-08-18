@@ -8,7 +8,23 @@ import {
 } from "./governance.ts";
 import { Content, TextContent } from "./content.ts";
 
-export type LocalFsEntry = FileSystemEntry<string>;
+export interface LocalFsEntry extends FileSystemEntry<string, Deno.FileInfo> {
+  readonly descriptor: () => Promise<Deno.FileInfo>;
+  readonly descriptorSync: () => Deno.FileInfo;
+}
+
+export function localFsEntry(
+  canonicalPath: string | Pick<LocalFsEntry, "canonicalPath">,
+) {
+  const defaults: Pick<LocalFsEntry, "canonicalPath"> =
+    typeof canonicalPath === "string" ? { canonicalPath } : canonicalPath;
+  const result: LocalFsEntry = {
+    ...defaults,
+    descriptor: async () => await Deno.stat(defaults.canonicalPath),
+    descriptorSync: () => Deno.statSync(defaults.canonicalPath),
+  };
+  return result;
+}
 
 export class LocalFile
   implements
@@ -45,7 +61,6 @@ export class LocalMutableFile extends LocalFile
   }
 }
 
-// ... (rest of the code remains unchanged)
 export class LocalDirectory implements Directory<LocalFsEntry, LocalFile> {
   constructor(readonly fsEntry: LocalFsEntry) {
   }
@@ -55,7 +70,7 @@ export class LocalDirectory implements Directory<LocalFsEntry, LocalFile> {
   ): AsyncIterable<Content> {
     for await (const dirEntry of Deno.readDir(this.fsEntry.canonicalPath)) {
       if (dirEntry.isFile) {
-        let file = new LocalFile({ canonicalPath: dirEntry.name }) as Content;
+        let file = new LocalFile(localFsEntry(dirEntry.name)) as Content;
         if (options?.factory) {
           file = options.factory(file as Content);
         }
@@ -76,7 +91,7 @@ export class LocalDirectory implements Directory<LocalFsEntry, LocalFile> {
   ): AsyncIterable<LocalDirectory> {
     for await (const dirEntry of Deno.readDir(this.fsEntry.canonicalPath)) {
       if (dirEntry.isDirectory) {
-        let dir = new LocalDirectory({ canonicalPath: dirEntry.name });
+        let dir = new LocalDirectory(localFsEntry(dirEntry.name));
         if (options?.factory) dir = options.factory(dir);
         if (!options?.filter) {
           yield dir;
@@ -92,7 +107,7 @@ export class LocalDirectory implements Directory<LocalFsEntry, LocalFile> {
     options?: Parameters<Directory<LocalFsEntry, LocalFile>["entries"]>[0],
   ): AsyncIterable<LocalFile | LocalDirectory> {
     for await (const dirEntry of Deno.readDir(this.fsEntry.canonicalPath)) {
-      const fsEntry: LocalFsEntry = { canonicalPath: dirEntry.name };
+      const fsEntry = localFsEntry(dirEntry.name);
       let entry: LocalFile | LocalDirectory;
       if (dirEntry.isFile) {
         entry = new LocalFile(fsEntry);
@@ -112,11 +127,8 @@ export class LocalDirectory implements Directory<LocalFsEntry, LocalFile> {
 
 export class LocalMutableDirectory extends LocalDirectory
   implements MutableDirectory<LocalFsEntry, LocalFile> {
-  private bufferSize: number;
-
-  constructor(fsEntry: LocalFsEntry, bufferSize?: number) {
+  constructor(fsEntry: LocalFsEntry) {
     super(fsEntry);
-    this.bufferSize = bufferSize || 4096; // Default to 4KB if not provided
   }
 
   async add(
@@ -168,7 +180,7 @@ export class LocalFileSystem
   }
 
   directory(
-    path: LocalFsEntry = { canonicalPath: Deno.cwd() },
+    path: LocalFsEntry = localFsEntry(Deno.cwd()),
   ): LocalDirectory {
     return new LocalDirectory(path);
   }

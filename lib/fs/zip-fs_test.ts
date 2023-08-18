@@ -62,7 +62,7 @@ Deno.test("ZipFS - Read File Content from existing fixture", async () => {
   const zipFs = await ZipFS.fromPath(
     relativeFilePath("./zip-fs_test-fixture.zip"),
   );
-  const file = zipFs.file({ canonicalPath: "file0.txt" }); // Replace with actual path inside the zip
+  const file = zipFs.file(zipFs.zipFsFileEntry("file0.txt")); // Replace with actual path inside the zip
   const content = await file.text();
 
   assertEquals(content, "file0.txt content in zip-fs_test-fixture.zip"); // Replace with the actual expected content
@@ -76,7 +76,7 @@ Deno.test("ZipFS - Full Functionality with generated Zip", async () => {
   const zipFs = await ZipFS.fromPath(testFiles.zipFileName);
 
   for (const dir of testFiles.directories) {
-    const directory = zipFs.directory({ canonicalPath: dir });
+    const directory = zipFs.directory(zipFs.zipFsDirEntry(dir));
 
     // Assertion: Directory should exist
     assert(directory !== null, `Directory ${dir} should exist`);
@@ -114,7 +114,7 @@ Deno.test("ZipFS - Full Functionality with generated Zip", async () => {
   }
 
   for (const file of testFiles.files) {
-    const fileInstance = zipFs.file({ canonicalPath: file });
+    const fileInstance = zipFs.file(zipFs.zipFsFileEntry(file));
     const content = await fileInstance.text();
     assertEquals(content, `Content of ${file}`);
   }

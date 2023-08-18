@@ -1,5 +1,7 @@
-export interface FileSystemEntry<CanonicalPath> {
+export interface FileSystemEntry<CanonicalPath, Descriptor> {
   readonly canonicalPath: CanonicalPath;
+  readonly descriptor?: () => Promise<Descriptor>;
+  readonly descriptorSync?: () => Descriptor;
 }
 
 export interface File<Entry, StreamContent> {

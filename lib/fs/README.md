@@ -141,14 +141,8 @@ or similar set of modules.
   match.
 - Create a new supplier for `udi-pgp-sqld` which embeds Deno and the virtual
   file system module to allow SQL access to all content across all file systems
-- Implement `nature` interface which would use filename extensions and other
-  meta data to indicate the nature of a file.
-- Implement `stat` or similar interface which which accepts `nature` or other
-  generic type because each FileSystem might have different meta data; the job
-  of `stat` would provide information like size, last modified, etc. Be sure to
-  pass in the generic interface for `stat` meta data at the FileSystem level.
 - Implement content addressable hashes so that two files' content could be
-  compared across file systems.
+  compared across file systems (best place is likely `FileSystemEntry`).
 - Implement events infrastructure for type-safe listeners.
 - Implement plugins infrastructure for transformation pipelines (using
   `SQLa Flow` or other means).
