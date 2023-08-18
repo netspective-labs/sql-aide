@@ -141,8 +141,10 @@ or similar set of modules.
   match.
 - Implement `nature` interface which would use filename extensions and other
   meta data to indicate the nature of a file.
-- Implement `stat` or similar interface which would provide information like
-  size, last modified, etc.
+- Implement `stat` or similar interface which which accepts `nature` or other
+  generic type because each FileSystem might have different meta data; the job
+  of `stat` would provide information like size, last modified, etc. Be sure to
+  pass in the generic interface for `stat` meta data at the FileSystem level.
 - Implement content addressable hashes so that two files' content could be
   compared across file systems.
 - Implement events infrastructure for type-safe listeners.
