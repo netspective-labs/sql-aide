@@ -45,6 +45,10 @@ export class ZipFile
 
   // deno-lint-ignore require-await
   async readable() {
+    return this.readableSync();
+  }
+
+  readableSync() {
     if (!this.fsEntry.jso) {
       throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
     }
@@ -70,6 +74,10 @@ export class ZipMutableFile extends ZipFile
   implements MutableFile<ZipFileSystemEntry, Uint8Array> {
   // deno-lint-ignore require-await
   async writable() {
+    return this.writableSync();
+  }
+
+  writableSync() {
     let chunks = new Uint8Array(0);
 
     return new WritableStream<Uint8Array>({

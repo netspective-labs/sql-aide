@@ -113,3 +113,49 @@ export function autoDetectValueNatures(sampleRow: string[]) {
   }
   return valueNatures;
 }
+
+export class TransformArrayValuesStream<
+  I extends string[],
+  O extends Any[],
+> extends TransformStream<I, O> {
+  constructor(readonly sample?: I) {
+    // TODO: implement sampling mechanism to speed up transformations;
+    //       without samples, we do the value deteection for each chunk
+    super({
+      transform(chunk: I, controller: TransformStreamDefaultController<O>) {
+        const result: Any[] = [];
+
+        for (let i = 0; i < chunk.length; i++) {
+          const value = chunk[i];
+          const vn = detectedValueNature(value);
+          result[i] = vn.transform(value, vn);
+        }
+
+        controller.enqueue(result as O);
+      },
+    });
+  }
+}
+
+export class TransformObjectValuesStream<
+  I extends Record<string, string>,
+  O extends Record<string, Any>,
+> extends TransformStream<I, O> {
+  constructor(readonly sample?: I) {
+    // TODO: implement sampling mechanism to speed up transformations;
+    //       without samples, we do the value deteection for each chunk
+    super({
+      transform(chunk: I, controller: TransformStreamDefaultController<O>) {
+        const result: Partial<O> = {};
+
+        for (const key in chunk) {
+          const value = chunk[key];
+          const vn = detectedValueNature(value);
+          (result as Any)[key] = vn.transform(value, vn);
+        }
+
+        controller.enqueue(result as O);
+      },
+    });
+  }
+}

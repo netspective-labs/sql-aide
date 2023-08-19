@@ -31,11 +31,13 @@ export interface FileSystemEntry<CanonicalPath, Descriptor>
 export interface File<Entry, StreamContent> {
   readonly fsEntry: Entry;
   readonly readable: () => Promise<ReadableStream<StreamContent>>;
+  readonly readableSync: () => ReadableStream<StreamContent>;
 }
 
 export interface MutableFile<Entry, StreamContent>
   extends File<Entry, StreamContent> {
   readonly writable: () => Promise<WritableStream<StreamContent>>;
+  readonly writableSync: () => WritableStream<StreamContent>;
 }
 
 export interface Directory<Entry, File> {

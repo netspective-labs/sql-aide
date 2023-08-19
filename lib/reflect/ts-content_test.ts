@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
+import { testingAsserts as ta } from "./deps-test.ts";
 import { detectedValueNature } from "./value.ts";
 import { toTypeScriptCode } from "./ts-content.ts";
 
@@ -57,6 +57,6 @@ Deno.test("toTypeScriptCode with async generator function", async () => {
   },
 ];`;
 
-  assertEquals(result.rowType, expectedTypeDefinitions);
-  assertEquals(result.rowsConst, expectedRowContent);
+  ta.assertEquals(result.rowType, expectedTypeDefinitions);
+  ta.assertEquals(result.rowsConst, expectedRowContent);
 });

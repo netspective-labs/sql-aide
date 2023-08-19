@@ -42,6 +42,12 @@ export class LocalFile
     return fsFile.readable;
   }
 
+  readableSync() {
+    return Deno.openSync(this.fsEntry.canonicalPath, {
+      read: true,
+    }).readable;
+  }
+
   async content(): Promise<Uint8Array> {
     return await Deno.readFile(this.fsEntry.canonicalPath);
   }
@@ -55,6 +61,14 @@ export class LocalMutableFile extends LocalFile
   implements MutableFile<LocalFsEntry, Uint8Array> {
   async writable() {
     const fsFile = await Deno.open(this.fsEntry.canonicalPath, {
+      write: true,
+      create: true,
+    });
+    return fsFile.writable;
+  }
+
+  writableSync() {
+    const fsFile = Deno.openSync(this.fsEntry.canonicalPath, {
       write: true,
       create: true,
     });

@@ -4,12 +4,35 @@ import {
   MemoryFile,
   MemoryMutableDirectory,
   MemoryMutableFile,
+  StringFile,
 } from "./memory-fs.ts";
 import { streamFromText, textFromStream } from "./content.ts";
 
 Deno.test("MemoryFile read content", async () => {
   const file = new MemoryMutableFile({ canonicalPath: "/file0.txt" });
   await streamFromText("This is file 0").pipeTo(await file.writable());
+
+  // Using content method
+  const content = await file.content();
+  const textFromContent = new TextDecoder().decode(content);
+
+  // Using text method
+  const textFromTextMethod = await file.text();
+
+  // Using reader method
+  const textFromReader = await textFromStream(await file.readable());
+
+  // Assert that all methods return the same result
+  assertEquals(textFromContent, "This is file 0");
+  assertEquals(textFromTextMethod, "This is file 0");
+  assertEquals(textFromReader, "This is file 0");
+});
+
+Deno.test("StringFile read content", async () => {
+  const file = new StringFile(
+    { canonicalPath: "/file0.txt" },
+    "This is file 0",
+  );
 
   // Using content method
   const content = await file.content();

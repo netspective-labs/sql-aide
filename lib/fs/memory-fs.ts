@@ -22,6 +22,10 @@ export class MemoryFile
 
   // deno-lint-ignore require-await
   async readable() {
+    return this.readableSync();
+  }
+
+  readableSync() {
     return new ReadableStream({
       start: (controller) => {
         controller.enqueue(this.inMemData);
@@ -41,10 +45,49 @@ export class MemoryFile
   }
 }
 
+export class StringFile
+  implements
+    File<MemoryFsEntry, string>,
+    Content<MemoryFsEntry>,
+    TextContent<MemoryFsEntry> {
+  readonly inMemData: Uint8Array;
+  constructor(readonly fsEntry: MemoryFsEntry, readonly inMemString: string) {
+    this.inMemData = new TextEncoder().encode(inMemString);
+  }
+
+  // deno-lint-ignore require-await
+  async readable() {
+    return this.readableSync();
+  }
+
+  readableSync() {
+    return new ReadableStream({
+      start: (controller) => {
+        controller.enqueue(this.inMemData);
+        controller.close();
+      },
+    });
+  }
+
+  // deno-lint-ignore require-await
+  async content(): Promise<Uint8Array> {
+    return this.inMemData;
+  }
+
+  // deno-lint-ignore require-await
+  async text(): Promise<string> {
+    return this.inMemString;
+  }
+}
+
 export class MemoryMutableFile extends MemoryFile
   implements MutableFile<MemoryFsEntry, Uint8Array> {
   // deno-lint-ignore require-await
   async writable() {
+    return this.writableSync();
+  }
+
+  writableSync() {
     return new WritableStream<Uint8Array>({
       write: (chunk) => {
         this.inMemData = new Uint8Array([...this.inMemData, ...chunk]);
