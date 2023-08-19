@@ -1,8 +1,8 @@
 import { path } from "./deps.ts";
 import { FileSystemEntry } from "./governance.ts";
 
-export interface FileSystemEntryPathParts<CanonicalPath>
-  extends FileSystemEntry<CanonicalPath> {
+export interface FileSystemEntryPathParts<CanonicalPath, Descriptor>
+  extends FileSystemEntry<CanonicalPath, Descriptor> {
   readonly root: string; // E.g., '/' or 'c:'
   readonly dir: string; // E.g., '/home/user/dir' or 'c:\path\dir'
   readonly base: string; // E.g., 'index.html'
@@ -12,8 +12,9 @@ export interface FileSystemEntryPathParts<CanonicalPath>
 
 export function fsEntryPathParts<
   CanonicalPath extends string,
-  Entry extends FileSystemEntry<CanonicalPath>,
->(entry: Entry): FileSystemEntryPathParts<CanonicalPath> {
+  Descriptor,
+  Entry extends FileSystemEntry<CanonicalPath, Descriptor>,
+>(entry: Entry): FileSystemEntryPathParts<CanonicalPath, Descriptor> {
   return {
     ...entry,
     ...path.parse(entry.canonicalPath),
