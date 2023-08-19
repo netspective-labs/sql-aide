@@ -122,6 +122,11 @@ Deno.test("TabularFileUntyped (arrays)", async (tc) => {
     }
     assertEquals(encountered, csvArray01);
   });
+
+  await tc.step("toArray", async () => {
+    assertEquals(await tfr.toArray(tfr.readableSync()), csvArray01);
+    assertEquals(await tfr.toArray(await tfr.readable()), csvArray01);
+  });
 });
 
 Deno.test("TabularFileUntyped (objects)", async (tc) => {
@@ -141,6 +146,11 @@ Deno.test("TabularFileUntyped (objects)", async (tc) => {
       encountered.push(row);
     }
     assertEquals(encountered, csvUntyped01);
+  });
+
+  await tc.step("toArray", async () => {
+    assertEquals(await tfu.toArray(tfu.readableSync()), csvUntyped01);
+    assertEquals(await tfu.toArray(await tfu.readable()), csvUntyped01);
   });
 });
 
@@ -218,5 +228,10 @@ Deno.test("TabularFile (typed objects)", async (tc) => {
       encountered.push(row);
     }
     assertEquals(encountered, jsonFixture01);
+  });
+
+  await tc.step("toArray", async () => {
+    assertEquals(await tf.toArray(tf.readableSync()), jsonFixture01);
+    assertEquals(await tf.toArray(await tf.readable()), jsonFixture01);
   });
 });
