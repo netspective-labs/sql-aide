@@ -22,7 +22,10 @@ export type ValueNature =
     readonly accumulate: (unionable?: string) => string[];
   };
 
-export const detectedValueNature = (sampleValue?: string): ValueNature => {
+export const detectedValueNature = (
+  sampleValue?: string,
+  emptyVN?: (sampleValue?: string) => ValueNature,
+): ValueNature => {
   if (typeof sampleValue === "undefined") {
     return {
       nature: "undefined",
@@ -33,6 +36,16 @@ export const detectedValueNature = (sampleValue?: string): ValueNature => {
   }
 
   const normalizedValue = sampleValue.trim().toLowerCase();
+  if (normalizedValue.length == 0) {
+    if (emptyVN) return emptyVN(sampleValue);
+    return {
+      nature: "undefined",
+      transform: () => undefined,
+      emitTsType: () => `undefined`,
+      emitTsValue: () => `undefined`,
+    };
+  }
+
   const defaultEmitters: Emitters = {
     emitTsType: (type) => type.nature,
     emitTsValue: (value) => value,
@@ -118,12 +131,20 @@ export class TransformArrayValuesStream<
   I extends string[],
   O extends Any[],
 > extends TransformStream<I, O> {
-  constructor(readonly sample?: I) {
+  constructor(
+    readonly options?: {
+      readonly sample?: I;
+      readonly finalize?: (row: O) => O;
+    },
+  ) {
     // TODO: implement sampling mechanism to speed up transformations;
     //       without samples, we do the value deteection for each chunk
     super({
-      transform(chunk: I, controller: TransformStreamDefaultController<O>) {
-        const result: Any[] = [];
+      transform: (
+        chunk: I,
+        controller: TransformStreamDefaultController<O>,
+      ) => {
+        let result: Any[] = [];
 
         for (let i = 0; i < chunk.length; i++) {
           const value = chunk[i];
@@ -131,6 +152,7 @@ export class TransformArrayValuesStream<
           result[i] = vn.transform(value, vn);
         }
 
+        if (this.options?.finalize) result = this.options.finalize(result as O);
         controller.enqueue(result as O);
       },
     });
@@ -141,12 +163,20 @@ export class TransformObjectValuesStream<
   I extends Record<string, string>,
   O extends Record<string, Any>,
 > extends TransformStream<I, O> {
-  constructor(readonly sample?: I) {
+  constructor(
+    readonly options?: {
+      readonly sample?: I;
+      readonly finalize?: (row: O) => O;
+    },
+  ) {
     // TODO: implement sampling mechanism to speed up transformations;
     //       without samples, we do the value deteection for each chunk
     super({
-      transform(chunk: I, controller: TransformStreamDefaultController<O>) {
-        const result: Partial<O> = {};
+      transform: (
+        chunk: I,
+        controller: TransformStreamDefaultController<O>,
+      ) => {
+        let result: Partial<O> = {};
 
         for (const key in chunk) {
           const value = chunk[key];
@@ -154,6 +184,7 @@ export class TransformObjectValuesStream<
           (result as Any)[key] = vn.transform(value, vn);
         }
 
+        if (this.options?.finalize) result = this.options.finalize(result as O);
         controller.enqueue(result as O);
       },
     });

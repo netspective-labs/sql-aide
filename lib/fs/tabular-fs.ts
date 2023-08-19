@@ -8,6 +8,7 @@ type Any = any;
 export interface TabularFileRaw<Entry, Row extends string[]>
   extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
+  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
 }
 
 export function tabularFileRaw<
@@ -25,6 +26,11 @@ export function tabularFileRaw<
       source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream()),
+    toArray: async (iterable) => {
+      const arr: string[][] = [];
+      for await (const item of iterable) arr.push(item);
+      return arr;
+    },
   };
   return tfu;
 }
@@ -34,6 +40,7 @@ export interface TabularFileUntyped<
   Row extends string[] | Record<string, string | unknown>,
 > extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
+  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
 }
 
 export function tabularFileUntyped<
@@ -54,6 +61,11 @@ export function tabularFileUntyped<
       source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream(options)),
+    toArray: async (iterable) => {
+      const arr: (string[] | Record<string, string | unknown>)[] = [];
+      for await (const item of iterable) arr.push(item);
+      return arr;
+    },
   };
   return tfu;
 }
@@ -63,13 +75,14 @@ export interface TabularFile<
   Row extends Record<string, Any>,
 > extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
+  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
 }
 
 export function tabularFile<
   Entry,
   File extends fsg.File<Any, Uint8Array>,
   Row extends Record<string, Any>,
->(source: File) {
+>(source: File, transform?: (row: Row) => Row) {
   const tfu: TabularFileUntyped<Entry, Row> = {
     fsEntry: source.fsEntry,
     source,
@@ -77,12 +90,21 @@ export function tabularFile<
       (await source.readable())
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream({ skipFirstRow: true }))
-        .pipeThrough(new v.TransformObjectValuesStream()),
+        .pipeThrough(
+          new v.TransformObjectValuesStream({ finalize: transform }),
+        ),
     readableSync: () =>
       source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream({ skipFirstRow: true }))
-        .pipeThrough(new v.TransformObjectValuesStream()),
+        .pipeThrough(
+          new v.TransformObjectValuesStream({ finalize: transform }),
+        ),
+    toArray: async (iterable) => {
+      const arr: Row[] = [];
+      for await (const item of iterable) arr.push(item);
+      return arr;
+    },
   };
   return tfu;
 }

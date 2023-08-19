@@ -29,6 +29,10 @@ export class ZipFileSystemEntry
   descriptorSync() {
     return this.jso;
   }
+
+  exists() {
+    return this.jso ? true : false;
+  }
 }
 
 export class ZipFile
@@ -52,7 +56,18 @@ export class ZipFile
     if (!this.fsEntry.jso) {
       throw new Error(`File not found: ${this.fsEntry.canonicalPath} in ZIP`);
     }
-    return this.fsEntry.jso.nodeStream();
+    return new ReadableStream<Uint8Array>({
+      pull: async (controller) => {
+        // TODO: instead of feeding the entire thing at once, properly stream the data
+        try {
+          const data = await this.fsEntry.jso!.async("uint8array");
+          controller.enqueue(data);
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+    });
   }
 
   async content(): Promise<Uint8Array> {
