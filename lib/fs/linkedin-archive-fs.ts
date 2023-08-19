@@ -138,7 +138,7 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
         const elaboration: Partial<
           Record<
             LinkedInArchiveEntryName,
-            { rows: Record<string, Any>[]; error?: Error }
+            Record<string, Any>[] | Error
           >
         > = {};
         for (const lian of liaEntryNames) {
@@ -146,12 +146,12 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
           try {
             const eContent = entries[lian]?.tfTyped();
             if (eContent) {
-              elaboration[lian] = {
-                rows: await eContent.toArray(await eContent.readable()),
-              };
+              elaboration[lian] = await eContent.toArray(
+                await eContent.readable(),
+              );
             }
           } catch (error) {
-            elaboration[lian] = { rows: [], error };
+            elaboration[lian] = error;
           }
         }
 

@@ -1,5 +1,5 @@
 import { path } from "./deps.ts";
-import { assertEquals } from "./deps-test.ts";
+import { assert, assertEquals } from "./deps-test.ts";
 import * as mod from "./linkedin-archive-fs.ts";
 
 /**
@@ -39,7 +39,7 @@ const syntheticProfile = {
   "Instant Messengers": { "SKYPE": "ShahidNShah" },
 };
 
-Deno.test("LinkedInArchiveFS liaEntries", async () => {
+Deno.test("LinkedInArchiveFS individual entries", async () => {
   const liaFS = await mod.LinkedInArchiveFS.fromPath(
     relativeFilePath("./linkedin-archive-fs_test-fixture.zip"),
   );
@@ -50,10 +50,10 @@ Deno.test("LinkedInArchiveFS liaEntries", async () => {
   assertEquals(profile[0], syntheticProfile);
 });
 
-Deno.test("LinkedInArchiveFS profile", async () => {
+Deno.test("LinkedInArchiveFS aggregated profile", async () => {
   const liaFS = await mod.LinkedInArchiveFS.fromPath(
     relativeFilePath("./linkedin-archive-fs_test-fixture.zip"),
   );
   const profile = await liaFS.profile();
-  console.dir(profile);
+  assert(profile);
 });
