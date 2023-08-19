@@ -19,7 +19,7 @@ import { detectedValueNature, ValueNature } from "./value.ts";
  * const result = await toTypeScriptCode(rowsGenerator());
  */
 export async function toTypeScriptCode(
-  rows: AsyncIterable<string[]>,
+  rows: AsyncIterable<string[]> | Iterable<string[]>,
   options?: {
     readonly valueNature?: (index: number, sample?: string) => ValueNature;
     readonly tsTypePropName?: (index: number) => string;

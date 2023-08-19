@@ -22,7 +22,7 @@ export function tabularFileRaw<
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream()),
     readableSync: () =>
-      (source.readableSync())
+      source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream()),
   };
@@ -51,7 +51,7 @@ export function tabularFileUntyped<
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream(options)),
     readableSync: () =>
-      (source.readableSync())
+      source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream(options)),
   };
@@ -79,7 +79,7 @@ export function tabularFile<
         .pipeThrough(new csvPS.CsvParseStream({ skipFirstRow: true }))
         .pipeThrough(new v.TransformObjectValuesStream()),
     readableSync: () =>
-      (source.readableSync())
+      source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream({ skipFirstRow: true }))
         .pipeThrough(new v.TransformObjectValuesStream()),
