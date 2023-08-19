@@ -124,6 +124,51 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
     return entries;
   }
 
+  async profile() {
+    const entries = await this.liaEntries();
+    const profileEntry = entries["Profile.csv"];
+    if (profileEntry) {
+      const profileContent = profileEntry.tfTyped();
+      const profileRows = await profileContent.toArray(
+        await profileContent.readable(),
+      );
+
+      if (profileRows.length == 1) {
+        const profile = profileRows.length == 1 ? profileRows[0] : undefined;
+        const elaboration: Partial<
+          Record<
+            LinkedInArchiveEntryName,
+            { rows: Record<string, Any>[]; error?: Error }
+          >
+        > = {};
+        for (const lian of liaEntryNames) {
+          if (lian == "Profile.csv") continue;
+          try {
+            const eContent = entries[lian]?.tfTyped();
+            if (eContent) {
+              elaboration[lian] = {
+                rows: await eContent.toArray(await eContent.readable()),
+              };
+            }
+          } catch (error) {
+            elaboration[lian] = { rows: [], error };
+          }
+        }
+
+        return {
+          ...profile,
+          ...elaboration,
+        };
+      }
+
+      return Error(
+        `Single-row Profile.csv not found in LinkedIn Archive (${profileRows.length} rows found)`,
+      );
+    }
+
+    return Error("Profile.csv not found in LinkedIn Archive");
+  }
+
   static async fromPath(path: string): Promise<LinkedInArchiveFS> {
     const zfs = await zipFS.ZipFS.fromPath(path);
     return new LinkedInArchiveFS(zfs.jsZip);
