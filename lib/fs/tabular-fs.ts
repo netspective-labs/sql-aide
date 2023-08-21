@@ -8,7 +8,10 @@ type Any = any;
 export interface TabularFileRaw<Entry, Row extends string[]>
   extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
-  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
+  readonly toArray: (
+    iterable: AsyncIterable<Row>,
+    transform?: (row: Row) => Row,
+  ) => Promise<Row[]>;
 }
 
 export function tabularFileRaw<
@@ -26,9 +29,13 @@ export function tabularFileRaw<
       source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream()),
-    toArray: async (iterable) => {
+    toArray: async (iterable, transform) => {
       const arr: string[][] = [];
-      for await (const item of iterable) arr.push(item);
+      if (transform) {
+        for await (const item of iterable) arr.push(transform(item));
+      } else {
+        for await (const item of iterable) arr.push(item);
+      }
       return arr;
     },
   };
@@ -40,7 +47,10 @@ export interface TabularFileUntyped<
   Row extends string[] | Record<string, string | unknown>,
 > extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
-  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
+  readonly toArray: (
+    iterable: AsyncIterable<Row>,
+    transform?: (row: Row) => Row,
+  ) => Promise<Row[]>;
 }
 
 export function tabularFileUntyped<
@@ -61,9 +71,13 @@ export function tabularFileUntyped<
       source.readableSync()
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new csvPS.CsvParseStream(options)),
-    toArray: async (iterable) => {
+    toArray: async (iterable, transform) => {
       const arr: (string[] | Record<string, string | unknown>)[] = [];
-      for await (const item of iterable) arr.push(item);
+      if (transform) {
+        for await (const item of iterable) arr.push(transform(item));
+      } else {
+        for await (const item of iterable) arr.push(item);
+      }
       return arr;
     },
   };
@@ -75,7 +89,10 @@ export interface TabularFile<
   Row extends Record<string, Any>,
 > extends fsg.File<Entry, Row> {
   readonly source: fsg.File<Entry, Uint8Array>;
-  readonly toArray: (iterable: AsyncIterable<Row>) => Promise<Row[]>;
+  readonly toArray: (
+    iterable: AsyncIterable<Row>,
+    transform?: (row: Row) => Row,
+  ) => Promise<Row[]>;
 }
 
 export function tabularFile<
@@ -100,9 +117,13 @@ export function tabularFile<
         .pipeThrough(
           new v.TransformObjectValuesStream({ finalize: transform }),
         ),
-    toArray: async (iterable) => {
+    toArray: async (iterable, transform) => {
       const arr: Row[] = [];
-      for await (const item of iterable) arr.push(item);
+      if (transform) {
+        for await (const item of iterable) arr.push(transform(item));
+      } else {
+        for await (const item of iterable) arr.push(item);
+      }
       return arr;
     },
   };

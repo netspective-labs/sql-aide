@@ -124,7 +124,16 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
     return entries;
   }
 
-  async profile() {
+  async profile(options?: {
+    filter?: (tableName: LinkedInArchiveEntryName) => boolean;
+    transform?: (
+      tableName: LinkedInArchiveEntryName,
+      row: Record<string, Any>,
+    ) => Record<string, Any>;
+  }) {
+    const filter = options?.filter;
+    const transform = options?.transform;
+
     const entries = await this.liaEntries();
     const profileEntry = entries["Profile.csv"];
     if (profileEntry) {
@@ -143,12 +152,20 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
         > = {};
         for (const lian of liaEntryNames) {
           if (lian == "Profile.csv") continue;
+          if (filter && !filter(lian)) continue;
           try {
             const eContent = entries[lian]?.tfTyped();
             if (eContent) {
-              elaboration[lian] = await eContent.toArray(
-                await eContent.readable(),
-              );
+              if (transform) {
+                elaboration[lian] = await eContent.toArray(
+                  await eContent.readable(),
+                  (row) => transform(lian, row),
+                );
+              } else {
+                elaboration[lian] = await eContent.toArray(
+                  await eContent.readable(),
+                );
+              }
             }
           } catch (error) {
             elaboration[lian] = error;
