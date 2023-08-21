@@ -62,7 +62,9 @@ export type LinkedInArchiveSensitiveEntryName =
 export function isLiaSensitiveEntryName(
   name: LinkedInArchiveEntryName,
 ): boolean {
-  return liaSensitiveEntryNames.find(name as Any) ? true : false;
+  return liaSensitiveEntryNames.find((liasen) => name == liasen ? true : false)
+    ? true
+    : false;
 }
 
 export class LinkedInArchiveFS extends zipFS.ZipFS {
