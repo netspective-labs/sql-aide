@@ -4,14 +4,15 @@ import * as tabFS from "./tabular-fs.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+/**
+ * All LinkedIn Archive Entry names (senstive and non-sensitive).
+ */
 export const liaEntryNames = [
   "Ad_Targeting.csv",
   "Calendar.csv",
-  "Company",
   "Connections.csv",
   "Contacts.csv",
   "Education.csv",
-  "Email",
   "Endorsement_Given_Info.csv",
   "Endorsement_Received_Info.csv",
   "Events.csv",
@@ -28,11 +29,41 @@ export const liaEntryNames = [
   "Recommendations_Given.csv",
   "Recommendations_Received.csv",
   "Registration.csv",
-  "Rich",
-  "Services",
   "Skills.csv",
 ] as const;
 export type LinkedInArchiveEntryName = typeof liaEntryNames[number];
+
+/**
+ * LinkedIn Archive Entry names which may contain sensitive (confidential) data.
+ */
+export const liaSensitiveEntryNames = [
+  "Ad_Targeting.csv",
+  "Calendar.csv",
+  "Endorsement_Given_Info.csv",
+  "Events.csv",
+  "Invitations.csv",
+  "messages.csv",
+  "Patents.csv",
+  "Positions.csv",
+  "Profile.csv",
+  "Projects.csv",
+  "Publications.csv",
+  "Recommendations_Given.csv",
+  "Skills.csv",
+] as const;
+export type LinkedInArchiveSensitiveEntryName =
+  typeof liaSensitiveEntryNames[number];
+
+/**
+ * Determine if the given LinkedInArchiveEntryName is potentially sensitive
+ * @param name which LinedIn arvhive entry we're inquiring about
+ * @returns true if name might have confidential data
+ */
+export function isLiaSensitiveEntryName(
+  name: LinkedInArchiveEntryName,
+): boolean {
+  return liaSensitiveEntryNames.find(name as Any) ? true : false;
+}
 
 export class LinkedInArchiveFS extends zipFS.ZipFS {
   readonly entryHandlers: Partial<
