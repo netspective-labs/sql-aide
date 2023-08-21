@@ -45,6 +45,7 @@ export const liaSensitiveEntryNames = [
   "Events.csv",
   "Invitations.csv",
   "messages.csv",
+  "PhoneNumbers.csv",
   "Recommendations_Given.csv",
 ] as const;
 export type LinkedInArchiveSensitiveEntryName =
