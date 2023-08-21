@@ -39,6 +39,8 @@ export type LinkedInArchiveEntryName = typeof liaEntryNames[number];
 export const liaSensitiveEntryNames = [
   "Ad_Targeting.csv",
   "Calendar.csv",
+  "Connections.csv",
+  "Contacts.csv",
   "Endorsement_Given_Info.csv",
   "Events.csv",
   "Invitations.csv",
