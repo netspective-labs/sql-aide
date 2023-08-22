@@ -22,22 +22,9 @@ export class PgDcpShield {
     // const { sqlNamespace: extnsSchemaName } = ec.schemaDefns.dcp_lib;
     const [lQR] = ec.schemaQualifier("dcp_lib");
     const [aQR] = ec.schemaQualifier("dcp_assurance");
-    const extnPgjwt = ec.extnDefns.pgjwt;
-    const extnPgcrypto = ec.extnDefns.pgcrypto;
     const dcpLibSchema = SQLa.sqlSchemaDefn("dcp_lib", {
       isIdempotent: true,
     });
-    const jwtTokenSigned = SQLa.sqlTypeDefinition("jwt_token_signed", {
-      token: z.string(),
-    }, {
-      sqlNS: dcpLibSchema,
-      embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
-    });
-    const jwtTokenSignedBlock = pgSQLa.anonymousPlPgSqlRoutine(this.ctx)`
-        ${jwtTokenSigned}
-      EXCEPTION
-        WHEN DUPLICATE_OBJECT THEN
-          RAISE NOTICE 'type "jwt_token_signed" already exists, skipping';`;
     const createRoleIfNotExists = pgSQLa.storedProcedure(
       "create_role_if_not_exists",
       {
@@ -209,6 +196,54 @@ export class PgDcpShield {
     END IF;
     RETURN 1;`;
 
+    const createDatabaseMigrationUserWithRole = pgSQLa.storedFunction(
+      "create_database_migration_user_with_role",
+      {
+        user_passwd: z.string(),
+      },
+      "SMALLINT",
+      (name, args) => pgSQLa.typedPlPgSqlBody(name, args, this.ctx),
+      {
+        embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+        autoBeginEnd: false,
+        isIdempotent: true,
+        sqlNS: schemas[0],
+        headerBodySeparator: "$create_database_migration_user_with_role$",
+        privilegesSQL: { SQL: () => `STRICT VOLATILE SECURITY DEFINER` },
+      },
+    )`-- escape properly to prevent SQL injection
+    IF NOT EXISTS ( SELECT FROM pg_roles WHERE  rolname = 'db_migrations') THEN
+      EXECUTE FORMAT('CREATE ROLE db_migrations WITH LOGIN PASSWORD %L', user_passwd);
+      EXECUTE 'REASSIGN OWNED BY postgres TO db_migrations';
+      REVOKE CREATE ON SCHEMA public FROM public;
+    END IF;
+    RETURN 1;`;
+
+    const createReadOnlyPrivilegesRole = pgSQLa.storedProcedure(
+      "create_read_only_privileges_role",
+      {
+        role_name: z.string(),
+      },
+      (name, args, _) => pgSQLa.typedPlPgSqlBody(name, args, this.ctx),
+      {
+        embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
+        autoBeginEnd: false,
+        isIdempotent: false,
+        sqlNS: dcpLibSchema,
+      },
+    )`call ${lQR(`create_role_if_not_exists`)}(role_name);
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE db_migrations GRANT USAGE ON SCHEMAS TO %I;', role_name);
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE db_migrations GRANT SELECT ON TABLES TO %I', role_name);
+      EXECUTE 'SELECT FORMAT('GRANT USAGE ON SCHEMA %I TO %I;', schema_name, role_name) FROM information_schema.schemata
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
+      EXECUTE 'SELECT FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I;', schema_name, role_name)
+      FROM information_schema.schemata
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
+      EXECUTE 'SELECT FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I;', schema_name, role_name)
+      FROM information_schema.schemata
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
+    `;
+
     const createAllPrivilegesDcpSchemaTableRole = pgSQLa.storedProcedure(
       "create_all_privileges_dcp_schema_table_role",
       {
@@ -361,14 +396,6 @@ export class PgDcpShield {
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
 
-      ${schemas}
-
-      ${extnPgjwt}
-
-      ${extnPgcrypto}
-
-      ${jwtTokenSignedBlock}
-
       ${createRoleIfNotExists}
 
       ${createAllPrivilegesDcpSchemaRole}
@@ -380,6 +407,10 @@ export class PgDcpShield {
       ${grantExecuteOnFunction}
 
       ${createDatabaseUserWithRole}
+
+      ${createDatabaseMigrationUserWithRole}
+
+      ${createReadOnlyPrivilegesRole}
 
       ${revokeAllPrivilegesViewsRole}
 

@@ -24,15 +24,15 @@ Deno.test("PgDCP examples", async () => {
   });
   await persister.emitAll();
   ta.assertEquals(persisted.map((p) => [p.destFile, p.isExecutable]), [
-    ["000_context.auto.psql", false],
-    ["001_engine.auto.psql", false],
-    ["002_federated.auto.psql", false],
-    ["003_shield.auto.psql", false],
-    ["004_event.auto.psql", false],
-    ["005_postgraphile.auto.psql", false],
-    ["006_graphql.auto.psql", false],
-    ["007_version.auto.psql", false],
-    ["008_pg-stat-statements.auto.psql", false],
+    ["000_infrastructure.auto.psql", false],
+    ["001_context.auto.psql", false],
+    ["002_engine.auto.psql", false],
+    ["003_federated.auto.psql", false],
+    ["004_shield.auto.psql", false],
+    ["005_event.auto.psql", false],
+    ["006_postgraphile.auto.psql", false],
+    ["007_graphql.auto.psql", false],
+    ["008_version.auto.psql", false],
     ["driver.auto.psql", false],
   ]);
 });

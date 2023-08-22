@@ -27,8 +27,6 @@ export class PgDcpVersion {
 
   content() {
     const { ec, schemas } = this.state;
-    const ltree = ec.extnDefns.ltree;
-    const semver = ec.extnDefns.semver;
     const dcpLcSchema = SQLa.sqlSchemaDefn("dcp_lifecycle", {
       isIdempotent: true,
     });
@@ -165,12 +163,6 @@ export class PgDcpVersion {
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
-
-      ${schemas}
-
-      ${ltree}
-
-      ${semver}
 
       ${versionSql}
 

@@ -42,12 +42,6 @@ export class PgDcpEngine {
 
   content() {
     const { ec, schemas } = this.state;
-    const { sqlNamespace: extnsSchemaName } = ec.schemaDefns.dcp_extensions;
-    const ltree = ec.extnDefns.ltree;
-    const semver = ec.extnDefns.semver;
-    const pgtap = ec.extnDefns.pgtap;
-    const pg_stat_statements = ec.extnDefns.pg_stat_statements;
-
     const dropAllFunctionsWithName = pgSQLa.storedFunction(
       "drop_all_functions_with_name",
       {
@@ -114,21 +108,6 @@ export class PgDcpEngine {
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
-      ${schemas}
-      ${pg_stat_statements}
-      ${pgtap}
-      ${ltree}
-      ${semver}
-      -- make sure everybody can use everything in the extensions schema
-      grant usage on schema ${extnsSchemaName} to public;
-      grant execute on all functions in schema ${extnsSchemaName} to public;
-
-      -- include future extensions
-      alter default privileges in schema ${extnsSchemaName}
-        grant execute on functions to public;
-
-      alter default privileges in schema ${extnsSchemaName}
-      grant usage on types to public;
 
       ${this.constructIdempotent()}
 

@@ -16,31 +16,8 @@ export class PgDcpPostgraphile {
 
   content() {
     const { ec, schemas } = this.state;
-    const pgcrypto = ec.extnDefns.pgcrypto;
     const [aQR] = ec.schemaQualifier("dcp_assurance");
     const [lQR] = ec.schemaQualifier("dcp_lib");
-    const dcpLibSchema = SQLa.sqlSchemaDefn("dcp_lib", {
-      isIdempotent: true,
-    });
-    const jwtTokenPostgraphile = SQLa.sqlTypeDefinition(
-      "jwt_token_postgraphile",
-      {
-        role: z.string(),
-        exp: z.number(),
-        user_id: z.number(),
-        username: z.string(),
-      },
-      {
-        sqlNS: dcpLibSchema,
-        embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
-      },
-    );
-    const jwtTokenPostgraphileBlock = pgSQLa.anonymousPlPgSqlRoutine(this.ctx)`
-        ${jwtTokenPostgraphile}
-      EXCEPTION
-        WHEN DUPLICATE_OBJECT THEN
-          RAISE NOTICE 'type "jwt_token_postgraphile" already exists, skipping';`;
-
     const authenticatePostgraphilePgNative = pgSQLa.storedFunction(
       "authenticate_postgraphile_pg_native",
       {
@@ -112,11 +89,6 @@ export class PgDcpPostgraphile {
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
 
-      ${schemas}
-
-      ${pgcrypto}
-
-      ${jwtTokenPostgraphileBlock}
 
       ${authenticatePostgraphilePgNative}
 

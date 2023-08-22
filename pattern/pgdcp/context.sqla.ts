@@ -9,7 +9,6 @@ type Any = any;
 export class PgDcpContext {
   readonly state = pgdcp.pgDcpState(import.meta, {
     principal: "dcp_context",
-    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy", "dcp_assurance"],
   });
 
   readonly subjectArea: string;
@@ -109,14 +108,12 @@ export class PgDcpContext {
   }
 
   content() {
-    const { ae, ec, lc, schemas } = this.state;
+    const { ae, ec, lc } = this.state;
     const ecf = this.execCtxFunctions();
 
     // deno-fmt-ignore
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
-
-      ${schemas}
 
       ${this.constructStorage()}
 
