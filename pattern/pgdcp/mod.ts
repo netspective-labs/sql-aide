@@ -10,6 +10,7 @@ export * as govnPattern from "../governed/mod.ts";
 export * as pgGovnPattern from "./pg-governed.ts";
 
 export * from "./pgdcp.ts";
+export * from "./infrastructure.sqla.ts";
 export * from "./context.sqla.ts";
 export * from "./engine.sqla.ts";
 export * from "./federated.sqla.ts";
