@@ -18,13 +18,13 @@ export * from "./event.sqla.ts";
 export * from "./postgraphile.sqla.ts";
 export * from "./graphql.sqla.ts";
 export * from "./version.sqla.ts";
-export * from "./pg-stat-statements.sqla.ts";
 
 // this file doubles as a CLI to emit all files or as a module index if using
 // it in Deno. everything below this is only used when being called as a main
 // module
 
 import * as g from "./pgdcp.ts";
+import * as i from "./infrastructure.sqla.ts";
 import * as c from "./context.sqla.ts";
 import * as e from "./engine.sqla.ts";
 import * as fed from "./federated.sqla.ts";
@@ -33,9 +33,9 @@ import * as ev from "./event.sqla.ts";
 import * as pg from "./postgraphile.sqla.ts";
 import * as gr from "./graphql.sqla.ts";
 import * as ver from "./version.sqla.ts";
-import * as pgss from "./pg-stat-statements.sqla.ts";
 
 export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
+  const infrastructure = i.PgDcpInfrastructure.init();
   const context = c.PgDcpContext.init();
   const engine = e.PgDcpEngine.init();
   const federated = fed.PgDcpFederated.init();
@@ -44,10 +44,10 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
   const postgraphile = pg.PgDcpPostgraphile.init();
   const graphql = gr.PgDcpGraphql.init();
   const version = ver.PgDcpVersion.init();
-  const pgStatStatements = pgss.PgDcpPgStatStatements.init();
   return {
     importMeta: import.meta,
     sources: [
+      infrastructure.content().persistableSQL,
       context.content().persistableSQL,
       engine.content().persistableSQL,
       federated.content().persistableSQL,
@@ -56,7 +56,6 @@ export const persistables = (): Parameters<typeof g.pgDcpPersister>[0] => {
       postgraphile.content().persistableSQL,
       graphql.content().persistableSQL,
       version.content().persistableSQL,
-      pgStatStatements.content().persistableSQL,
     ],
   };
 };

@@ -10,7 +10,6 @@ export class PgDcpFederated {
   readonly state = pgdcp.pgDcpState(import.meta, {
     subjectArea: "federated",
     principal: "dcp_confidential",
-    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy"],
   });
 
   readonly subjectArea: string;
@@ -61,14 +60,12 @@ export class PgDcpFederated {
       ${fdwPostgresAuthn}`;
   }
   content() {
-    const { ae, ec, lc, schemas } = this.state;
+    const { ae, ec, lc } = this.state;
     const [confQR] = ec.schemaQualifier("dcp_confidential");
     const [aQR] = ec.schemaQualifier("dcp_assurance");
     // deno-fmt-ignore
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
-
-      ${schemas}
 
       ${this.constructStorage()}
 
