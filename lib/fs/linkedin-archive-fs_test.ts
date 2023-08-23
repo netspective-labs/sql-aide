@@ -57,3 +57,46 @@ Deno.test("LinkedInArchiveFS aggregated profile", async () => {
   const profile = await liaFS.profile();
   assert(profile);
 });
+
+Deno.test("LinkedInArchiveFS countEndorsements should add endorsement count to Skills.csv", () => {
+  const testProfile: mod.LiaEndorsedSkillsProfile = {
+    "Endorsement_Received_Info.csv": [
+      {
+        "Endorsement Date": 1689700382000,
+        "Skill Name": "Entrepreneur",
+        "Endorser First Name": "John",
+        "Endorser Last Name": "Mehta",
+        "Endorser Public Url": "www.linkedin.com/in/johnmehta14",
+        "Endorsement Status": "ACCEPTED",
+      },
+      {
+        "Endorsement Date": 1689700382000,
+        "Skill Name": "Entrepreneur",
+        "Endorser First Name": "Neel",
+        "Endorser Last Name": "Smith",
+        "Endorser Public Url": "www.linkedin.com/in/neelsmith123",
+        "Endorsement Status": "ACCEPTED",
+      },
+      // ... (other endorsements for testing)
+    ],
+    "Skills.csv": [
+      {
+        "Name": "Investment Advisory",
+      },
+      {
+        "Name": "Engaging Public Speaker",
+      },
+      {
+        "Name": "Entrepreneur",
+      },
+      // ... (other skills for testing)
+    ],
+  };
+
+  mod.countSkillsEndorsements(testProfile);
+  assertEquals(
+    testProfile["Skills.csv"].find((skill) => skill.Name === "Entrepreneur")
+      ?.["Endorsements Count"],
+    2,
+  );
+});

@@ -64,6 +64,45 @@ export function isLiaSensitiveEntryName(
     : false;
 }
 
+export type LiaEndorsedSkillsProfile = {
+  "Endorsement_Received_Info.csv": Array<{
+    "Endorsement Date": number;
+    "Skill Name": string;
+    "Endorser First Name": string;
+    "Endorser Last Name": string;
+    "Endorser Public Url": string;
+    "Endorsement Status": string;
+  }>;
+  "Skills.csv": Array<{
+    "Name": string;
+    "Endorsements Count"?: number;
+  }>;
+};
+
+export function countSkillsEndorsements(profile: LiaEndorsedSkillsProfile) {
+  if (!("Endorsement_Received_Info.csv" in profile)) {
+    return;
+  }
+
+  // Create an endorsement counter map
+  const endorsementCounts: { [key: string]: number } = {};
+
+  // Count endorsements from 'Endorsement_Received_Info.csv'
+  profile["Endorsement_Received_Info.csv"].forEach((endorsement) => {
+    const skill = endorsement["Skill Name"];
+    if (endorsementCounts[skill]) {
+      endorsementCounts[skill] += 1;
+    } else {
+      endorsementCounts[skill] = 1;
+    }
+  });
+
+  // Add the count to 'Skills.csv'
+  profile["Skills.csv"].forEach((skill) => {
+    skill["Endorsements Count"] = endorsementCounts[skill.Name] ?? 0;
+  });
+}
+
 export class LinkedInArchiveFS extends zipFS.ZipFS {
   readonly entryHandlers: Partial<
     Record<
@@ -160,6 +199,7 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
       tableName: LinkedInArchiveEntryName,
       row: Record<string, Any>,
     ) => Record<string, Any>;
+    endorsementsPrivate?: boolean;
   }) {
     const filter = options?.filter;
     const transform = options?.transform;
@@ -200,6 +240,16 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
           } catch (error) {
             elaboration[lian] = error;
           }
+        }
+
+        // the endorsements should be considered private
+        countSkillsEndorsements(profile as LiaEndorsedSkillsProfile);
+        if (
+          options?.endorsementsPrivate &&
+          "Endorsement_Received_Info.csv" in (profile as Any)
+        ) {
+          // the endorsements should be considered private
+          delete (profile as Any)["Endorsement_Received_Info.csv"];
         }
 
         return {
