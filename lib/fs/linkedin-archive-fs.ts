@@ -64,7 +64,7 @@ export function isLiaSensitiveEntryName(
     : false;
 }
 
-export type LiaEndorsedSkillsProfile = {
+export type LiaEndorsedSkillsSupplier = {
   "Endorsement_Received_Info.csv": Array<{
     "Endorsement Date": number;
     "Skill Name": string;
@@ -79,7 +79,7 @@ export type LiaEndorsedSkillsProfile = {
   }>;
 };
 
-export function countSkillsEndorsements(profile: LiaEndorsedSkillsProfile) {
+export function countSkillsEndorsements(profile: LiaEndorsedSkillsSupplier) {
   if (!("Endorsement_Received_Info.csv" in profile)) {
     return;
   }
@@ -243,13 +243,13 @@ export class LinkedInArchiveFS extends zipFS.ZipFS {
         }
 
         // the endorsements should be considered private
-        countSkillsEndorsements(profile as LiaEndorsedSkillsProfile);
+        countSkillsEndorsements(elaboration as LiaEndorsedSkillsSupplier);
         if (
           options?.endorsementsPrivate &&
-          "Endorsement_Received_Info.csv" in (profile as Any)
+          "Endorsement_Received_Info.csv" in (elaboration as Any)
         ) {
           // the endorsements should be considered private
-          delete (profile as Any)["Endorsement_Received_Info.csv"];
+          delete (elaboration as Any)["Endorsement_Received_Info.csv"];
         }
 
         return {

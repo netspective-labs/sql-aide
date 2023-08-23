@@ -59,7 +59,7 @@ Deno.test("LinkedInArchiveFS aggregated profile", async () => {
 });
 
 Deno.test("LinkedInArchiveFS countEndorsements should add endorsement count to Skills.csv", () => {
-  const testProfile: mod.LiaEndorsedSkillsProfile = {
+  const testProfile: mod.LiaEndorsedSkillsSupplier = {
     "Endorsement_Received_Info.csv": [
       {
         "Endorsement Date": 1689700382000,
