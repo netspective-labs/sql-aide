@@ -71,10 +71,13 @@ export function sqlTriggerDefinition<
         : create;
     },
   };
+  const dropTriggerFn = (options?: { ifExists?: boolean }) =>
+    dropTrigger<TriggerName, Context>(triggerName, table, options);
   return {
     ...triggerDefn,
-    drop: (options?: { ifExists?: boolean }) =>
-      dropTrigger(triggerName, options),
+    // drop: (options?: { ifExists?: boolean }) =>
+    //   dropTrigger(triggerName, options),
+    drop: dropTriggerFn,
     sqlNS: stdOptions?.sqlNS,
   };
 }
@@ -84,15 +87,16 @@ export function dropTrigger<
   Context extends emit.SqlEmitContext,
 >(
   triggerName: TriggerName,
+  table: string, // Add the table parameter
   options?: { ifExists?: boolean },
 ): emit.SqlTextSupplier<Context> {
   const { ifExists = true } = options ?? {};
   return {
     SQL: (ctx) => {
-      const ns = ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true });
+      const ns = ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: false });
       return `DROP TRIGGER ${ifExists ? "IF EXISTS " : ""}${
         ns.triggerName(triggerName)
-      }`;
+      } ON ${ns.tableName(table)}`; // Include the table name in the DROP TRIGGER statement
     },
   };
 }
