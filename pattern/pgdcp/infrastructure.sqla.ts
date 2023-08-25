@@ -9,7 +9,7 @@ type Any = any;
 export class PgDcpInfrastructure {
   readonly state = pgdcp.pgDcpState(import.meta, {
     principal: "dcp_lifecycle",
-    schemas: ["dcp_lifecycle"],
+    schemas: ["dcp_lifecycle", "dcp_lifecycle_destroy", "dcp_assurance"],
   });
 
   readonly subjectArea: string;
@@ -56,11 +56,7 @@ export class PgDcpInfrastructure {
       isIdempotent: true,
     });
     const extnPgTap = ec.extnDefns.pgtap.SQL(ec.sqlEmitContext());
-    const semver = ec.extnDefns.semver.SQL(ec.sqlEmitContext());
     const ltree = ec.extnDefns.ltree.SQL(ec.sqlEmitContext());
-    const pgJwt = ec.extnDefns.pgjwt.SQL(ec.sqlEmitContext());
-    const pgCrypto = ec.extnDefns.pgcrypto.SQL(ec.sqlEmitContext());
-    const plpython3u = ec.extnDefns.plpython3u.SQL(ec.sqlEmitContext());
     const pgStatStatements = ec.extnDefns.pg_stat_statements.SQL(
       ec.sqlEmitContext(),
     );
@@ -101,8 +97,9 @@ export class PgDcpInfrastructure {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLcSchema,
+        headerBodySeparator: "$infrastructureInit$",
       },
     )`
       ${dcpExtSchema}
@@ -111,13 +108,9 @@ export class PgDcpInfrastructure {
       ${dcpConfSchema}
       ${dcpLibSchema}
       ${dcpContextSchema}
-      ${extnPgTap}
-      ${semver}
-      ${ltree}
-      ${pgJwt}
-      ${pgCrypto}
-      ${plpython3u}
-      ${pgStatStatements}
+      ${extnPgTap};
+      ${ltree};
+      ${pgStatStatements};
       -- make sure everybody can use everything in the extensions schema
       grant usage on schema ${extnsSchemaName} to public;
       grant execute on all functions in schema ${extnsSchemaName} to public;

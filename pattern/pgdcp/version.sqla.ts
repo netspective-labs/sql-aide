@@ -46,7 +46,7 @@ export class PgDcpVersion {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
         isIdempotent: true,
-        sqlNS: schemas[0],
+        sqlNS: schemas[2],
         headerBodySeparator: "$version_sql$",
       },
     )`
@@ -163,6 +163,7 @@ export class PgDcpVersion {
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
+      ${ec.extnDefns.semver}
 
       ${versionSql}
 

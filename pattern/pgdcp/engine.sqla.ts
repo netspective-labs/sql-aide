@@ -17,10 +17,12 @@ export class PgDcpEngine {
 
   constructIdempotent() {
     const { lc, ec } = this.state;
+    const semver = ec.extnDefns.semver;
     const [lcQR] = ec.schemaQualifier("dcp_lifecycle");
 
     // deno-fmt-ignore
     return lc.constructIdempotent()`
+    ${semver}
     CALL ${lcQR(`version_construct`)}('dcp_lifecycle', 'asset_version', 'asset', NULL, '1.0.0'::semver);
     insert into asset_version (nature, asset, version) values ('storage', '${lcQR(`asset_version_store`)}', ${lcQR(`asset_version_initial_revision`)}());
     insert into asset_version (nature, asset, version) values ('storage', '${lcQR(`asset_version_label_store`)}', ${lcQR(`asset_version_initial_revision`)}());
@@ -108,6 +110,7 @@ export class PgDcpEngine {
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
+
 
       ${this.constructIdempotent()}
 

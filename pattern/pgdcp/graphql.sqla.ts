@@ -16,6 +16,7 @@ export class PgDcpGraphql {
 
   content() {
     const { ec, lc, schemas } = this.state;
+    const plpython3u = ec.extnDefns.plpython3u;
     const [aQR] = ec.schemaQualifier("dcp_assurance");
     const [lQR] = ec.schemaQualifier("dcp_lib");
 
@@ -104,6 +105,8 @@ export class PgDcpGraphql {
 
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
+
+      ${plpython3u}
 
       ${httpClientGraphqlAnonymousQueryResult}
 

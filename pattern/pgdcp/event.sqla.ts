@@ -16,6 +16,7 @@ export class PgDcpEvent {
 
   content() {
     const { ec, schemas } = this.state;
+    const extnSemver = ec.extnDefns.semver;
     const dcpLcSchema = SQLa.sqlSchemaDefn("dcp_lifecycle", {
       isIdempotent: true,
     });
@@ -140,6 +141,7 @@ export class PgDcpEvent {
     const psqlText = ec.SQL()`
       ${ec.psqlHeader}
 
+      ${extnSemver}
 
       ${eventManagerSql}
 
