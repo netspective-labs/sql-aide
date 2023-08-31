@@ -1334,6 +1334,7 @@ const assignmentInsertion = assignment.insertDML([
   { code: "MISSING", value: "Missing" },
   { code: "RETURNED_FOR_MAINTENANCE", value: "Returned For Maintenance" },
   { code: "RETURNED_TO_SUPPLIER", value: "Returned To Supplier" },
+  { code: "RETIRED", value: "Retired" },
 ]);
 
 const threatSourceTypeInsertion = threatSourceType.insertDML([

@@ -1867,7 +1867,8 @@ INSERT INTO "assignment" ("code", "value", "created_by", "updated_at", "updated_
               ('IN_USE', 'In Use', NULL, NULL, NULL, NULL, NULL, NULL),
               ('MISSING', 'Missing', NULL, NULL, NULL, NULL, NULL, NULL),
               ('RETURNED_FOR_MAINTENANCE', 'Returned For Maintenance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL);
+              ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('RETIRED', 'Retired', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "threat_source_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
        VALUES ('PHISHING', 'Phishing', NULL, NULL, NULL, NULL, NULL, NULL),
