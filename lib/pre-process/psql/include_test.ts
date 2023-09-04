@@ -76,8 +76,8 @@ Deno.test("includeDirective correctly handles in-memory targets", () => {
   ta.assertEquals(
     Array.from(directive.encountered.values()).map((e) => ({
       name: e.supplied,
-      replCount:
-        e.content?.filter((l) => l.indexOf(`included ${e.supplied}`)).length,
+      replCount: e.content?.filter((l) => l.indexOf(`included ${e.supplied}`))
+        .length,
       method: e.metaCommand,
     })),
     [

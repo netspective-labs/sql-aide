@@ -235,7 +235,9 @@ export class GovernedDomains<
   }
 
   uuidNullable() {
-    return z.string().uuid().optional();
+    return z.string(SQLa.zodSqlDomainRawCreateParams(
+      SQLa.sqlDomainZodStringDescr({ isUuid: true }),
+    )).uuid().optional();
   }
 
   selfRef<ZTA extends z.ZodTypeAny>(zodType: ZTA) {

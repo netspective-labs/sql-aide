@@ -178,7 +178,10 @@ export function governedDomains<
     ulidNullable: () => z.string().ulid().optional(),
 
     uuid: () => z.string().uuid(),
-    uuidNullable: () => z.string().uuid().optional(),
+    uuidNullable: () =>
+      z.string(SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodStringDescr({ isUuid: true }),
+      )).uuid().optional(),
     // TODO [NL Aide Migration]:
     // unique: SQLa.uniqueContraint,
 
