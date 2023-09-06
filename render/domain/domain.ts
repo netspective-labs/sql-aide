@@ -181,12 +181,14 @@ export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
   readonly isVarChar?: boolean;
 } & {
   readonly isSemver?: boolean;
+} & {
+  readonly isUuid?: boolean;
 };
 
 export function sqlDomainZodStringDescr(
   options: Pick<
     SqlDomainZodStringDescr,
-    "isJsonText" | "isVarChar" | "isSemver"
+    "isJsonText" | "isVarChar" | "isSemver" | "isUuid"
   >,
 ): SqlDomainZodStringDescr {
   return {
@@ -200,7 +202,7 @@ export function isSqlDomainZodStringDescr<
 >(o: unknown): o is SDZND {
   const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
   return isSDZSD(o) &&
-    ("isJsonText" in o || "isVarChar" in o || "isSemver" in o);
+    ("isJsonText" in o || "isVarChar" in o || "isSemver" in o || "isUuid" in o);
 }
 
 export function zodStringSqlDomainFactory<
@@ -357,6 +359,33 @@ export function zodStringSqlDomainFactory<
         sqlDataType: () => ({
           SQL: (_ctx: Context) => {
             return `semver`;
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
+    uuidNullable: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue?.();
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (_ctx: Context) => {
+            return `TEXT`;
+          },
+        }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            return defaultValue != undefined ? defaultValue : "";
           },
         }),
         parents: init?.parents,
@@ -1362,7 +1391,9 @@ export function zodTypeSqlDomainFactory<
                 ? stringSDF.varChar(zodType, init)
                 : (zodDefHook.descrMeta.isSemver
                   ? stringSDF.semver(zodType, init)
-                  : stringSDF.string(zodType, init)));
+                  : (zodDefHook.descrMeta.isUuid
+                    ? stringSDF.uuidNullable(zodType, init)
+                    : stringSDF.string(zodType, init))));
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${

@@ -34,7 +34,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`EXECUTE FORMAT('CREATE ROLE %I WITH NOLOGIN', role_name);
@@ -52,7 +52,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`call ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -73,7 +73,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`call ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -94,7 +94,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`CALL ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -111,7 +111,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`CALL ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -129,7 +129,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`EXECUTE FORMAT('REVOKE ALL ON %I.%I FROM %I',schema_name,view_name, role_name);
@@ -145,7 +145,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`EXECUTE FORMAT('REVOKE ALL PRIVILEGES ON SCHEMA %I FROM %I', dcp_schema_name, role_name);
@@ -163,7 +163,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`EXECUTE FORMAT('REASSIGN OWNED BY %I', role_name);
@@ -228,20 +228,20 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`call ${lQR(`create_role_if_not_exists`)}(role_name);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE db_migrations GRANT USAGE ON SCHEMAS TO %I;', role_name);
-      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE db_migrations GRANT SELECT ON TABLES TO %I', role_name);
-      EXECUTE 'SELECT FORMAT('GRANT USAGE ON SCHEMA %I TO %I;', schema_name, role_name) FROM information_schema.schemata
-      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
-      EXECUTE 'SELECT FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I;', schema_name, role_name)
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE db_migrations GRANT SELECT ON TABLES TO %I;', role_name);
+      EXECUTE "SELECT FORMAT('GRANT USAGE ON SCHEMA %I TO %I;', schema_name, role_name) FROM information_schema.schemata
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')";
+      EXECUTE "SELECT FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I;', schema_name, role_name)
       FROM information_schema.schemata
-      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
-      EXECUTE 'SELECT FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I;', schema_name, role_name)
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')";
+      EXECUTE "SELECT FORMAT('GRANT SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I;', schema_name, role_name)
       FROM information_schema.schemata
-      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')';
+      WHERE schema_name NOT IN ('pg_toast', 'pg_catalog', 'information_schema')";
     `;
 
     const createAllPrivilegesDcpSchemaTableRole = pgSQLa.storedProcedure(
@@ -255,7 +255,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`call ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -273,7 +273,7 @@ export class PgDcpShield {
       {
         embeddedStsOptions: SQLa.typicalSqlTextSupplierOptions(),
         autoBeginEnd: false,
-        isIdempotent: false,
+        isIdempotent: true,
         sqlNS: dcpLibSchema,
       },
     )`call ${lQR(`create_role_if_not_exists`)}(role_name);
@@ -303,6 +303,8 @@ export class PgDcpShield {
       username_password text;
       user_role text;
       BEGIN
+        ${ec.extnDefns.pgcrypto.SQL(ec.sqlEmitContext())};
+        ${ec.extnDefns.pgjwt.SQL(ec.sqlEmitContext())};
         select a.* into account from pg_catalog.pg_authid as a where a.rolname = username;
         username_password := (select concat(password,username));
         user_role:= (select rolname from pg_user

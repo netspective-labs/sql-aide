@@ -41,14 +41,15 @@ Deno.test("SQL Aide (SQLa) triggers", async (tc) => {
       END`),
       {
         embeddedStsOptions: emit.typicalSqlTextSupplierOptions(),
-        before: (triggerName) => mod.dropTrigger(triggerName),
+        before: (triggerName) =>
+          mod.dropTrigger(triggerName, "synthetic_table1"),
         quoteIdentifiers: false,
       },
     );
     ta.assertEquals(
       trigger.SQL(ctx),
       uws(`
-          DROP TRIGGER IF EXISTS "synthetic_trigger";
+          DROP TRIGGER IF EXISTS synthetic_trigger ON synthetic_table1;
           CREATE TRIGGER synthetic_trigger
           AFTER INSERT ON synthetic_table1
           FOR EACH ROW
@@ -59,11 +60,11 @@ Deno.test("SQL Aide (SQLa) triggers", async (tc) => {
 
     ta.assertEquals(
       trigger.drop().SQL(ctx),
-      `DROP TRIGGER IF EXISTS "synthetic_trigger"`,
+      `DROP TRIGGER IF EXISTS synthetic_trigger ON synthetic_table1`,
     );
     ta.assertEquals(
       trigger.drop({ ifExists: false }).SQL(ctx),
-      `DROP TRIGGER "synthetic_trigger"`,
+      `DROP TRIGGER synthetic_trigger ON synthetic_table1`,
     );
   });
 });

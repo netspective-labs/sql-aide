@@ -10,6 +10,9 @@ export class PgDcpContext {
   readonly state = pgdcp.pgDcpState(import.meta, {
     principal: "dcp_context",
   });
+  readonly ctx = SQLa.typicalSqlEmitContext({
+    sqlDialect: SQLa.postgreSqlDialect(),
+  });
 
   readonly subjectArea: string;
   readonly cSchema = this.state.ec.schemaDefns.dcp_context;
@@ -129,7 +132,32 @@ export class PgDcpContext {
         ${pgdcp.executionContexts.map((ec) => ecf.dropExecCtxFns(ec)).flat()}`}
 
       ${lc.populateSeedData()`
-        ${this.execCtxTable.seedDML}`}
+        ${this.execCtxTable.insertDML({ code:"DEVELOPMENT",value:pgdcp.ExecutionContext.DEVELOPMENT}, {
+          onConflict: {
+            SQL: () => `ON CONFLICT DO NOTHING`,
+          },
+        }).SQL(this.ctx)};
+        ${this.execCtxTable.insertDML({ code:"PRODUCTION",value:pgdcp.ExecutionContext.PRODUCTION}, {
+          onConflict: {
+            SQL: () => `ON CONFLICT DO NOTHING`,
+          },
+        }).SQL(this.ctx)};
+        ${this.execCtxTable.insertDML({ code:"SANDBOX",value:pgdcp.ExecutionContext.SANDBOX}, {
+          onConflict: {
+            SQL: () => `ON CONFLICT DO NOTHING`,
+          },
+        }).SQL(this.ctx)};
+        ${this.execCtxTable.insertDML({ code:"EXPERIMENTAL",value:pgdcp.ExecutionContext.EXPERIMENTAL}, {
+          onConflict: {
+            SQL: () => `ON CONFLICT DO NOTHING`,
+          },
+        }).SQL(this.ctx)};
+        ${this.execCtxTable.insertDML({ code:"TEST",value:pgdcp.ExecutionContext.TEST}, {
+          onConflict: {
+            SQL: () => `ON CONFLICT DO NOTHING`,
+          },
+        }).SQL(this.ctx)};
+      `}
 
       ${ae.unitTest()`
         ${pgdcp.executionContexts.map((ec) => [
