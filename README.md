@@ -77,12 +77,13 @@ If you're modifying the documenation or would like to use it locally without
 Internet access, start the server and launch the site:
 
 ```bash
-cd support/docs-nextra
+cd support/docs-astro
 pnpm install    # first time or whenever you do a pull
-pnpm next       # docs are available at http://localhost:3000
+pnpm run dev    # docs are available at http://localhost:3000
 ```
 
-We use [Nextra](https://nextra.site/) as document publishing framework.
+We use [Astro Starlight](https://starlight.astro.build/) as document publishing
+framework.
 
 ## Unit Testing
 
