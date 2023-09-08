@@ -8,6 +8,7 @@
     "hediet.vscode-drawio",
     "cmoog.sqlnotebook",
     "jebbs.plantuml",
-    "yoavbls.pretty-ts-errors"
+    "yoavbls.pretty-ts-errors",
+    "humao.rest-client"
   ]
 }

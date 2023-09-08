@@ -1,3 +1,7 @@
+# we don't track .env since it might have sensitive data like API keys or passwords
+.env
+.envrc
+
 # we don't track OS-specific file system meta-data
 .DS_Store
 
@@ -10,5 +14,3 @@ examples/pgdcp/*.auto.psql
 
 # we don't track NPM or NextJS artifacts
 support/package-npm/npm/
-support/docs-nextra/node_modules
-support/docs-nextra/.next

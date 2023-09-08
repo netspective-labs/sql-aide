@@ -1,0 +1,47 @@
+# this file ises for exploring Elasticsearch SQL (`esSql`) capabilities
+# ------------------------------------------------------------------------
+# * requires the `humao.rest-client` Visual Studio Code extension
+# * requires a `.env` file with ESSQL_HOST, ESSQL_API_TOKEN defined
+
+@contentType = application/json
+@esSqlHostName = {{$dotenv ESSQL_HOST}}
+@esSqlApiToken= {{$dotenv ESSQL_API_TOKEN}}
+@esSqlUrlJSON = {{esSqlHostName}}/_sql?format=json
+@esSqlUrlText = {{esSqlHostName}}/_sql?format=txt
+
+###
+
+# Fetch all columns in the emailengine table using ElasticSearch SQL
+
+POST {{esSqlUrlText}} HTTP/1.1
+Content-Type: {{contentType}}
+Authorization: Basic {{esSqlApiToken}}
+
+{
+    "query": "SHOW COLUMNS FROM emailengine"
+}
+
+###
+
+# Get the first 20 Email listing with HTML body using ElasticSearch SQL
+
+POST {{esSqlUrlJSON}} HTTP/1.1
+Content-Type: {{contentType}}
+Authorization: Basic {{esSqlApiToken}}
+
+{
+    "query": "SELECT id,subject,date,text.html FROM emailengine where account='periodicals' ORDER BY date DESC LIMIT 5"
+}
+
+###
+
+# Fetch all tables using ElasticSearch SQL
+
+POST {{esSqlUrlText}} HTTP/1.1
+Content-Type: {{contentType}}
+Authorization: Basic {{esSqlApiToken}}
+
+{
+    "query": "SHOW TABLES"
+}
+
