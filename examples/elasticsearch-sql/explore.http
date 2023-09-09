@@ -23,6 +23,18 @@ Authorization: Basic {{esSqlApiToken}}
 
 ###
 
+# Get the total Emails per account using ElasticSearch SQL
+
+POST {{esSqlUrlText}} HTTP/1.1
+Content-Type: {{contentType}}
+Authorization: Basic {{esSqlApiToken}}
+
+{
+    "query": "SELECT account, count(*) FROM emailengine group by account"
+}
+
+###
+
 # Get the first 20 Email listing with HTML body using ElasticSearch SQL
 
 POST {{esSqlUrlJSON}} HTTP/1.1
