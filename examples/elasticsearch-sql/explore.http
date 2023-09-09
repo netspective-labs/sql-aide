@@ -1,4 +1,4 @@
-# this file ises for exploring Elasticsearch SQL (`esSql`) capabilities
+# this file is for exploring Elasticsearch SQL (`esSql`) capabilities
 # ------------------------------------------------------------------------
 # * requires the `humao.rest-client` Visual Studio Code extension
 # * requires a `.env` file with ESSQL_HOST, ESSQL_API_TOKEN defined
