@@ -1,10 +1,12 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { persistContent as pc, SQLa } from "./deps.ts";
+import { persistContent as pc, pgSQLa, SQLa } from "./deps.ts";
 import * as pgdcp from "./pgdcp.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+type SchemaName = "dcp_context";
 
 export class PgDcpFederated {
   readonly state = pgdcp.pgDcpState(import.meta, {
@@ -21,6 +23,12 @@ export class PgDcpFederated {
     {
       sqlNS: this.cSchema,
     },
+  );
+  readonly dcpContextSchema = SQLa.sqlSchemaDefn("dcp_context", {
+    isIdempotent: true,
+  });
+  readonly searchPath = pgSQLa.pgSearchPath<SchemaName, SQLa.SqlEmitContext>(
+    this.dcpContextSchema,
   );
 
   protected constructor() {
@@ -52,11 +60,21 @@ export class PgDcpFederated {
         ssl_ca: d.textNullable(),
         ssl_capath: d.textNullable(),
       },
-      { sqlNS: this.confSchema },
+      {
+        sqlNS: this.confSchema,
+        isIdempotent: true,
+        constraints: (props, tableName) => {
+          const c = SQLa.tableConstraints(tableName, props);
+          return [
+            c.unique("context", "identity"),
+          ];
+        },
+      },
     );
 
     // deno-fmt-ignore
     return lc.constructStorage()`
+      ${this.searchPath}
       ${fdwPostgresAuthn}`;
   }
   content() {

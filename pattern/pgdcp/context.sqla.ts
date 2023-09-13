@@ -1,10 +1,12 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { persistContent as pc, SQLa, zod as z } from "./deps.ts";
+import { persistContent as pc, pgSQLa, SQLa, zod as z } from "./deps.ts";
 import * as pgdcp from "./pgdcp.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+type SchemaName = "dcp_context";
 
 export class PgDcpContext {
   readonly state = pgdcp.pgDcpState(import.meta, {
@@ -20,13 +22,22 @@ export class PgDcpContext {
     "execution_context",
     pgdcp.ExecutionContext,
     {
+      isIdempotent: true,
       sqlNS: this.cSchema,
     },
   );
 
+  readonly dcpContextSchema = SQLa.sqlSchemaDefn("dcp_context", {
+    isIdempotent: true,
+  });
+
   protected constructor() {
     this.subjectArea = this.state.ec.subjectArea(this.cSchema);
   }
+
+  readonly searchPath = pgSQLa.pgSearchPath<SchemaName, SQLa.SqlEmitContext>(
+    this.dcpContextSchema,
+  );
 
   constructStorage() {
     const { ec, lc, ec: { pgDomains: pgd } } = this.state;
@@ -57,7 +68,7 @@ export class PgDcpContext {
         active: this.execCtxTable.references.code(),
         host: d.text(),
       },
-      { sqlNS: this.cSchema },
+      { sqlNS: this.cSchema, isIdempotent: true },
     );
 
     // deno-fmt-ignore
@@ -68,6 +79,7 @@ export class PgDcpContext {
 
       -- TODO: the host column in context table should be \`execution_host_identity\` not TEXT
       -- TODO: see ticket #87 - REFERENCES "execution_context"("code") should be schema-qualified
+      ${this.searchPath}
       ${context}
 
       -- TODO: add trigger to ensure that no improper values can be added into context`;
@@ -79,17 +91,17 @@ export class PgDcpContext {
 
     // deno-fmt-ignore
     const ecConstantFn = (ec: pgdcp.ExecutionContext) => ({
-      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT ''${ec}''::${sQR("execution_context")}'`
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`exec_context_${ec}`)}() RETURNS ${sQR("execution_context")} LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $ecConstantFn$ SELECT ('${ec}'::text)::${sQR("execution_context")}$ecConstantFn$;`
     });
 
     // deno-fmt-ignore
     const isCompareExecCtxFn = (ec: pgdcp.ExecutionContext) => ({
-      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN $1 = ${sQR(`exec_context_${ec}`)}() THEN true else false end'`
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_exec_context_${ec}`)}(ec ${sQR("execution_context")}) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $isCompareExecCtxFn$ SELECT CASE WHEN $1 = ${sQR(`exec_context_${ec}`)}() THEN true else false end; $isCompareExecCtxFn$;`
     });
 
     // deno-fmt-ignore
     const isActiveExecCtxFn = (ec: pgdcp.ExecutionContext) => ({
-      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS 'SELECT CASE WHEN active = ${sQR(`exec_context_${ec}`)}() THEN true else false end from ${sQR("context")} where singleton_id = true'`
+      SQL: () => `CREATE OR REPLACE FUNCTION ${sQR(`is_active_context_${ec}`)}() RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $isActiveExecCtxFn$ SELECT CASE WHEN active::text = (${sQR(`exec_context_${ec}`)}())::text THEN true else false end from ${sQR("context")} where singleton_id = true; $isActiveExecCtxFn$;`
     });
 
     const dropExecCtxFns = (
