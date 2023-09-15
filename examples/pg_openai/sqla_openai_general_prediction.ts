@@ -81,8 +81,8 @@ const sfGeneralPredictions = sqlsp.storedFunction(
   response json;
   feed_title_without_html text;
  BEGIN
-  SELECT openai_general_prediction.settings.openai_api_key::text INTO OPENAI_API_KEY
-  FROM openai_general_prediction.settings
+  SELECT ${nfDvSchema.sqlNamespace}.settings.openai_api_key::text INTO OPENAI_API_KEY
+  FROM ${nfDvSchema.sqlNamespace}.settings
   WHERE name = 'default';
 
   FOR feed_row IN (select title from fdw_stateful_service_miniflux.entries ORDER BY created_at DESC LIMIT 20 OFFSET 650) LOOP
@@ -98,9 +98,9 @@ const sfGeneralPredictions = sqlsp.storedFunction(
           'max_tokens', 1000
           )::text
       )) CROSS JOIN LATERAL unnest(string_to_array(SUBSTRING((content::json->'choices'->0->>'text') FROM 2), ',')) AS choice;
-    INSERT INTO openai_general_prediction.general_predictions(feed_title, model_name, related_topic_with_title, created_at, created_by) VALUES(feed_title_without_html, 'OpenAI', response, CURRENT_TIMESTAMP, CURRENT_USER) ON CONFLICT (feed_title,model_name) DO NOTHING;
+    INSERT INTO ${nfDvSchema.sqlNamespace}.general_predictions(feed_title, model_name, related_topic_with_title, created_at, created_by) VALUES(feed_title_without_html, 'OpenAI', response, CURRENT_TIMESTAMP, CURRENT_USER) ON CONFLICT (feed_title,model_name) DO NOTHING;
   END LOOP;
-  UPDATE openai_general_prediction.general_predictions SET related_topic_with_title = replace(replace(related_topic_with_title::json::text, '\\n', ''), ':', '')::json;
+  UPDATE ${nfDvSchema.sqlNamespace}.general_predictions SET related_topic_with_title = replace(replace(related_topic_with_title::json::text, '\\n', ''), ':', '')::json;
  END;`;
 
 function sqlDDL(options: {
