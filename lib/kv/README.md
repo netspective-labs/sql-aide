@@ -11,6 +11,15 @@ more manageable structure for storage in a key-value (KV) store.
 * `typicalEntityKV` returns an object which accepts a typed object and returns
   several utility functions.
 
+# References
+
+- Review
+  [How We Built Deno KV using FoundationDB](https://deno.com/blog/designing-deno-kv)
+  to see how this library can be used in Deno Deploy as well as Apple's
+  FoundationDB.
+- Review [mvSQLite](https://github.com/losfair/mvsqlite) if you're interesting
+  in using a SQLite interface to FoundationDB.
+
 # TODO
 
 - [ ] Use [ulid](https://deno.land/x/ulid) as default identity strategy
