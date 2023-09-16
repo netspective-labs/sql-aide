@@ -159,3 +159,34 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
       select count(*) from postgres_scan('dbname=gitlabhq_production user=gitlab password=synthetic_passwd host=127.0.0.1 port=5033', 'public', 'issues');`),
   );
 });
+
+Deno.test("DuckDB Excel Supplier", () => {
+  const fixture: mod.DuckDbSqlTextSupplier = {
+    // deno-fmt-ignore
+    SQL: ({ excelBackends }) => ws.unindentWhitespace(/*sql*/`
+        SELECT * FROM ${excelBackends.get("SYNTHETIC")?.from("Sheet1") ?? "??"}`),
+  };
+
+  const ctx = mod.duckDbSqlEmitContext((provenance) => provenance.identity, {
+    excelBackends: new Map([[
+      "SYNTHETIC",
+      mod.attachableExcelEngine({ identifier: "synthetic.xls" }),
+    ]]),
+  });
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<
+    mod.DuckDbSqlEmitContext
+  >();
+
+  const ddlDefn = tmpl.SQL<mod.DuckDbSqlEmitContext>(ddlOptions)`
+      ${ctx.extensions({ emitExcelASE: () => true })}
+
+      ${fixture}`;
+
+  ta.assertEquals(
+    ddlDefn.SQL(ctx),
+    ws.unindentWhitespace(`
+        INSTALL spatial; LOAD spatial;
+
+        SELECT * FROM st_read('synthetic.xls', layer='Sheet1');`),
+  );
+});

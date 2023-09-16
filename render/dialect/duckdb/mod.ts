@@ -42,6 +42,45 @@ export function attachableSqliteEngine(
   return sqliteEngine;
 }
 
+export interface AttachableExcelEngine extends AttachableStorageEngine {
+  readonly isAttachableExcelEngine: true;
+  readonly from: (sheetName: string) => string;
+}
+
+export function attachableExcelEngine(
+  init: Omit<
+    AttachableExcelEngine,
+    "isAttachableExcelEngine" | "from" | "encounteredInSQL"
+  >,
+) {
+  const encounteredInSQL = new Map<
+    string,
+    {
+      readonly excelFileName: string;
+      readonly sheetName: string;
+      count: number;
+    }
+  >();
+  const xlsEngine: AttachableExcelEngine = {
+    isAttachableExcelEngine: true,
+    ...init,
+    from: (sheetName) => {
+      const excelFileName = init.identifier;
+      const key = `${excelFileName}:::${sheetName}`;
+      let eis = encounteredInSQL.get(key);
+      if (!eis) {
+        eis = { excelFileName, sheetName, count: 1 };
+        encounteredInSQL.set(key, eis);
+      } else {
+        eis.count++;
+      }
+      // deno-fmt-ignore
+      return `st_read('${excelFileName}', layer='${sheetName}')`;
+    },
+  };
+  return xlsEngine;
+}
+
 export interface AttachablePostgreSqlEngine extends AttachableStorageEngine {
   readonly isAttachablePostgreSqlEngine: true;
   readonly pgpassConn: pgpass.Connection;
@@ -91,7 +130,8 @@ export function attachablePostgreSqlEngine(
 
 export type AttachableBackEnds =
   | AttachableSqliteEngine
-  | AttachablePostgreSqlEngine;
+  | AttachablePostgreSqlEngine
+  | AttachableExcelEngine;
 
 export type AttachedBackEnds = Map<string, AttachableBackEnds>;
 
@@ -99,10 +139,14 @@ export interface DuckDbSqlEmitContext extends tmpl.SqlEmitContext {
   readonly contentFsPath: ContentFsPathSupplier;
   readonly sqliteBackends: Map<string, AttachableSqliteEngine>;
   readonly postgreSqlBackends: Map<string, AttachablePostgreSqlEngine>;
+  readonly excelBackends: Map<string, AttachableExcelEngine>;
   readonly extensions: (options?: {
     readonly emitSqliteASE?: (ase: AttachableSqliteEngine) => boolean;
     readonly emitPostgreSqlASE?: (
       ase: Map<string, AttachablePostgreSqlEngine>,
+    ) => boolean;
+    readonly emitExcelASE?: (
+      ase: Map<string, AttachableExcelEngine>,
     ) => boolean;
   }) => DuckDbSqlTextSupplier[];
 }
@@ -118,6 +162,7 @@ export const duckDbSqlEmitContext = (
     contentFsPath,
     sqliteBackends: inherit?.sqliteBackends ?? new Map(),
     postgreSqlBackends: inherit?.postgreSqlBackends ?? new Map(),
+    excelBackends: inherit?.excelBackends ?? new Map(),
     extensions: (options) => {
       const extensions: DuckDbSqlTextSupplier[] = [];
       const emitSqliteASE = options?.emitSqliteASE;
@@ -128,6 +173,12 @@ export const duckDbSqlEmitContext = (
       if (options?.emitPostgreSqlASE?.(result.postgreSqlBackends)) {
         extensions.push({
           SQL: () => `INSTALL postgres; LOAD postgres;`,
+        });
+      }
+
+      if (options?.emitExcelASE?.(result.excelBackends)) {
+        extensions.push({
+          SQL: () => `INSTALL spatial; LOAD spatial;`,
         });
       }
       return extensions;
