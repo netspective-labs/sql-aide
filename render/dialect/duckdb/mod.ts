@@ -1,87 +1,100 @@
 import * as pgpass from "../../../lib/postgres/pgpass/pgpass-parse.ts";
-import * as ws from "../../../lib/universal/whitespace.ts";
 import * as tmpl from "../../emit/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export type ContentProvenance = { identity: string };
-
-export type ContentFsPathSupplier = (provenance: ContentProvenance) => string;
-
-export interface AttachableStorageEngine {
-  readonly identifier: string;
+export interface IntegrationSupplier {
+  readonly isIntegrationSupplier: true;
 }
 
-export interface AttachableSqliteEngine
-  extends AttachableStorageEngine, DuckDbSqlTextSupplier<Any, Any, Any> {
-  readonly isAttachableSqliteEngine: true;
-  readonly sqliteDbFsPath: string;
+// deno-lint-ignore no-empty-interface
+export interface IntegrationsSupplier<Context extends tmpl.SqlEmitContext>
+  extends tmpl.SqlTextSupplier<Context> {
 }
 
-export function attachableSqliteEngine(
+export interface SqliteIntegration<Context extends tmpl.SqlEmitContext>
+  extends IntegrationSupplier {
+  readonly sqliteDbFsPath: (ctx: Context) => string;
+  readonly attachAs: string;
+}
+
+export function sqliteIntegration<Context extends tmpl.SqlEmitContext>(
   init: Omit<
-    AttachableSqliteEngine,
-    "isAttachableSqliteEngine" | "SQL" | "encounteredInSQL"
+    SqliteIntegration<Context>,
+    "isIntegrationSupplier" | "isSqliteIntegration"
   >,
 ) {
-  let emitCount = 0;
-  const sqliteEngine: AttachableSqliteEngine = {
-    isAttachableSqliteEngine: true,
+  const si: SqliteIntegration<Context> = {
+    isIntegrationSupplier: true,
     ...init,
-    // SQL(ctx) will be called each time it's added to a SQLa template literal
-    // so we use ctx.sqliteBackends for state management
-    SQL: (ctx) => {
-      let sbe = ctx.sqliteBackends.get(sqliteEngine.identifier);
-      if (!sbe) {
-        sbe = sqliteEngine;
-        ctx.sqliteBackends.set(sbe.identifier, sbe);
+  };
+  return si;
+}
+
+export function sqliteIntegrations<
+  Shape extends Record<string | number | symbol, SqliteIntegration<Context>>,
+  Context extends tmpl.SqlEmitContext,
+>(
+  integrations: Shape,
+  options?: {
+    readonly resolveFsPath?: (
+      si: SqliteIntegration<Context>,
+      ctx: Context,
+    ) => string;
+  },
+) {
+  return {
+    ...integrations,
+    SQL: (ctx: Context) => {
+      const SQL: string[] = [];
+      let emitCount = 0;
+      for (
+        const si of Object.values<SqliteIntegration<Context>>(integrations)
+      ) {
+        const sqliteDbFsPath = options?.resolveFsPath?.(si, ctx) ??
+          si.sqliteDbFsPath(ctx);
+        emitCount++;
+        // deno-fmt-ignore
+        SQL.push(`${emitCount == 1 ? `INSTALL sqlite;\n` : ''}ATTACH '${sqliteDbFsPath}' AS ${si.attachAs} (TYPE sqlite);`);
       }
-      emitCount++;
-      // deno-fmt-ignore
-      return ws.unindentWhitespace(`${emitCount == 1 ? `INSTALL sqlite;\n` : ''}ATTACH '${init.sqliteDbFsPath}' AS ${init.identifier} (TYPE sqlite);`);
+      return SQL.join("\n");
     },
   };
-  return sqliteEngine;
 }
 
-export interface AttachableExcelEngine<SheetName extends string>
-  extends AttachableStorageEngine {
-  readonly isAttachableExcelEngine: true;
-  readonly from: (
-    sheetName: SheetName,
-  ) => string | DuckDbSqlTextSupplier<Any, Any, Any>;
+export interface ExcelIntegration<
+  SheetName extends string,
+  Context extends tmpl.SqlEmitContext,
+> extends IntegrationSupplier {
+  readonly xlsFsPath: (ctx: Context) => string;
+  readonly from: (sheetName: SheetName) => tmpl.SqlTextSupplier<Context>;
 }
 
-export function attachableExcelEngine<SheetName extends string = string>(
-  init: Omit<
-    AttachableExcelEngine<SheetName>,
-    "isAttachableExcelEngine" | "from" | "encounteredInSQL"
-  >,
+export function excelIntegration<
+  SheetName extends string,
+  Context extends tmpl.SqlEmitContext,
+>(
+  init:
+    & Omit<
+      ExcelIntegration<SheetName, Context>,
+      "isIntegrationSupplier" | "isExcelIntegration" | "from"
+    >
+    & {
+      readonly resolveFsPath?: (
+        ei: ExcelIntegration<SheetName, Context>,
+        ctx: Context,
+      ) => string;
+    },
 ) {
-  const encounteredInSQL = new Map<
-    string,
-    {
-      readonly excelFileName: string;
-      readonly sheetName: string;
-      count: number;
-    }
-  >();
-  const xlsEngine: AttachableExcelEngine<SheetName> = {
-    isAttachableExcelEngine: true,
+  const xlsEngine: ExcelIntegration<SheetName, Context> = {
+    isIntegrationSupplier: true,
     ...init,
     from: (sheetName) => {
       return {
-        SQL: ({ contentFsPath }) => {
-          const excelFileName = contentFsPath({ identity: init.identifier });
-          const key = `${excelFileName}:::${sheetName}`;
-          let eis = encounteredInSQL.get(key);
-          if (!eis) {
-            eis = { excelFileName, sheetName, count: 1 };
-            encounteredInSQL.set(key, eis);
-          } else {
-            eis.count++;
-          }
+        SQL: (ctx) => {
+          const excelFileName = init?.resolveFsPath?.(xlsEngine, ctx) ??
+            xlsEngine.xlsFsPath(ctx);
           return `st_read('${excelFileName}', layer='${sheetName}')`;
         },
       };
@@ -90,122 +103,133 @@ export function attachableExcelEngine<SheetName extends string = string>(
   return xlsEngine;
 }
 
-export interface AttachablePostgreSqlEngine<Table extends string>
-  extends AttachableStorageEngine {
-  readonly isAttachablePostgreSqlEngine: true;
-  readonly pgpassConn: pgpass.Connection;
+export function excelIntegrations<
+  Shape extends Record<
+    string | number | symbol,
+    ExcelIntegration<Any, Context>
+  >,
+  Context extends tmpl.SqlEmitContext,
+>(
+  integrations: Shape,
+) {
+  return {
+    ...integrations,
+    SQL: () => `INSTALL spatial; LOAD spatial;`,
+  };
+}
+
+export interface PostgreSqlIntegration<
+  Table extends string,
+  Context extends tmpl.SqlEmitContext,
+> extends IntegrationSupplier {
+  readonly isPostgreSqlIntegration: true;
+  readonly pgpassConn: (ctx: Context) => pgpass.Connection;
   readonly from: (
     tableName: Table,
     options?: { schema?: string; pushdown?: boolean },
-  ) => string | DuckDbSqlTextSupplier<Any, Any, Any>;
-  readonly encounteredInSQL: (table?: Table) => number | null;
+  ) => tmpl.SqlTextSupplier<Context>;
 }
 
-export function attachablePostgreSqlEngine<Table extends string = string>(
+export function postgreSqlIntegration<
+  TableName extends string,
+  Context extends tmpl.SqlEmitContext,
+>(
   init: Omit<
-    AttachablePostgreSqlEngine<Table>,
-    "isAttachablePostgreSqlEngine" | "from" | "encounteredInSQL"
+    PostgreSqlIntegration<TableName, Context>,
+    "isIntegrationSupplier" | "isPostgreSqlIntegration" | "from"
   >,
 ) {
-  const encounteredInSQL = new Map<Table, { count: number }>();
-  const conn = init.pgpassConn;
-  const pgEngine: AttachablePostgreSqlEngine<Table> = {
-    isAttachablePostgreSqlEngine: true,
+  const pgEngine: PostgreSqlIntegration<TableName, Context> = {
+    isIntegrationSupplier: true,
+    isPostgreSqlIntegration: true,
     ...init,
     from: (tableName, options) => {
-      let eis = encounteredInSQL.get(tableName);
-      if (!eis) {
-        eis = { count: 1 };
-        encounteredInSQL.set(tableName, eis);
-      }
-      // deno-fmt-ignore
-      return `${options?.pushdown ? "postgres_scan_pushdown" : "postgres_scan"}('dbname=${conn.database} user=${conn.username} password=${conn.password} host=${conn.host} port=${String(conn.port)}', '${options?.schema ?? "public"}', '${tableName}')`;
-    },
-    encounteredInSQL: (table?: Table) => {
-      if (table) {
-        const found = encounteredInSQL.get(table);
-        if (found) return found.count;
-        return null;
-      }
-      if (encounteredInSQL.size == 0) return null;
-      let count = 0;
-      encounteredInSQL.forEach((value) => {
-        count += value.count;
-      });
-      return count;
+      return {
+        SQL: (ctx) => {
+          const conn = init.pgpassConn(ctx);
+          // deno-fmt-ignore
+          return `${options?.pushdown ? "postgres_scan_pushdown" : "postgres_scan"}('dbname=${conn.database} user=${conn.username} password=${conn.password} host=${conn.host} port=${String(conn.port)}', '${options?.schema ?? "public"}', '${tableName}')`
+        },
+      };
     },
   };
   return pgEngine;
 }
 
-export type AttachableBackEnds =
-  | AttachableSqliteEngine
-  | AttachablePostgreSqlEngine<Any>
-  | AttachableExcelEngine<Any>;
-
-export interface DuckDbSqlEmitContext<
-  SqliteBE extends string,
-  PgBE extends string,
-  XlsBE extends string,
-> extends tmpl.SqlEmitContext {
-  readonly contentFsPath: ContentFsPathSupplier;
-  readonly sqliteBackends: Map<SqliteBE, AttachableSqliteEngine>;
-  readonly postgreSqlBackends: Map<PgBE, AttachablePostgreSqlEngine<Any>>;
-  readonly excelBackends: Map<XlsBE, AttachableExcelEngine<Any>>;
-  readonly extensions: (options?: {
-    readonly emitSqliteASE?: (ase: AttachableSqliteEngine) => boolean;
-    readonly emitPostgreSqlASE?: <Table extends string>(
-      ase: Map<string, AttachablePostgreSqlEngine<Table>>,
-    ) => boolean;
-    readonly emitExcelASE?: <SheetName extends string>(
-      ase: Map<string, AttachableExcelEngine<SheetName>>,
-    ) => boolean;
-  }) => DuckDbSqlTextSupplier<Any, Any, Any>[];
+export function postgreSqlIntegrations<
+  Shape extends Record<
+    string | number | symbol,
+    PostgreSqlIntegration<Any, Context>
+  >,
+  Context extends tmpl.SqlEmitContext,
+>(
+  integrations: Shape,
+) {
+  return {
+    ...integrations,
+    SQL: () => `INSTALL postgres; LOAD postgres;`,
+  };
 }
 
-export type DuckDbSqlTextSupplier<
-  SqliteBE extends string,
-  PgBE extends string,
-  XlsBE extends string,
-> = tmpl.SqlTextSupplier<DuckDbSqlEmitContext<SqliteBE, PgBE, XlsBE>>;
+// the functions below are "convenience" functions for building strongly-typed
+// integrations with attached Context
 
-export const duckDbSqlEmitContext = <
-  SqliteBE extends string,
-  PgBE extends string,
-  XlsBE extends string,
->(
-  contentFsPath: ContentFsPathSupplier,
-  inherit?: Omit<
-    Partial<DuckDbSqlEmitContext<SqliteBE, PgBE, XlsBE>>,
-    "contentFsPath"
-  >,
-) => {
-  const result: DuckDbSqlEmitContext<SqliteBE, PgBE, XlsBE> = {
-    ...tmpl.typicalSqlEmitContext(inherit),
-    contentFsPath,
-    sqliteBackends: inherit?.sqliteBackends ?? new Map(),
-    postgreSqlBackends: inherit?.postgreSqlBackends ?? new Map(),
-    excelBackends: inherit?.excelBackends ?? new Map(),
-    extensions: (options) => {
-      const extensions: DuckDbSqlTextSupplier<SqliteBE, PgBE, XlsBE>[] = [];
-      const emitSqliteASE = options?.emitSqliteASE;
-      result.sqliteBackends.forEach((ase) => {
-        if (!emitSqliteASE || emitSqliteASE(ase)) extensions.push(ase);
-      });
+export function integration<Context extends tmpl.SqlEmitContext>() {
+  function sqlite(init: Parameters<typeof sqliteIntegration<Context>>[0]) {
+    return sqliteIntegration<Context>(init);
+  }
 
-      if (options?.emitPostgreSqlASE?.(result.postgreSqlBackends)) {
-        extensions.push({
-          SQL: () => `INSTALL postgres; LOAD postgres;`,
-        });
-      }
+  function excel<SheetName extends string>(
+    init: Parameters<typeof excelIntegration<SheetName, Context>>[0],
+  ) {
+    return excelIntegration<SheetName, Context>(init);
+  }
 
-      if (options?.emitExcelASE?.(result.excelBackends)) {
-        extensions.push({
-          SQL: () => `INSTALL spatial; LOAD spatial;`,
-        });
-      }
-      return extensions;
-    },
+  function postgreSQL<TableName extends string>(
+    init: Parameters<typeof postgreSqlIntegration<TableName, Context>>[0],
+  ) {
+    return postgreSqlIntegration<TableName, Context>(init);
+  }
+
+  return {
+    sqlite,
+    excel,
+    postgreSQL,
   };
-  return result;
-};
+}
+
+export function integrationsBuilder<Context extends tmpl.SqlEmitContext>() {
+  function sqlite<
+    Shape extends Record<string | number | symbol, SqliteIntegration<Context>>,
+  >(
+    shape: Shape,
+    options: Parameters<typeof sqliteIntegrations<Shape, Context>>[1],
+  ) {
+    return sqliteIntegrations<Shape, Context>(shape, options);
+  }
+
+  function excel<
+    Shape extends Record<
+      string | number | symbol,
+      ExcelIntegration<Any, Context>
+    >,
+  >(shape: Shape) {
+    return excelIntegrations<Shape, Context>(shape);
+  }
+
+  function postgreSQL<
+    Shape extends Record<
+      string | number | symbol,
+      PostgreSqlIntegration<Any, Context>
+    >,
+  >(shape: Shape) {
+    return postgreSqlIntegrations<Shape, Context>(shape);
+  }
+
+  return {
+    factory: integration<Context>(),
+    sqlite,
+    excel,
+    postgreSQL,
+  };
+}
