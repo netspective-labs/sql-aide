@@ -44,7 +44,7 @@ export function attachableSqliteEngine(
 
 export interface AttachableExcelEngine extends AttachableStorageEngine {
   readonly isAttachableExcelEngine: true;
-  readonly from: (sheetName: string) => string;
+  readonly from: (sheetName: string) => string | DuckDbSqlTextSupplier;
 }
 
 export function attachableExcelEngine(
@@ -65,17 +65,20 @@ export function attachableExcelEngine(
     isAttachableExcelEngine: true,
     ...init,
     from: (sheetName) => {
-      const excelFileName = init.identifier;
-      const key = `${excelFileName}:::${sheetName}`;
-      let eis = encounteredInSQL.get(key);
-      if (!eis) {
-        eis = { excelFileName, sheetName, count: 1 };
-        encounteredInSQL.set(key, eis);
-      } else {
-        eis.count++;
-      }
-      // deno-fmt-ignore
-      return `st_read('${excelFileName}', layer='${sheetName}')`;
+      return {
+        SQL: ({ contentFsPath }) => {
+          const excelFileName = contentFsPath({ identity: init.identifier });
+          const key = `${excelFileName}:::${sheetName}`;
+          let eis = encounteredInSQL.get(key);
+          if (!eis) {
+            eis = { excelFileName, sheetName, count: 1 };
+            encounteredInSQL.set(key, eis);
+          } else {
+            eis.count++;
+          }
+          return `st_read('${excelFileName}', layer='${sheetName}')`;
+        },
+      };
     },
   };
   return xlsEngine;
@@ -87,7 +90,7 @@ export interface AttachablePostgreSqlEngine extends AttachableStorageEngine {
   readonly from: (
     tableName: string,
     options?: { schema?: string; pushdown?: boolean },
-  ) => string;
+  ) => string | DuckDbSqlTextSupplier;
   readonly encounteredInSQL: (table?: string) => number | null;
 }
 

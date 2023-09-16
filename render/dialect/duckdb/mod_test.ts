@@ -120,8 +120,11 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
 
   const fixture: mod.DuckDbSqlTextSupplier = {
     // deno-fmt-ignore
-    SQL: ({ postgreSqlBackends }) => ws.unindentWhitespace(/*sql*/`
-        select count(*) from ${postgreSqlBackends.get("SYNTHETIC_GITLAB")?.from("issues") ?? "??"}`),
+    SQL: ({ postgreSqlBackends }) => {
+      const from =postgreSqlBackends.get("SYNTHETIC_GITLAB")?.from("issues") ?? "??";
+      return ws.unindentWhitespace(/*sql*/`
+        select count(*) from ${typeof from === "string" ? from : from.SQL(ctx)}`)
+    },
   };
 
   const ctx = mod.duckDbSqlEmitContext(
@@ -163,8 +166,11 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
 Deno.test("DuckDB Excel Supplier", () => {
   const fixture: mod.DuckDbSqlTextSupplier = {
     // deno-fmt-ignore
-    SQL: ({ excelBackends }) => ws.unindentWhitespace(/*sql*/`
-        SELECT * FROM ${excelBackends.get("SYNTHETIC")?.from("Sheet1") ?? "??"}`),
+    SQL: (ctx) => {
+      const from = ctx.excelBackends.get("SYNTHETIC")?.from("Sheet1") ?? "??";
+      return ws.unindentWhitespace(/*sql*/`
+        SELECT * FROM ${typeof from === "string" ? from : from.SQL(ctx)}`)
+    },
   };
 
   const ctx = mod.duckDbSqlEmitContext((provenance) => provenance.identity, {
