@@ -1,0 +1,25 @@
+# -----------------------------------------------------------------------------
+# see https://www.postgresql.org/docs/current/libpq-pgpass.html for docs
+# see ../../../lib/postgres/pgpass/README.md for parser instructions
+# -----------------------------------------------------------------------------
+# Before each .pgpass line you should include a strict JSON5L definition that
+# includes a line like { id: "XYZ", description: "Purpose", boundary: "Network" } 
+# - id: unique ID where "XYZ" will be used by pgpass.ts to identify connection
+# - description: human=friendly elaboration of purpose
+# - boundary: human=friendly name of network or location of the connection
+# -----------------------------------------------------------------------------
+
+# hostname:port:database:username:password
+# 192.168.2.x:5432:database:postgres:sup3rSecure!
+
+# { id: "SYNTHETIC_GITLAB", description: "GitLab", boundary: "unit-test" } 
+127.0.0.1:5033:gitlabhq_production:gitlab:synthetic_passwd
+
+# { id: "SYNTHETIC_OPENPROJECTs", description: "OpenProject OKRs", boundary: "unit-test" } 
+127.0.0.1:5418:openproject:postgres:synthetic_passwd
+
+# { id: "SYNTHETIC_MINIFLUX", description: "Miniflux Feed Reader", boundary: "unit-test" } 
+127.0.0.1:5441:miniflux:miniflux:synthetic_passwd
+
+# { id: "SYNTHETIC_KEYCLOAK_SSO", description: "Keycloak Single Sign-on Service", boundary: "unit-test" } 
+127.0.0.1:5512:keycloak:admin:synthetic_passwd
