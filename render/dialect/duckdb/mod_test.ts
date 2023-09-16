@@ -5,7 +5,20 @@ import * as ws from "../../../lib/universal/whitespace.ts";
 import * as tmpl from "../../emit/mod.ts";
 import * as mod from "./mod.ts";
 
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
 Deno.test("DuckDB SQLite SQL Supplier", () => {
+  type EmitContext = mod.DuckDbSqlEmitContext<
+    "synthetic_sqlite_instance",
+    Any,
+    Any
+  >;
+  type SqlTextSupplier = mod.DuckDbSqlTextSupplier<
+    "synthetic_sqlite_instance",
+    Any,
+    Any
+  >;
   /**
    * On a regular basis, go to PayPal activity download and ingest only sales.
    * We export all activity from PayPal on a private machine, store it in a file
@@ -13,7 +26,7 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
    * by us to our service providers) and convert data to be properly typed.
    * TRY_CAST will either succeed in the conversion or assign NULL.
    */
-  const paypalActivitySales: mod.DuckDbSqlTextSupplier = {
+  const paypalActivitySales: SqlTextSupplier = {
     SQL: ({ contentFsPath }) => {
       // deno-fmt-ignore
       return ws.unindentWhitespace(/*sql*/`
@@ -37,7 +50,7 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
    * rather than a table but it's a good example of how to take aggregates and
    * make them easy to query in publications.
    */
-  const paypalMonthlySalesSummary: mod.DuckDbSqlTextSupplier = {
+  const paypalMonthlySalesSummary: SqlTextSupplier = {
     SQL: () => {
       // deno-fmt-ignore
       return ws.unindentWhitespace(/*sql*/`
@@ -59,18 +72,19 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
     sqliteDbFsPath: "./synthetic.sqlite.db",
   });
 
-  const ctx = mod.duckDbSqlEmitContext((provenance) => provenance.identity, {
-    sqliteBackends: new Map([[
-      syntheticSqliteASE.identifier,
-      syntheticSqliteASE,
-    ]]),
-  });
-  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<
-    mod.DuckDbSqlEmitContext
-  >();
+  const ctx = mod.duckDbSqlEmitContext<"synthetic_sqlite_instance", Any, Any>(
+    (provenance) => provenance.identity,
+    {
+      sqliteBackends: new Map([[
+        syntheticSqliteASE.identifier as "synthetic_sqlite_instance",
+        syntheticSqliteASE,
+      ]]),
+    },
+  );
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<EmitContext>();
 
   // ${ctx.extensions} will automatically generate the INSTALL sqlite; ATTACH...
-  const ddlDefn = tmpl.SQL<mod.DuckDbSqlEmitContext>(ddlOptions)`
+  const ddlDefn = tmpl.SQL<EmitContext>(ddlOptions)`
     ${ctx.extensions()}
 
     ${paypalActivitySales}
@@ -107,6 +121,12 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
 });
 
 Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
+  type EmitContext = mod.DuckDbSqlEmitContext<Any, "SYNTHETIC_GITLAB", Any>;
+  type SqlTextSupplier = mod.DuckDbSqlTextSupplier<
+    Any,
+    "SYNTHETIC_GITLAB",
+    Any
+  >;
   /**
    * Read some synthetic PostgreSQL backend connection parameters from a synthetic
    * `.pgpass` which can be parsed by SQLa/lib/postgres/pgpass utility.
@@ -118,22 +138,24 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
     console.warn(`${i.message} (${i.srcLineNumber}, ${i.error})`)
   );
 
-  const fixture: mod.DuckDbSqlTextSupplier = {
-    // deno-fmt-ignore
+  const fixture: SqlTextSupplier = {
     SQL: ({ postgreSqlBackends }) => {
-      const from =postgreSqlBackends.get("SYNTHETIC_GITLAB")?.from("issues") ?? "??";
+      const from = (postgreSqlBackends.get(
+        "SYNTHETIC_GITLAB",
+      ) as mod.AttachablePostgreSqlEngine<"issues">)?.from("issues") ?? "??";
+      // deno-fmt-ignore
       return ws.unindentWhitespace(/*sql*/`
         select count(*) from ${typeof from === "string" ? from : from.SQL(ctx)}`)
     },
   };
 
-  const ctx = mod.duckDbSqlEmitContext(
+  const ctx = mod.duckDbSqlEmitContext<Any, "SYNTHETIC_GITLAB", Any>(
     (provenance) => import.meta.resolve(provenance.identity),
     {
       postgreSqlBackends: pgPassFixture.conns.reduce(
         (catalog, conn) => {
           catalog.set(
-            conn.connDescr.id,
+            conn.connDescr.id as "SYNTHETIC_GITLAB",
             mod.attachablePostgreSqlEngine({
               identifier: conn.connDescr.id,
               pgpassConn: conn,
@@ -141,15 +163,13 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
           );
           return catalog;
         },
-        new Map<string, mod.AttachablePostgreSqlEngine>(),
+        new Map<"SYNTHETIC_GITLAB", mod.AttachablePostgreSqlEngine<"issues">>(),
       ),
     },
   );
-  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<
-    mod.DuckDbSqlEmitContext
-  >();
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<EmitContext>();
 
-  const ddlDefn = tmpl.SQL<mod.DuckDbSqlEmitContext>(ddlOptions)`
+  const ddlDefn = tmpl.SQL<EmitContext>(ddlOptions)`
     ${ctx.extensions({ emitPostgreSqlASE: () => true })}
 
     ${fixture}`;
@@ -164,26 +184,32 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
 });
 
 Deno.test("DuckDB Excel Supplier", () => {
-  const fixture: mod.DuckDbSqlTextSupplier = {
-    // deno-fmt-ignore
+  type SqlTextSupplier = mod.DuckDbSqlTextSupplier<Any, Any, "SYNTHETIC">;
+
+  const fixture: SqlTextSupplier = {
     SQL: (ctx) => {
-      const from = ctx.excelBackends.get("SYNTHETIC")?.from("Sheet1") ?? "??";
+      const from =
+        (ctx.excelBackends.get("SYNTHETIC") as mod.AttachableExcelEngine<
+          "Sheet1"
+        >)?.from("Sheet1") ?? "??";
+      // deno-fmt-ignore
       return ws.unindentWhitespace(/*sql*/`
         SELECT * FROM ${typeof from === "string" ? from : from.SQL(ctx)}`)
     },
   };
 
-  const ctx = mod.duckDbSqlEmitContext((provenance) => provenance.identity, {
-    excelBackends: new Map([[
-      "SYNTHETIC",
-      mod.attachableExcelEngine({ identifier: "synthetic.xls" }),
-    ]]),
-  });
-  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<
-    mod.DuckDbSqlEmitContext
-  >();
+  const ctx = mod.duckDbSqlEmitContext<Any, Any, "SYNTHETIC">(
+    (provenance) => provenance.identity,
+    {
+      excelBackends: new Map([[
+        "SYNTHETIC",
+        mod.attachableExcelEngine<"Sheet1">({ identifier: "synthetic.xls" }),
+      ]]),
+    },
+  );
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<typeof ctx>();
 
-  const ddlDefn = tmpl.SQL<mod.DuckDbSqlEmitContext>(ddlOptions)`
+  const ddlDefn = tmpl.SQL<typeof ctx>(ddlOptions)`
       ${ctx.extensions({ emitExcelASE: () => true })}
 
       ${fixture}`;
