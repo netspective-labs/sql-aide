@@ -203,7 +203,7 @@ export function integrationsBuilder<Context extends tmpl.SqlEmitContext>() {
     Shape extends Record<string | number | symbol, SqliteIntegration<Context>>,
   >(
     shape: Shape,
-    options: Parameters<typeof sqliteIntegrations<Shape, Context>>[1],
+    options?: Parameters<typeof sqliteIntegrations<Shape, Context>>[1],
   ) {
     return sqliteIntegrations<Shape, Context>(shape, options);
   }
