@@ -489,6 +489,19 @@ CREATE TABLE IF NOT EXISTS "asset_status" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "asset_service_status" (
+    "asset_service_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
 CREATE TABLE IF NOT EXISTS "asset_type" (
     "asset_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
@@ -575,6 +588,10 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "serial_number" TEXT NOT NULL,
     "tco_amount" TEXT NOT NULL,
     "tco_currency" TEXT NOT NULL,
+    "criticality" TEXT,
+    "asymmetric_keys_encryption_enabled" TEXT,
+    "cryptographic_key_encryption_enabled" TEXT,
+    "symmetric_keys_encryption_enabled" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -586,6 +603,32 @@ CREATE TABLE IF NOT EXISTS "asset" (
     FOREIGN KEY("asset_status_id") REFERENCES "asset_status"("asset_status_id"),
     FOREIGN KEY("asset_type_id") REFERENCES "asset_type"("asset_type_id"),
     FOREIGN KEY("assignment_id") REFERENCES "assignment"("assignment_id")
+);
+CREATE TABLE IF NOT EXISTS "asset_service" (
+    "asset_service_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_id" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "asset_service_status_id" INTEGER NOT NULL,
+    "port" TEXT NOT NULL,
+    "experimental_version" TEXT NOT NULL,
+    "production_version" TEXT NOT NULL,
+    "latest_vendor_version" TEXT NOT NULL,
+    "resource_utilization" TEXT NOT NULL,
+    "log_file" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "vendor_link" TEXT NOT NULL,
+    "installation_date" DATE,
+    "criticality" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
+    FOREIGN KEY("asset_service_status_id") REFERENCES "asset_service_status"("asset_service_status_id")
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "vulnerability_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1631,6 +1674,15 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+    SELECT
+    asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
+    ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
+    FROM asset_service asser
+    INNER JOIN asset ast ON ast.asset_id = asser.asset_id
+    INNER JOIN organization o ON o.organization_id=ast.organization_id
+    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
@@ -1820,6 +1872,11 @@ INSERT INTO "asset_status" ("code", "value", "created_by", "updated_at", "update
               ('RETURNED_FOR_MAINTENANCE', 'Returned For Maintenance', NULL, NULL, NULL, NULL, NULL, NULL),
               ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL),
               ('UNDEFINED', 'Undefined', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "asset_service_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('ACTIVE', 'Active', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('INACTIVE', 'Inactive', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('DELETED', 'DELETED', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "asset_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
        VALUES ('ACCOUNT', 'Account', NULL, NULL, NULL, NULL, NULL, NULL),
@@ -2100,7 +2157,7 @@ INSERT INTO "security_incident_response_team" ("training_subject_id", "person_id
 INSERT INTO "rating" ("author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FOUR'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FIVE'), 'Good Service', 'Satisfied', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "contract" ("contract_from_id", "contract_to_id", "contract_status_id", "document_reference", "payment_type_id", "periodicity_id", "start_date", "end_date", "contract_type_id", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), (SELECT "contract_status_id" FROM "contract_status" WHERE "code" = 'FINISHED'), 'google.com', (SELECT "payment_type_id" FROM "payment_type" WHERE "code" = 'RENTS'), (SELECT "periodicity_id" FROM "periodicity" WHERE "code" = 'WEEKLY'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', (SELECT "contract_type_id" FROM "contract_type" WHERE "code" = 'GENERAL_CONTRACT_FOR_SERVICES'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Risk description', (SELECT "risk_subject_id" FROM "risk_subject" WHERE "code" = 'TECHNICAL_RISK'), (SELECT "risk_type_id" FROM "risk_type" WHERE "code" = 'QUALITY'), 'Impact to the organization', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-13', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, (SELECT "asset_status_id" FROM "asset_status" WHERE "code" = 'IN_USE'), '', 'Asset Name', 'Service used for asset etc', (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE'), '', (SELECT "assignment_id" FROM "assignment" WHERE "code" = 'IN_USE'), '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "criticality", "asymmetric_keys_encryption_enabled", "cryptographic_key_encryption_enabled", "symmetric_keys_encryption_enabled", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, (SELECT "asset_status_id" FROM "asset_status" WHERE "code" = 'IN_USE'), '', 'Asset Name', 'Service used for asset etc', (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE'), '', (SELECT "assignment_id" FROM "assignment" WHERE "code" = 'IN_USE'), '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "incident" ("title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Server Down - Due to CPU utilization reached 100%', '2021-04-20', '2021-04-20T00:00:00.000Z', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE')), (SELECT "incident_category_id" FROM "incident_category" WHERE "code" = 'PERFORMANCE'), (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE'), 'MAJOR', 'HIGH', (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT'), 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', (SELECT "incident_status_id" FROM "incident_status" WHERE "code" = 'CLOSED'), NULL, NULL, '', '', '2021-04-20', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "incident_root_cause" ("incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE') AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT') AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL, NULL, NULL, NULL, NULL, NULL);
 -- the .dump in the last line is necessary because we load into :memory:

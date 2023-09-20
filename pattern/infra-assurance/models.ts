@@ -126,6 +126,17 @@ export const assetStatus = gm.autoIncPkTable(
   { isIdempotent: true },
 );
 
+export const assetServiceStatus = gm.autoIncPkTable(
+  "asset_service_status",
+  {
+    asset_service_status_id: udm.autoIncPK(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
 export const assetType = gm.autoIncPkTable(
   "asset_type",
   {
@@ -507,6 +518,41 @@ export const asset = gm.autoIncPkTable("asset", {
   serial_number: udm.text(),
   tco_amount: udm.text(),
   tco_currency: udm.text(),
+  criticality: udm.textNullable(),
+  asymmetric_keys_encryption_enabled: udm.textNullable(),
+  cryptographic_key_encryption_enabled: udm.textNullable(),
+  symmetric_keys_encryption_enabled: udm.textNullable(),
+  ...gm.housekeeping.columns,
+});
+
+/**
+ * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/infrastructure_service.html
+ */
+/**
+ * https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/installed_software.html
+ */
+/**
+ * https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/running_software.html
+ */
+
+export const assetService = gm.autoIncPkTable("asset_service", {
+  asset_service_id: udm.autoIncPK(),
+  asset_id: asset.references
+    .asset_id(),
+  name: udm.text(),
+  description: udm.text(),
+  asset_service_status_id: assetServiceStatus.references
+    .asset_service_status_id(),
+  port: udm.text(),
+  experimental_version: udm.text(),
+  production_version: udm.text(),
+  latest_vendor_version: udm.text(),
+  resource_utilization: udm.text(),
+  log_file: udm.text(),
+  url: udm.text(),
+  vendor_link: udm.text(),
+  installation_date: udm.dateNullable(),
+  criticality: udm.text(),
   ...gm.housekeeping.columns,
 });
 
@@ -1019,12 +1065,14 @@ export const allContentTables: SQLa.TableDefinition<
   host,
   hostBoundary,
   assetStatus,
+  assetServiceStatus,
   assetType,
   assignment,
   raciMatrix,
   raciMatrixSubjectBoundary,
   raciMatrixActivity,
   asset,
+  assetService,
   vulnerabilitySource,
   vulnerability,
   threatSource,
@@ -1281,6 +1329,12 @@ const assetStatusInsertion = assetStatus.insertDML([
   { code: "RETURNED_FOR_MAINTENANCE", value: "Returned For Maintenance" },
   { code: "RETURNED_TO_SUPPLIER", value: "Returned To Supplier" },
   { code: "UNDEFINED", value: "Undefined" },
+]);
+
+const assetServiceStatusInsertion = assetServiceStatus.insertDML([
+  { code: "ACTIVE", value: "Active" },
+  { code: "INACTIVE", value: "Inactive" },
+  { code: "DELETED", value: "DELETED" },
 ]);
 
 const assetTypeInsertion = assetType.insertDML([
@@ -1949,6 +2003,39 @@ const contractView = SQLa.safeViewDefinition(
   INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
   INNER JOIN periodicity p on p.code = ct.periodicity_id`;
 
+const assetServiceView = SQLa.safeViewDefinition(
+  "asset_service_view",
+  {
+    name: udm.text(),
+    server: udm.text(),
+    description: udm.text(),
+    port: udm.text(),
+    experimental_version: udm.text(),
+    production_version: udm.text(),
+    latest_vendor_version: udm.text(),
+    resource_utilization: udm.text(),
+    log_file: udm.text(),
+    url: udm.text(),
+    vendor_link: udm.text(),
+    installation_date: udm.dateNullable(),
+    criticality: udm.text(),
+    owner: udm.text(),
+    tag: udm.text(),
+    asset_criticality: udm.text(),
+    asymmetric_keys: udm.text(),
+    cryptographic_key: udm.text(),
+    symmetric_keys: udm.text(),
+  },
+)`
+  SELECT
+  asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+  asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
+  ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
+  FROM asset_service asser
+  INNER JOIN asset ast ON ast.asset_id = asser.asset_id
+  INNER JOIN organization o ON o.organization_id=ast.organization_id
+  INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id`;
+
 export const allContentViews: SQLa.ViewDefinition<
   Any,
   udm.EmitContext,
@@ -1965,6 +2052,7 @@ export const allContentViews: SQLa.ViewDefinition<
   rootCauseAnalysisView,
   vendorView,
   contractView,
+  assetServiceView,
 ];
 
 export function sqlDDL() {
@@ -2013,6 +2101,8 @@ export function sqlDDL() {
     ${skillInsertion}
 
     ${assetStatusInsertion}
+
+    ${assetServiceStatusInsertion}
 
     ${assetTypeInsertion}
 
