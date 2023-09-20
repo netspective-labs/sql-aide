@@ -489,6 +489,19 @@ CREATE TABLE IF NOT EXISTS "asset_status" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "asset_service_status" (
+    "asset_service_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
 CREATE TABLE IF NOT EXISTS "asset_type" (
     "asset_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
@@ -575,6 +588,10 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "serial_number" TEXT NOT NULL,
     "tco_amount" TEXT NOT NULL,
     "tco_currency" TEXT NOT NULL,
+    "criticality" TEXT,
+    "asymmetric_keys_encryption_enabled" TEXT,
+    "cryptographic_key_encryption_enabled" TEXT,
+    "symmetric_keys_encryption_enabled" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -586,6 +603,32 @@ CREATE TABLE IF NOT EXISTS "asset" (
     FOREIGN KEY("asset_status_id") REFERENCES "asset_status"("asset_status_id"),
     FOREIGN KEY("asset_type_id") REFERENCES "asset_type"("asset_type_id"),
     FOREIGN KEY("assignment_id") REFERENCES "assignment"("assignment_id")
+);
+CREATE TABLE IF NOT EXISTS "asset_service" (
+    "asset_service_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_id" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "asset_service_status_id" INTEGER NOT NULL,
+    "port" TEXT NOT NULL,
+    "experimental_version" TEXT NOT NULL,
+    "production_version" TEXT NOT NULL,
+    "latest_vendor_version" TEXT NOT NULL,
+    "resource_utilization" TEXT NOT NULL,
+    "log_file" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "vendor_link" TEXT NOT NULL,
+    "installation_date" DATE,
+    "criticality" TEXT NOT NULL,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMP,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMP,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
+    FOREIGN KEY("asset_service_status_id") REFERENCES "asset_service_status"("asset_service_status_id")
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "vulnerability_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1631,6 +1674,15 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+    SELECT
+    asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
+    ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
+    FROM asset_service asser
+    INNER JOIN asset ast ON ast.asset_id = asser.asset_id
+    INNER JOIN organization o ON o.organization_id=ast.organization_id
+    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
@@ -1820,6 +1872,11 @@ INSERT INTO "asset_status" ("code", "value", "created_by", "updated_at", "update
               ('RETURNED_FOR_MAINTENANCE', 'Returned For Maintenance', NULL, NULL, NULL, NULL, NULL, NULL),
               ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL),
               ('UNDEFINED', 'Undefined', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "asset_service_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('ACTIVE', 'Active', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('INACTIVE', 'Inactive', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('DELETED', 'DELETED', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "asset_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
        VALUES ('ACCOUNT', 'Account', NULL, NULL, NULL, NULL, NULL, NULL),

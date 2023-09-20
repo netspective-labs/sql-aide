@@ -408,6 +408,20 @@
       activity_log: TEXT
   }
 
+  entity "asset_service_status" as asset_service_status {
+      **asset_service_status_id**: INTEGER
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   entity "asset_type" as asset_type {
       **asset_type_id**: INTEGER
     --
@@ -501,6 +515,36 @@
     * serial_number: TEXT
     * tco_amount: TEXT
     * tco_currency: TEXT
+      criticality: TEXT
+      asymmetric_keys_encryption_enabled: TEXT
+      cryptographic_key_encryption_enabled: TEXT
+      symmetric_keys_encryption_enabled: TEXT
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "asset_service" as asset_service {
+      **asset_service_id**: INTEGER
+    --
+    * asset_id: INTEGER
+    * name: TEXT
+    * description: TEXT
+    * asset_service_status_id: INTEGER
+    * port: TEXT
+    * experimental_version: TEXT
+    * production_version: TEXT
+    * latest_vendor_version: TEXT
+    * resource_utilization: TEXT
+    * log_file: TEXT
+    * url: TEXT
+    * vendor_link: TEXT
+      installation_date: DATE
+    * criticality: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -1396,6 +1440,8 @@
   asset_status |o..o{ asset
   asset_type |o..o{ asset
   assignment |o..o{ asset
+  asset |o..o{ asset_service
+  asset_service_status |o..o{ asset_service
   vulnerability_source |o..o{ vulnerability
   threat_source_type |o..o{ threat_source
   threat_source |o..o{ threat_event
