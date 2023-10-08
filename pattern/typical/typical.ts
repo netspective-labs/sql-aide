@@ -174,8 +174,14 @@ export function governedDomains<
         ),
       ).optional(),
 
-    ulid: () => z.string().ulid(),
-    ulidNullable: () => z.string().ulid().optional(),
+    ulid: () =>
+      z.string(SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodStringDescr({ isUlid: true }),
+      )).ulid(),
+    ulidNullable: () =>
+      z.string(SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodStringDescr({ isUlid: true }),
+      )).ulid().optional(),
 
     uuid: () => z.string().uuid(),
     uuidNullable: () =>
