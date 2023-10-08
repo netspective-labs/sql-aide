@@ -1,8 +1,8 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run
 
+import { cliffy } from "./deps.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as sh from "../../lib/sqlite/shell.ts";
-import * as flow from "../../lib/flow/mod.ts";
 import * as notebook from "./notebook.sqla.ts";
 import * as m from "./models.sqla.ts";
 import * as SQLa from "../../render/mod.ts";
@@ -11,15 +11,30 @@ import * as typical from "../../pattern/typical/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-// TODO TODO for shell.ts:
-// -- search for SQLite on path or through requested paths
-// -- search for SQLite extensions on path or through requested paths
-// TODO
+export type DryRunnable = { readonly dryRun: boolean };
+export type VerboseCapable = { readonly verbose: boolean };
 
-// const relativeFilePath = (name: string) => {
-//   const absPath = path.fromFileUrl(import.meta.resolve(name));
-//   return path.relative(Deno.cwd(), absPath);
-// };
+export type Reportable = {
+  readonly dryRun?: (message: string) => void;
+  readonly verbose?: (message: string) => void;
+  readonly log?: (message: string) => void;
+  readonly error?: (message: string, error?: Error) => void;
+};
+
+export function reportCLI(
+  options: Partial<DryRunnable> & Partial<VerboseCapable>,
+): Reportable {
+  return {
+    dryRun: options?.dryRun
+      ? ((message: string) => console.log(message))
+      : undefined,
+    verbose: options?.verbose
+      ? ((message: string) => console.log(message))
+      : undefined,
+    log: (message: string) => console.log(message),
+    error: (message: string) => console.error(message),
+  };
+}
 
 export type ExtensionLoadSqlSupplier<Extension extends string> = (
   extnIdentity: Extension,
@@ -40,44 +55,41 @@ export const sqlPkgExtnLoadSqlSupplier = (
   };
 };
 
-export function sqlCommand(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
-) {
-  const models = m.models();
-  const ctx = m.sqlEmitContext();
+const emitSQL = async (
+  sqlSupplier: Parameters<typeof sh.executeSqliteUA>[1],
+  options:
+    & { dest?: string | undefined }
+    & { sqliteDb?: string | undefined }
+    & Partial<DryRunnable>
+    & Partial<VerboseCapable>
+    & Parameters<typeof sh.executeSqliteUA>[2],
+) => {
+  if (
+    typeof options.dest === "undefined" &&
+    typeof options.sqliteDb === "undefined"
+  ) {
+    console.log(ft.flexibleTextList(sqlSupplier).join("\n"));
+    return;
+  }
 
-  const emitSQL = async (
-    sqlSupplier: Parameters<typeof sh.executeSqliteUA>[1],
-    options:
-      & { dest?: string | undefined }
-      & { sqliteDb?: string | undefined }
-      & Parameters<typeof sh.executeSqliteUA>[2],
-  ) => {
-    if (
-      typeof options.dest === "undefined" &&
-      typeof options.sqliteDb === "undefined"
-    ) {
-      console.log(ft.flexibleTextList(sqlSupplier).join("\n"));
-      return;
-    }
+  if (options.dest) {
+    await Deno.writeTextFile(
+      options.dest,
+      ft.flexibleTextList(sqlSupplier).join("\n"),
+    );
+  }
 
-    if (options.dest) {
-      await Deno.writeTextFile(
-        options.dest,
-        ft.flexibleTextList(sqlSupplier).join("\n"),
-      );
-    }
+  if (options.sqliteDb) {
+    await sh.executeSqliteUA(options.sqliteDb, sqlSupplier, {
+      ...options,
+      report: reportCLI(options),
+    });
+  }
+};
 
-    if (options.sqliteDb) {
-      await sh.executeSqliteUA(options.sqliteDb, sqlSupplier, {
-        ...options,
-        report: clii.reportCLI(options),
-      });
-    }
-  };
-
+export function notebookCommand() {
   // deno-fmt-ignore
-  return clii.command()
+  return new cliffy.Command()
     .description("Emit SQL to STDOUT or SQLite database")
     .option("-d, --dest <file:string>", "Save the SQL in the provided filename")
     .option("--sqlite-db <file:string>", "Execute the SQL in the provided SQLite database")
@@ -86,33 +98,20 @@ export function sqlCommand(
     .option("--remove-dest-first", "If using --sqlite-db, delete the SQLite DB before executing SQL")
     .option("-s, --separators", "Include comments before each SQL block")
     .option("--dump", "Append `.dump` to the end of the SQL to faciliate sending output via pipe")
-    .arguments("<sql-identity...>")
+    .arguments("[sql-identity...]")
     .action((options, ...sqlIdentities) => {
-      const library = notebook.notebook({ loadExtnSQL: sqlPkgExtnLoadSqlSupplier });
-      const separators = options?.separators;
-      const SQL: string[] = [];
-      for(const si of sqlIdentities) {
-        if(separators) SQL.push(`-- ${si}\n`);
-        if(si in library) {
-          SQL.push((library as Any)[si].SQL(ctx))
-        } else {
-          switch(si) {
-            case "init":
-              SQL.push(models.sqlDDL({ loadExtnSQL: sqlPkgExtnLoadSqlSupplier }).SQL(ctx));
-              break;
-          }
-        }
+      const library = notebook.library({ loadExtnSQL: sqlPkgExtnLoadSqlSupplier });
+      if(sqlIdentities.length == 0) {
+        console.log(Object.keys(library.entries).join("\n"))
+      } else {
+        emitSQL(library.SQL(options, ...sqlIdentities as (keyof typeof library.entries)[]), options)
       }
-      if(options.dump) SQL.push(`.dump`);
-      emitSQL(SQL, options)
     });
 }
 
-export function diagramCommand(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
-) {
+export function diagramCommand() {
   // deno-fmt-ignore
-  return clii.command()
+  return new cliffy.Command()
     .description("Emit Diagram")
     .option("-d, --dest <file:string>", "Output destination, STDOUT if not supplied")
     .action((options) => {
@@ -137,14 +136,23 @@ export function diagramCommand(
     });
 }
 
-// we use the "flow" infrastructure because it has the ability to dry-run/verbose
-const clii = flow.cliInfrastructure({
-  resolveURI: (specifier) =>
-    specifier ? import.meta.resolve(specifier) : import.meta.url,
-});
-
-await clii.commands
-  // .command("db", dbCommand(clii))
-  .command("sql", sqlCommand(clii))
-  .command("diagram", diagramCommand(clii))
+const callerName = import.meta.resolve(import.meta.url);
+new cliffy.Command()
+  .name(callerName.slice(callerName.lastIndexOf("/") + 1))
+  .version("0.1.0")
+  .description("Content Aide")
+  .action(() => {
+    const library = notebook.library({
+      loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
+    });
+    emitSQL(library.SQL({}, "init"), {
+      sqliteDb: `device-content.sqlite.db`,
+      removeDestFirst: true,
+      verbose: true,
+    });
+  })
+  .command("help", new cliffy.HelpCommand().global())
+  .command("completions", new cliffy.CompletionsCommand())
+  .command("diagram", diagramCommand())
+  .command("notebook", notebookCommand())
   .parse();

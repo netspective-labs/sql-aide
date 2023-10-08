@@ -1,11 +1,10 @@
 import * as SQLa from "../../render/mod.ts";
 import * as tp from "../../pattern/typical/mod.ts";
-import mimeTypesDefn from "https://raw.githubusercontent.com/patrickmccallum/mimetype-io/master/src/mimeData.json" with {
-  type: "json",
-};
 
-export const sqlEmitContext = () =>
-  SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.sqliteDialect() });
+export const sqlEmitContext = <EmitContext extends SQLa.SqlEmitContext>() =>
+  SQLa.typicalSqlEmitContext({
+    sqlDialect: SQLa.sqliteDialect(),
+  }) as EmitContext;
 
 export function governance<EmitContext extends SQLa.SqlEmitContext>() {
   type DomainQS = tp.TypicalDomainQS;
@@ -26,9 +25,8 @@ export function governance<EmitContext extends SQLa.SqlEmitContext>() {
 }
 
 export function models<EmitContext extends SQLa.SqlEmitContext>() {
-  const { keys: gk, domains: gd, model: gm, templateState: gts } = governance<
-    EmitContext
-  >();
+  const modelsGovn = governance<EmitContext>();
+  const { keys: gk, domains: gd, model: gm } = modelsGovn;
 
   /**
    * Immutable Devices table represents different machines, servers, or workstations.
@@ -281,59 +279,8 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsWalkEntryFile,
   ];
 
-  function sqlDDL(options: {
-    // extensions should be loaded using "behaviors" so `;` terminator is not emitted
-    loadExtnSQL: (extn: string) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
-  }) {
-    const newUlid = { SQL: () => "ulid()" }; // can also use ulid_bytes() for higher performance
-    const deviceInsertable = {
-      device_id: newUlid,
-      name: "test",
-      ip_address: "127.0.0.1",
-      os: "Debian",
-    };
-    const deviceDML = device.insertDML(deviceInsertable);
-    const monitorPathDML = deviceMonitorPath.insertDML({
-      device_monitor_path_id: newUlid,
-      device_id: device.select({ name: "test" }),
-      root_path: "/etc/init.d",
-    });
-    const mimeTypesDML = mimeTypesDefn.flatMap((mt) =>
-      mt.types.map((type) =>
-        mimeType.insertDML({
-          mime_type_id: newUlid,
-          name: mt.name,
-          file_extn: type,
-          description: mt.description.replaceAll("\n", "\\n"),
-        })
-      )
-    );
-
-    // deno-fmt-ignore
-    return SQLa.SQL<EmitContext>(gts.ddlOptions)`
-      -- Enable foreign key constraints for data integrity
-      PRAGMA foreign_keys = ON;
-
-      ${options.loadExtnSQL('asg017/ulid/ulid0')}
-
-      ${contentTables}
-
-      -- Indexes for optimizing query performance
-      CREATE INDEX idx_device__name ON device(name);
-      CREATE INDEX idx_fs_walk_session__device_id ON fs_walk_session(device_id);
-      CREATE INDEX idx_fs_walk_entry__fs_walk_session_id ON fs_walk_entry(fs_walk_session_id);
-      CREATE INDEX idx_fs_content__device_id__content_hash ON fs_content(device_id, content_hash);
-      CREATE INDEX idx_fs_walk_entry_file__fs_walk_entry_id ON fs_walk_entry_file(fs_walk_entry_id);
-      CREATE INDEX idx_fs_walk_entry_file__fs_content_id ON fs_walk_entry_file(fs_content_id);
-
-      ${mimeTypesDML}
-
-      ${deviceDML}
-      ${monitorPathDML}
-      `;
-  }
-
   return {
+    modelsGovn,
     mimeType,
     device,
     deviceMonitorPath,
@@ -343,6 +290,5 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsWalkEntry,
     fsWalkEntryFile,
     contentTables,
-    sqlDDL,
   };
 }
