@@ -149,9 +149,11 @@ export function psqlSetMetaCmd(
     line,
     lineNum,
   ) =>
-    `-- ${line} (variable: ${mcTokens.identifier}, value: ${mcTokens.resolve?.(
-      psmcInstance,
-    )}, srcLine: ${lineNum})`);
+    `-- ${line} (variable: ${mcTokens.identifier}, value: ${
+      mcTokens.resolve?.(
+        psmcInstance,
+      )
+    }, srcLine: ${lineNum})`);
   const onVarValueNotFound = init?.onVarValueNotFound ?? (() => undefined);
   const onUndefinedVarValue = init?.onUndefinedVarValue ?? (() => undefined);
 
