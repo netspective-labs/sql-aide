@@ -135,7 +135,13 @@ export async function executeSqliteUA(
   const reportDryRun = report?.dryRun ?? report?.log ?? verbose;
   if (removeDestFirst && dbDest != inMemorySqliteDB) {
     verbose?.(`Deno.remove("${dbDest}")`);
-    Deno.remove(dbDest, { recursive: true });
+    try {
+      await Deno.remove(dbDest, { recursive: true });
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) {
+        throw error; // Rethrow any errors other than NotFound
+      }
+    }
   }
 
   type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
