@@ -134,6 +134,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       content_hash: gd.text(),
       content: gd.textNullable(), // TODO: BLOB
       content_mime_type: gd.textNullable(),
+      file_extn: gd.integerNullable(),
       file_mode: gd.integerNullable(),
       file_mode_human: gd.textNullable(),
       file_size: gd.integerNullable(),
@@ -171,6 +172,8 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       device_id: device.references.device_id(),
       file_path: gd.text(),
       content_hash: gd.text(),
+      content_mime_type: gd.textNullable(),
+      file_extn: gd.integerNullable(),
       file_mode: gd.integerNullable(),
       file_mode_human: gd.textNullable(),
       file_size: gd.integerNullable(),
