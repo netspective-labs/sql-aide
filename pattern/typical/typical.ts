@@ -361,6 +361,80 @@ export function governedModel<
   };
 
   /**
+   * Simple wrapper around tableDefinition so that generics and Context is
+   * easier to pass when a custom table without any specific shape is needed.
+   * @param tableName the name of table
+   * @param columnsShape all the columns
+   * @returns TableDefinition
+   */
+  const table = <
+    TableName extends string,
+    ColumnsShape extends z.ZodRawShape,
+  >(
+    tableName: TableName,
+    columnsShape: ColumnsShape,
+    options?:
+      & SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>
+      & {
+        readonly lint?:
+          & SQLa.TableNameConsistencyLintOptions
+          & SQLa.FKeyColNameConsistencyLintOptions<
+            Context,
+            DomainQS,
+            DomainsQS
+          >;
+      },
+  ) => {
+    const tableDefn = SQLa.tableDefinition<
+      TableName,
+      ColumnsShape,
+      Context,
+      DomainQS,
+      DomainsQS
+    >(
+      tableName,
+      columnsShape,
+      {
+        ...options,
+        sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
+      },
+    );
+    const defaultIspOptions = housekeeping.insertStmtPrepOptions<
+      TableName
+    >();
+    const result = {
+      ...tableDefn,
+      ...SQLa.tableColumnsRowFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
+        tableName,
+        columnsShape,
+        { defaultIspOptions },
+      ),
+      ...SQLa.tableSelectFactory<
+        TableName,
+        ColumnsShape,
+        Context,
+        DomainQS,
+        DomainsQS
+      >(
+        tableName,
+        columnsShape,
+      ),
+      defaultIspOptions, // in case others need to wrap the call
+    };
+
+    const rules = tableLintRules.typical(result);
+    rules.lint(result, options?.lint);
+
+    return result;
+  };
+
+  /**
    * All of our "content" or "transaction" tables will follow a specific format,
    * namely that they will have a single primary key with the same name as the
    * table with _id appended and common "housekeeping" columns like created_at.
@@ -567,6 +641,7 @@ export function governedModel<
     keys,
     housekeeping,
     tcFactory,
+    table,
     autoIncPkTable,
     textPkTable,
     tableLintRules,
