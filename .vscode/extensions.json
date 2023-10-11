@@ -9,6 +9,7 @@
     "cmoog.sqlnotebook",
     "jebbs.plantuml",
     "yoavbls.pretty-ts-errors",
-    "humao.rest-client"
+    "humao.rest-client",
+    "stateful.runme"
   ]
 }
