@@ -43,8 +43,6 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       name: gd.text(),
       description: gd.text(),
       file_extn: gd.text(),
-      os_info: gd.textNullable(),
-      device_elaboration: gd.jsonTextNullable(), // TODO: need check constraint `CHECK(json_valid(content_elaboration) OR content_elaboration IS NULL),`
       ...gm.housekeeping.columns,
     },
     {
@@ -71,9 +69,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     {
       device_id: gm.keys.ulidPrimaryKey(), // TODO: allow setting default to `ulid()` type like autoIncPK execpt autoUlidPK or something
       name: gd.text(),
-      os: gd.text(),
-      ip_address: gd.text(),
-      os_info: gd.textNullable(),
+      boundary: gd.text(), // can be IP address, VLAN, or any other device name differentiator
       device_elaboration: gd.jsonTextNullable(), // TODO: need check constraint `CHECK(json_valid(content_elaboration) OR content_elaboration IS NULL),`
       ...gm.housekeeping.columns,
     },
@@ -82,34 +78,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       constraints: (props, tableName) => {
         const c = SQLa.tableConstraints(tableName, props);
         return [
-          c.unique("name", "ip_address"),
-        ];
-      },
-    },
-  );
-
-  /**
-   * Immutable Device Monitor Path represents which paths should be monitored
-   * on a given device, which files should be monitored, and how often.
-   *
-   * Always append new records. NEVER delete or update existing records.
-   */
-  const deviceMonitorPath = gm.textPkTable(
-    "device_monitor_path",
-    {
-      device_monitor_path_id: gm.keys.ulidPrimaryKey(),
-      device_id: device.references.device_id(),
-      root_path: gd.text(),
-      glob_spec: gd.text().optional(),
-      cron_spec: gd.text().optional(),
-      ...gm.housekeeping.columns,
-    },
-    {
-      isIdempotent: true,
-      constraints: (props, tableName) => {
-        const c = SQLa.tableConstraints(tableName, props);
-        return [
-          c.unique("device_id", "root_path", "glob_spec"),
+          c.unique("name", "boundary"),
         ];
       },
     },
@@ -131,13 +100,13 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     {
       fs_content_id: gm.keys.ulidPrimaryKey(),
       device_id: device.references.device_id(),
-      content_hash: gd.text(),
+      file_path: gd.text(),
+      content_hash: gd.textNullable(), // content_hash for symlinks will be the same as their target
       content: gd.textNullable(), // TODO: BLOB
-      content_mime_type: gd.textNullable(),
-      file_extn: gd.integerNullable(),
+      file_bytes: gd.integerNullable(), // file_bytes for symlinks will be different than their target
+      file_extn: gd.textNullable(),
       file_mode: gd.integerNullable(),
       file_mode_human: gd.textNullable(),
-      file_size: gd.integerNullable(),
       file_mtime: gd.integerNullable(),
       content_elaboration: gd.jsonTextNullable(), // TODO: need check constraint
       ...gm.housekeeping.columns,
@@ -146,46 +115,16 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       isIdempotent: true,
       constraints: (props, tableName) => {
         const c = SQLa.tableConstraints(tableName, props);
+        // TODO: note that content_hash for symlinks will be the same as their target
+        //       figure out whether we need anything special in the UNIQUE index
         return [
           c.unique(
             "device_id",
+            "file_path",
             "content_hash",
-            "file_size",
+            "file_bytes",
             "file_mtime",
           ),
-        ];
-      },
-    },
-  );
-
-  /**
-   * Immutable File Content path table represents the path where the content
-   * was found. Usually this only has one entry but could have more if there
-   * were multiple symlinks pointing to the same content.
-   *
-   * Always append new records. NEVER delete or update existing records.
-   */
-  const fsContentPath = gm.textPkTable(
-    "fs_content_path",
-    {
-      fs_content_path_id: gm.keys.ulidPrimaryKey(),
-      device_id: device.references.device_id(),
-      file_path: gd.text(),
-      content_hash: gd.text(),
-      content_mime_type: gd.textNullable(),
-      file_extn: gd.integerNullable(),
-      file_mode: gd.integerNullable(),
-      file_mode_human: gd.textNullable(),
-      file_size: gd.integerNullable(),
-      file_mtime: gd.integerNullable(),
-      ...gm.housekeeping.columns,
-    },
-    {
-      isIdempotent: true,
-      constraints: (props, tableName) => {
-        const c = SQLa.tableConstraints(tableName, props);
-        return [
-          c.unique("device_id", "content_hash", "file_path"),
         ];
       },
     },
@@ -274,9 +213,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   const contentTables = [
     mimeType,
     device,
-    deviceMonitorPath,
     fsContent,
-    fsContentPath,
     fsWalkSession,
     fsWalkEntry,
     fsWalkEntryFile,
@@ -286,9 +223,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     modelsGovn,
     mimeType,
     device,
-    deviceMonitorPath,
     fsContent,
-    fsContentPath,
     fsWalkSession,
     fsWalkEntry,
     fsWalkEntryFile,

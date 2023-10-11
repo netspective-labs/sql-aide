@@ -1,6 +1,6 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-sys
 
-import { cliffy } from "./deps.ts";
+import { cliffy, fs } from "./deps.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as sh from "../../lib/sqlite/shell.ts";
 import * as notebook from "./notebook.sqla.ts";
@@ -80,7 +80,10 @@ const emitSQL = async (
   }
 
   if (options.sqliteDb) {
-    await sh.executeSqliteUA(options.sqliteDb, sqlSupplier, {
+    if (typeof options.optimization === "undefined") {
+      options = { ...options, optimization: false };
+    }
+    await sh.executeSqliteUA(options.sqliteDb!, sqlSupplier, {
       ...options,
       report: reportCLI(options),
     });
@@ -107,11 +110,11 @@ export function notebookEntriesCommand() {
   return notebookCommand("Emit one or more SQL entries to STDOUT or SQLite database when generated SQL does not have parameters")
     .option("-s, --separators", "Include comments before each SQL block")
     .arguments("[sql-identity...]")
-    .action((options, ...sqlIdentities) => {
+    .action(async (options, ...sqlIdentities) => {
       if(sqlIdentities.length == 0) {
         console.log(Object.keys(library.entries).join("\n"))
       } else {
-        emitSQL(library.SQL(options, ...sqlIdentities as (keyof typeof library.entries)[]), options)
+        emitSQL(await library.SQL(options, ...sqlIdentities as (keyof typeof library.entries)[]), options)
       }
     });
 }
@@ -129,10 +132,10 @@ export function sqlCommand() {
     "insertMonitoredContent",
     notebookCommand("Insert monitored content")
       .option("--blobs", "Include content blobs not just hashes in registry")
-      .action((options) => {
+      .action(async (options) => {
         const ctx = m.sqlEmitContext();
         emitSQL(
-          library.entries.insertMonitoredContent(options).SQL(ctx),
+          (await library.entries.insertMonitoredContent(options)).SQL(ctx),
           options,
         );
       }),
@@ -145,9 +148,9 @@ export function sqlCommand() {
     result = result.command(
       si,
       notebookCommand(si)
-        .action((options) => {
+        .action(async (options) => {
           emitSQL(
-            library.SQL(options, si as keyof typeof library.entries),
+            await library.SQL(options, si as keyof typeof library.entries),
             options,
           );
         }),
@@ -183,21 +186,41 @@ export function diagramCommand() {
     });
 }
 
+export async function defaultAction(
+  options: { sqliteDb: string; blobs: boolean },
+) {
+  const { sqliteDb, blobs } = options;
+  console.log(options);
+  const library = notebook.library({
+    loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
+  });
+  const ctx = m.sqlEmitContext();
+  if (!fs.existsSync(sqliteDb)) {
+    await emitSQL(await library.SQL({}, "init", "mimeTypesSeedDML"), {
+      sqliteDb,
+      optimization: true, // should only be used on `init` (or new DB)
+      verbose: true,
+    });
+  }
+  const imcSQL = (library.entries.insertMonitoredContent({ blobs })).SQL(ctx);
+  console.log(imcSQL);
+  await emitSQL(imcSQL, { sqliteDb, verbose: true });
+}
+
 const callerName = import.meta.resolve(import.meta.url);
 new cliffy.Command()
   .name(callerName.slice(callerName.lastIndexOf("/") + 1))
   .version("0.1.0")
   .description("Content Aide")
-  .action(() => {
-    const library = notebook.library({
-      loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
-    });
-    emitSQL(library.SQL({}, "init", "mimeTypesSeedDML"), {
-      sqliteDb: `device-content.sqlite.db`,
-      removeDestFirst: true,
-      verbose: true,
-    });
+  .option(
+    "--sqlite-db <file:string>",
+    "Execute the SQL in the provided SQLite database",
+    { default: `device-content.sqlite.db` },
+  )
+  .option("--blobs", "Include content blobs not just hashes in registry", {
+    default: false,
   })
+  .action(async (options) => await defaultAction(options))
   .command("help", new cliffy.HelpCommand().global())
   .command("completions", new cliffy.CompletionsCommand())
   .command("diagram", diagramCommand())
