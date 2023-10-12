@@ -20,6 +20,9 @@ $ sqlpkg install asg017/regex    # https://github.com/asg017/sqlite-regex/blob/m
 
 Others to consider:
 
+- `asg017/sqlite-md` - Markdown parser similar to asg017/html (at
+  https://github.com/asg017/sqlite-md, not in SqlPkg yet, requested via ticket
+  https://github.com/asg017/sqlite-md/issues/2)
 - `x2bool/xlite` - Query Excel (.xlsx, .xls) and Open Document spreadsheets
   (.ods).
 - `nalgeon/define` - User-defined functions and dynamic SQL.
@@ -27,6 +30,10 @@ Others to consider:
   not.
 - `jhowie/envfuncs` - Returns the value of the environment variable.
 - `nalgeon/text` - String and text processing.
+- `mergestat` - Query Git repos
+  (https://docs.mergestat.com/mergestat-lite/usage/runtime-extension, not in
+  SqlPkg yet, requested via ticket
+  https://github.com/mergestat/mergestat/issues/1124)
 
 ## Testing
 
