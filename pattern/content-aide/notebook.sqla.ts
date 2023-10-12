@@ -63,43 +63,38 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     executeSqlBehavior: () => sts,
   });
 
-  // TODO: move this into SQLa as a reusable function across all projects;
-  // when you want to store "variables" (what we call "session state") so that
-  // multiple queries can share
-  const tempTableDDL = <
-    Identifier extends string,
+  /**
+   * Accepts an object shape and turns each property name into a SQLite param
+   * and the property value into the param value. SQLite can use SQL expressions
+   * or literals as values so this function supports both.
+   * @param shape the variables and the values that should become bindable parameters
+   * @returns a SqlTextBehaviorSupplier that can be used in SQL DDL / DML
+   */
+  const sqliteParametersPragma = <
     Shape extends Record<string, Any>,
-  >(identifier: Identifier, shape: Shape) => {
-    const SQL: SqlTextSupplier = {
-      SQL: (ctx) => {
-        const eo = ctx.sqlTextEmitOptions;
-        const state = Object.entries(shape).map(([colName, recordValueRaw]) => {
-          let value: [
-            value: unknown,
-            valueSqlText: string,
-          ] | undefined;
-          if (SQLa.isSqlTextSupplier(recordValueRaw)) {
-            value = [
-              recordValueRaw,
-              `(${recordValueRaw.SQL(ctx)})`, // e.g. `(SELECT x from y) as SQL expr`
-            ];
-          } else {
-            value = eo.quotedLiteral(recordValueRaw);
-          }
-          return [colName, value[1]];
-        });
-
-        // deno-fmt-ignore
-        return uws(`
-          CREATE TEMP TABLE ${identifier} AS
-            SELECT ${state.map(([key, value]) => `${value} AS ${key}`).join(",\n              ")}`);
+  >(shape: Shape) => {
+    const stbs: SQLa.SqlTextBehaviorSupplier<EmitContext> = {
+      executeSqlBehavior: () => {
+        return {
+          SQL: (ctx) => {
+            const eo = ctx.sqlTextEmitOptions;
+            const params: string[] = [];
+            // deno-fmt-ignore
+            Object.entries(shape).forEach(([paramName, recordValueRaw]) => {
+              if (SQLa.isSqlTextSupplier(recordValueRaw)) {
+                params.push(`.parameter set :${paramName} "${recordValueRaw.SQL(ctx).replaceAll('"', '\\"')}"`); // a SQL expression
+              } else {
+                const ql = eo.quotedLiteral(recordValueRaw);
+                // we do replaceAll('\\', '\\\\') because SQLite parameters use \ for their own escape and so does JS :-/
+                params.push(`.parameter set :${paramName} ${ql[0] == ql[1] ? ql[1] : `"${ql[1].replaceAll('\\', '\\\\')}"`}`);
+              }
+            });
+            return params.join("\n");
+          },
+        };
       },
     };
-    return {
-      ...SQL,
-      identifier,
-      shape,
-    };
+    return { ...stbs, shape };
   };
 
   // TODO: move this into SQLa as a reusable function across all projects;
@@ -232,7 +227,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         CREATE INDEX idx_device__name ON device(name);
         CREATE INDEX idx_fs_walk_session__device_id ON fs_walk_session(device_id);
         CREATE INDEX idx_fs_walk_entry__fs_walk_session_id ON fs_walk_entry(fs_walk_session_id);
-        CREATE INDEX idx_fs_content__device_id__content_hash ON fs_content(device_id, content_hash);
+        CREATE INDEX idx_fs_content__device_id__content_digest ON fs_content(device_id, content_digest);
         CREATE INDEX idx_fs_walk_entry_file__fs_walk_entry_id ON fs_walk_entry_file(fs_walk_entry_id);
         CREATE INDEX idx_fs_walk_entry_file__fs_content_id ON fs_walk_entry_file(fs_content_id);
 
@@ -284,7 +279,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       deviceName?: string;
       deviceBoundary?: string;
       paths?: string[];
-      blobs?: boolean;
+      ignorePathsRegEx?: string;
+      blobsRegEx?: string;
+      digestsRegEx?: string;
       maxFileIoReadBytes?: number;
     },
   ): SqlTextSupplier => {
@@ -300,18 +297,27 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     }, { onConflict: onConflictDoNothing });
 
     const paths = options?.paths ?? [Deno.cwd()];
-    const blobs = options?.blobs ?? false;
+    const blobsRegEx = options?.blobsRegEx ?? "\\.(md|mdx|html)$";
+    const digestsRegEx = options?.digestsRegEx ?? ".*";
+    const ignorePathsRegEx = options?.ignorePathsRegEx ??
+      "/(\\.git|node_modules)/";
     const maxFileIoReadBytes = options?.maxFileIoReadBytes ?? 1000000000;
 
-    const sessionState = tempTableDDL("session_state", {
+    // setup the SQL bind parameters that will be used in this block;
+    // object property values will be available as :device_id, :walk_session_id, etc.
+    const bindParams = sqliteParametersPragma({
       device_id: models.device.select({
         name: deviceName,
         boundary: deviceBoundary,
       }),
       walk_session_id: sqlEngineNewUlid,
-      max_filio_read_bytes: maxFileIoReadBytes,
+      max_fileio_read_bytes: maxFileIoReadBytes,
+      ignore_paths_regex: ignorePathsRegEx,
+      blobs_regex: blobsRegEx,
+      digests_regex: digestsRegEx,
     });
 
+    // create active_walk temp table to accept the list of paths we want to scan
     const activeWalk = gm.table(
       "active_walk",
       { root_path: tcFactory.unique(gd.text()) },
@@ -330,39 +336,40 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         ${load("nalgeon/fileio/fileio")}
         ${load("nalgeon/crypto/crypto")}
         ${load("asg017/path/path0")}
+        ${load("asg017/regex/regex0")}
 
         ${activeDeviceDML}
 
-        ${sessionState}
+        ${bindParams}
+        -- if something's not working, use '.parameter list' to see the bind parameters from SQL
+        .parameter list
 
         ${activeWalk}
         ${activeWalkDML}
 
-        -- TODO: add ignore directives (e.g. .git) and "globbing"
-        -- using TEMP VIEW since 'fileio_ls' doesn't work in VIEW
-        DROP VIEW IF EXISTS monitored_file;
-        CREATE TEMP VIEW monitored_file AS
-          SELECT (select device_id from ${sessionState.identifier}) as device_id,
-                 root_path,
+        -- this first pass inserts all unique content where file_path, file_bytes, and file_mtime do not conflict;
+        -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths
+        INSERT OR IGNORE INTO fs_content (fs_content_id, device_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human)
+          SELECT ulid() as fs_content_id,
+                 :device_id as device_id,
                  name AS file_path,
                  path_extension(name) as file_extn,
-                 mtime as file_mtime,
                  size as file_bytes,
+                 mtime as file_mtime,
                  mode as file_mode,
                  fileio_mode(mode) as file_mode_human
             FROM (SELECT root_path FROM active_walk),
                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
-           WHERE file_mode_human like '-%' or file_mode_human like 'l%'; -- only files, not directories
+           WHERE (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
+             AND regex_find(:ignore_paths_regex, name) IS NULL;
 
-        DROP VIEW IF EXISTS monitored_file_content;
-        CREATE TEMP VIEW monitored_file_content AS
-          SELECT *, ${ blobs ? "fileio_read(file_path) AS content, " : "" }hex(sha256(fileio_read(file_path)) AS content_hash
-            FROM monitored_file;
+        -- this second pass reads file contents ("blobs") for those that are requested and will fit
+        UPDATE fs_content SET content = fileio_read(file_path)
+         WHERE regex_find(:blobs_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
 
-        -- this first pass will insert all unique content where content_hash, file_bytes, file_mtime do not conflict
-        INSERT OR IGNORE INTO fs_content (fs_content_id, device_id, file_path, content_hash, ${ blobs ? "content, " : "" }file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human)
-            SELECT ulid(), device_id, file_path, content_hash, ${ blobs ? "content, " : "" }file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human
-              FROM monitored_file_content;
+        -- this third pass reads computes hashes for all those that are requested and will fit
+        UPDATE fs_content SET content_digest = hex(sha256(fileio_read(file_path)))
+         WHERE regex_find(:digests_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
       `.SQL(ctx);
       },
     };
@@ -415,10 +422,10 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         -- find all HTML files in the fs_content table and return
         -- each file and the anchors' labels and hrefs in that file
         WITH html_content AS (
-          SELECT content, content_hash FROM fs_content WHERE file_extn = '.html'
+          SELECT content, content_digest FROM fs_content WHERE file_extn = '.html'
         ),
         html AS (
-          SELECT content_hash,
+          SELECT content_digest,
                  text as label,
                  html_attribute_get(html, 'a', 'href') as href
             FROM html_content, html_each(html_content.content, 'a')
@@ -426,7 +433,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         file as (
           SELECT fs_content_path_id, file_path, label, href
             FROM fs_content_path, html
-           WHERE fs_content_path.content_hash = html.content_hash
+           WHERE fs_content_path.content_digest = html.content_digest
         )
         SELECT * FROM file;
       `.SQL(ctx);

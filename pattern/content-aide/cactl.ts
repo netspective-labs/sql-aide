@@ -131,11 +131,14 @@ export function sqlCommand() {
   result = result.command(
     "insertMonitoredContent",
     notebookCommand("Insert monitored content")
-      .option("--blobs", "Include content blobs not just hashes in registry")
-      .action(async (options) => {
+      .option(
+        "--blobs-reg-ex <reg-ex:string>",
+        "Include content blobs in registry for files matching reg-ex",
+      )
+      .action((options) => {
         const ctx = m.sqlEmitContext();
         emitSQL(
-          (await library.entries.insertMonitoredContent(options)).SQL(ctx),
+          library.entries.insertMonitoredContent(options).SQL(ctx),
           options,
         );
       }),
@@ -187,9 +190,9 @@ export function diagramCommand() {
 }
 
 export async function defaultAction(
-  options: { sqliteDb: string; blobs: boolean },
+  options: { sqliteDb: string; blobsRegEx: string },
 ) {
-  const { sqliteDb, blobs } = options;
+  const { sqliteDb, blobsRegEx } = options;
   console.log(options);
   const library = notebook.library({
     loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
@@ -202,8 +205,10 @@ export async function defaultAction(
       verbose: true,
     });
   }
-  const imcSQL = (library.entries.insertMonitoredContent({ blobs })).SQL(ctx);
-  console.log(imcSQL);
+  const imcSQL = (await library.entries.insertMonitoredContent({ blobsRegEx }))
+    .SQL(
+      ctx,
+    );
   await emitSQL(imcSQL, { sqliteDb, verbose: true });
 }
 
@@ -217,9 +222,13 @@ new cliffy.Command()
     "Execute the SQL in the provided SQLite database",
     { default: `device-content.sqlite.db` },
   )
-  .option("--blobs", "Include content blobs not just hashes in registry", {
-    default: false,
-  })
+  .option(
+    "--blobs-reg-ex <reg-ex:string>",
+    "Include content blobs for files matching reg-ex",
+    {
+      default: "\\.(md|mdx|html)$",
+    },
+  )
   .action(async (options) => await defaultAction(options))
   .command("help", new cliffy.HelpCommand().global())
   .command("completions", new cliffy.CompletionsCommand())

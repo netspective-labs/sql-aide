@@ -15,6 +15,7 @@ $ sqlpkg install nalgeon/crypto
 $ sqlpkg install asg017/path
 $ sqlpkg install asg017/html     # https://github.com/asg017/sqlite-html/blob/main/docs.md
 $ sqlpkg install asg017/http     # https://github.com/asg017/sqlite-http/blob/main/docs.md
+$ sqlpkg install asg017/regex    # https://github.com/asg017/sqlite-regex/blob/main/docs.md
 ```
 
 Others to consider:
@@ -81,7 +82,6 @@ Given the design, there are two primary scenarios where a conflict might arise:
 1. **Timestamp Collision**: If two or more ULIDs are generated at the exact same
    millisecond on different machines, then the uniqueness of the ULID is purely
    dependent on the randomness of the second component.
-
 2. **Randomness Collision**: Even if the timestamp differs, if the random
    component generated is the same for two ULIDs (which is astronomically
    unlikely), there will be a conflict.
@@ -92,7 +92,6 @@ Now, let's consider the probability of each scenario:
    span of time, it's quite likely that you'll have multiple ULIDs with the same
    timestamp. This isn't a problem by itself, but it means the uniqueness then
    rests on the random component.
-
 2. **Randomness Collision**: The random component of a ULID is 80 bits. This
    means there are \(2^{80}\) or approximately \(1.2 x 10^{24}\) possible
    values. If you generate millions (let's say one million for simplicity), the

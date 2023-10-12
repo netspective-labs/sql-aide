@@ -101,7 +101,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       fs_content_id: gm.keys.ulidPrimaryKey(),
       device_id: device.references.device_id(),
       file_path: gd.text(),
-      content_hash: gd.textNullable(), // content_hash for symlinks will be the same as their target
+      content_digest: gd.textNullable(), // content_digest for symlinks will be the same as their target
       content: gd.textNullable(), // TODO: BLOB
       file_bytes: gd.integerNullable(), // file_bytes for symlinks will be different than their target
       file_extn: gd.textNullable(),
@@ -121,7 +121,6 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
           c.unique(
             "device_id",
             "file_path",
-            "content_hash",
             "file_bytes",
             "file_mtime",
           ),
