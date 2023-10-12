@@ -395,3 +395,41 @@ export function tableDefinition<
     ...tableDefnResult,
   };
 }
+
+/**
+ * Generate the SQL for a temp table that can hold temporary "state" variables
+ * for simple bind parameters or reference across other SQL statements. This is
+ * usually only valuable for databases like SQLite or DuckDB that do not have
+ * their own programming languages.
+ * @param tableName the name of the temp table
+ * @param shape object whose properties become table columns and whose values are the column values
+ * @returns SQL template
+ */
+export const tempValuesTable = <
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+>(tableName: TableName, shape: ColumnsShape) => {
+  const SQL: tmpl.SqlTextSupplier<Context> = {
+    SQL: (ctx) => {
+      const eo = ctx.sqlTextEmitOptions;
+      const state = Object.entries(shape).map(([colName, recordValueRaw]) => {
+        let value: [value: unknown, valueSqlText: string] | undefined;
+        if (tmpl.isSqlTextSupplier(recordValueRaw)) {
+          value = [recordValueRaw, `(${recordValueRaw.SQL(ctx)})`];
+        } else {
+          value = eo.quotedLiteral(recordValueRaw);
+        }
+        return [colName, value[1]];
+      });
+
+      // deno-fmt-ignore
+      return `CREATE TEMP TABLE ${tableName} AS SELECT ${state.map(([key, value]) => `${value} AS ${key}`).join(",")}`;
+    },
+  };
+  return {
+    ...SQL,
+    tableName,
+    shape,
+  };
+};
