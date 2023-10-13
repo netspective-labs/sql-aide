@@ -316,13 +316,8 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     const maxFileIoReadBytes = options?.maxFileIoReadBytes ?? 1000000000;
 
     // setup the SQL bind parameters that will be used in this block;
-    // object property values will be available as :device_id, :walk_session_id, etc.
+    // object property values will be available as :device_id, etc.
     const bindParams = sqliteParametersPragma({
-      device_id: models.device.select({
-        name: deviceName,
-        boundary: deviceBoundary,
-      }),
-      walk_session_id: sqlEngineNewUlid,
       max_fileio_read_bytes: maxFileIoReadBytes,
       ignore_paths_regex: ignorePathsRegEx,
       blobs_regex: blobsRegEx,
@@ -353,8 +348,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         ${activeDeviceDML}
 
         ${bindParams}
+        ${models.sqliteParameters.insertDML({ key: `:device_id`, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
         -- if something's not working, use '.parameter list' to see the bind parameters from SQL
-        -- .parameter list
+        --.parameter list
 
         ${activeWalk}
         ${activeWalkDML}

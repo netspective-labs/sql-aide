@@ -211,6 +211,15 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     { isIdempotent: true },
   );
 
+  /**
+   * This is a "virtual" table that should not be used for DDL but used for DML.
+   * It is managed by SQLite and is used to store `.parameter set` values.
+   */
+  const sqliteParameters = gm.table("sqlite_parameters", {
+    key: gd.text(),
+    value: gd.text(),
+  });
+
   const contentTables = [
     mimeType,
     device,
@@ -228,6 +237,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsWalkSession,
     fsWalkEntry,
     fsWalkEntryFile,
+    sqliteParameters,
     contentTables,
   };
 }
