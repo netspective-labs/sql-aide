@@ -41,24 +41,12 @@ Until is tests are fully automated, use
 [RunMe](https://marketplace.visualstudio.com/items?itemName=stateful.runme) via
 Visual Studio Code to execute the commands.
 
-Initialize the database:
+Scan the current directory for all files and store them into
+`device-content.sqlite.db` (this is idempotent, by default it ignores `.git` and
+`node_modules` directories):
 
 ```bash
 $ ./cactl.ts
-$ ./cactl.ts sql mimeTypesSeedDML | sqlite3 device-content.sqlite.db
-```
-
-Load the content including blobs:
-
-```bash
-$ ./cactl.ts sql device | sqlite3 device-content.sqlite.db
-$ ./cactl.ts sql insertMonitoredContent --blobs | sqlite3 device-content.sqlite.db
-```
-
-Show all the HTML anchors in all HTML files:
-
-```bash
-$ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
 ```
 
 Show the stats:
@@ -67,8 +55,16 @@ Show the stats:
 $ ./cactl.ts sql contentStats | sqlite3 device-content.sqlite.db --table
 ```
 
+Show all the HTML anchors in all HTML files:
+
+```bash
+$ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
+```
+
 ## Tasks
 
+- [ ] Track walk sessions, observability (parameters used, etc.)
+- [ ] Add args/option for running ./cactl.ts with a starting root path
 - [ ] Figure out what to do about symlinks
 - [ ] Figure out what to do when fileio_read cannot read larger than 1,000,000
       bytes for hash, etc.

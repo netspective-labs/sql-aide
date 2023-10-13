@@ -108,7 +108,9 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       file_mode: gd.integerNullable(),
       file_mode_human: gd.textNullable(),
       file_mtime: gd.integerNullable(),
-      content_elaboration: gd.jsonTextNullable(), // TODO: need check constraint
+      content_fm_body_attrs: gd.jsonTextNullable(), // each component of frontmatter-based content ({ frontMatter: '', body: '', attrs: {...} })
+      frontmatter: gd.jsonTextNullable(), // meta data or other "frontmatter" in JSON format, TODO: need JSON check constraint
+      elaboration: gd.jsonTextNullable(), // anything that doesn't fit above; TODO: need JSON check constraint
       ...gm.housekeeping.columns,
     },
     {

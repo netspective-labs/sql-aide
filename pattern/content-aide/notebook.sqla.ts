@@ -1,4 +1,6 @@
+import { frontmatter as fm } from "./deps.ts";
 import { unindentWhitespace as uws } from "../../lib/universal/whitespace.ts";
+import * as ft from "../../lib/universal/flexible-text.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as m from "./models.sqla.ts";
 import * as c from "./content.ts";
@@ -11,6 +13,10 @@ type Any = any;
  * together all SQL we use. It's important to note we do not prefer to use ORMs
  * that hide SQL and instead use stateless SQL generators like SQLa to produce
  * all SQL through type-safe TypeScript functions.
+ *
+ * We go to great lengths to allow SQL to be independently executed because we
+ * don't always know the final use cases and we try to use the SQLite CLI whenever
+ * possible because performance is best that way.
  *
  * Because SQL is a declarative and TypeScript is imperative langauage, use each
  * for their respective strengths. Use TypeScript to generate type-safe SQL and
@@ -36,8 +42,11 @@ type Any = any;
  * @returns
  */
 export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
-  // extensions should be loaded using "behaviors" so `;` terminator is not emitted
   loadExtnSQL: (extn: string) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
+  execDbQueryResult: <Shape>(
+    sqlSupplier: ft.FlexibleTextSupplierSync,
+    sqliteDb?: string,
+  ) => Promise<Shape[] | undefined>;
 }) {
   type SqlTextSupplier = SQLa.SqlTextSupplier<EmitContext>;
   const models = m.models<EmitContext>();
@@ -296,6 +305,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       boundary: deviceBoundary,
     }, { onConflict: onConflictDoNothing });
 
+    // for all regular expressions we use ags017/regex Rust extension so
+    // test with https://regex101.com/ ("Rust" flavor, remove \\ and use \ for tests)
+
     const paths = options?.paths ?? [Deno.cwd()];
     const blobsRegEx = options?.blobsRegEx ?? "\\.(md|mdx|html)$";
     const digestsRegEx = options?.digestsRegEx ?? ".*";
@@ -342,7 +354,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
         ${bindParams}
         -- if something's not working, use '.parameter list' to see the bind parameters from SQL
-        .parameter list
+        -- .parameter list
 
         ${activeWalk}
         ${activeWalkDML}
@@ -367,12 +379,54 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         UPDATE fs_content SET content = fileio_read(file_path)
          WHERE regex_find(:blobs_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
 
-        -- this third pass reads computes hashes for all those that are requested and will fit
+        -- this third pass computes hashes for all those that are requested and will fit
         UPDATE fs_content SET content_digest = hex(sha256(fileio_read(file_path)))
          WHERE regex_find(:digests_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
       `.SQL(ctx);
       },
     };
+  };
+
+  const postProcessFsContent = async (
+    options?: {
+      readonly ctx?: EmitContext;
+      readonly potentialFmFilesRegEx?: string;
+    },
+  ): Promise<SqlTextSupplier | undefined> => {
+    const potentialFmFilesRegEx = options?.potentialFmFilesRegEx ??
+      "\\.(md|mdx)$";
+
+    const { loadExtnSQL: load } = libOptions;
+    const unparsedFM = await libOptions.execDbQueryResult<
+      { fs_content_id: string; content: string }
+    >(SQL()`
+      ${load("asg017/regex/regex0")}
+
+      SELECT fs_content_id, content
+        FROM fs_content
+      WHERE regex_find('${potentialFmFilesRegEx}', file_path) IS NOT NULL
+        AND content IS NOT NULL
+        AND content_fm_body_attrs IS NULL
+        AND frontmatter IS NULL;`.SQL(options?.ctx ?? m.sqlEmitContext()));
+
+    if (unparsedFM) {
+      return {
+        SQL: (ctx) => {
+          const { quotedLiteral } = ctx.sqlTextEmitOptions;
+          const updatedFM: string[] = [];
+          for (const ufm of unparsedFM) {
+            if (fm.test(ufm.content)) {
+              const parsedFM = fm.extract(ufm.content);
+              // deno-fmt-ignore
+              updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
+            }
+          }
+          // deno-fmt-ignore
+          return updatedFM.join("\n");
+        },
+      };
+    }
+    return undefined;
   };
 
   const contentStats = (): SqlTextSupplier => ({
@@ -383,6 +437,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
             SELECT
                 file_extn,
                 file_bytes,
+                CASE WHEN frontmatter IS NOT NULL THEN 1 ELSE 0 END AS frontmatter,
                 julianday('now') - julianday(datetime(file_mtime, 'unixepoch')) AS file_age
             FROM fs_content
         ),
@@ -390,6 +445,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
             SELECT
                 file_extn,
                 file_bytes,
+                frontmatter,
                 CASE
                     WHEN file_age < 1/24 THEN
                         CAST(ROUND(1440 * file_age) AS INTEGER) || ' minutes'
@@ -403,6 +459,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         SELECT
             file_extn,
             COUNT(*) AS total_count,
+            SUM(frontmatter) AS with_frontmatter,
             CAST(ROUND(AVG(file_bytes)) AS INTEGER) AS average_size,
             MAX(formatted_time) AS oldest,
             MIN(formatted_time) AS youngest
@@ -454,6 +511,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
   return {
     entries,
+    postProcessFsContent, // this one is special
     SQL: async (
       options: { separators?: true | undefined; dump?: true | undefined },
       ...sqlIdentities: (keyof typeof entries)[]

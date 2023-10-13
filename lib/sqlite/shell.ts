@@ -4,6 +4,8 @@ import {
   flexibleTextType as sqlTextTypeMessage,
 } from "../universal/flexible-text.ts";
 
+// deno-lint-ignore no-explicit-any
+type Any = any;
 export const inMemorySqliteDB = ":memory:" as const;
 
 /**
@@ -19,12 +21,15 @@ export async function executeSqliteCmd(
   sqlSupplier: Uint8Array | FlexibleSqlTextSupplierSync,
   options?: {
     readonly executableFsPath?: (dbFsPath: string) => string | Promise<string>;
+    readonly additionalArgs?: (dbFsPath: string) => string[];
   },
 ) {
   const sqliteCmdFsPath = await options?.executableFsPath?.(dbDest) ??
     `sqlite3`;
   const cmd = new Deno.Command(sqliteCmdFsPath, {
-    args: [dbDest],
+    args: options?.additionalArgs
+      ? [dbDest, ...options.additionalArgs(dbDest)]
+      : [dbDest],
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",
@@ -52,6 +57,48 @@ export async function executeSqliteCmd(
     stdout: () => new TextDecoder().decode(stdoutRaw),
     stderr: () => new TextDecoder().decode(stderrRaw),
   };
+}
+
+export async function sqliteCmdAsJSON<RowShape>(
+  dbDest: string,
+  sqlSupplier: FlexibleSqlTextSupplierSync,
+  options?: Parameters<typeof executeSqliteCmd>[2] & {
+    readonly destDbSQL?: FlexibleSqlTextSupplierSync;
+    readonly transform?: (
+      json: unknown,
+    ) => Promise<RowShape[] | undefined> | RowShape[] | undefined;
+    readonly onError?: (
+      escResult: Awaited<ReturnType<typeof executeSqliteCmd>>,
+    ) =>
+      | RowShape[]
+      | undefined
+      | Promise<RowShape[] | undefined>;
+    readonly onException?: (
+      error: Error,
+      escResult?: Awaited<ReturnType<typeof executeSqliteCmd>>,
+    ) =>
+      | RowShape[]
+      | undefined
+      | Promise<RowShape[] | undefined>;
+  },
+): Promise<RowShape[] | undefined> {
+  let escResult: Awaited<ReturnType<typeof executeSqliteCmd>> | undefined;
+  try {
+    escResult = await executeSqliteCmd(dbDest, sqlSupplier, {
+      ...options,
+      additionalArgs: () => ["--json"],
+    });
+    if (escResult.code != 0) {
+      return options?.onError?.(escResult) ?? undefined;
+    }
+    const json = JSON.parse(escResult.stdout());
+    if (options?.transform) {
+      return options?.transform(json);
+    }
+    return json as RowShape[];
+  } catch (err) {
+    return options?.onException?.(err, escResult) ?? undefined;
+  }
 }
 
 /**

@@ -55,6 +55,25 @@ export const sqlPkgExtnLoadSqlSupplier = (
   };
 };
 
+const library = (options: { sqliteDb?: string }) => {
+  return notebook.library({
+    loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
+    execDbQueryResult: async (sql, sqliteDb) => {
+      return await sh.sqliteCmdAsJSON(
+        sqliteDb ?? options?.sqliteDb ?? ":memory:",
+        sql,
+        {
+          onError: (escResult) => {
+            console.error(escResult?.stderr());
+            console.log(sql);
+            return undefined;
+          },
+        },
+      );
+    },
+  });
+};
+
 const emitSQL = async (
   sqlSupplier: Parameters<typeof sh.executeSqliteUA>[1],
   options:
@@ -105,28 +124,28 @@ export function notebookCommand(description: string) {
 }
 
 export function notebookEntriesCommand() {
-  const library = notebook.library({ loadExtnSQL: sqlPkgExtnLoadSqlSupplier });
   // deno-fmt-ignore
   return notebookCommand("Emit one or more SQL entries to STDOUT or SQLite database when generated SQL does not have parameters")
     .option("-s, --separators", "Include comments before each SQL block")
     .arguments("[sql-identity...]")
     .action(async (options, ...sqlIdentities) => {
+      const l = library(options);
       if(sqlIdentities.length == 0) {
-        console.log(Object.keys(library.entries).join("\n"))
+        console.log(Object.keys(l.entries).join("\n"))
       } else {
-        emitSQL(await library.SQL(options, ...sqlIdentities as (keyof typeof library.entries)[]), options)
+        emitSQL(await l.SQL(options, ...sqlIdentities as (keyof typeof l.entries)[]), options)
       }
     });
 }
 
 export function sqlCommand() {
-  const library = notebook.library({ loadExtnSQL: sqlPkgExtnLoadSqlSupplier });
   const customCmds = ["insertMonitoredContent"];
 
   // deno-fmt-ignore
   let result: Any = notebookCommand("Emit single SQL entry to STDOUT or SQLite database when generated SQL has arguments")
-    .action(() => {
-      console.log(Object.keys(library.entries).map(si => customCmds.find((cc) => cc == si) ? `${si} (has args)` : si).join("\n"));
+    .action((options) => {
+      const l = library(options);
+      console.log(Object.keys(l.entries).map(si => customCmds.find((cc) => cc == si) ? `${si} (has args)` : si).join("\n"));
     });
   result = result.command(
     "insertMonitoredContent",
@@ -136,15 +155,18 @@ export function sqlCommand() {
         "Include content blobs in registry for files matching reg-ex",
       )
       .action((options) => {
+        const l = library(options);
         const ctx = m.sqlEmitContext();
         emitSQL(
-          library.entries.insertMonitoredContent(options).SQL(ctx),
+          l.entries.insertMonitoredContent(options).SQL(ctx),
           options,
         );
       }),
   );
+
+  const l = library({ sqliteDb: ":memory:" });
   for (
-    const si of Object.keys(library.entries).filter((k) =>
+    const si of Object.keys(l.entries).filter((k) =>
       customCmds.find((cc) => cc == k) ? false : true
     )
   ) {
@@ -153,7 +175,7 @@ export function sqlCommand() {
       notebookCommand(si)
         .action(async (options) => {
           emitSQL(
-            await library.SQL(options, si as keyof typeof library.entries),
+            await l.SQL(options, si as keyof typeof l.entries),
             options,
           );
         }),
@@ -193,23 +215,29 @@ export async function defaultAction(
   options: { sqliteDb: string; blobsRegEx: string },
 ) {
   const { sqliteDb, blobsRegEx } = options;
-  console.log(options);
-  const library = notebook.library({
-    loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
-  });
+  const l = library(options);
   const ctx = m.sqlEmitContext();
   if (!fs.existsSync(sqliteDb)) {
-    await emitSQL(await library.SQL({}, "init", "mimeTypesSeedDML"), {
+    await emitSQL(await l.SQL({}, "init", "mimeTypesSeedDML"), {
       sqliteDb,
       optimization: true, // should only be used on `init` (or new DB)
-      verbose: true,
+      verbose: false,
     });
   }
-  const imcSQL = (await library.entries.insertMonitoredContent({ blobsRegEx }))
-    .SQL(
-      ctx,
-    );
-  await emitSQL(imcSQL, { sqliteDb, verbose: true });
+  const imcSQL = l.entries.insertMonitoredContent({ blobsRegEx }).SQL(
+    ctx,
+  );
+  await emitSQL(imcSQL, { sqliteDb, verbose: false });
+
+  // this command will used the data prepared above and do post-processing that
+  // cannot be done in SQLite CLI so we do it in TypeScript
+  const ppfsc = await l.postProcessFsContent();
+  if (ppfsc) {
+    await emitSQL(function* () {
+      yield ppfsc.SQL(ctx);
+      // add any other processing necessary
+    }, { sqliteDb, verbose: false });
+  }
 }
 
 const callerName = import.meta.resolve(import.meta.url);
