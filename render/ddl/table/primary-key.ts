@@ -48,6 +48,11 @@ export function primaryKeyColumnFactory<
       ...sqlDomain,
       isPrimaryKey: true,
       isAutoIncrement: false,
+      sqlSymbol: (ctx) =>
+        // we override sqlSymbol since the one inherited from ...sqlDomain is bound to a different identity
+        ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
+          pkSD.identity,
+        ),
       sqlPartial: (dest) => {
         if (dest === "create table, column defn decorators") {
           const ctcdd = sqlDomain?.sqlPartial?.(
@@ -94,6 +99,10 @@ export function primaryKeyColumnFactory<
         isPrimaryKey: true,
         isExcludedFromInsertDML: true,
         isAutoIncrement: true,
+        sqlSymbol: (ctx) =>
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
+            aipkSD.identity,
+          ),
         sqlDataType: (purpose) => ({
           SQL: (ctx: Context) => {
             if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
@@ -160,6 +169,10 @@ export function primaryKeyColumnFactory<
         isPrimaryKey: true,
         isAutoIncrement: false,
         isOptionalInInsertableRecord: true,
+        sqlSymbol: (ctx) =>
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
+            uadPK.identity,
+          ),
         sqlPartial: (dest) => {
           if (dest === "create table, column defn decorators") {
             const ctcdd = sqlDomain?.sqlPartial?.(

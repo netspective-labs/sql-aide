@@ -140,6 +140,7 @@ const syntheticSchema = () => {
 Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
   /**
    * Test strategy:
+   * Step 0. Validate all column identifiers match their Zod object property names
    * Step 1. Validate that a table with all columns types except primary keys
    *         can be properly defined and are type-safe.
    * Step 2. Check that auto-inc primary keys can be defined and are type-safe
@@ -149,6 +150,56 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
    * General approach is to separate the tests so that no duplicate testing is
    * done (meaning don't just test the same stuff in Step 3 was in 2 and 1).
    */
+
+  await tc.step("identifiers", () => {
+    const { tableWithoutPK, tableWithAutoIncPK, tableWithTextPK } =
+      syntheticSchema();
+    const { ctx } = sqlGen();
+    ta.assertEquals(
+      Array.from(Object.values(tableWithoutPK.columns)).map((c) => ({
+        identifier: c.identity,
+        symbol: c.sqlSymbol(ctx),
+      })),
+      [
+        { identifier: "text", symbol: `"text"` },
+        { identifier: "text_nullable", symbol: `"text_nullable"` },
+        { identifier: "int", symbol: `"int"` },
+        { identifier: "int_nullable", symbol: `"int_nullable"` },
+      ],
+    );
+    ta.assertEquals(
+      Array.from(Object.values(tableWithAutoIncPK.columns)).map((c) => ({
+        identifier: c.identity,
+        symbol: c.sqlSymbol(ctx),
+      })),
+      [
+        {
+          identifier: "auto_inc_primary_key",
+          symbol: `"auto_inc_primary_key"`,
+        },
+        { identifier: "text", symbol: `"text"` },
+        { identifier: "text_nullable", symbol: `"text_nullable"` },
+        { identifier: "int", symbol: `"int"` },
+        { identifier: "int_nullable", symbol: `"int_nullable"` },
+      ],
+    );
+    ta.assertEquals(
+      Array.from(Object.values(tableWithTextPK.columns)).map((c) => ({
+        identifier: c.identity,
+        symbol: c.sqlSymbol(ctx),
+      })),
+      [
+        {
+          identifier: "text_primary_key",
+          symbol: `"text_primary_key"`,
+        },
+        { identifier: "text", symbol: `"text"` },
+        { identifier: "text_nullable", symbol: `"text_nullable"` },
+        { identifier: "int", symbol: `"int"` },
+        { identifier: "int_nullable", symbol: `"int_nullable"` },
+      ],
+    );
+  });
 
   await tc.step(
     "[1] valid table and columns (without any PKs)",

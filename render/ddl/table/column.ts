@@ -68,6 +68,11 @@ export function tableColumnFactory<
       & con.UniqueTableColumn = {
         ...sqlDomain,
         isUnique: true,
+        sqlSymbol: (ctx) =>
+          // we override sqlSymbol since the one inherited from ...sqlDomain is bound to a different identity
+          ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true }).domainName(
+            uniqueSD.identity,
+          ),
         sqlPartial: (dest) => {
           if (dest === "create table, column defn decorators") {
             const ctcdd = sqlDomain?.sqlPartial?.(

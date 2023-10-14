@@ -219,7 +219,7 @@ const fixtureSQL = ws.unindentWhitespace(`
   -- encountered persistence request for 1_publ-host.sql
 
   CREATE VIEW IF NOT EXISTS "publ_host_vw"("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_at", "created_by") AS
-      SELECT * FROM publ_host WHERE "SQL_DOMAIN_NOT_IN_COLLECTION" = 'my_host';
+      SELECT * FROM publ_host WHERE "host" = 'my_host';
 
   CREATE TABLE IF NOT EXISTS "build_event_type" (
       "code" TEXT PRIMARY KEY NOT NULL,
