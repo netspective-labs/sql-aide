@@ -201,6 +201,19 @@ export function governedDomains<
           SQLa.sqlDomainZodStringDescr({ isSemver: true }),
         ),
       ),
+
+    blobText: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isBlobText: true }),
+        ),
+      ),
+    blobTextNullable: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isBlobText: true }),
+        ),
+      ).optional(),
   };
 }
 

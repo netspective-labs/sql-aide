@@ -185,12 +185,14 @@ export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
   readonly isUuid?: boolean;
 } & {
   readonly isUlid?: boolean;
+} & {
+  readonly isBlobText?: boolean;
 };
 
 export function sqlDomainZodStringDescr(
   options: Pick<
     SqlDomainZodStringDescr,
-    "isJsonText" | "isVarChar" | "isSemver" | "isUuid" | "isUlid"
+    "isJsonText" | "isVarChar" | "isSemver" | "isUuid" | "isUlid" | "isBlobText"
   >,
 ): SqlDomainZodStringDescr {
   return {
@@ -205,7 +207,7 @@ export function isSqlDomainZodStringDescr<
   const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
   return isSDZSD(o) &&
     ("isJsonText" in o || "isVarChar" in o || "isSemver" in o ||
-      "isUuid" in o || "isUlid" in o);
+      "isUuid" in o || "isUlid" in o || "isBlobText" in o);
 }
 
 export function zodStringSqlDomainFactory<
@@ -267,14 +269,59 @@ export function zodStringSqlDomainFactory<
         readonly parents?: z.ZodTypeAny[];
       },
     ) => {
+      const inherited = ztaSDF.defaults<Identity>(zodType, init);
       return {
-        ...ztaSDF.defaults<Identity>(zodType, init),
+        ...inherited,
         sqlDataType: () => ({
           SQL: (ctx: Context) => {
             if (tmpl.isPostgreSqlDialect(ctx.sqlDialect)) {
               return `JSONB`;
             }
             return `TEXT`;
+          },
+        }),
+        sqlPartial: (
+          dest:
+            | "create table, full column defn"
+            | "create table, column defn decorators"
+            | "create table, after all column definitions",
+        ) => {
+          if (dest === "create table, column defn decorators") {
+            // we're assuming there are no other sqlPartials inherited
+            const decorators: tmpl.SqlTextSupplier<Context> = {
+              SQL: (ctx) =>
+                tmpl.isSqliteDialect(ctx.sqlDialect)
+                  ? `CHECK(json_valid(${inherited.identity})${
+                    inherited.isNullable()
+                      ? ` OR ${inherited.identity} IS NULL`
+                      : ""
+                  })`
+                  : ``,
+            };
+            return [decorators];
+          }
+          // we're assuming there are no other sqlPartials inherited
+          return undefined;
+        },
+        parents: init?.parents,
+      };
+    },
+    blobString: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: () => {
+            return `BLOB`;
           },
         }),
         parents: init?.parents,
@@ -1425,7 +1472,9 @@ export function zodTypeSqlDomainFactory<
                     ? stringSDF.uuid(zodType, init)
                     : (zodDefHook.descrMeta.isUlid
                       ? stringSDF.ulid(zodType, init)
-                      : stringSDF.string(zodType, init)))));
+                      : (zodDefHook.descrMeta.isBlobText
+                        ? stringSDF.blobString(zodType, init)
+                        : stringSDF.string(zodType, init))))));
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${

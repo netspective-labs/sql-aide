@@ -315,9 +315,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         // get column names for easier to read templating
         //
         const { defineBind: d_defb, useBind: d_useb } = models.device
-          .columnNames(
-            ctx,
-          );
+          .columnNames(ctx);
         const { symbol: fscws_c, defineBind: fscws_defb, useBind: fscws_useb } =
           fscws.columnNames(ctx);
         // const { stsb: fscwpb } = fscwp.columnNames(ctx);
@@ -355,8 +353,15 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         -- if something's not working, use '.parameter list' to see the bind parameters from SQL
         -- .parameter list
 
-        -- inserts all unique content where file_path, file_bytes, and file_mtime do not conflict;
-        -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths
+        -- This SQL statement inserts data into the fs_content table, generating values for some columns
+        -- and conditionally computing content and hashes (content digests) for certain files based on
+        -- provided criteria and functions. It takes care to avoid inserting duplicate entries into the
+        -- table so if the file is already in the table, it does not insert it again. When a file is
+        -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
+        -- file was found in. This allows us to easily find all files that were found in a particular
+        -- walk session and we can run simple queries to see which files were added or updated in a
+        -- specific session. There is no support for detecting file deletes, though.
+        -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
         INSERT OR IGNORE INTO fs_content (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
           SELECT ulid() as fs_content_id,
                  walk_session_id,
@@ -368,7 +373,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
                  mode as file_mode,
                  fileio_mode(mode) as file_mode_human,
                  CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
-                 CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE NULL END AS content_digest
+                 CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE '-' END AS content_digest
             FROM ${fscwp.tableName},
                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
            WHERE walk_session_id = :fs_content_walk_session_id

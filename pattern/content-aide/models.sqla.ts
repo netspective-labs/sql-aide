@@ -70,7 +70,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       device_id: gm.keys.ulidPrimaryKey(), // TODO: allow setting default to `ulid()` type like autoIncPK execpt autoUlidPK or something
       name: gd.text(),
       boundary: gd.text(), // can be IP address, VLAN, or any other device name differentiator
-      device_elaboration: gd.jsonTextNullable(), // TODO: need check constraint `CHECK(json_valid(content_elaboration) OR content_elaboration IS NULL),`
+      device_elaboration: gd.jsonTextNullable(),
       ...gm.housekeeping.columns,
     },
     {
@@ -103,7 +103,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       ignore_paths_regex: gd.textNullable(),
       blobs_regex: gd.textNullable(),
       digests_regex: gd.textNullable(),
-      elaboration: gd.jsonTextNullable(), // TODO: need check constraint
+      elaboration: gd.jsonTextNullable(),
       ...gm.housekeeping.columns,
     },
     {
@@ -132,7 +132,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
       walk_session_id: fsContentWalkSession.references
         .fs_content_walk_session_id(),
       root_path: gd.text(),
-      elaboration: gd.jsonTextNullable(), // TODO: need check constraint
+      elaboration: gd.jsonTextNullable(),
       ...gm.housekeeping.columns,
     },
     {
@@ -165,16 +165,16 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
         .fs_content_walk_session_id(),
       walk_path_id: fsContentWalkPath.references.fs_content_walk_path_id(),
       file_path: gd.text(),
-      content_digest: gd.textNullable(), // content_digest for symlinks will be the same as their target
-      content: gd.textNullable(), // TODO: BLOB
+      content_digest: gd.text(), // '-' when no hash was computed (not NULL); content_digest for symlinks will be the same as their target
+      content: gd.blobTextNullable(),
       file_bytes: gd.integerNullable(), // file_bytes for symlinks will be different than their target
       file_extn: gd.textNullable(),
       file_mode: gd.integerNullable(),
       file_mode_human: gd.textNullable(),
       file_mtime: gd.integerNullable(),
       content_fm_body_attrs: gd.jsonTextNullable(), // each component of frontmatter-based content ({ frontMatter: '', body: '', attrs: {...} })
-      frontmatter: gd.jsonTextNullable(), // meta data or other "frontmatter" in JSON format, TODO: need JSON check constraint
-      elaboration: gd.jsonTextNullable(), // anything that doesn't fit above; TODO: need JSON check constraint
+      frontmatter: gd.jsonTextNullable(), // meta data or other "frontmatter" in JSON format
+      elaboration: gd.jsonTextNullable(), // anything that doesn't fit above
       ...gm.housekeeping.columns,
     },
     {
@@ -185,7 +185,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
         //       figure out whether we need anything special in the UNIQUE index
         return [
           c.unique(
-            "content_digest", // TODO: switch to NON-NULL constraint with empty text default?
+            "content_digest", // use something like `-` when hash is no computed
             "file_path",
             "file_bytes",
             "file_mtime",
