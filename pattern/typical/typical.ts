@@ -1,4 +1,5 @@
 import { zod as z } from "../../deps.ts";
+import * as za from "../../lib/universal/zod-aide.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as et from "./enum-table.ts";
 import * as diaPUML from "../../render/diagram/plantuml-ie-notation.ts";
@@ -309,6 +310,18 @@ export function governedModel<
     },
   );
 
+  const safeTemplating = <ColumnsShape extends z.ZodRawShape>(
+    shape: ColumnsShape,
+    supplier: { symbols: Record<keyof ColumnsShape, (ctx: Context) => string> },
+  ) => ({
+    columnNames: (ctx: Context) =>
+      za.shapeProxies(shape, {
+        symbol: (columnName, ctx) => supplier.symbols[columnName](ctx),
+        defineBind: (columnName) => `:${String(columnName)}`,
+        useBind: (columnName) => ({ SQL: () => `:${String(columnName)}` }),
+      }, ctx),
+  });
+
   const housekeeping = {
     columns: {
       created_at: domains.createdAt(),
@@ -357,6 +370,30 @@ export function governedModel<
         Context,
         DomainQS
       >;
+    },
+    // COALESCE(activity_log, '[]'): This checks if activity_log is NULL and if it is, it defaults to an empty JSON array '[]'.
+    // json_insert() with the '$[' || json_array_length(...) || ']' path: This appends a new entry at the end of the JSON array in activity_log.
+    // usage:
+    //       UPDATE your_table SET
+    //         your_col1 = 'application/typescript',
+    //         updated_at = CURRENT_TIMESTAMP,
+    //         activity_log = ${activityLogDmlPartial(shape)}
+    //       WHERE your_pk = 'pk_value';
+    activityLogDmlPartial: <Shape extends Record<string, Any>>(
+      shape: Shape,
+      alColumnName = "activity_log",
+    ): SQLa.SqlTextBehaviorSupplier<Context> => {
+      return {
+        executeSqlBehavior: () => ({
+          // TODO: this works for SQLite but use the ctx to get the dialect and change it for other DBs
+          SQL: () =>
+            `json_insert(COALESCE(${alColumnName}, '[]'), '$[' || json_array_length(COALESCE(${alColumnName}, '[]')) || ']', json_object(${
+              Object.keys(shape).map((column) => `'${column}', ${column}`).join(
+                ", ",
+              )
+            }))`,
+        }),
+      };
     },
   };
 
@@ -426,6 +463,7 @@ export function governedModel<
         columnsShape,
       ),
       defaultIspOptions, // in case others need to wrap the call
+      ...safeTemplating(tableDefn.zoSchema.shape, tableDefn),
     };
 
     const rules = tableLintRules.typical(result);
@@ -505,6 +543,9 @@ export function governedModel<
         columnsShape,
       ),
       defaultIspOptions, // in case others need to wrap the call
+      activityLogDmlPartial: () =>
+        housekeeping.activityLogDmlPartial<ColumnsShape>(columnsShape),
+      ...safeTemplating(tableDefn.zoSchema.shape, tableDefn),
     };
 
     const rules = tableLintRules.typical(result);
@@ -584,6 +625,9 @@ export function governedModel<
         columnsShape,
       ),
       defaultIspOptions, // in case others need to wrap the call
+      activityLogDmlPartial: () =>
+        housekeeping.activityLogDmlPartial<ColumnsShape>(columnsShape),
+      ...safeTemplating(tableDefn.zoSchema.shape, tableDefn),
     };
 
     const rules = tableLintRules.typical(result);
