@@ -227,8 +227,11 @@ export function typicalTableColumnDefnSQL<
     const decorations = isd.sqlPartial?.(
       "create table, column defn decorators",
     );
-    const decoratorsSQL = decorations
-      ? ` ${decorations.map((d) => d.SQL(ctx)).join(" ")}`
+    const decoratorsText = decorations?.map((d) => d.SQL(ctx)).filter((s) =>
+      s.length > 0
+    );
+    const decoratorsSQL = decoratorsText && decoratorsText.length > 0
+      ? ` ${decoratorsText.join(" ")}`
       : "";
     const notNull = isd.isNullable() ? "" : " NOT NULL";
     const rawDefaultValue = isd.sqlDefaultValue
