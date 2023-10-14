@@ -51,8 +51,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
   type SqlTextSupplier = SQLa.SqlTextSupplier<EmitContext>;
   const models = m.models<EmitContext>();
   const content = c.content<EmitContext>();
-  const { model: gm, domains: gd, templateState: gts, model: { tcFactory } } =
-    models.modelsGovn;
+  const { templateState: gts } = models.modelsGovn;
 
   // type-safe wrapper for all SQL text generated in this library;
   // we call it `SQL` so that VS code extensions like frigus02.vscode-sql-tagged-template-literals
@@ -234,11 +233,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         -- TODO: have SQLa generate these from tables
         CREATE INDEX idx_mime_type__file_extn ON mime_type(file_extn);
         CREATE INDEX idx_device__name ON device(name);
-        CREATE INDEX idx_fs_walk_session__device_id ON fs_walk_session(device_id);
-        CREATE INDEX idx_fs_walk_entry__fs_walk_session_id ON fs_walk_entry(fs_walk_session_id);
-        CREATE INDEX idx_fs_content__device_id__content_digest ON fs_content(device_id, content_digest);
-        CREATE INDEX idx_fs_walk_entry_file__fs_walk_entry_id ON fs_walk_entry_file(fs_walk_entry_id);
-        CREATE INDEX idx_fs_walk_entry_file__fs_content_id ON fs_walk_entry_file(fs_content_id);
+        CREATE INDEX idx_fs_content__walk_session_id__file_path ON fs_content(walk_session_id, file_path);
 
         /**
          * This view combines the results of the four detection methods (creation,
@@ -283,7 +278,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     `;
   };
 
-  const insertMonitoredContent = (
+  const insertContent = (
     options?: {
       deviceName?: string;
       deviceBoundary?: string;
@@ -324,16 +319,6 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       digests_regex: digestsRegEx,
     });
 
-    // create active_walk temp table to accept the list of paths we want to scan
-    const activeWalk = gm.table(
-      "active_walk",
-      { root_path: tcFactory.unique(gd.text()) },
-      { isTemp: true, isIdempotent: false },
-    );
-    const activeWalkDML = activeWalk.insertDML(paths.map((root_path) => ({
-      root_path,
-    })));
-
     return {
       SQL: (ctx) => {
         const { loadExtnSQL: load } = libOptions;
@@ -349,35 +334,47 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
         ${bindParams}
         ${models.sqliteParameters.insertDML({ key: `:device_id`, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
+
+        ${models.fsContentWalkSession.insertDML({
+          fs_content_walk_session_id: sqlEngineNewUlid,
+          device_id: { SQL: () => `:device_id` },
+          walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
+          max_fileio_read_bytes: { SQL: () => `:max_fileio_read_bytes` },
+          blobs_regex: { SQL: () => `:blobs_regex` },
+          digests_regex: { SQL: () => `:digests_regex` },
+          ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
+        })}
+        ${models.sqliteParameters.insertDML({ key: `:fs_content_walk_session_id`, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+
+        ${models.fsContentWalkPath.insertDML(paths.map((root_path) => ({
+          fs_content_walk_path_id: sqlEngineNewUlid,
+          walk_session_id: { SQL: () => `:fs_content_walk_session_id` },
+          root_path })))}
+
         -- if something's not working, use '.parameter list' to see the bind parameters from SQL
-        --.parameter list
+        -- .parameter list
 
-        ${activeWalk}
-        ${activeWalkDML}
-
-        -- this first pass inserts all unique content where file_path, file_bytes, and file_mtime do not conflict;
+        -- inserts all unique content where file_path, file_bytes, and file_mtime do not conflict;
         -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths
-        INSERT OR IGNORE INTO fs_content (fs_content_id, device_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human)
+        INSERT OR IGNORE INTO fs_content (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
           SELECT ulid() as fs_content_id,
-                 :device_id as device_id,
+                 walk_session_id,
+                 fs_content_walk_path_id,
                  name AS file_path,
                  path_extension(name) as file_extn,
                  size as file_bytes,
                  mtime as file_mtime,
                  mode as file_mode,
-                 fileio_mode(mode) as file_mode_human
-            FROM (SELECT root_path FROM active_walk),
+                 fileio_mode(mode) as file_mode_human,
+                 CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
+                 CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE NULL END AS content_digest
+            FROM fs_content_walk_path,
                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
-           WHERE (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
+           WHERE walk_session_id = :fs_content_walk_session_id
+             AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
              AND regex_find(:ignore_paths_regex, name) IS NULL;
 
-        -- this second pass reads file contents ("blobs") for those that are requested and will fit
-        UPDATE fs_content SET content = fileio_read(file_path)
-         WHERE regex_find(:blobs_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
-
-        -- this third pass computes hashes for all those that are requested and will fit
-        UPDATE fs_content SET content_digest = hex(sha256(fileio_read(file_path)))
-         WHERE regex_find(:digests_regex, file_path) IS NOT NULL AND file_bytes < :max_fileio_read_bytes;
+        UPDATE fs_content_walk_session SET walk_finished_at = CURRENT_TIMESTAMP WHERE fs_content_walk_session_id = :fs_content_walk_session_id;
       `.SQL(ctx);
       },
     };
@@ -500,7 +497,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     inspect,
     deviceDML,
     mimeTypesSeedDML,
-    insertMonitoredContent,
+    insertContent,
     contentStats,
     allHtmlAnchors,
   };

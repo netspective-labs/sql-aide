@@ -139,7 +139,7 @@ export function notebookEntriesCommand() {
 }
 
 export function sqlCommand() {
-  const customCmds = ["insertMonitoredContent"];
+  const customCmds = ["insertContent"];
 
   // deno-fmt-ignore
   let result: Any = notebookCommand("Emit single SQL entry to STDOUT or SQLite database when generated SQL has arguments")
@@ -148,7 +148,7 @@ export function sqlCommand() {
       console.log(Object.keys(l.entries).map(si => customCmds.find((cc) => cc == si) ? `${si} (has args)` : si).join("\n"));
     });
   result = result.command(
-    "insertMonitoredContent",
+    "insertContent",
     notebookCommand("Insert monitored content")
       .option(
         "--blobs-reg-ex <reg-ex:string>",
@@ -158,7 +158,7 @@ export function sqlCommand() {
         const l = library(options);
         const ctx = m.sqlEmitContext();
         emitSQL(
-          l.entries.insertMonitoredContent(options).SQL(ctx),
+          l.entries.insertContent(options).SQL(ctx),
           options,
         );
       }),
@@ -224,7 +224,7 @@ export async function defaultAction(
       verbose: false,
     });
   }
-  const imcSQL = l.entries.insertMonitoredContent({ blobsRegEx }).SQL(
+  const imcSQL = l.entries.insertContent({ blobsRegEx }).SQL(
     ctx,
   );
   await emitSQL(imcSQL, { sqliteDb, verbose: false });
