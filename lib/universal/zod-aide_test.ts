@@ -167,6 +167,27 @@ Deno.test("Zod Aide ZodType Baggage", async (tc) => {
   });
 });
 
+Deno.test("Zod Shape Proxy", () => {
+  const syntheticSchema = z.object({
+    text: z.string(),
+    url: z.string().url(),
+    number: z.number(),
+  });
+
+  const proxy = za.shapeProxy<typeof syntheticSchema.shape, string>((prop) =>
+    `${prop} comment`
+  );
+
+  const proxies = za.shapeProxies(syntheticSchema.shape, {
+    proxy1: (prop) => `${prop} comment1`,
+    proxy2: (prop, arg) => `${prop} comment2 ${arg}`,
+  }, "shapeProxyArg");
+
+  ta.assert(proxy.text, `text comment`);
+  ta.assert(proxies.proxy1.number, `number comment1`);
+  ta.assert(proxies.proxy2.url, `url comment1 shapeProxyArg`);
+});
+
 Deno.test("Zod Schema Proxy", () => {
   const syntheticSchema = z.object({
     text: z.string(),

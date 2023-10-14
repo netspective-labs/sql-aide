@@ -170,14 +170,15 @@ Deno.test("SQLa native Zod domains (without references)", async (tc) => {
 
     await innerTC.step("type-safe symbols", () => {
       const { ctx, ddlOptions } = sqlGen();
-      const { symbolSuppliers: ss, symbols: s } = domains;
+      const { symbolSuppliers: ss, symbols: s, identifiers } = domains;
+      const i = identifiers(ctx);
       const symsFixture = tmpl.SQL(ddlOptions)`
-        select ${ss.text_nullable}, ${s.text_optional_defaultable}
+        select ${ss.text_nullable}, ${s.text_optional_defaultable}, ${i.int}
           from Y`;
       ta.assertEquals(
         symsFixture.SQL(ctx),
         uws(`
-          select "text_nullable", "text_optional_defaultable"
+          select "text_nullable", "text_optional_defaultable", "int"
             from Y`),
       );
     });

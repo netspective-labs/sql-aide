@@ -110,6 +110,15 @@ export function sqlDomainsFactory<
       symbols,
 
       /**
+       * Creates a type-safe object that can be used to "inject" the domain
+       * identifier anywhere a string is expected
+       * @param ctx the current context
+       * @returns an object that can be used in SQL template literal text streams
+       */
+      identifiers: (ctx: Context) =>
+        za.shapeProxy<RawShape, string>((domain) => symbols[domain](ctx)),
+
+      /**
        * Creates a type-safe object that can be used to "inject" the qualified
        * identifiers into a SQL template literal text stream.
        * @param sqlNSS the Context or naming strategy supplier

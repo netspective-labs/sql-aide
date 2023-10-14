@@ -45,6 +45,40 @@ export function wrappedZTAs<T extends z.ZodTypeAny>(search: T) {
   return result;
 }
 
+export type ShapeProxies<
+  RawShape extends z.ZodRawShape,
+  ProxyFn extends (key: keyof RawShape, ...args: Any[]) => Any,
+> = Record<keyof RawShape, ProxyFn>;
+
+export const shapeProxy = <RawShape extends z.ZodRawShape, Result>(
+  proxyFn: (key: keyof RawShape, ...args: Any[]) => Result,
+  ...args: Any[]
+) =>
+  new Proxy<{ [d in keyof RawShape]: ReturnType<typeof proxyFn> }>(
+    {} as Any,
+    {
+      get: (_target, prop, _receiver) =>
+        proxyFn(prop as keyof RawShape, ...args),
+    },
+  );
+
+export const shapeProxies = <
+  RawShape extends z.ZodRawShape,
+  Funcs extends Record<string, (key: keyof RawShape, ...args: Any[]) => Any>,
+>(_shape: RawShape, funcs: Funcs, ...args: Any[]) => {
+  const result: {
+    [p in keyof typeof funcs]: {
+      [d in keyof RawShape]: ReturnType<Funcs[p]>;
+    };
+  } = {} as Any;
+  for (const pfk of Object.keys(funcs)) {
+    const proxyKey = pfk as keyof typeof funcs;
+    // the return type is (typeof funcs)[p] so we set to Any
+    result[proxyKey] = shapeProxy(funcs[proxyKey], ...args) as Any;
+  }
+  return result;
+};
+
 export type ZodTypedBaggage<
   ZTA extends z.ZodTypeAny,
   Baggage,
