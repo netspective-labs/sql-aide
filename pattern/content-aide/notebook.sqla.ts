@@ -21,6 +21,10 @@ type Any = any;
  * Because SQL is a declarative and TypeScript is imperative langauage, use each
  * for their respective strengths. Use TypeScript to generate type-safe SQL and
  * let the database do as much work as well.
+ * - Capture all state, valid content, invalid content, and other data in the
+ *   database so that we can run queries for observability; if everything is in
+ *   the database, including error messages, warnings, etc. we can always run
+ *   queries and not have to store logs in separate system.
  * - Instead of imperatively creating thousands of SQL statements, let the SQL
  *   engine use CTEs and other capabilities to do as much declarative work in
  *   the engine as possible.
@@ -103,28 +107,6 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       },
     };
     return { ...stbs, shape };
-  };
-
-  // TODO: move this into SQLa as a reusable function across all projects;
-  // COALESCE(activity_log, '[]'): This checks if activity_log is NULL and if it is, it defaults to an empty JSON array '[]'.
-  // json_insert() with the '$[' || json_array_length(...) || ']' path: This appends a new entry at the end of the JSON array in activity_log.
-  // usage:
-  //       UPDATE mime_type SET
-  //         name = 'application/typescript',
-  //         updated_at = CURRENT_TIMESTAMP,
-  //         activity_log = ${activityLogContent(models.mimeType.zoSchema.shape)}
-  //       WHERE file_extn = '.ts' and name != 'application/typescript'
-  //       AND (SELECT COUNT(*) FROM mime_type WHERE name = 'application/typescript' AND file_extn = '.ts') = 0;;
-  const _activityLogContent = <Shape extends Record<string, Any>>(
-    shape: Shape,
-    alColumnName = "activity_log",
-  ) => {
-    return uws(`json_insert(
-      COALESCE(${alColumnName}, '[]'),
-      '$[' || json_array_length(COALESCE(${alColumnName}, '[]')) || ']',
-      json_object(${
-      Object.keys(shape).map((column) => `'${column}', ${column}`).join(", ")
-    }))`);
   };
 
   // See [SQLite Pragma Cheatsheet for Performance and Consistency](https://cj.rs/blog/sqlite-pragma-cheatsheet-for-performance-and-consistency/)
@@ -319,9 +301,28 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       digests_regex: digestsRegEx,
     });
 
+    // use abbreviations for easier to read templating
+    const {
+      fsContentWalkSession: fscws,
+      fsContentWalkPath: fscwp,
+      // fsContent: fsc,
+    } = models;
+
     return {
       SQL: (ctx) => {
         const { loadExtnSQL: load } = libOptions;
+
+        // get column names for easier to read templating
+        //
+        const { defineBind: d_defb, useBind: d_useb } = models.device
+          .columnNames(
+            ctx,
+          );
+        const { symbol: fscws_c, defineBind: fscws_defb, useBind: fscws_useb } =
+          fscws.columnNames(ctx);
+        // const { stsb: fscwpb } = fscwp.columnNames(ctx);
+        // const { stsb: fscb } = fsc.columnNames(ctx);
+
         // deno-fmt-ignore
         return SQL()`
         ${load("asg017/ulid/ulid0")}
@@ -333,22 +334,22 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         ${activeDeviceDML}
 
         ${bindParams}
-        ${models.sqliteParameters.insertDML({ key: `:device_id`, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
+        ${models.sqliteParameters.insertDML({ key: d_defb.device_id, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
 
         ${models.fsContentWalkSession.insertDML({
           fs_content_walk_session_id: sqlEngineNewUlid,
-          device_id: { SQL: () => `:device_id` },
+          device_id: d_useb.device_id,
           walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
           max_fileio_read_bytes: { SQL: () => `:max_fileio_read_bytes` },
           blobs_regex: { SQL: () => `:blobs_regex` },
           digests_regex: { SQL: () => `:digests_regex` },
           ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
         })}
-        ${models.sqliteParameters.insertDML({ key: `:fs_content_walk_session_id`, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+        ${models.sqliteParameters.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
 
         ${models.fsContentWalkPath.insertDML(paths.map((root_path) => ({
           fs_content_walk_path_id: sqlEngineNewUlid,
-          walk_session_id: { SQL: () => `:fs_content_walk_session_id` },
+          walk_session_id: fscws_useb.fs_content_walk_session_id,
           root_path })))}
 
         -- if something's not working, use '.parameter list' to see the bind parameters from SQL
@@ -368,13 +369,13 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
                  fileio_mode(mode) as file_mode_human,
                  CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
                  CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE NULL END AS content_digest
-            FROM fs_content_walk_path,
+            FROM ${fscwp.tableName},
                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
            WHERE walk_session_id = :fs_content_walk_session_id
              AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
              AND regex_find(:ignore_paths_regex, name) IS NULL;
 
-        UPDATE fs_content_walk_session SET walk_finished_at = CURRENT_TIMESTAMP WHERE fs_content_walk_session_id = :fs_content_walk_session_id;
+        UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};
       `.SQL(ctx);
       },
     };
