@@ -1,9 +1,9 @@
 # Content Aide
 
 This SQLite-based pattern provides tables and queries which collectively manage
-and storing metadata related to file system content, MIME types, devices, and
-file system content walk sessions. They include various fields for timestamps,
-user information, and JSON data for additional details and elaboration.
+and store content and metadata related to files, MIME types, devices, and file
+system content walk sessions. They include various fields for timestamps, user
+information, and JSON data for additional details and elaboration.
 
 - `mime_type`: Stores MIME type information, including a ULID primary key and
   various attributes like name, description, file extension, timestamps, and
@@ -84,10 +84,6 @@ Others to consider:
 
 ## Testing
 
-Until is tests are fully automated, use
-[RunMe](https://marketplace.visualstudio.com/items?itemName=stateful.runme) via
-Visual Studio Code to execute the commands.
-
 Scan the current directory for all files and store them into
 `device-content.sqlite.db` (this is idempotent, by default it ignores `.git` and
 `node_modules` directories):
@@ -96,10 +92,16 @@ Scan the current directory for all files and store them into
 $ ./cactl.ts
 ```
 
+See the contents with [SQLpage](https://github.com/lovasoa/SQLpage):
+
+```bash
+DATABASE_URL=sqlite://./device-content.sqlite.db sqlpage.bin
+```
+
 Show the stats:
 
 ```bash
-$ ./cactl.ts sql contentStats | sqlite3 device-content.sqlite.db --table
+$ ./cactl.ts sql fsContentWalkSessionStats | sqlite3 device-content.sqlite.db --table
 ```
 
 Show all the HTML anchors in all HTML files:
@@ -115,6 +117,17 @@ $ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
 - [ ] Figure out what to do about symlinks
 - [ ] Figure out what to do when fileio_read cannot read larger than 1,000,000
       bytes for hash, etc.
+- [ ] See [simon987/sist2](https://github.com/simon987/sist2) for other ideas
+      like:
+  - [ ] Extracts text and metadata from
+        [common file types](https://github.com/simon987/sist2#format-support)
+  - [ ] [Generates thumbnails](https://github.com/simon987/sist2#format-support)
+  - [ ] Manual tagging from the UI and automatic tagging based on file
+        attributes via
+        [user scripts](https://github.com/simon987/sist2/blob/master/docs/scripting.md)
+  - [ ] Recursive scan inside
+        [archive files](https://github.com/simon987/sist2#archive-files)
+  - [ ] [Named-entity recognition](https://github.com/simon987/sist2#NER)
 
 ## ULID Primary Keys across multiple devices
 

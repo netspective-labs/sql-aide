@@ -362,7 +362,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
           -- this second pass walks the path again and connects all found files to the immutable fs_content
           -- table; this is necessary so that if any files were removed in a subsequent session, the
           -- immutable fs_content table would still contain the file for history but it would not show up in
-          -- fs_content_walk_path_entry
+          -- fs_content_walk_path_entry;
+          -- NOTE: we denormalize and compute using path_dirname, path_basename, path_extension, etc. so that
+          -- the ulid(), path_*, and other extensions are only needed on inserts, not reads.
           INSERT INTO ${fscwpe.tableName} (fs_content_walk_path_entry_id, walk_session_id, walk_path_id, fs_content_id, file_path_abs, file_path_rel_parent, file_path_rel, file_basename, file_extn)
             SELECT ulid() as fs_content_walk_path_entry_id,
                     fscwp.walk_session_id as walk_session_id,
@@ -501,7 +503,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     },
   });
 
-  const allHtmlAnchors = (): SqlTextSupplier => ({
+  const htmlAnchors = (): SqlTextSupplier => ({
     SQL: (ctx) => {
       const { loadExtnSQL: load } = libOptions;
       // deno-fmt-ignore
@@ -510,21 +512,45 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
         -- find all HTML files in the fs_content table and return
         -- each file and the anchors' labels and hrefs in that file
+        -- TODO: create a table called fs_content_html_anchor to store this data after inserting it into fs_content
+        --       so that simple HTML lookups do not require the html0 extension to be loaded
         WITH html_content AS (
-          SELECT content, content_digest FROM fs_content WHERE file_extn = '.html'
+          SELECT fs_content_id, content, content_digest, file_path, file_extn FROM fs_content WHERE file_extn = '.html'
         ),
         html AS (
-          SELECT content_digest,
+          SELECT file_path,
                  text as label,
                  html_attribute_get(html, 'a', 'href') as href
             FROM html_content, html_each(html_content.content, 'a')
-        ),
-        file as (
-          SELECT fs_content_path_id, file_path, label, href
-            FROM fs_content_path, html
-           WHERE fs_content_path.content_digest = html.content_digest
         )
-        SELECT * FROM file;
+        SELECT * FROM html;
+      `.SQL(ctx);
+    },
+  });
+
+  const htmlHeadMeta = (): SqlTextSupplier => ({
+    SQL: (ctx) => {
+      const { loadExtnSQL: load } = libOptions;
+      // deno-fmt-ignore
+      return SQL()`
+        ${load("asg017/html/html0")}
+
+        -- find all HTML files in the fs_content table and return
+        -- each file and the <head><meta name="key" content="value"> pair
+        -- TODO: create a table called fs_content_html_head_meta to store this data after inserting it into fs_content
+        --       so that simple HTML lookups do not require the html0 extension to be loaded
+        WITH html_content AS (
+          SELECT fs_content_id, content, content_digest, file_path, file_extn FROM fs_content WHERE file_extn = '.html'
+        ),
+        html AS (
+          SELECT file_path,
+                 html_attribute_get(html, 'meta', 'name') as key,
+                 html_attribute_get(html, 'meta', 'content') as value,
+                 html
+            FROM html_content, html_each(html_content.content, 'head meta')
+           WHERE key IS NOT NULL
+        )
+        SELECT * FROM html;
       `.SQL(ctx);
     },
   });
@@ -581,7 +607,8 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     mimeTypesSeedDML,
     insertContent,
     fsContentWalkSessionStats,
-    allHtmlAnchors,
+    htmlAnchors,
+    htmlHeadMeta,
     sqlPageFiles,
   };
 
