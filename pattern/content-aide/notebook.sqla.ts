@@ -217,6 +217,10 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
       ${models.tableIndexes}
 
+      ${models.viewDefn("fs_content_walk_session_stats")`${fsContentWalkSessionStats}`}
+
+      ${sqlPageFiles}
+
       ${pragma(optimalCloseDB)}
       `;
   };
@@ -296,64 +300,64 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
         // deno-fmt-ignore
         return SQL()`
-        ${pragma(optimalOpenDB)}
-        ${load("asg017/ulid/ulid0")}
-        ${load("nalgeon/fileio/fileio")}
-        ${load("nalgeon/crypto/crypto")}
-        ${load("asg017/path/path0")}
-        ${load("asg017/regex/regex0")}
+          ${pragma(optimalOpenDB)}
+          ${load("asg017/ulid/ulid0")}
+          ${load("nalgeon/fileio/fileio")}
+          ${load("nalgeon/crypto/crypto")}
+          ${load("asg017/path/path0")}
+          ${load("asg017/regex/regex0")}
 
-        ${activeDeviceDML}
+          ${activeDeviceDML}
 
-        ${bindParams}
-        ${models.sqliteParameters.insertDML({ key: d_defb.device_id, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
+          ${bindParams}
+          ${models.sqliteParameters.insertDML({ key: d_defb.device_id, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
 
-        ${fscws.insertDML({
-          fs_content_walk_session_id: sqlEngineNewUlid,
-          device_id: d_useb.device_id,
-          walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
-          max_fileio_read_bytes: { SQL: () => `:max_fileio_read_bytes` },
-          blobs_regex: { SQL: () => `:blobs_regex` },
-          digests_regex: { SQL: () => `:digests_regex` },
-          ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
-        })}
-        ${sqp.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+          ${fscws.insertDML({
+            fs_content_walk_session_id: sqlEngineNewUlid,
+            device_id: d_useb.device_id,
+            walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
+            max_fileio_read_bytes: { SQL: () => `:max_fileio_read_bytes` },
+            blobs_regex: { SQL: () => `:blobs_regex` },
+            digests_regex: { SQL: () => `:digests_regex` },
+            ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
+          })}
+          ${sqp.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
 
-        ${fscwp.insertDML(paths.map((root_path) => ({
-          fs_content_walk_path_id: sqlEngineNewUlid,
-          walk_session_id: fscws_useb.fs_content_walk_session_id,
-          root_path })))}
+          ${fscwp.insertDML(paths.map((root_path) => ({
+            fs_content_walk_path_id: sqlEngineNewUlid,
+            walk_session_id: fscws_useb.fs_content_walk_session_id,
+            root_path })))}
 
-        -- if something's not working, use '.parameter list' to see the bind parameters from SQL
-        -- .parameter list
+          -- if something's not working, use '.parameter list' to see the bind parameters from SQL
+          -- .parameter list
 
-        -- This SQL statement inserts data into the fs_content table, generating values for some columns
-        -- and conditionally computing content and hashes (content digests) for certain files based on
-        -- provided criteria and functions. It takes care to avoid inserting duplicate entries into the
-        -- table so if the file is already in the table, it does not insert it again. When a file is
-        -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
-        -- file was found in. This allows us to easily find all files that were found in a particular
-        -- walk session and we can run simple queries to see which files were added or updated in a
-        -- specific session. There is support for detecting file deletes by using path entries.
-        -- fs_content_walk_path_entry.
-        -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
-        INSERT OR IGNORE INTO ${fsc.tableName} (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
-          SELECT ulid() as fs_content_id,
-                 walk_session_id,
-                 fs_content_walk_path_id,
-                 name AS file_path,
-                 path_extension(name) as file_extn,
-                 size as file_bytes,
-                 mtime as file_mtime,
-                 mode as file_mode,
-                 fileio_mode(mode) as file_mode_human,
-                 CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
-                 CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE '-' END AS content_digest
-            FROM ${fscwp.tableName},
-                 fileio_ls(root_path, true) as ls -- true indicates recursive listing
-           WHERE walk_session_id = :fs_content_walk_session_id
-             AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
-             AND regex_find(:ignore_paths_regex, name) IS NULL;
+          -- This SQL statement inserts data into the fs_content table, generating values for some columns
+          -- and conditionally computing content and hashes (content digests) for certain files based on
+          -- provided criteria and functions. It takes care to avoid inserting duplicate entries into the
+          -- table so if the file is already in the table, it does not insert it again. When a file is
+          -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
+          -- file was found in. This allows us to easily find all files that were found in a particular
+          -- walk session and we can run simple queries to see which files were added or updated in a
+          -- specific session. There is support for detecting file deletes by using path entries.
+          -- fs_content_walk_path_entry.
+          -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
+          INSERT OR IGNORE INTO ${fsc.tableName} (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
+            SELECT ulid() as fs_content_id,
+                  walk_session_id,
+                  fs_content_walk_path_id,
+                  name AS file_path,
+                  path_extension(name) as file_extn,
+                  size as file_bytes,
+                  mtime as file_mtime,
+                  mode as file_mode,
+                  fileio_mode(mode) as file_mode_human,
+                  CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
+                  CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE '-' END AS content_digest
+              FROM ${fscwp.tableName},
+                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
+            WHERE walk_session_id = :fs_content_walk_session_id
+              AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
+              AND regex_find(:ignore_paths_regex, name) IS NULL;
 
           -- this second pass walks the path again and connects all found files to the immutable fs_content
           -- table; this is necessary so that if any files were removed in a subsequent session, the
@@ -361,25 +365,25 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
           -- fs_content_walk_path_entry
           INSERT INTO ${fscwpe.tableName} (fs_content_walk_path_entry_id, walk_session_id, walk_path_id, fs_content_id, file_path_abs, file_path_rel_parent, file_path_rel, file_basename, file_extn)
             SELECT ulid() as fs_content_walk_path_entry_id,
-                   fscwp.walk_session_id as walk_session_id,
-                   fscwp.fs_content_walk_path_id as walk_path_id,
-                   fsc.fs_content_id,
-                   ls.name AS file_path,
-                   path_dirname(substr(ls.name, length(root_path) + 1)) AS file_path_rel_parent,
-                   substr(ls.name, length(root_path) + 1) AS file_path_rel,
-                   path_basename(name) as file_basename,
-                   path_extension(name) as file_extn
+                    fscwp.walk_session_id as walk_session_id,
+                    fscwp.fs_content_walk_path_id as walk_path_id,
+                    fsc.fs_content_id,
+                    ls.name AS file_path,
+                    path_dirname(substr(ls.name, length(root_path) + 1)) AS file_path_rel_parent,
+                    substr(ls.name, length(root_path) + 1) AS file_path_rel,
+                    path_basename(name) as file_basename,
+                    path_extension(name) as file_extn
               FROM fileio_ls(root_path, true) as ls
-                   INNER JOIN ${fscwp.tableName} as fscwp ON fscwp.walk_session_id = :fs_content_walk_session_id
-                   LEFT JOIN fs_content AS fsc ON fsc.file_path = ls.name
-             WHERE ((ls.mode & 61440) = 32768  /* Regular file */ OR (ls.mode & 61440) = 40960 /* Symbolic link */)
-               AND regex_find(:ignore_paths_regex, ls.name) IS NULL
-               AND fsc.created_at = (SELECT MAX(created_at) FROM fs_content WHERE file_path = ls.name);
+                    INNER JOIN ${fscwp.tableName} as fscwp ON fscwp.walk_session_id = :fs_content_walk_session_id
+                    LEFT JOIN fs_content AS fsc ON fsc.file_path = ls.name
+              WHERE ((ls.mode & 61440) = 32768  /* Regular file */ OR (ls.mode & 61440) = 40960 /* Symbolic link */)
+                AND regex_find(:ignore_paths_regex, ls.name) IS NULL
+                AND fsc.created_at = (SELECT MAX(created_at) FROM fs_content WHERE file_path = ls.name);
 
           -- TODO: add SQLa 'updateDML' generator like insertDML
           UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};
           ${pragma(optimalCloseDB)}
-      `.SQL(ctx);
+        `.SQL(ctx);
       },
     };
   };
@@ -426,7 +430,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     return undefined;
   };
 
-  const contentStats = (): SqlTextSupplier => ({
+  const fsContentWalkSessionStats = (): SqlTextSupplier => ({
     SQL: (ctx) => {
       // deno-fmt-ignore
       return SQL()`
@@ -448,7 +452,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
             LEFT JOIN
                 fs_content_walk_path_entry AS fcwpe ON fcwp.fs_content_walk_path_id = fcwpe.walk_path_id
             LEFT JOIN
-                fs_content AS fsc ON fcwpe.walk_path_id = fsc.fs_content_id
+                fs_content AS fsc ON fcwpe.fs_content_id = fsc.fs_content_id
             GROUP BY
                 fcws.walk_started_at,
                 fcws.walk_finished_at,
@@ -472,10 +476,11 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
             LEFT JOIN
                 fs_content_walk_path_entry AS fcwpe ON fcwp.fs_content_walk_path_id = fcwpe.walk_path_id
             LEFT JOIN
-                fs_content AS fsc ON fcwpe.walk_path_id = fsc.fs_content_id
+                fs_content AS fsc ON fcwpe.fs_content_id = fsc.fs_content_id
             GROUP BY
                 fcws.walk_started_at,
-                fcws.walk_finished_at
+                fcws.walk_finished_at,
+                fcwp.root_path
         )
         SELECT
             walk_datetime,
@@ -524,6 +529,49 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     },
   });
 
+  const sqlPageFiles = () => {
+    const pages = {
+      "index.sql": SQL()`
+        SELECT
+          'list' as component,
+          'Get started: where to go from here ?' as title,
+          'Here are some useful links to get you started with SQLPage.' as description;
+        SELECT 'Content Walk Session Statistics' as title,
+          'fsc-walk-session-stats.sql' as link,
+          'TODO' as description,
+          'green' as color,
+          'download' as icon;
+        SELECT 'MIME Types' as title,
+          'mime-types.sql' as link,
+          'TODO' as description,
+          'blue' as color,
+          'download' as icon;`,
+      "fsc-walk-session-stats.sql": SQL()`
+        SELECT 'table' as component, 1 as search, 1 as sort;
+        SELECT walk_datetime, walk_duration, file_extn, total_count, with_frontmatter, average_size from fs_content_walk_session_stats;
+      `,
+      "mime-types.sql": SQL()`
+        SELECT 'table' as component, 1 as search, 1 as sort;
+        SELECT name, file_extn, description from mime_type;
+      `,
+    };
+
+    const { sqlPageFiles } = models;
+    const ctx = m.sqlEmitContext<EmitContext>();
+    // deno-fmt-ignore
+    return SQL()`
+      ${pragma(optimalOpenDB)}
+
+      ${Object.entries(pages).map((
+        [path, contents]) => sqlPageFiles.insertDML({
+          path,
+          contents: contents.SQL(ctx),
+          last_modified:{ SQL: () => `CURRENT_TIMESTAMP` }},
+          { onConflict: { SQL: () => `ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP` } },
+        ))};
+      `;
+  };
+
   const entries = {
     init,
     optimalOpenDB,
@@ -532,8 +580,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     deviceDML,
     mimeTypesSeedDML,
     insertContent,
-    contentStats,
+    fsContentWalkSessionStats,
     allHtmlAnchors,
+    sqlPageFiles,
   };
 
   return {

@@ -28,6 +28,10 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   const modelsGovn = governance<EmitContext>();
   const { keys: gk, domains: gd, model: gm } = modelsGovn;
 
+  const viewDefn = <ViewName extends string, DomainQS extends SQLa.SqlDomainQS>(
+    viewName: ViewName,
+  ) => SQLa.viewDefinition<ViewName, EmitContext, DomainQS>(viewName);
+
   /**
    * Immutable Devices table represents different machines, servers, or workstations.
    * Every device has a unique identifier (ULID) and contains fields for its name,
@@ -261,6 +265,13 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     value: gd.text(),
   });
 
+  // see https://github.com/lovasoa/SQLpage/tree/main#hosting-sql-files-directly-inside-the-database
+  const sqlPageFiles = gm.table("sqlpage_files", {
+    path: gk.textPrimaryKey(),
+    contents: gd.blobText(),
+    last_modified: gd.createdAt(),
+  });
+
   const contentTables = [
     mimeType,
     device,
@@ -268,6 +279,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContentWalkPath,
     fsContent,
     fsContentWalkPathEntry,
+    sqlPageFiles,
   ];
 
   const tableIndexes = [
@@ -277,10 +289,12 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     ...fsContentWalkPath.indexes,
     ...fsContent.indexes,
     ...fsContentWalkPathEntry.indexes,
+    ...sqlPageFiles.indexes,
   ];
 
   return {
     modelsGovn,
+    viewDefn,
     mimeType,
     device,
     fsContentWalkSession,
@@ -288,6 +302,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContent,
     fsContentWalkPathEntry,
     sqliteParameters,
+    sqlPageFiles,
     contentTables,
     tableIndexes,
   };
