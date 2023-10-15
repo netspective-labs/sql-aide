@@ -53,6 +53,10 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
           c.unique("name", "file_extn"),
         ];
       },
+      indexes: (props, tableName) => {
+        const tif = SQLa.tableIndexesFactory(tableName, props);
+        return [tif.index(undefined, "file_extn")];
+      },
     },
   );
 
@@ -80,6 +84,10 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
         return [
           c.unique("name", "boundary"),
         ];
+      },
+      indexes: (props, tableName) => {
+        const tif = SQLa.tableIndexesFactory(tableName, props);
+        return [tif.index(undefined, "name")];
       },
     },
   );
@@ -143,6 +151,10 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
           c.unique("walk_session_id", "root_path", "created_at"),
         ];
       },
+      indexes: (props, tableName) => {
+        const tif = SQLa.tableIndexesFactory(tableName, props);
+        return [tif.index(undefined, "walk_session_id", "root_path")];
+      },
     },
   );
 
@@ -192,6 +204,10 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
           ),
         ];
       },
+      indexes: (props, tableName) => {
+        const tif = SQLa.tableIndexesFactory(tableName, props);
+        return [tif.index(undefined, "walk_session_id", "file_path")];
+      },
     },
   );
 
@@ -218,6 +234,14 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContent,
   ];
 
+  const tableIndexes = [
+    ...mimeType.indexes,
+    ...device.indexes,
+    ...fsContentWalkSession.indexes,
+    ...fsContentWalkPath.indexes,
+    ...fsContent.indexes,
+  ];
+
   return {
     modelsGovn,
     mimeType,
@@ -227,5 +251,6 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContent,
     sqliteParameters,
     contentTables,
+    tableIndexes,
   };
 }

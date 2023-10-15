@@ -111,6 +111,7 @@ export interface SqlObjectNames {
   readonly injectable: (text: string) => string;
   readonly schemaName: (schemaName: string) => string;
   readonly tableName: (tableName: string) => string;
+  readonly tableIndexName: (tableName: string, columnNames: string[]) => string;
   readonly domainName: (domainName: string) => string;
   readonly tableColumnName: (
     tc: { tableName: string; columnName: string },
@@ -149,6 +150,8 @@ export function qualifiedNamingStrategy(
     injectable: (name) => q(ns.injectable(name)),
     schemaName: (name) => q(ns.schemaName(name)),
     tableName: (name) => q(ns.tableName(name)),
+    tableIndexName: (tableName, colNames) =>
+      q(ns.tableIndexName(tableName, colNames)),
     domainName: (name) => q(ns.domainName(name)),
     tableColumnName: (tc, qtn) => q(ns.tableColumnName(tc, qtn)),
     viewName: (name) => q(ns.viewName(name)),
@@ -267,6 +270,8 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
     injectable: (text) => `"${text}"`,
     schemaName: (name) => `"${name}"`,
     tableName: (name) => `"${name}"`,
+    tableIndexName: (tableName, colNames) =>
+      `"idx_${tableName}__${colNames.join("__")}"`,
     domainName: (name) => `"${name}"`,
     tableColumnName: (tc, qtn) =>
       qtn
@@ -294,6 +299,8 @@ export function typicalSqlNamingStrategy(): SqlObjectNamesSupplier {
     injectable: (text) => text,
     schemaName: (name) => name,
     tableName: (name) => name,
+    tableIndexName: (tableName, colNames) =>
+      `idx_${tableName}__${colNames.join("__")}`,
     domainName: (name) => name,
     tableColumnName: (tc, qtn) =>
       qtn
@@ -334,6 +341,8 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
     injectable: (text) => text,
     schemaName: (name) => `[${name}]`,
     tableName: (name) => `[${name}]`,
+    tableIndexName: (tableName, colNames) =>
+      `[idx_${tableName}__${colNames.join("__")}]`,
     domainName: (name) => `[${name}]`,
     tableColumnName: (tc, qtn) =>
       qtn
@@ -361,6 +370,8 @@ export function bracketSqlNamingStrategy(): SqlObjectNamesSupplier {
     injectable: (text) => text,
     schemaName: (name) => name,
     tableName: (name) => name,
+    tableIndexName: (tableName, colNames) =>
+      `idx_${tableName}__${colNames.join("__")}`,
     domainName: (name) => name,
     tableColumnName: (tc, qtn) =>
       qtn

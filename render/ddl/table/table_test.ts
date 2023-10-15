@@ -119,6 +119,18 @@ const syntheticSchema = () => {
           c.uniqueNamed("uniq_constr_name", "text_primary_key", "created_at"),
         ];
       },
+      // test "automatic" creation of table indexes
+      indexes: (props, tableName) => {
+        const tif = mod.tableIndexesFactory(tableName, props);
+        return [
+          tif.index(undefined, "column_unique", "created_at"),
+          tif.index(
+            { indexIdentity: "custom_index_name", isUnique: true },
+            "text_primary_key",
+            "created_at",
+          ),
+        ];
+      },
       qualitySystem: {
         description: "synthetic_table_with_constraints table description",
       },
@@ -624,6 +636,8 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints and documentation", async (tc) 
 
     ${table}
 
+    ${table.indexes}
+
     ${qsContent.sqlObjectsComments}`.SQL(ctx),
       uws(`
       -- no SQL lint issues (typicalSqlTextLintManager)
@@ -637,6 +651,9 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints and documentation", async (tc) 
           UNIQUE("text_primary_key", "created_at"),
           UNIQUE(column_one_text, column_three_text_digest) /* CUSTOM CONSTRAINT */
       );
+
+      CREATE INDEX "idx_synthetic_table_with_constraints__column_unique__created_at" ON "synthetic_table_with_constraints"("column_unique", "created_at");
+      CREATE UNIQUE INDEX custom_index_name ON "synthetic_table_with_constraints"("text_primary_key", "created_at");
 
       COMMENT ON table "synthetic_table_with_constraints" IS 'synthetic_table_with_constraints table description';`),
     );

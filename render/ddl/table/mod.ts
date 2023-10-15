@@ -1,6 +1,7 @@
 export * from "./column.ts";
 export * from "./constraint.ts";
 export * from "./foreign-key.ts";
+export * from "./index.ts";
 export * from "./lint.ts";
 export * from "./primary-key.ts";
 export * from "./record.ts";

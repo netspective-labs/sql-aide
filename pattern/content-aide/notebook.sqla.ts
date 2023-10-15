@@ -205,49 +205,16 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
   const init = () => {
     // deno-fmt-ignore
     return SQL()`
-        ${pragma(optimalOpenDB)}
+      ${pragma(optimalOpenDB)}
 
-        ${libOptions.loadExtnSQL('asg017/ulid/ulid0')}
+      ${libOptions.loadExtnSQL('asg017/ulid/ulid0')}
 
-        ${models.contentTables}
+      ${models.contentTables}
 
-        -- Indexes for optimizing query performance
-        -- TODO: have SQLa generate these from tables
-        CREATE INDEX idx_mime_type__file_extn ON mime_type(file_extn);
-        CREATE INDEX idx_device__name ON device(name);
-        CREATE INDEX idx_fs_content__walk_session_id__file_path ON fs_content(walk_session_id, file_path);
+      ${models.tableIndexes}
 
-        /**
-         * This view combines the results of the four detection methods (creation,
-         * deletion, renaming, and moving) into a unified dataset. You can then query
-         * this view to get a comprehensive list of file operations across all sessions.
-         * When you run a SELECT against this view, you'll get a list of operations
-         * detailing how files have changed from one session to another.
-         */
-         DROP VIEW IF EXISTS fs_operations;
-         CREATE VIEW fs_operations AS
-            -- Detect Created Files
-              SELECT 'created' AS operation, new.session_id, NULL AS old_path, new.path AS new_path
-              FROM fs_walk_entry AS new
-              LEFT JOIN fs_walk_entry AS old ON new.path = old.path WHERE old.path IS NULL
-            UNION ALL
-              -- Detect Deleted Files
-              SELECT 'deleted' AS operation, old.session_id, old.path AS old_path, NULL AS new_path
-              FROM fs_walk_entry AS old
-              LEFT JOIN fs_walk_entry AS new ON old.path = new.path WHERE new.path IS NULL
-            UNION ALL
-              -- Detect Renamed Files
-              SELECT 'renamed' AS operation, new.session_id, old.path AS old_path, new.path AS new_path
-              FROM fs_walk_entry AS old
-              JOIN fs_walk_entry AS new ON old.rel_path = new.rel_path AND old.entry_name != new.entry_name
-            UNION ALL
-              -- Detect Moved Files
-              SELECT 'moved' AS operation, new.session_id, old.path AS old_path, new.path AS new_path
-              FROM fs_walk_entry AS old
-              JOIN fs_walk_entry AS new ON old.entry_name = new.entry_name AND old.rel_path != new.rel_path;
-
-        ${pragma(optimalCloseDB)}
-        `;
+      ${pragma(optimalCloseDB)}
+      `;
   };
 
   const deviceDML = async (

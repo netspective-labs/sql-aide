@@ -5,6 +5,7 @@ import * as qs from "../../../lib/quality-system/mod.ts";
 import * as d from "../../domain/mod.ts";
 import * as c from "./column.ts";
 import * as con from "./constraint.ts";
+import * as idx from "./index.ts";
 import * as pk from "./primary-key.ts";
 import * as fk from "./foreign-key.ts";
 import * as g from "../../graph.ts";
@@ -54,6 +55,12 @@ export interface TableDefnOptions<
     columnsShape: ColumnsShape,
     tableName: TableName,
   ) => con.TableColumnsConstraint<ColumnsShape, Context>[];
+  readonly indexes?: <
+    TableName extends string,
+  >(
+    columnsShape: ColumnsShape,
+    tableName: TableName,
+  ) => idx.TableColumnsIndex<ColumnsShape, Context>[];
   readonly descr?: string; // convenience form of qualitySystem: { description }
 }
 
@@ -205,6 +212,7 @@ export function tableDefinition<
   const columnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: con.TableColumnsConstraint<ColumnsShape, Context>[] = [];
+  const indexes: idx.TableColumnsIndex<ColumnsShape, Context>[] = [];
   const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
   const symbols: SqlSymbolsSchema = {} as Any;
   let columnsQS:
@@ -261,8 +269,14 @@ export function tableDefinition<
 
   afterColumnDefnsSS.push(...constraints);
   if (tdOptions?.constraints) {
-    const custom = tdOptions?.constraints(zodRawShape, tableName);
+    const custom = tdOptions.constraints(zodRawShape, tableName);
+    constraints.push(...custom);
     afterColumnDefnsSS.push(...custom);
+  }
+
+  if (tdOptions?.indexes) {
+    const custom = tdOptions.indexes(zodRawShape, tableName);
+    indexes.push(...custom);
   }
 
   const graphEntityDefn = () => {
@@ -319,6 +333,8 @@ export function tableDefinition<
       readonly references: typeof fkf.references;
       readonly belongsTo: typeof fkf.belongsTo;
       readonly foreignKeys: typeof fkf.foreignKeys;
+      readonly constraints: typeof constraints;
+      readonly indexes: typeof indexes;
       readonly sqlNS?: tmpl.SqlNamespaceSupplier;
       readonly tblQualitySystem?: DomainsQS;
       readonly columnsQS?: typeof columnsQS;
@@ -384,6 +400,8 @@ export function tableDefinition<
       tblQualitySystem,
       sqlObjectsComments,
       columnsQS,
+      constraints,
+      indexes,
     };
 
   // we let Typescript infer function return to allow generics in sqlDomains to
