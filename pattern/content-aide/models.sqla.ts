@@ -212,6 +212,41 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   );
 
   /**
+   * Immutable File Content walk path entry table represents an entry that was
+   * traversed during path walking. This table contains references to the device
+   * where the file resides, and references to the file content, digest hash, etc.
+   *
+   * If you want to see which files did not change between sessions, just "diff"
+   * the rows in SQL.
+   *
+   * Always append new records. NEVER delete or update existing records.
+   */
+  const fsContentWalkPathEntry = gm.textPkTable(
+    "fs_content_walk_path_entry",
+    {
+      fs_content_walk_path_entry_id: gm.keys.ulidPrimaryKey(),
+      walk_session_id: fsContentWalkSession.references
+        .fs_content_walk_session_id(),
+      walk_path_id: fsContentWalkPath.references.fs_content_walk_path_id(),
+      fs_content_id: fsContent.references.fs_content_id().optional(),
+      file_path_abs: gd.text(),
+      file_path_rel_parent: gd.text(),
+      file_path_rel: gd.text(),
+      file_basename: gd.text(),
+      file_extn: gd.textNullable(),
+      elaboration: gd.jsonTextNullable(), // anything that doesn't fit above
+      ...gm.housekeeping.columns,
+    },
+    {
+      isIdempotent: true,
+      indexes: (props, tableName) => {
+        const tif = SQLa.tableIndexesFactory(tableName, props);
+        return [tif.index(undefined, "walk_session_id", "file_path_abs")];
+      },
+    },
+  );
+
+  /**
    * This is a "virtual" table that should not be used for DDL but used for DML.
    * It is managed by SQLite and is used to store `.parameter set` values and
    * allows all keys to be used as `:xyz` variables that point to `value`.
@@ -232,6 +267,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContentWalkSession,
     fsContentWalkPath,
     fsContent,
+    fsContentWalkPathEntry,
   ];
 
   const tableIndexes = [
@@ -240,6 +276,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     ...fsContentWalkSession.indexes,
     ...fsContentWalkPath.indexes,
     ...fsContent.indexes,
+    ...fsContentWalkPathEntry.indexes,
   ];
 
   return {
@@ -249,6 +286,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     fsContentWalkSession,
     fsContentWalkPath,
     fsContent,
+    fsContentWalkPathEntry,
     sqliteParameters,
     contentTables,
     tableIndexes,

@@ -1,4 +1,51 @@
-# TODO
+# Content Aide
+
+This SQLite-based pattern provides tables and queries which collectively manage
+and storing metadata related to file system content, MIME types, devices, and
+file system content walk sessions. They include various fields for timestamps,
+user information, and JSON data for additional details and elaboration.
+
+- `mime_type`: Stores MIME type information, including a ULID primary key and
+  various attributes like name, description, file extension, timestamps, and
+  user information.
+- `device`: Stores device information, including a ULID primary key, device
+  name, boundary, JSON-valid device elaboration, timestamps, and user
+  information.
+- `fs_content_walk_session`: Records file system content walk sessions,
+  including ULID primary key, device ID, timestamps, maximum file I/O read
+  bytes, regular expressions, JSON-valid elaboration, and user information.
+  - `fs_content_walk_session` has a foreign key reference to the `device` table
+    so that the same device can be used for multiple walk sessions but also the
+    walk sessions can be merged across workstations for easier detection of
+    changes and similaries between file systems on different devices.
+- `fs_content_walk_path`: Stores file system content walk paths with a ULID
+  primary key, walk session ID, root path, JSON-valid elaboration, timestamps,
+  and user information.
+  - Each walk path is associated with a walk session and one or more `root_path`
+    entries.
+  - It has a foreign key reference to the `fs_content_walk_session` table.
+- `fs_content`: Records file system content information, including a ULID
+  primary key, walk session ID, walk path ID, file details, JSON-valid
+  attributes, timestamps, and user information.
+  - On multiple executions, `fs_content` are inserted only if the the file
+    content or `mtime` has changed
+  - For historical logging, `fs_content` has foreign key references to both
+    `fs_content_walk_session` and `fs_content_walk_path` tables to indicate
+    which particular session and walk path the content was inserted for.
+- `fs_content_walk_path_entry`: Contains entries related to file system content
+  walk paths, including a ULID primary key, references to walk session, walk
+  path, and content, file paths, and JSON-valid elaboration, timestamps, and
+  user information.
+  - On multiple executions, unlike `fs_content`, `fs_content_walk_path_entry`
+    are always inserted and references the `fs_content`.`fs_content_id` of its
+    related content. This method allows for a more efficient query of file
+    version differences across sessions. With SQL queries, you can detect:
+    - Which sessions have a file added or modified
+    - Which sessions have a file deleted
+    - What the differences are in file contents if they were modified across
+      sessions.
+  - `fs_content_walk_path_entry` has foreign key references to the
+    `fs_content_walk_session`, `fs_content_walk_path`, and `fs_content` tables.
 
 ## Setup
 

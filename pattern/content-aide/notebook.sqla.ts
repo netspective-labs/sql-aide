@@ -14,6 +14,10 @@ type Any = any;
  * that hide SQL and instead use stateless SQL generators like SQLa to produce
  * all SQL through type-safe TypeScript functions.
  *
+ * Because applications come and go but data lives forever, we want to allow
+ * our generated SQL to be hand-edited later if the initial generated code no
+ * longers benefits from being regenerated in the future.
+ *
  * We go to great lengths to allow SQL to be independently executed because we
  * don't always know the final use cases and we try to use the SQLite CLI whenever
  * possible because performance is best that way.
@@ -270,9 +274,11 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
     // use abbreviations for easier to read templating
     const {
+      sqliteParameters: sqp,
       fsContentWalkSession: fscws,
       fsContentWalkPath: fscwp,
-      // fsContent: fsc,
+      fsContent: fsc,
+      fsContentWalkPathEntry: fscwpe,
     } = models;
 
     return {
@@ -290,6 +296,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
         // deno-fmt-ignore
         return SQL()`
+        ${pragma(optimalOpenDB)}
         ${load("asg017/ulid/ulid0")}
         ${load("nalgeon/fileio/fileio")}
         ${load("nalgeon/crypto/crypto")}
@@ -301,7 +308,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         ${bindParams}
         ${models.sqliteParameters.insertDML({ key: d_defb.device_id, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
 
-        ${models.fsContentWalkSession.insertDML({
+        ${fscws.insertDML({
           fs_content_walk_session_id: sqlEngineNewUlid,
           device_id: d_useb.device_id,
           walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
@@ -310,9 +317,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
           digests_regex: { SQL: () => `:digests_regex` },
           ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
         })}
-        ${models.sqliteParameters.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+        ${sqp.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
 
-        ${models.fsContentWalkPath.insertDML(paths.map((root_path) => ({
+        ${fscwp.insertDML(paths.map((root_path) => ({
           fs_content_walk_path_id: sqlEngineNewUlid,
           walk_session_id: fscws_useb.fs_content_walk_session_id,
           root_path })))}
@@ -327,9 +334,10 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
         -- file was found in. This allows us to easily find all files that were found in a particular
         -- walk session and we can run simple queries to see which files were added or updated in a
-        -- specific session. There is no support for detecting file deletes, though.
+        -- specific session. There is support for detecting file deletes by using path entries.
+        -- fs_content_walk_path_entry.
         -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
-        INSERT OR IGNORE INTO fs_content (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
+        INSERT OR IGNORE INTO ${fsc.tableName} (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
           SELECT ulid() as fs_content_id,
                  walk_session_id,
                  fs_content_walk_path_id,
@@ -347,7 +355,30 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
              AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
              AND regex_find(:ignore_paths_regex, name) IS NULL;
 
-        UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};
+          -- this second pass walks the path again and connects all found files to the immutable fs_content
+          -- table; this is necessary so that if any files were removed in a subsequent session, the
+          -- immutable fs_content table would still contain the file for history but it would not show up in
+          -- fs_content_walk_path_entry
+          INSERT INTO ${fscwpe.tableName} (fs_content_walk_path_entry_id, walk_session_id, walk_path_id, fs_content_id, file_path_abs, file_path_rel_parent, file_path_rel, file_basename, file_extn)
+            SELECT ulid() as fs_content_walk_path_entry_id,
+                   fscwp.walk_session_id as walk_session_id,
+                   fscwp.fs_content_walk_path_id as walk_path_id,
+                   fsc.fs_content_id,
+                   ls.name AS file_path,
+                   path_dirname(substr(ls.name, length(root_path) + 1)) AS file_path_rel_parent,
+                   substr(ls.name, length(root_path) + 1) AS file_path_rel,
+                   path_basename(name) as file_basename,
+                   path_extension(name) as file_extn
+              FROM fileio_ls(root_path, true) as ls
+                   INNER JOIN ${fscwp.tableName} as fscwp ON fscwp.walk_session_id = :fs_content_walk_session_id
+                   LEFT JOIN fs_content AS fsc ON fsc.file_path = ls.name
+             WHERE ((ls.mode & 61440) = 32768  /* Regular file */ OR (ls.mode & 61440) = 40960 /* Symbolic link */)
+               AND regex_find(:ignore_paths_regex, ls.name) IS NULL
+               AND fsc.created_at = (SELECT MAX(created_at) FROM fs_content WHERE file_path = ls.name);
+
+          -- TODO: add SQLa 'updateDML' generator like insertDML
+          UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};
+          ${pragma(optimalCloseDB)}
       `.SQL(ctx);
       },
     };
@@ -399,38 +430,68 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     SQL: (ctx) => {
       // deno-fmt-ignore
       return SQL()`
-        WITH TimeDifferences AS (
+        WITH Summary AS (
             SELECT
-                file_extn,
-                file_bytes,
-                CASE WHEN frontmatter IS NOT NULL THEN 1 ELSE 0 END AS frontmatter,
-                julianday('now') - julianday(datetime(file_mtime, 'unixepoch')) AS file_age
-            FROM fs_content
-        ),
-        FormattedTimes AS (
+                strftime('%Y-%m-%d %H:%M:%S.%f', fcws.walk_started_at) AS walk_datetime,
+                strftime('%f', fcws.walk_finished_at - fcws.walk_started_at) AS walk_duration,
+                COALESCE(fcwpe.file_extn, '') AS file_extn,
+                fcwp.root_path AS root_path,
+                COUNT(fcwpe.fs_content_id) AS total_count,
+                SUM(CASE WHEN fsc.frontmatter IS NOT NULL THEN 1 ELSE 0 END) AS with_frontmatter,
+                AVG(fsc.file_bytes) AS average_size,
+                strftime('%Y-%m-%d %H:%M:%S', datetime(MIN(fsc.file_mtime), 'unixepoch')) AS oldest,
+                strftime('%Y-%m-%d %H:%M:%S', datetime(MAX(fsc.file_mtime), 'unixepoch')) AS youngest
+            FROM
+                fs_content_walk_session AS fcws
+            LEFT JOIN
+                fs_content_walk_path AS fcwp ON fcws.fs_content_walk_session_id = fcwp.walk_session_id
+            LEFT JOIN
+                fs_content_walk_path_entry AS fcwpe ON fcwp.fs_content_walk_path_id = fcwpe.walk_path_id
+            LEFT JOIN
+                fs_content AS fsc ON fcwpe.walk_path_id = fsc.fs_content_id
+            GROUP BY
+                fcws.walk_started_at,
+                fcws.walk_finished_at,
+                fcwpe.file_extn,
+                fcwp.root_path
+            UNION ALL
             SELECT
-                file_extn,
-                file_bytes,
-                frontmatter,
-                CASE
-                    WHEN file_age < 1/24 THEN
-                        CAST(ROUND(1440 * file_age) AS INTEGER) || ' minutes'
-                    WHEN file_age < 1 THEN
-                        CAST(ROUND(24 * file_age) AS INTEGER) || ' hours'
-                    ELSE
-                        CAST(file_age AS INTEGER) || ' days'
-                END AS formatted_time
-            FROM TimeDifferences
+                strftime('%Y-%m-%d %H:%M:%S.%f', fcws.walk_started_at) AS walk_datetime,
+                strftime('%f', fcws.walk_finished_at - fcws.walk_started_at) AS walk_duration,
+                'ALL' AS file_extn,
+                fcwp.root_path AS root_path,
+                COUNT(fcwpe.fs_content_id) AS total_count,
+                SUM(CASE WHEN fsc.frontmatter IS NOT NULL THEN 1 ELSE 0 END) AS with_frontmatter,
+                AVG(fsc.file_bytes) AS average_size,
+                strftime('%Y-%m-%d %H:%M:%S', datetime(MIN(fsc.file_mtime), 'unixepoch')) AS oldest,
+                strftime('%Y-%m-%d %H:%M:%S', datetime(MAX(fsc.file_mtime), 'unixepoch')) AS youngest
+            FROM
+                fs_content_walk_session AS fcws
+            LEFT JOIN
+                fs_content_walk_path AS fcwp ON fcws.fs_content_walk_session_id = fcwp.walk_session_id
+            LEFT JOIN
+                fs_content_walk_path_entry AS fcwpe ON fcwp.fs_content_walk_path_id = fcwpe.walk_path_id
+            LEFT JOIN
+                fs_content AS fsc ON fcwpe.walk_path_id = fsc.fs_content_id
+            GROUP BY
+                fcws.walk_started_at,
+                fcws.walk_finished_at
         )
         SELECT
+            walk_datetime,
+            walk_duration,
             file_extn,
-            COUNT(*) AS total_count,
-            SUM(frontmatter) AS with_frontmatter,
-            CAST(ROUND(AVG(file_bytes)) AS INTEGER) AS average_size,
-            MAX(formatted_time) AS oldest,
-            MIN(formatted_time) AS youngest
-        FROM FormattedTimes
-        GROUP BY file_extn;
+            root_path,
+            total_count,
+            with_frontmatter,
+            CAST(ROUND(average_size) AS INTEGER) AS average_size,
+            oldest,
+            youngest
+        FROM
+            Summary
+        ORDER BY
+            walk_datetime,
+            file_extn;
       `.SQL(ctx);
     },
   });
