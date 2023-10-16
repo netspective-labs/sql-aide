@@ -113,16 +113,19 @@ $ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
 
 ## Tasks
 
+- [ ] Add args/option for running ./cactl.ts with a starting root path(s)
+- [ ] Add Deno-based Unit Tests with TAP output or this ancient
+      [SQLite TAP extension](https://github.com/yanick/SQLiteTap)
 - [ ] Add SQL in notebook to easily remove and vacuum all sessions, walk paths,
       and walk entries prior to a given date.
   - [ ] Add SQL in notebook to easily remove all sessions, walk paths, and walk
         entries except the ones referenced by the most recent session.
 - [ ] Add SQL in notebook to report on the differences between sessions (files
       added, modified, removed)
-- [ ] Add args/option for running ./cactl.ts with a starting root path(s)
-- [ ] Figure out what to do about symlinks
-- [ ] Figure out what to do when fileio_read cannot read larger than 1,000,000
-      bytes for hash, etc.
+- [ ] Figure out to properly test that symlinks work (smoke testing seems to
+      indicate that they do)
+- [ ] Figure out what to do when fileio_read cannot read larger than
+      1,000,000,000 bytes for hash, etc.
 - [ ] Add one or more SQLPage pages that will contain PlantUML or database
       description markdown so that the documentation for the database is
       contained within the DB itself.
