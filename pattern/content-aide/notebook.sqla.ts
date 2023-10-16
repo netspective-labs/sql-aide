@@ -580,6 +580,9 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
         SELECT 'table' as component, 1 as search, 1 as sort;
         SELECT name, file_extn, description from mime_type;
       `,
+      // TODO: add one or more pages that will contain PlantUML or database
+      //       description markdown so that the documentation for the database
+      //       is contained within the DB itself.
     };
 
     const { sqlPageFiles } = models;

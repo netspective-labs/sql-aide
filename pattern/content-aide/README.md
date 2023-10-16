@@ -65,7 +65,7 @@ $ sqlpkg install asg017/http     # https://github.com/asg017/sqlite-http/blob/ma
 $ sqlpkg install asg017/regex    # https://github.com/asg017/sqlite-regex/blob/main/docs.md
 ```
 
-Others to consider:
+Other SQLite extensions to consider:
 
 - `asg017/sqlite-md` - Markdown parser similar to asg017/html (at
   https://github.com/asg017/sqlite-md, not in SqlPkg yet, requested via ticket
@@ -95,6 +95,7 @@ $ ./cactl.ts
 See the contents with [SQLpage](https://github.com/lovasoa/SQLpage):
 
 ```bash
+eget lovasoa/SQLpage   # if you don't already have it downloaded
 DATABASE_URL=sqlite://./device-content.sqlite.db sqlpage.bin
 ```
 
@@ -112,11 +113,21 @@ $ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
 
 ## Tasks
 
-- [ ] Track walk sessions, observability (parameters used, etc.)
-- [ ] Add args/option for running ./cactl.ts with a starting root path
+- [ ] Add SQL in notebook to easily remove and vacuum all sessions, walk paths,
+      and walk entries prior to a given date.
+  - [ ] Add SQL in notebook to easily remove all sessions, walk paths, and walk
+        entries except the ones referenced by the most recent session.
+- [ ] Add SQL in notebook to report on the differences between sessions (files
+      added, modified, removed)
+- [ ] Add args/option for running ./cactl.ts with a starting root path(s)
 - [ ] Figure out what to do about symlinks
 - [ ] Figure out what to do when fileio_read cannot read larger than 1,000,000
       bytes for hash, etc.
+- [ ] Add one or more SQLPage pages that will contain PlantUML or database
+      description markdown so that the documentation for the database is
+      contained within the DB itself.
+- [ ] Learn from
+      [Scraping JSON, HTML, and ZIP Files with Pure SQLite](https://observablehq.com/@asg017/scrape-json-html-zip-with-sqlite)
 - [ ] See [simon987/sist2](https://github.com/simon987/sist2) for other ideas
       like:
   - [ ] Extracts text and metadata from
@@ -126,7 +137,8 @@ $ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
         attributes via
         [user scripts](https://github.com/simon987/sist2/blob/master/docs/scripting.md)
   - [ ] Recursive scan inside
-        [archive files](https://github.com/simon987/sist2#archive-files)
+        [archive files](https://github.com/simon987/sist2#archive-files) using
+        [SQLite Zip File support](https://sqlite.org/zipfile.html)
   - [ ] [Named-entity recognition](https://github.com/simon987/sist2#NER)
 
 ## ULID Primary Keys across multiple devices

@@ -32,6 +32,19 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     viewName: ViewName,
   ) => SQLa.viewDefinition<ViewName, EmitContext, DomainQS>(viewName);
 
+  // TODO: consider storing all notebook entries in the database so that
+  // once the database is created, all SQL is part of the database and may be
+  // executed like this from the CLI:
+  //    sqlite3 xyz.db "select sql from sqla_notebook where sqla_notebook_id = 'init'" | sqlite3 xyz.db
+  // TODO: you can pass in arguments using .parameter or `sql_parameters` table, like:
+  //    echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sqla_notebook WHERE sqla_notebook_id = 'init'\")" | sqlite3 xyz.db
+  // const sqlNotebook = gm.textPkTable("sqla_notebook", {
+  //   sqla_notebook_id: gk.textPrimaryKey(),
+  //   sql: gd.blobText(),
+  //   description: gd.textNullable(),
+  //   ...gm.housekeeping.columns,
+  // });
+
   /**
    * Immutable Devices table represents different machines, servers, or workstations.
    * Every device has a unique identifier (ULID) and contains fields for its name,
