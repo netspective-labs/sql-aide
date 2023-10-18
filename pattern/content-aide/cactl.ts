@@ -145,6 +145,7 @@ export function sqlCommand() {
   let result: Any = notebookCommand("Emit single SQL entry to STDOUT or SQLite database when generated SQL has arguments")
     .action((options) => {
       const l = library(options);
+      console.log('insertSqlNotebook'); // this one is special
       console.log(Object.keys(l.entries).map(si => customCmds.find((cc) => cc == si) ? `${si} (has args)` : si).join("\n"));
     });
   result = result.command(
@@ -159,6 +160,18 @@ export function sqlCommand() {
         const ctx = m.sqlEmitContext();
         emitSQL(
           l.entries.insertContent(options).SQL(ctx),
+          options,
+        );
+      }),
+  );
+  result = result.command(
+    "insertSqlNotebook",
+    notebookCommand("Insert monitored content")
+      .action(async (options) => {
+        const l = library(options);
+        const ctx = m.sqlEmitContext();
+        emitSQL(
+          (await l.sqlNotebookCells()).map((snc) => snc.SQL(ctx)).join(";\n"),
           options,
         );
       }),
@@ -224,6 +237,13 @@ export async function defaultAction(
       verbose: false,
     });
   }
+  await emitSQL(
+    (await l.sqlNotebookCells()).map((snc) => snc.SQL(ctx)).join(";\n"),
+    {
+      sqliteDb,
+      verbose: false,
+    },
+  );
   const imcSQL = l.entries.insertContent({ blobsRegEx }).SQL(
     ctx,
   );

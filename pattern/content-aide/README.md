@@ -5,6 +5,16 @@ and store content and metadata related to files, MIME types, devices, and file
 system content walk sessions. They include various fields for timestamps, user
 information, and JSON data for additional details and elaboration.
 
+- `sql_notebook_cell`: Stores SQL (called _SQL notebook cells_) in the database
+  so that once the database is created, all SQL is part of the database and may
+  be executed like this from the CLI:
+
+  > `$ sqlite3 xyz.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 xyz.db`
+
+  You can pass in arguments using .parameter or `sql_parameters` table, like:
+
+  > `$ echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sql_notebook_cell where sql_notebook_cell_id = 'init'\")" | sqlite3 xyz.db`
+
 - `mime_type`: Stores MIME type information, including a ULID primary key and
   various attributes like name, description, file extension, timestamps, and
   user information.
@@ -99,16 +109,25 @@ eget lovasoa/SQLpage   # if you don't already have it downloaded
 DATABASE_URL=sqlite://./device-content.sqlite.db sqlpage.bin
 ```
 
+Show the information schema as markdown:
+
+```bash
+$ ./cactl.ts sql fsContentWalkSessionStats infoSchemaMarkdown | sqlite3 device-content.sqlite.db
+$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 device-content.sqlite.db
+```
+
 Show the stats:
 
 ```bash
 $ ./cactl.ts sql fsContentWalkSessionStats | sqlite3 device-content.sqlite.db --table
+$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'fsContentWalkSessionStats'" | sqlite3 device-content.sqlite.db --table
 ```
 
 Show all the HTML anchors in all HTML files:
 
 ```bash
 $ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
+$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'allHtmlAnchors'" | sqlite3 device-content.sqlite.db --json
 ```
 
 ## Tasks

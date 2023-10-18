@@ -32,18 +32,18 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
     viewName: ViewName,
   ) => SQLa.viewDefinition<ViewName, EmitContext, DomainQS>(viewName);
 
-  // TODO: consider storing all notebook entries in the database so that
-  // once the database is created, all SQL is part of the database and may be
-  // executed like this from the CLI:
-  //    sqlite3 xyz.db "select sql from sqla_notebook where sqla_notebook_id = 'init'" | sqlite3 xyz.db
-  // TODO: you can pass in arguments using .parameter or `sql_parameters` table, like:
-  //    echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sqla_notebook WHERE sqla_notebook_id = 'init'\")" | sqlite3 xyz.db
-  // const sqlNotebook = gm.textPkTable("sqla_notebook", {
-  //   sqla_notebook_id: gk.textPrimaryKey(),
-  //   sql: gd.blobText(),
-  //   description: gd.textNullable(),
-  //   ...gm.housekeeping.columns,
-  // });
+  // Stores all notebook cells in the database so that once the database is
+  // created, all SQL is part of the database and may be executed like this
+  // from the CLI:
+  //    sqlite3 xyz.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 xyz.db
+  // You can pass in arguments using .parameter or `sql_parameters` table, like:
+  //    echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sql_notebook_cell where sql_notebook_cell_id = 'init'\")" | sqlite3 xyz.db
+  const sqlNotebook = gm.textPkTable("sql_notebook_cell", {
+    sql_notebook_cell_id: gk.textPrimaryKey(),
+    sql: gd.blobText(),
+    description: gd.textNullable(),
+    ...gm.housekeeping.columns,
+  });
 
   /**
    * Immutable Devices table represents different machines, servers, or workstations.
@@ -286,6 +286,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   });
 
   const contentTables = [
+    sqlNotebook,
     mimeType,
     device,
     fsContentWalkSession,
@@ -296,6 +297,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   ];
 
   const tableIndexes = [
+    ...sqlNotebook.indexes,
     ...mimeType.indexes,
     ...device.indexes,
     ...fsContentWalkSession.indexes,
@@ -308,6 +310,7 @@ export function models<EmitContext extends SQLa.SqlEmitContext>() {
   return {
     modelsGovn,
     viewDefn,
+    sqlNotebook,
     mimeType,
     device,
     fsContentWalkSession,

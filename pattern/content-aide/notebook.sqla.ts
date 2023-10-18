@@ -79,40 +79,6 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     executeSqlBehavior: () => sts,
   });
 
-  /**
-   * Accepts an object shape and turns each property name into a SQLite param
-   * and the property value into the param value. SQLite can use SQL expressions
-   * or literals as values so this function supports both.
-   * @param shape the variables and the values that should become bindable parameters
-   * @returns a SqlTextBehaviorSupplier that can be used in SQL DDL / DML
-   */
-  const sqliteParametersPragma = <
-    Shape extends Record<string, Any>,
-  >(shape: Shape) => {
-    const stbs: SQLa.SqlTextBehaviorSupplier<EmitContext> = {
-      executeSqlBehavior: () => {
-        return {
-          SQL: (ctx) => {
-            const eo = ctx.sqlTextEmitOptions;
-            const params: string[] = [];
-            // deno-fmt-ignore
-            Object.entries(shape).forEach(([paramName, recordValueRaw]) => {
-              if (SQLa.isSqlTextSupplier(recordValueRaw)) {
-                params.push(`.parameter set :${paramName} "${recordValueRaw.SQL(ctx).replaceAll('"', '\\"')}"`); // a SQL expression
-              } else {
-                const ql = eo.quotedLiteral(recordValueRaw);
-                // we do replaceAll('\\', '\\\\') because SQLite parameters use \ for their own escape and so does JS :-/
-                params.push(`.parameter set :${paramName} ${ql[0] == ql[1] ? ql[1] : `"${ql[1].replaceAll('\\', '\\\\')}"`}`);
-              }
-            });
-            return params.join("\n");
-          },
-        };
-      },
-    };
-    return { ...stbs, shape };
-  };
-
   // See [SQLite Pragma Cheatsheet for Performance and Consistency](https://cj.rs/blog/sqlite-pragma-cheatsheet-for-performance-and-consistency/)
   const optimalOpenDB: SqlTextSupplier = {
     SQL: (ctx) =>
@@ -336,15 +302,6 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       "/(\\.git|node_modules)/";
     const maxFileIoReadBytes = options?.maxFileIoReadBytes ?? 1000000000;
 
-    // setup the SQL bind parameters that will be used in this block;
-    // object property values will be available as :device_id, etc.
-    const bindParams = sqliteParametersPragma({
-      max_fileio_read_bytes: maxFileIoReadBytes,
-      ignore_paths_regex: ignorePathsRegEx,
-      blobs_regex: blobsRegEx,
-      digests_regex: digestsRegEx,
-    });
-
     // use abbreviations for easier to read templating
     const {
       sqliteParameters: sqp,
@@ -354,14 +311,31 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
       fsContentWalkPathEntry: fscwpe,
     } = models;
 
+    // setup the SQL bind parameters that will be used in this block;
+    // object property values will be available as :device_id, etc.
+    const bindParams = Object.entries({
+      max_fileio_read_bytes: maxFileIoReadBytes,
+      ignore_paths_regex: ignorePathsRegEx,
+      blobs_regex: blobsRegEx,
+      digests_regex: digestsRegEx,
+      device_id: models.device.select({
+        name: deviceName,
+        boundary: deviceBoundary,
+      }),
+    }).map(([key, value]) =>
+      sqp.insertDML({
+        key: `:${key}`,
+        value: typeof value === "number" ? String(value) : value,
+      })
+    );
+
     return {
       SQL: (ctx) => {
         const { loadExtnSQL: load } = libOptions;
 
         // get column names for easier to read templating
         //
-        const { defineBind: d_defb, useBind: d_useb } = models.device
-          .columnNames(ctx);
+        const { useBind: d_useb } = models.device.columnNames(ctx);
         const { symbol: fscws_c, defineBind: fscws_defb, useBind: fscws_useb } =
           fscws.columnNames(ctx);
         // const { stsb: fscwpb } = fscwp.columnNames(ctx);
@@ -378,8 +352,8 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
           ${activeDeviceDML}
 
+          .parameter init
           ${bindParams}
-          ${models.sqliteParameters.insertDML({ key: d_defb.device_id, value: models.device.select({ name: deviceName, boundary: deviceBoundary }) })}
 
           ${fscws.insertDML({
             fs_content_walk_session_id: sqlEngineNewUlid,
@@ -624,6 +598,26 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
     },
   });
 
+  const sqlNotebookCells = async () => {
+    const ctx = m.sqlEmitContext<EmitContext>();
+    const cellsDML = Object.entries(entries).map(async (
+      [identity, sqlSupplier],
+    ) => {
+      return models.sqlNotebook.insertDML({
+        sql_notebook_cell_id: identity,
+        sql: (typeof sqlSupplier === "function"
+          ? await sqlSupplier()
+          : sqlSupplier).SQL(ctx),
+      }, {
+        onConflict: {
+          SQL: () =>
+            `ON CONFLICT(sql_notebook_cell_id) DO UPDATE SET sql = EXCLUDED.sql, updated_at = CURRENT_TIMESTAMP`,
+        },
+      });
+    });
+    return await Promise.all(cellsDML);
+  };
+
   const sqlPageFiles = () => {
     const pages = {
       "index.sql": SQL()`
@@ -687,6 +681,7 @@ export function library<EmitContext extends SQLa.SqlEmitContext>(libOptions: {
 
   return {
     entries,
+    sqlNotebookCells,
     postProcessFsContent, // this one is special
     SQL: async (
       options: { separators?: true | undefined; dump?: true | undefined },
