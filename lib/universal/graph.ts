@@ -395,40 +395,51 @@ export function dagExecutionPlantUmlDiagram<Node, NodeID>(
     compare: NodeComparator<Node>,
   ) => Array<Node>,
 ): string {
+  // Prepend an underscore if the first character is not a valid identifier character, then remove all invalid characters.
+  // Ensure the result is not an empty string, returning a default identifier if necessary.
+  const plantUmlIdentifier = (input: NodeID) =>
+    String(input).replace(/^[^a-zA-Z_$]/, "_").replace(
+      /[^a-zA-Z0-9_$]/g,
+      "_",
+    ) || "_";
+  const pumlIdentity = (input: Node) => plantUmlIdentifier(identity(input));
+
   const topologicalSort = topologicalSortSupplier(graph, identity, compare);
   const nodeLines: string[] = [];
   const edgeLines: string[] = [];
 
   for (const node of topologicalSort) {
-    const text = identity(node);
     const isP = dagIsNodeParallelizable(graph, identity, node);
-    const nodeLine = `${isP ? `label` : "queue"} dag${text} as "${text}"`;
+    const nodeLine = `${isP ? `label` : "queue"} dag${pumlIdentity(node)} as "${
+      identity(node)
+    }"`;
     nodeLines.push(nodeLine);
   }
 
   if (topologicalSort.length > 1) {
-    edgeLines.push(`DAG --> dag${identity(topologicalSort[0])}`);
+    edgeLines.push(`DAG --> dag${pumlIdentity(topologicalSort[0])}`);
     for (let i = 0; i < topologicalSort.length - 1; i++) {
       const node = topologicalSort[i];
       // deno-fmt-ignore
-      const edgeLine = `dag${identity(node)} --> dag${identity(topologicalSort[i+1])}`;
+      const edgeLine = `dag${pumlIdentity(node)} --> dag${pumlIdentity(topologicalSort[i+1])}`;
       edgeLines.push(edgeLine);
     }
   }
 
   for (const node of graph.nodes) {
-    const text = identity(node);
-    const nodeLine = `rectangle g${text} as "${text}"`;
+    const nodeLine = `rectangle g${pumlIdentity(node)} as "${identity(node)}"`;
     nodeLines.push(nodeLine);
   }
 
   let first = true;
   for (const edge of graph.edges) {
     if (first) {
-      edgeLines.push(`Graph --> g${identity(edge.from)}`);
+      edgeLines.push(`Graph --> g${pumlIdentity(edge.from)}`);
       first = false;
     }
-    const edgeLine = `g${identity(edge.from)} --> g${identity(edge.to)}`;
+    const edgeLine = `g${pumlIdentity(edge.from)} --> g${
+      pumlIdentity(edge.to)
+    }`;
     edgeLines.push(edgeLine);
   }
 
