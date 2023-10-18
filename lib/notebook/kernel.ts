@@ -1,15 +1,10 @@
 import {
-  introspectedNotebook,
-  Kernel,
-  KernelCellContext,
-  KernelContext,
-  KernelOptions,
-  KernelRunState,
-  KernelRunStateSupplier,
   NotebookCell,
-  NotebookDescriptor,
+  NotebookCellContext,
+  NotebookContext,
   NotebookShapeCell,
 } from "./governance.ts";
+import { introspectedNotebook, NotebookDescriptor } from "./introspect.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -17,15 +12,16 @@ type Any = any;
 export class ObservableKernel<
   Notebook,
   Cell extends NotebookCell<Notebook, NotebookShapeCell<Notebook>>,
-  KernelCtx extends KernelContext<Notebook, Cell> = KernelContext<
+  KernelNotebookCtx extends NotebookContext<Notebook, Cell> = NotebookContext<
     Notebook,
     Cell
   >,
-  KernelCellCtx extends KernelCellContext<Notebook, Cell> = KernelCellContext<
-    Notebook,
-    Cell
-  >,
-> implements Kernel<Notebook> {
+  KernelNotebookCellCtx extends NotebookCellContext<Notebook, Cell> =
+    NotebookCellContext<
+      Notebook,
+      Cell
+    >,
+> {
   readonly introspectedNB: ReturnType<
     typeof introspectedNotebook<Notebook, NotebookShapeCell<Notebook>, Cell>
   >;
@@ -38,24 +34,23 @@ export class ObservableKernel<
         Notebook,
         Cell
       >(),
-    readonly options?:
-      & KernelOptions<
-        Notebook,
-        Cell,
-        KernelCtx,
-        KernelCellCtx
-      >
-      & {
-        readonly executeCells?: (
-          introspectedNB: ReturnType<
-            typeof introspectedNotebook<
-              Notebook,
-              NotebookShapeCell<Notebook>,
-              Cell
-            >
-          >,
-        ) => Cell[];
-      },
+    readonly options?: {
+      readonly prepareNotebookCtx?: (
+        suggested: NotebookContext<Notebook, Cell>,
+      ) => KernelNotebookCtx;
+      readonly prepareCellCtx?: (
+        suggested: NotebookCellContext<Notebook, Cell>,
+      ) => KernelNotebookCellCtx;
+      readonly executeCells?: (
+        introspectedNB: ReturnType<
+          typeof introspectedNotebook<
+            Notebook,
+            NotebookShapeCell<Notebook>,
+            Cell
+          >
+        >,
+      ) => Cell[];
+    },
   ) {
     this.introspectedNB = introspectedNotebook<
       Notebook,
@@ -74,33 +69,107 @@ export class ObservableKernel<
   }
 
   // deno-lint-ignore require-await
-  async prepareRunState() {
+  async initRunState() {
+    type Events = {
+      initNotebook: (
+        ctx: KernelNotebookCtx,
+      ) => void | false | Promise<void | false>;
+      beforeCell: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
+        cellID: `${ShapeCell}`,
+        ctx:
+          & KernelNotebookCellCtx
+          & RunStateSupplier<Any>,
+      ) => void | "interrupt" | Promise<void | "interrupt">;
+      afterInterrupt: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
+        cellID: `${ShapeCell}`,
+        ctx:
+          & KernelNotebookCellCtx
+          & RunStateSupplier<Any>,
+      ) => void | Promise<void>;
+      afterError: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
+        cellID: `${ShapeCell}`,
+        error: Error,
+        ctx:
+          & KernelNotebookCellCtx
+          & RunStateSupplier<Any>,
+      ) => void | "continue" | "abort" | Promise<void | "continue" | "abort">;
+      afterCell: <
+        ShapeCell extends string & NotebookShapeCell<Notebook>,
+        Result,
+      >(
+        cellID: `${ShapeCell}`,
+        result: RunCellState<Result>,
+        ctx:
+          & KernelNotebookCellCtx
+          & RunStateSupplier<Result>,
+      ) => void | Promise<void>;
+      finalizeNotebook: (
+        ctx:
+          & KernelNotebookCtx
+          & RunStateSupplier<Any>,
+      ) => void | Promise<void>;
+    };
+
+    type RunCellState<ExecResult> =
+      & {
+        readonly index: number;
+        readonly cellCtx: KernelNotebookCellCtx;
+      }
+      & ({ readonly status: "initial" } | {
+        readonly status: "successful";
+        readonly execResult: ExecResult;
+      } | {
+        readonly status: "interrupted";
+      } | {
+        readonly status: "aborted" | "indeterminate";
+        readonly execError: Error;
+      });
+
+    interface RunState<ExecResult> {
+      readonly descriptor: NotebookDescriptor<Notebook, Cell>;
+      readonly prepareNotebookCtx: (
+        suggested: NotebookContext<Notebook, Cell>,
+      ) => KernelNotebookCtx;
+      readonly prepareCellCtx: (
+        suggested: NotebookCellContext<Notebook, Cell>,
+      ) => KernelNotebookCellCtx;
+      readonly callArgs: ((
+        cellCtx: KernelNotebookCellCtx,
+        prevExecResult: ExecResult,
+      ) => Array<Any>)[];
+      readonly eventEmitter: Events;
+      readonly cellsExecuted: RunCellState<ExecResult>[];
+      readonly cellResult: (
+        cellState: RunCellState<ExecResult>,
+      ) => Error | ExecResult;
+      interruptedAtCell: KernelNotebookCellCtx | undefined;
+      erroredOutAtCell: KernelNotebookCellCtx | undefined;
+    }
+
+    interface RunStateSupplier<PreviousResult> {
+      readonly kernelRunState: () => RunState<PreviousResult>;
+    }
+
     const prepareNotebookCtx = this.options?.prepareNotebookCtx ??
-      ((suggested) => suggested as KernelCtx);
+      ((suggested) => suggested as KernelNotebookCtx);
     const prepareCellCtx = this.options?.prepareCellCtx ??
-      ((suggested) => suggested as KernelCellCtx);
-    const eventEmitter = this.options?.eventEmitter ?? ({
+      ((suggested) => suggested as KernelNotebookCellCtx);
+    const eventEmitter: Events = {
       initNotebook: () => {},
       beforeCell: () => {},
       afterInterrupt: () => {},
       afterError: () => {},
       afterCell: () => {},
       finalizeNotebook: () => {},
-    });
+    };
 
     // each cell might have different call args from decoration decls
     const callArgs = this.introspectedNB.cells.map((_cell) => ((
-      cellCtx: KernelCellCtx,
+      cellCtx: KernelNotebookCellCtx,
       prevExecResult: Any,
     ) => [cellCtx, prevExecResult]));
 
-    const runState: KernelRunState<
-      Notebook,
-      Cell,
-      Any,
-      KernelCtx,
-      KernelCellCtx
-    > = {
+    const runState: RunState<Any> = {
       callArgs,
       descriptor: this.descriptor,
       prepareNotebookCtx,
@@ -117,13 +186,7 @@ export class ObservableKernel<
       erroredOutAtCell: undefined,
     };
 
-    const runStateSupplier: KernelRunStateSupplier<
-      Notebook,
-      Cell,
-      Any,
-      KernelCtx,
-      KernelCellCtx
-    > = {
+    const runStateSupplier: RunStateSupplier<Any> = {
       kernelRunState: () => runState,
     };
 
@@ -133,7 +196,10 @@ export class ObservableKernel<
     };
   }
 
-  async run(instance: Notebook) {
+  async run(
+    instance: Notebook,
+    initRunState: Awaited<ReturnType<this["initRunState"]>>,
+  ) {
     if (!this.isValid) {
       throw new Error(`Cycles detected in graph, invalid DAG`);
     }
@@ -141,7 +207,7 @@ export class ObservableKernel<
       throw new Error(`Notebook must be a class instance`);
     }
 
-    const { runState, runStateSupplier } = await this.prepareRunState();
+    const { runState, runStateSupplier } = initRunState;
     const {
       callArgs,
       prepareNotebookCtx,
@@ -152,7 +218,7 @@ export class ObservableKernel<
 
     const execCells = this.options?.executeCells?.(this.introspectedNB) ??
       this.introspectedNB.topologicallySortedCells();
-    const staticCtx: KernelContext<Notebook, Cell> = {
+    const staticCtx: NotebookContext<Notebook, Cell> = {
       cells: execCells,
       notebook: instance,
       last: execCells.length - 1,

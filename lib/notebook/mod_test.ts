@@ -57,7 +57,7 @@ Deno.test("simple class-based notebook cells executed in linear order", async ()
   ]);
 
   const workflow = new SimpleNotebook();
-  await kernel.run(workflow);
+  await kernel.run(workflow, await kernel.initRunState());
   ta.assertEquals(workflow.executed, [
     { cell: "constructor" },
     { cell: "simpleCell1" },
@@ -74,8 +74,8 @@ Deno.test("complex class-based notebook cells executed in topological order", as
     mod.NotebookShapeCell<ComplexNotebook>
   >;
   const cnd = new mod.NotebookDescriptor<ComplexNotebook, ComplexCell>();
-  type NotebookContent = mod.KernelContext<ComplexNotebook, ComplexCell>;
-  type CellContext = mod.KernelCellContext<ComplexNotebook, ComplexCell>;
+  type NotebookContent = mod.NotebookContext<ComplexNotebook, ComplexCell>;
+  type CellContext = mod.NotebookCellContext<ComplexNotebook, ComplexCell>;
   type ShapeCell = mod.NotebookShapeCell<ComplexNotebook>;
 
   class ComplexNotebook {
@@ -158,28 +158,6 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   >(
     ComplexNotebook.prototype,
     cnd,
-    {
-      eventEmitter: {
-        initNotebook: (_ctx) => {
-          eventMetrics.beforeNotebook++;
-        },
-        beforeCell: (cell, _ctx) => {
-          eventMetrics.beforeCell.push(cell);
-        },
-        afterInterrupt: (cell, _ctx) => {
-          eventMetrics.afterInterrupt.push(cell);
-        },
-        afterError: (cell, _error, _ctx) => {
-          eventMetrics.afterError.push(cell);
-        },
-        afterCell: (cell, _ctx) => {
-          eventMetrics.afterCell.push(cell);
-        },
-        finalizeNotebook: (_ctx) => {
-          eventMetrics.afterNotebook++;
-        },
-      },
-    },
   );
 
   if (kernel.introspectedNB.isCyclical()) {
@@ -205,7 +183,27 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   ]);
 
   const workflow = new ComplexNotebook();
-  await kernel.run(workflow);
+  const initRunState = await kernel.initRunState();
+  initRunState.runState.eventEmitter.initNotebook = (_ctx) => {
+    eventMetrics.beforeNotebook++;
+  };
+  initRunState.runState.eventEmitter.beforeCell = (cell, _ctx) => {
+    eventMetrics.beforeCell.push(cell);
+  };
+  initRunState.runState.eventEmitter.afterInterrupt = (cell, _ctx) => {
+    eventMetrics.afterInterrupt.push(cell);
+  };
+  initRunState.runState.eventEmitter.afterError = (cell, _ctx) => {
+    eventMetrics.afterError.push(cell);
+  };
+  initRunState.runState.eventEmitter.afterCell = (cell, _ctx) => {
+    eventMetrics.afterCell.push(cell);
+  };
+  initRunState.runState.eventEmitter.finalizeNotebook = (_ctx) => {
+    eventMetrics.afterNotebook++;
+  };
+
+  await kernel.run(workflow, initRunState);
   ta.assertEquals(eventMetrics, {
     beforeNotebook: 1,
     beforeCell: ["cell3", "cell1", "cell2", "cell4", "cell5"],
