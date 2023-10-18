@@ -1,10 +1,10 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
-import * as mod from "./notebook.ts";
+import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-Deno.test("simple class-based Workflow DAG engine executed in linear order", async () => {
+Deno.test("simple class-based notebook cells executed in linear order", async () => {
   class SimpleNotebook {
     readonly executed: { cell: "constructor" | keyof SimpleNotebook }[] = [];
     constructor() {
@@ -30,16 +30,26 @@ Deno.test("simple class-based Workflow DAG engine executed in linear order", asy
     }
   }
 
-  const kernel = new mod.Kernel<SimpleNotebook>(SimpleNotebook.prototype);
-  if (!kernel.isValid || kernel.lintResults.length > 0) {
+  const kernel = new mod.ObservableKernel<
+    SimpleNotebook,
+    mod.NotebookCell<SimpleNotebook, mod.NotebookShapeCell<SimpleNotebook>>
+  >(
+    SimpleNotebook.prototype,
+  );
+  if (!kernel.isValid() || kernel.lintResults.length > 0) {
     const pe = await import("npm:plantuml-encoder");
-    const diagram = kernel.DAG.ops.diagram(kernel.DAG.graph);
+    const diagram = kernel.introspectedNB.dagOps.diagram(
+      kernel.introspectedNB.graph,
+    );
     console.log(`http://www.plantuml.com/plantuml/svg/${pe.encode(diagram)}`);
   }
 
   ta.assertEquals(kernel.lintResults, []);
-  ta.assert(kernel.isValid);
-  ta.assertEquals(kernel.DAG.dagCells.map((s) => s.nbShapeCell), [
+  ta.assert(kernel.isValid());
+
+  const tsCells = kernel.introspectedNB.topologicallySortedCells();
+  ta.assertEquals(tsCells, kernel.introspectedNB.cells);
+  ta.assertEquals(tsCells.map((s) => s.nbShapeCell), [
     "simpleCell1",
     "simpleCell_two",
     "simpleCell3",
@@ -57,11 +67,15 @@ Deno.test("simple class-based Workflow DAG engine executed in linear order", asy
   ]);
 });
 
-Deno.test("complex class-based Workflow DAG engine executed in topological", async () => {
-  // these are the workflow class decorators (`wcd`) and you can name it anything
-  const cnd = new mod.NotebookDescriptor<ComplexNotebook>();
-  type NotebookContent = mod.NotebookDagContext<ComplexNotebook>;
-  type CellContext = mod.NotebookDagCellContext<ComplexNotebook>;
+Deno.test("complex class-based notebook cells executed in topological order", async () => {
+  // these are the complex notebook decorators (`cnd`) and you can name it anything
+  type ComplexCell = mod.NotebookCell<
+    ComplexNotebook,
+    mod.NotebookShapeCell<ComplexNotebook>
+  >;
+  const cnd = new mod.NotebookDescriptor<ComplexNotebook, ComplexCell>();
+  type NotebookContent = mod.KernelContext<ComplexNotebook, ComplexCell>;
+  type CellContext = mod.KernelCellContext<ComplexNotebook, ComplexCell>;
   type ShapeCell = mod.NotebookShapeCell<ComplexNotebook>;
 
   class ComplexNotebook {
@@ -136,7 +150,12 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
     afterNotebook: 0,
   };
 
-  const engine = new mod.Kernel<ComplexNotebook, NotebookContent, CellContext>(
+  const kernel = new mod.ObservableKernel<
+    ComplexNotebook,
+    ComplexCell,
+    NotebookContent,
+    CellContext
+  >(
     ComplexNotebook.prototype,
     cnd,
     {
@@ -163,15 +182,21 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
     },
   );
 
-  //   console.log(plantUmlRenderUrl(engine.DAG.ops.diagram(engine.DAG.graph)));
-  if (engine.DAG.isCyclical()) {
-    console.dir(engine.DAG.cycles());
+  if (kernel.introspectedNB.isCyclical()) {
+    const pe = await import("npm:plantuml-encoder");
+    const diagram = kernel.introspectedNB.dagOps.diagram(
+      kernel.introspectedNB.graph,
+    );
+    console.log(`http://www.plantuml.com/plantuml/svg/${pe.encode(diagram)}`);
+    console.dir(kernel.introspectedNB.cycles());
     throw new Error("Invalid graph, cycles detected");
   }
 
-  ta.assertEquals(engine.lintResults.length, 0);
-  ta.assert(engine.isValid);
-  ta.assertEquals(engine.DAG.dagCells.map((s) => s.nbShapeCell), [
+  ta.assertEquals(kernel.lintResults.length, 0);
+  ta.assert(kernel.isValid());
+
+  const tsCells = kernel.introspectedNB.topologicallySortedCells();
+  ta.assertEquals(tsCells.map((s) => s.nbShapeCell), [
     "cell3",
     "cell1",
     "cell2",
@@ -180,7 +205,7 @@ Deno.test("complex class-based Workflow DAG engine executed in topological", asy
   ]);
 
   const workflow = new ComplexNotebook();
-  await engine.run(workflow);
+  await kernel.run(workflow);
   ta.assertEquals(eventMetrics, {
     beforeNotebook: 1,
     beforeCell: ["cell3", "cell1", "cell2", "cell4", "cell5"],
