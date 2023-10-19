@@ -5,7 +5,7 @@ import { NotebookCell, NotebookShapeCell } from "./governance.ts";
 type Any = any;
 
 /**
- * Defines TypeScript functions which can be used to decorate functions and
+ * Defines TypeScript functions which can be used to decorate class methods and
  * introspect the shape and notebook cells.
  */
 export class NotebookDescriptor<

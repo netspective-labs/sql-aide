@@ -1,6 +1,9 @@
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+// There is no "Notebook" type or interface because it's just a "plain old
+// JavaScript class".
+
 /**
  * Interface which accepts a Notebook class or object and limits the keys to
  * just class methods (basically every function defined in a class is a Notebook

@@ -34,23 +34,6 @@ export class ObservableKernel<
         Notebook,
         Cell
       >(),
-    readonly options?: {
-      readonly prepareNotebookCtx?: (
-        suggested: NotebookContext<Notebook, Cell>,
-      ) => KernelNotebookCtx;
-      readonly prepareCellCtx?: (
-        suggested: NotebookCellContext<Notebook, Cell>,
-      ) => KernelNotebookCellCtx;
-      readonly executeCells?: (
-        introspectedNB: ReturnType<
-          typeof introspectedNotebook<
-            Notebook,
-            NotebookShapeCell<Notebook>,
-            Cell
-          >
-        >,
-      ) => Cell[];
-    },
   ) {
     this.introspectedNB = introspectedNotebook<
       Notebook,
@@ -69,7 +52,23 @@ export class ObservableKernel<
   }
 
   // deno-lint-ignore require-await
-  async initRunState() {
+  async initRunState(options?: {
+    readonly prepareNotebookCtx?: (
+      suggested: NotebookContext<Notebook, Cell>,
+    ) => KernelNotebookCtx;
+    readonly prepareCellCtx?: (
+      suggested: NotebookCellContext<Notebook, Cell>,
+    ) => KernelNotebookCellCtx;
+    readonly executeCells?: (
+      introspectedNB: ReturnType<
+        typeof introspectedNotebook<
+          Notebook,
+          NotebookShapeCell<Notebook>,
+          Cell
+        >
+      >,
+    ) => Cell[];
+  }) {
     type Events = {
       initNotebook: (
         ctx: KernelNotebookCtx,
@@ -126,20 +125,20 @@ export class ObservableKernel<
       });
 
     interface RunState<ExecResult> {
-      readonly descriptor: NotebookDescriptor<Notebook, Cell>;
-      readonly prepareNotebookCtx: (
+      descriptor: NotebookDescriptor<Notebook, Cell>;
+      prepareNotebookCtx: (
         suggested: NotebookContext<Notebook, Cell>,
       ) => KernelNotebookCtx;
-      readonly prepareCellCtx: (
+      prepareCellCtx: (
         suggested: NotebookCellContext<Notebook, Cell>,
       ) => KernelNotebookCellCtx;
-      readonly callArgs: ((
+      callArgs: ((
         cellCtx: KernelNotebookCellCtx,
         prevExecResult: ExecResult,
       ) => Array<Any>)[];
-      readonly eventEmitter: Events;
-      readonly cellsExecuted: RunCellState<ExecResult>[];
-      readonly cellResult: (
+      eventEmitter: Events;
+      cellsExecuted: RunCellState<ExecResult>[];
+      cellResult: (
         cellState: RunCellState<ExecResult>,
       ) => Error | ExecResult;
       interruptedAtCell: KernelNotebookCellCtx | undefined;
@@ -150,9 +149,9 @@ export class ObservableKernel<
       readonly kernelRunState: () => RunState<PreviousResult>;
     }
 
-    const prepareNotebookCtx = this.options?.prepareNotebookCtx ??
+    const prepareNotebookCtx = options?.prepareNotebookCtx ??
       ((suggested) => suggested as KernelNotebookCtx);
-    const prepareCellCtx = this.options?.prepareCellCtx ??
+    const prepareCellCtx = options?.prepareCellCtx ??
       ((suggested) => suggested as KernelNotebookCellCtx);
     const eventEmitter: Events = {
       initNotebook: () => {},
@@ -191,6 +190,8 @@ export class ObservableKernel<
     };
 
     return {
+      executeCells: options?.executeCells?.(this.introspectedNB) ??
+        this.introspectedNB.topologicallySortedCells(),
       runState,
       runStateSupplier,
     };
@@ -207,7 +208,7 @@ export class ObservableKernel<
       throw new Error(`Notebook must be a class instance`);
     }
 
-    const { runState, runStateSupplier } = initRunState;
+    const { runState, runStateSupplier, executeCells } = initRunState;
     const {
       callArgs,
       prepareNotebookCtx,
@@ -216,12 +217,10 @@ export class ObservableKernel<
       cellsExecuted,
     } = runState;
 
-    const execCells = this.options?.executeCells?.(this.introspectedNB) ??
-      this.introspectedNB.topologicallySortedCells();
     const staticCtx: NotebookContext<Notebook, Cell> = {
-      cells: execCells,
+      cells: executeCells,
       notebook: instance,
-      last: execCells.length - 1,
+      last: executeCells.length - 1,
     };
     const nbCtx = prepareNotebookCtx(staticCtx);
 
@@ -246,14 +245,14 @@ export class ObservableKernel<
     // At this point all initializations and pre-processing are complete; now we
     // loop through each cell and attempt to execute the functions associated
     // with each cell.
-    for (let cell = 0; cell < execCells.length; cell++) {
+    for (let cell = 0; cell < executeCells.length; cell++) {
       const prevCellState = cell > 0
         ? runState.cellsExecuted[cell - 1]
         : undefined;
       const [previous, current, next] = [
         cell > 0 ? prevCellState?.cellCtx : undefined,
-        execCells[cell],
-        cell < staticCtx.last ? execCells[cell + 1] : undefined,
+        executeCells[cell],
+        cell < staticCtx.last ? executeCells[cell + 1] : undefined,
       ];
 
       const cellCtx = {
