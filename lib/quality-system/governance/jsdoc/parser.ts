@@ -29,7 +29,7 @@ const paramSchema = z.object({
 const codeReviewSchema = z.object({
   isReviewed: z.boolean().optional(),
 });
-const schemaSchema = z.object({
+const informationSchema = z.object({
   table: z.string().optional(),
   description: z.string().optional(),
   columns: z.record(z.string()).optional(),
@@ -50,7 +50,7 @@ const parsedCommentSchema = z.object({
   returns: returnsSchema.optional(), //z.string().optional(),
   param: paramSchema.optional(),
   codeReview: codeReviewSchema.optional(),
-  schema: schemaSchema.optional(),
+  informationSchema: informationSchema.optional(),
 });
 
 type TagData = z.infer<typeof parsedCommentSchema>;
@@ -66,13 +66,13 @@ export function unsafeSourceComments(content: string): TagData[] {
       lineage: { input: { source: "", columns: [] } },
       codeReview: {},
       traceability: {},
-      schema: {},
+      informationSchema: {},
       param: {},
       returns: {},
     };
 
     for (const tag of obj.tags) {
-      const tagKey = tag.tag.toLowerCase();
+      const tagKey = tag.tag.trim(); //toLowerCase();
       (tagData as Any)[tagKey] = JSON.parse(`{${tag.type}}`);
     }
     tagDataResult.push(tagData);
@@ -90,7 +90,7 @@ export function validatedSourceComments(content: string): TagData[] {
     if (result.success) {
       tagDataResult.push(result.data);
     } else {
-      console.error("Validation errors:", result.error);
+      //console.error("Validation errors:", result.error);
     }
   }
   return tagDataResult;

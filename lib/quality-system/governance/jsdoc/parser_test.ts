@@ -53,7 +53,7 @@ const expecteUnMergeddData = [
     },
     codeReview: {},
     traceability: { jiraIssue: "HR-456" },
-    schema: {
+    informationSchema: {
       table: "Employee",
       description:
         "Table to store employee personal and work-related information.",
@@ -91,7 +91,7 @@ const expecteUnMergeddData = [
     },
     codeReview: {},
     traceability: { jiraIssue: "HR-123" },
-    schema: {},
+    informationSchema: {},
     param: { employee_id: "101" },
     returns: { full_name: "Mathews" },
   },
@@ -138,7 +138,7 @@ const expecteMergeddData = [
     },
     codeReview: {},
     traceability: { jiraIssue: "HR-456" },
-    schema: {
+    informationSchema: {
       table: "Employee",
       description:
         "Table to store employee personal and work-related information.",
@@ -176,7 +176,7 @@ const expecteMergeddData = [
     },
     codeReview: {},
     traceability: { jiraIssue: "HR-123" },
-    schema: {},
+    informationSchema: {},
     param: { employee_id: "101" },
     returns: { full_name: "Mathews" },
   },

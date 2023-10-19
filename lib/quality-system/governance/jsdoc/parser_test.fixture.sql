@@ -21,7 +21,7 @@
  * @traceability {
  *   jiraIssue: "HR-456"
  * }
- * @schema {
+ * @informationSchema {
  *   table: "Employee",
  *   description: "Table to store employee personal and work-related information.",
  *   columns: {
