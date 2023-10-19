@@ -71,7 +71,10 @@ export function sqlNotebookFactory<
           [];
       initRunState.runState.eventEmitter.afterCell = (cell, state) => {
         if (state.status == "successful") {
-          if (s.isSqlTextSupplier<Context>(state.execResult)) {
+          if (
+            s.isSqlTextSupplier<Context>(state.execResult) ||
+            s.isSqlTextBehaviorSupplier<Context>(state.execResult)
+          ) {
             if (options.separator) SQL.push(options.separator(cell, state));
             const sts = state.execResult as s.SqlTextSupplier<Context>;
             SQL.push(sts);
