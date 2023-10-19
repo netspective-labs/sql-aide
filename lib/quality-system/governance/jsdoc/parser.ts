@@ -1,5 +1,5 @@
 import { parse as commentParser } from "npm:comment-parser";
-import { path, zod as z } from "../../../../deps.ts";
+import { zod as z } from "../../../../deps.ts";
 import { Any } from "https://deno.land/std@0.198.0/yaml/_utils.ts";
 
 const lineageSchema = z.object({

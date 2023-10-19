@@ -2,11 +2,16 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "npm:comment-parser": "npm:comment-parser@1.4.0",
       "npm:json5": "npm:json5@2.2.3",
       "npm:jszip": "npm:jszip@3.10.1",
       "npm:plantuml-encoder": "npm:plantuml-encoder@1.4.0"
     },
     "npm": {
+      "comment-parser@1.4.0": {
+        "integrity": "sha512-QLyTNiZ2KDOibvFPlZ6ZngVsZ/0gYnE6uTXi5aoDg8ed3AkJAz4sEje3Y8a29hQ1s6A99MZXe47fLAXQ1rTqaw==",
+        "dependencies": {}
+      },
       "core-util-is@1.0.3": {
         "integrity": "sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==",
         "dependencies": {}
