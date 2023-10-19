@@ -3,7 +3,8 @@
   "packages": {
     "specifiers": {
       "npm:json5": "npm:json5@2.2.3",
-      "npm:jszip": "npm:jszip@3.10.1"
+      "npm:jszip": "npm:jszip@3.10.1",
+      "npm:plantuml-encoder": "npm:plantuml-encoder@1.4.0"
     },
     "npm": {
       "core-util-is@1.0.3": {
@@ -43,6 +44,10 @@
       },
       "pako@1.0.11": {
         "integrity": "sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==",
+        "dependencies": {}
+      },
+      "plantuml-encoder@1.4.0": {
+        "integrity": "sha512-sxMwpDw/ySY1WB2CE3+IdMuEcWibJ72DDOsXLkSmEaSzwEUaYBT6DWgOfBiHGCux4q433X6+OEFWjlVqp7gL6g==",
         "dependencies": {}
       },
       "process-nextick-args@2.0.1": {
