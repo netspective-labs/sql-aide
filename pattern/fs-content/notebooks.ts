@@ -19,6 +19,20 @@ type Any = any;
 // - when sending arbitrary text to the SQL stream, use SqlTextBehaviorSupplier
 // - when sending SQL statements (which need to be ; terminated) use SqlTextSupplier
 
+export function observableKernel<Notebook>(prototype: Notebook) {
+  type ShapeCell = nb.NotebookShapeCell<Notebook>;
+  type Cell = nb.NotebookCell<Notebook, ShapeCell>;
+  type NotebookCtx = nb.NotebookContext<Notebook, Cell>;
+  type CellCtx = nb.NotebookCellContext<Notebook, Cell>;
+
+  return new nb.ObservableKernel<
+    Notebook,
+    Cell,
+    NotebookCtx,
+    CellCtx
+  >(prototype, new nb.NotebookDescriptor<Notebook, Cell>());
+}
+
 /**
  * Decorate a function with `@notIdempotent` if it's important to indicate
  * whether its SQL is idempotent or not. By default we assume all SQL is
@@ -319,6 +333,7 @@ export class MutationSqlNotebook<
         }, { onConflict: nbh.onConflictDoNothing })};`;
   }
 
+  // TODO: convert arguments to Zod so that they can be validated from external sources?
   insertContent(
     options?: {
       deviceName?: string;
@@ -349,7 +364,7 @@ export class MutationSqlNotebook<
     // test with https://regex101.com/ ("Rust" flavor, remove \\ and use \ for tests)
 
     const paths = options?.paths ?? [Deno.cwd()];
-    const blobsRegEx = options?.blobsRegEx ?? "\\.(md|mdx|html)$";
+    const blobsRegEx = options?.blobsRegEx ?? "\\.(md|mdx|html|json)$";
     const digestsRegEx = options?.digestsRegEx ?? ".*";
     const ignorePathsRegEx = options?.ignorePathsRegEx ??
       "/(\\.git|node_modules)/";
@@ -482,6 +497,24 @@ export class MutationSqlNotebook<
       },
     };
   }
+
+  sqlPageSeedDML() {
+    const kernel = observableKernel(SqlPageNotebook.prototype);
+    const sqlPageNB = new SqlPageNotebook<EmitContext>(this.nbh);
+    const { universal: um } = this.nbh.models;
+    const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
+    // deno-fmt-ignore
+    return this.nbh.SQL`
+      ${this.nbh.optimalOpenDB}
+
+      ${kernel.introspectedNB.cells.map((cell) => um.sqlPageFiles.insertDML({
+          path: cell.nbShapeCell, // the class's method name is the "cell"
+          contents: sqlPageNB[cell.nbShapeCell].call(sqlPageNB).SQL(ctx),
+          last_modified:{ SQL: () => `CURRENT_TIMESTAMP` }},
+          { onConflict: { SQL: () => `ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP` } },
+        ))};
+      `;
+  }
 }
 
 export class QuerySqlNotebook<
@@ -595,6 +628,52 @@ export class QuerySqlNotebook<
           UNION ALL SELECT * FROM Indexes
       );`;
   }
+
+  htmlAnchors() {
+    // deno-fmt-ignore
+    return this.nbh.SQL`
+        ${this.nbh.loadExtnSQL("asg017/html/html0")}
+
+        -- find all HTML files in the fs_content table and return
+        -- each file and the anchors' labels and hrefs in that file
+        -- TODO: create a table called fs_content_html_anchor to store this data after inserting it into fs_content
+        --       so that simple HTML lookups do not require the html0 extension to be loaded
+        WITH html_content AS (
+          SELECT fs_content_id, content, content_digest, file_path, file_extn FROM fs_content WHERE file_extn = '.html'
+        ),
+        html AS (
+          SELECT file_path,
+                 text as label,
+                 html_attribute_get(html, 'a', 'href') as href
+            FROM html_content, html_each(html_content.content, 'a')
+        )
+        SELECT * FROM html;
+      `;
+  }
+
+  htmlHeadMeta() {
+    // deno-fmt-ignore
+    return this.nbh.SQL`
+        ${this.nbh.loadExtnSQL("asg017/html/html0")}
+
+        -- find all HTML files in the fs_content table and return
+        -- each file and the <head><meta name="key" content="value"> pair
+        -- TODO: create a table called fs_content_html_head_meta to store this data after inserting it into fs_content
+        --       so that simple HTML lookups do not require the html0 extension to be loaded
+        WITH html_content AS (
+          SELECT fs_content_id, content, content_digest, file_path, file_extn FROM fs_content WHERE file_extn = '.html'
+        ),
+        html AS (
+          SELECT file_path,
+                 html_attribute_get(html, 'meta', 'name') as key,
+                 html_attribute_get(html, 'meta', 'content') as value,
+                 html
+            FROM html_content, html_each(html_content.content, 'head meta')
+           WHERE key IS NOT NULL
+        )
+        SELECT * FROM html;
+      `;
+  }
 }
 
 export class OrchestrationSqlNotebook<
@@ -649,4 +728,55 @@ export class OrchestrationSqlNotebook<
     }
     return undefined;
   }
+}
+
+/**
+ * SqlPageNotebook has methods with the name of each [SQLPage](https://sql.ophir.dev/)
+ * content that we want in the database. The MutationSqlNotebook sqlPageSeedDML
+ * method "reads" the cells in the SqlPageNotebook (each method's result) and
+ * generates SQL to insert the content of the page in the database in the format
+ * and table expected by [SQLPage](https://sql.ophir.dev/).
+ */
+export class SqlPageNotebook<
+  EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
+> extends SQLa.SqlNotebook<EmitContext> {
+  static identity = this.constructor.name;
+
+  constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
+    super();
+  }
+
+  "index.sql"() {
+    return this.nbh.SQL`
+      SELECT
+        'list' as component,
+        'Get started: where to go from here ?' as title,
+        'Here are some useful links to get you started with SQLPage.' as description;
+      SELECT 'Content Walk Session Statistics' as title,
+        'fsc-walk-session-stats.sql' as link,
+        'TODO' as description,
+        'green' as color,
+        'download' as icon;
+      SELECT 'MIME Types' as title,
+        'mime-types.sql' as link,
+        'TODO' as description,
+        'blue' as color,
+        'download' as icon;`;
+  }
+
+  "fsc-walk-session-stats.sql"() {
+    return this.nbh.SQL`
+      SELECT 'table' as component, 1 as search, 1 as sort;
+      SELECT walk_datetime, walk_duration, file_extn, total_count, with_frontmatter, average_size from fs_content_walk_session_stats;`;
+  }
+
+  "mime-types.sql"() {
+    return this.nbh.SQL`
+      SELECT 'table' as component, 1 as search, 1 as sort;
+      SELECT name, file_extn, description from mime_type;`;
+  }
+
+  // TODO: add one or more pages that will contain PlantUML or database
+  //       description markdown so that the documentation for the database
+  //       is contained within the DB itself.
 }
