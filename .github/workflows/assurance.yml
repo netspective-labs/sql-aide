@@ -23,10 +23,8 @@ jobs:
 
       - run: deno task doctor
 
-      - uses: actions/setup-sqlite@v1
-        with:
-          sqlite-version: 3.43.1
-          sqlite-year: 2023
+      - uses: pkgxdev/setup@v1
+        with: sqlite3@3.43
 
       - run: |
           sqlite3 --version
