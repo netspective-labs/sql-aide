@@ -23,16 +23,7 @@ export function sqlNotebookFactory<
   nbd = sqlNotebookAnnotations<Notebook, Context>(),
 ) {
   type ShapeCell = nb.NotebookShapeCell<Notebook>;
-  type Cell = nb.NotebookCell<Notebook, ShapeCell>;
-  type NotebookCtx = nb.NotebookContext<Notebook, Cell>;
-  type CellCtx = nb.NotebookCellContext<Notebook, Cell>;
-
-  const kernel = new nb.ObservableKernel<
-    Notebook,
-    Cell,
-    NotebookCtx,
-    CellCtx
-  >(prototype, nbd);
+  const kernel = nb.ObservableKernel.create(prototype, nbd);
 
   type EventEmitter = Awaited<
     ReturnType<typeof kernel.initRunState>
