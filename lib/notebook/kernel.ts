@@ -369,4 +369,23 @@ export class ObservableKernel<
       instance.prototype.constructor.toString().substring(0, 5) === "class";
     return isCtorClass || isPrototypeCtorClass;
   }
+
+  /**
+   * Introspect and construct a typical notebook kernel.
+   * @param prototype a Notebook class (such as XyzNotebook.prototype)
+   * @returns new ObservableKernel instance
+   */
+  static create<Notebook>(prototype: Notebook) {
+    type ShapeCell = NotebookShapeCell<Notebook>;
+    type Cell = NotebookCell<Notebook, ShapeCell>;
+    type NotebookCtx = NotebookContext<Notebook, Cell>;
+    type CellCtx = NotebookCellContext<Notebook, Cell>;
+
+    return new ObservableKernel<
+      Notebook,
+      Cell,
+      NotebookCtx,
+      CellCtx
+    >(prototype, new NotebookDescriptor<Notebook, Cell>());
+  }
 }
