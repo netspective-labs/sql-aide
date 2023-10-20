@@ -1,43 +1,31 @@
-import { frontmatter as fm } from "./deps.ts";
+import { frontmatter as fm, ulid } from "./deps.ts";
+import * as si from "../../lib/universal/sys-info.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as nb from "../../lib/notebook/mod.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as m from "./models.ts";
-import * as c from "./content.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-// Strategy
-// -- use ConstructionSqlNotebook for DDL and table/view/entity construction
-// -- use MutationSqlNotebook for DML and stateful table data insert/update/delete
-// -- use QuerySqlNotebook for DQL and stateless table queries that can operate all within SQLite
-// -- use OrchestrationSqlNotebook for SQL needed as part of multi-party (e.g. SQLite + Deno) orchestration because SQLite could not operate on its own
-// -- use SqlPageNotebook for SQLPage content
+// TODO: move this to README.md and put these explanations in JSDoc
+// ServiceContentHelpers creates "insertable" type-safe content objects needed by the other notebooks
+// SqlNotebookHelpers encapsulates instances of SQLa objects needed to creation of SQL text in the other notebooks
+// ConstructionSqlNotebook encapsulates DDL and table/view/entity construction
+// MutationSqlNotebook encapsulates DML and stateful table data insert/update/delete
+// QuerySqlNotebook encapsulates DQL and stateless table queries that can operate all within SQLite
+// PolyglotSqlNotebook encapsulates SQL needed as part of multi-language (e.g. SQLite + Deno) orchestration because SQLite could not operate on its own
+// SQLPageNotebook encapsulates [SQLPage](https://sql.ophir.dev/) content
+// SqlNotebooksOrchestrator encapsulates instances of all the other notebooks and provides performs all the work
 
 // Reminders:
 // - when sending arbitrary text to the SQL stream, use SqlTextBehaviorSupplier
 // - when sending SQL statements (which need to be ; terminated) use SqlTextSupplier
 
-export function observableKernel<Notebook>(prototype: Notebook) {
-  type ShapeCell = nb.NotebookShapeCell<Notebook>;
-  type Cell = nb.NotebookCell<Notebook, ShapeCell>;
-  type NotebookCtx = nb.NotebookContext<Notebook, Cell>;
-  type CellCtx = nb.NotebookCellContext<Notebook, Cell>;
-
-  return new nb.ObservableKernel<
-    Notebook,
-    Cell,
-    NotebookCtx,
-    CellCtx
-  >(prototype, new nb.NotebookDescriptor<Notebook, Cell>());
-}
-
 /**
  * Decorate a function with `@notIdempotent` if it's important to indicate
  * whether its SQL is idempotent or not. By default we assume all SQL is
  * idempotent but this can be set to indicate it's not.
- * @param value idempotency indicator
  */
 export const notIdempotent = <Notebook>(
   cells: Set<nb.NotebookShapeCell<Notebook>>,
@@ -53,7 +41,7 @@ export const notIdempotent = <Notebook>(
 
 /**
  * Decorate a function with `@dontStoreInDB` if the particular query should
- * not be stored in the sql_notebook_cell table in the database.
+ * not be stored in the stored_notebook_cell table in the database.
  */
 export const dontStoreInDB = <Notebook>(
   cells: Set<nb.NotebookShapeCell<Notebook>>,
@@ -75,11 +63,41 @@ export const noSqliteExtnLoader: (
   }),
 });
 
+export class ServiceContentHelpers<
+  EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
+> {
+  constructor(
+    readonly models: ReturnType<typeof m.serviceModels<EmitContext>>,
+  ) {}
+
+  activeDevice(boundary?: string) {
+    return {
+      name: Deno.hostname(),
+      boundary: boundary ?? "??",
+    };
+  }
+
+  async activeDeviceInsertable(deviceId = { SQL: () => "ulid()" }) {
+    const ad = this.activeDevice();
+    return this.models.device.prepareInsertable({
+      deviceId,
+      name: ad.name,
+      boundary: ad.boundary,
+      deviceElaboration: JSON.stringify({
+        hostname: Deno.hostname(),
+        networkInterfaces: Deno.networkInterfaces(),
+        osPlatformName: si.osPlatformName(),
+        osArchitecture: await si.osArchitecture(),
+      }),
+    });
+  }
+}
+
 export class SqlNotebookHelpers<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
+  readonly sch: ServiceContentHelpers<EmitContext>;
   readonly models: ReturnType<typeof m.serviceModels<EmitContext>>;
-  readonly content: ReturnType<typeof c.content<EmitContext>>;
   readonly loadExtnSQL: (
     extn: string,
   ) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
@@ -98,7 +116,6 @@ export class SqlNotebookHelpers<
         extn: string,
       ) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
       readonly models?: ReturnType<typeof m.serviceModels<EmitContext>>;
-      readonly content?: ReturnType<typeof c.content<EmitContext>>;
       readonly stsOptions?: SQLa.SqlTextSupplierOptions<EmitContext>;
       readonly execDbQueryResult?: <Shape>(
         sqlSupplier: ft.FlexibleTextSupplierSync,
@@ -108,7 +125,7 @@ export class SqlNotebookHelpers<
   ) {
     super();
     this.models = options?.models ?? m.serviceModels<EmitContext>();
-    this.content = options?.content ?? c.content<EmitContext>();
+    this.sch = new ServiceContentHelpers(this.models);
     this.templateState = this.models.universal.modelsGovn.templateState;
     this.loadExtnSQL = options?.loadExtnSQL ?? noSqliteExtnLoader;
     this.stsOptions = options?.stsOptions ??
@@ -135,6 +152,12 @@ export class SqlNotebookHelpers<
     };
   }
 
+  // ULID generator when the value is needed in JS runtime
+  get newUlid() {
+    return ulid.ulid;
+  }
+
+  // ULID generator when the value is needed by the SQLite engine runtime
   get sqlEngineNewUlid(): SQLa.SqlTextSupplier<EmitContext> {
     return { SQL: () => `ulid()` };
   }
@@ -197,13 +220,13 @@ export class ConstructionSqlNotebook<
 
       ${nbh.loadExtnSQL('asg017/ulid/ulid0')}
 
-      ${models.universal.tables}
+      ${models.universal.informationSchema.tables}
 
-      ${models.universal.tableIndexes}
+      ${models.universal.informationSchema.tableIndexes}
 
-      ${models.serviceTables}
+      ${models.informationSchema.tables}
 
-      ${models.serviceTableIndexes}
+      ${models.informationSchema.tableIndexes}
 
       ${models.universal.sqlPageFiles}
 
@@ -334,7 +357,7 @@ export class MutationSqlNotebook<
   }
 
   // TODO: convert arguments to Zod so that they can be validated from external sources?
-  insertContent(
+  async insertContent(
     options?: {
       deviceName?: string;
       deviceBoundary?: string;
@@ -344,21 +367,19 @@ export class MutationSqlNotebook<
       digestsRegEx?: string;
       maxFileIoReadBytes?: number;
     },
-  ): SQLa.SqlTextSupplier<EmitContext> {
+  ): Promise<SQLa.SqlTextSupplier<EmitContext>> {
     const {
       nbh,
-      nbh: { models, content, sqlEngineNewUlid, onConflictDoNothing },
+      nbh: { models, sch, sqlEngineNewUlid, onConflictDoNothing },
     } = this;
-    const device = content.activeDevice();
-    const deviceName = options?.deviceName ?? device.name;
-    const deviceBoundary = options?.deviceBoundary ?? device.boundary;
+    const adi = await sch.activeDeviceInsertable();
+    const deviceName = options?.deviceName ?? adi.name;
+    const deviceBoundary = options?.deviceBoundary ?? adi.boundary;
 
     // we use ON CONFLICT DO NOTHING in case this device is already defined
-    const activeDeviceDML = models.device.insertDML({
-      device_id: sqlEngineNewUlid,
-      name: deviceName,
-      boundary: deviceBoundary,
-    }, { onConflict: onConflictDoNothing });
+    const activeDeviceDML = models.device.insertDML(adi, {
+      onConflict: onConflictDoNothing,
+    });
 
     // for all regular expressions we use ags017/regex Rust extension so
     // test with https://regex101.com/ ("Rust" flavor, remove \\ and use \ for tests)
@@ -499,10 +520,19 @@ export class MutationSqlNotebook<
   }
 
   sqlPageSeedDML() {
-    const kernel = observableKernel(SqlPageNotebook.prototype);
-    const sqlPageNB = new SqlPageNotebook<EmitContext>(this.nbh);
+    const kernel = nb.ObservableKernel.create(SQLPageNotebook.prototype);
+    const sqlPageNB = new SQLPageNotebook<EmitContext>(this.nbh);
     const { universal: um } = this.nbh.models;
     const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
+
+    // TODO: Currently we're using `kernel.introspectedNB.cells` and
+    //       `sqlPageNB[cell.nbShapeCell].call(sqlPageNB).SQL(ctx)` to execute
+    //       each notebook cell but we might want to use kernel.run() instead.
+    // TODO: `call(sqlPageNB).SQL(ctx)` is assumed to be a SqlTextSupplier but
+    //       that's not necessarily guaranteed so we need use type guards.
+    // TODO: `call(sqlPageNB).SQL(ctx)` does not understand promises (some of
+    //       our cells might be async).
+
     // deno-fmt-ignore
     return this.nbh.SQL`
       ${this.nbh.optimalOpenDB}
@@ -676,7 +706,7 @@ export class QuerySqlNotebook<
   }
 }
 
-export class OrchestrationSqlNotebook<
+export class PolyglotSqlNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
   static identity = this.constructor.name;
@@ -736,8 +766,10 @@ export class OrchestrationSqlNotebook<
  * method "reads" the cells in the SqlPageNotebook (each method's result) and
  * generates SQL to insert the content of the page in the database in the format
  * and table expected by [SQLPage](https://sql.ophir.dev/).
+ * NOTE: we break our PascalCase convention for the name of the class since SQLPage
+ *       is a proper noun (product name).
  */
-export class SqlPageNotebook<
+export class SQLPageNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
   static identity = this.constructor.name;
@@ -779,4 +811,34 @@ export class SqlPageNotebook<
   // TODO: add one or more pages that will contain PlantUML or database
   //       description markdown so that the documentation for the database
   //       is contained within the DB itself.
+}
+
+export class SqlNotebooksOrchestrator<
+  EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
+> {
+  readonly cnf: ReturnType<
+    typeof SQLa.sqlNotebookFactory<ConstructionSqlNotebook, EmitContext>
+  >;
+  readonly mnf: ReturnType<
+    typeof SQLa.sqlNotebookFactory<MutationSqlNotebook, EmitContext>
+  >;
+
+  constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
+    this.cnf = SQLa.sqlNotebookFactory(
+      ConstructionSqlNotebook.prototype,
+      () => new ConstructionSqlNotebook<EmitContext>(nbh, []),
+    );
+    this.mnf = SQLa.sqlNotebookFactory(
+      MutationSqlNotebook.prototype,
+      () => new MutationSqlNotebook<EmitContext>(nbh),
+    );
+  }
+
+  separator(cell: string) {
+    return {
+      executeSqlBehavior: () => ({
+        SQL: () => `\n---\n--- Cell: ${cell}\n---\n`,
+      }),
+    };
+  }
 }

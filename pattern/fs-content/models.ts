@@ -1,5 +1,34 @@
 import * as SQLa from "../../render/mod.ts";
-import * as g from "./governance.ts";
+import * as tp from "../../pattern/typical/mod.ts";
+
+/**
+ * Encapsulate the keys, domains, templateState, and other model "governance"
+ * needed by the models and notebooks. Instead of saying "types" we use the
+ * term "governance".
+ * @returns governed keys, domains, template, and context generator for SQLa models
+ */
+export function modelsGovernance<EmitContext extends SQLa.SqlEmitContext>() {
+  type DomainQS = tp.TypicalDomainQS;
+  type DomainsQS = tp.TypicalDomainsQS;
+  const templateState = tp.governedTemplateState<
+    DomainQS,
+    DomainsQS,
+    EmitContext
+  >();
+  const sqlEmitContext = <EmitContext extends SQLa.SqlEmitContext>() =>
+    SQLa.typicalSqlEmitContext({
+      sqlDialect: SQLa.sqliteDialect(),
+    }) as EmitContext;
+  return {
+    keys: tp.governedKeys<DomainQS, DomainsQS, EmitContext>(),
+    domains: tp.governedDomains<DomainQS, DomainsQS, EmitContext>(),
+    templateState,
+    sqlEmitContext,
+    model: tp.governedModel<DomainQS, DomainsQS, EmitContext>(
+      templateState.ddlOptions,
+    ),
+  };
+}
 
 /**
  * Encapsulate all models that are universally applicable and not specific to
@@ -7,7 +36,7 @@ import * as g from "./governance.ts";
  * @returns
  */
 export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
-  const modelsGovn = g.governance<EmitContext>();
+  const modelsGovn = modelsGovernance<EmitContext>();
   const { keys: gk, domains: gd, model: gm } = modelsGovn;
 
   // Stores all notebook cells in the database so that once the database is
@@ -68,8 +97,10 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
     last_modified: gd.createdAt(),
   }, { isIdempotent: true });
 
-  const tables = [storedNotebook, sqlPageFiles];
-  const tableIndexes = [...storedNotebook.indexes, ...sqlPageFiles.indexes];
+  const informationSchema = {
+    tables: [storedNotebook, sqlPageFiles],
+    tableIndexes: [...storedNotebook.indexes, ...sqlPageFiles.indexes],
+  };
 
   return {
     modelsGovn,
@@ -77,8 +108,7 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
     storedNotebook,
     sqliteParameters,
     sqlPageFiles,
-    tables,
-    tableIndexes,
+    informationSchema,
   };
 }
 
@@ -304,23 +334,24 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
     },
   );
 
-  const serviceTables = [
-    mimeType,
-    device,
-    fsContentWalkSession,
-    fsContentWalkPath,
-    fsContent,
-    fsContentWalkPathEntry,
-  ];
-
-  const serviceTableIndexes = [
-    ...mimeType.indexes,
-    ...device.indexes,
-    ...fsContentWalkSession.indexes,
-    ...fsContentWalkPath.indexes,
-    ...fsContent.indexes,
-    ...fsContentWalkPathEntry.indexes,
-  ];
+  const informationSchema = {
+    tables: [
+      mimeType,
+      device,
+      fsContentWalkSession,
+      fsContentWalkPath,
+      fsContent,
+      fsContentWalkPathEntry,
+    ],
+    tableIndexes: [
+      ...mimeType.indexes,
+      ...device.indexes,
+      ...fsContentWalkSession.indexes,
+      ...fsContentWalkPath.indexes,
+      ...fsContent.indexes,
+      ...fsContentWalkPathEntry.indexes,
+    ],
+  };
 
   return {
     universal,
@@ -330,7 +361,6 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
     fsContentWalkPath,
     fsContent,
     fsContentWalkPathEntry,
-    serviceTables,
-    serviceTableIndexes,
+    informationSchema,
   };
 }

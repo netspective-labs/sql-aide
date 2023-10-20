@@ -2,7 +2,7 @@ import { testingAsserts as ta } from "../../deps-test.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as sh from "../../lib/sqlite/shell.ts";
 import * as SQLa from "../../render/mod.ts";
-import * as mod from "./mod.ts";
+import * as mod from "./notebooks.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -54,29 +54,17 @@ export const sqlPkgExtnLoadSqlSupplier = (
 
 Deno.test("migration notebooks", async () => {
   const ctx = SQLa.typicalSqlEmitContext();
-  const nbh = new mod.SqlNotebookHelpers({
+  const nbh = new mod.SqlNotebookHelpers<typeof ctx>({
     loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
     execDbQueryResult,
   });
-  const cnf = SQLa.sqlNotebookFactory(
-    mod.ConstructionSqlNotebook.prototype,
-    () => new mod.ConstructionSqlNotebook<typeof ctx>(nbh, []),
-  );
-  const mnf = SQLa.sqlNotebookFactory(
-    mod.MutationSqlNotebook.prototype,
-    () => new mod.MutationSqlNotebook<typeof ctx>(nbh),
-  );
-  const separator = (cell: string) => ({
-    executeSqlBehavior: () => ({
-      SQL: () => `\n---\n--- Cell: ${cell}\n---\n`,
-    }),
-  });
+  const sno = new mod.SqlNotebooksOrchestrator(nbh);
 
   // deno-fmt-ignore
   const sql = nbh.SQL`
-    ${(await cnf.SQL({ separator }))}
+    ${(await sno.cnf.SQL({ separator: sno.separator }))}
 
-    ${(await mnf.SQL({ separator }))}
+    ${(await sno.mnf.SQL({ separator: sno.separator }))}
     `.SQL(ctx);
 
   // TODO: figure out why running this creates a `stdout;` file in current working directory
