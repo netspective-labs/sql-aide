@@ -30,12 +30,7 @@ Deno.test("simple class-based notebook cells executed in linear order", async ()
     }
   }
 
-  const kernel = new mod.ObservableKernel<
-    SimpleNotebook,
-    mod.NotebookCell<SimpleNotebook, mod.NotebookShapeCell<SimpleNotebook>>
-  >(
-    SimpleNotebook.prototype,
-  );
+  const kernel = mod.ObservableKernel.create(SimpleNotebook.prototype);
   if (!kernel.isValid() || kernel.lintResults.length > 0) {
     const pe = await import("npm:plantuml-encoder");
     const diagram = kernel.introspectedNB.dagOps.diagram(
@@ -150,16 +145,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
     afterNotebook: 0,
   };
 
-  const kernel = new mod.ObservableKernel<
-    ComplexNotebook,
-    ComplexCell,
-    NotebookContent,
-    CellContext
-  >(
-    ComplexNotebook.prototype,
-    cnd,
-  );
-
+  const kernel = mod.ObservableKernel.create(ComplexNotebook.prototype, cnd);
   if (kernel.introspectedNB.isCyclical()) {
     const pe = await import("npm:plantuml-encoder");
     const diagram = kernel.introspectedNB.dagOps.diagram(
