@@ -519,30 +519,39 @@ export class MutationSqlNotebook<
     };
   }
 
-  sqlPageSeedDML() {
+  async SQLPageSeedDML() {
     const kernel = nb.ObservableKernel.create(SQLPageNotebook.prototype);
-    const sqlPageNB = new SQLPageNotebook<EmitContext>(this.nbh);
     const { universal: um } = this.nbh.models;
     const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
 
-    // TODO: Currently we're using `kernel.introspectedNB.cells` and
-    //       `sqlPageNB[cell.nbShapeCell].call(sqlPageNB).SQL(ctx)` to execute
-    //       each notebook cell but we might want to use kernel.run() instead.
-    // TODO: `call(sqlPageNB).SQL(ctx)` is assumed to be a SqlTextSupplier but
-    //       that's not necessarily guaranteed so we need use type guards.
-    // TODO: `call(sqlPageNB).SQL(ctx)` does not understand promises (some of
-    //       our cells might be async).
+    // prepare the run state with list of all pages defined
+    const irs = await kernel.initRunState();
+    const sqlDML: SQLa.SqlTextSupplier<EmitContext>[] = [];
+    irs.runState.eventEmitter.afterCell = (cell, state) => {
+      if (state.status == "successful") {
+        sqlDML.push(um.sqlPageFiles.insertDML({
+          path: cell, // the class's method name is the "cell"
+          // deno-fmt-ignore
+          contents: SQLa.isSqlTextSupplier<EmitContext>(state.execResult)
+            ? state.execResult.SQL(ctx)
+            : `select 'alert' as component,
+                      'MutationSqlNotebook.SQLPageSeedDML() issue' as title,
+                      'SQLPageNotebook cell "${cell}" did not return SQL (found: ${typeof state.execResult})' as description;`,
+          last_modified: { SQL: () => `CURRENT_TIMESTAMP` },
+        }, {
+          onConflict: {
+            SQL: () =>
+              `ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP`,
+          },
+        }));
+      }
+    };
 
-    // deno-fmt-ignore
+    await kernel.run(new SQLPageNotebook<EmitContext>(this.nbh), irs);
     return this.nbh.SQL`
       ${this.nbh.optimalOpenDB}
-
-      ${kernel.introspectedNB.cells.map((cell) => um.sqlPageFiles.insertDML({
-          path: cell.nbShapeCell, // the class's method name is the "cell"
-          contents: sqlPageNB[cell.nbShapeCell].call(sqlPageNB).SQL(ctx),
-          last_modified:{ SQL: () => `CURRENT_TIMESTAMP` }},
-          { onConflict: { SQL: () => `ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP` } },
-        ))};
+      ${sqlDML};
+      ${this.nbh.optimalCloseDB}
       `;
   }
 }
@@ -806,6 +815,10 @@ export class SQLPageNotebook<
     return this.nbh.SQL`
       SELECT 'table' as component, 1 as search, 1 as sort;
       SELECT name, file_extn, description from mime_type;`;
+  }
+
+  "bad-item.sql"() {
+    return "this is not a proper return type in SQLPageNotebook so it should generate an alert page in SQLPage";
   }
 
   // TODO: add one or more pages that will contain PlantUML or database

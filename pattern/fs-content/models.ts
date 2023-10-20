@@ -143,7 +143,7 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
       },
       indexes: (props, tableName) => {
         const tif = SQLa.tableIndexesFactory(tableName, props);
-        return [tif.index(undefined, "file_extn")];
+        return [tif.index({ isIdempotent: true }, "file_extn")];
       },
     },
   );
@@ -175,7 +175,7 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
       },
       indexes: (props, tableName) => {
         const tif = SQLa.tableIndexesFactory(tableName, props);
-        return [tif.index(undefined, "name")];
+        return [tif.index({ isIdempotent: true }, "name")];
       },
     },
   );
@@ -241,7 +241,9 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
       },
       indexes: (props, tableName) => {
         const tif = SQLa.tableIndexesFactory(tableName, props);
-        return [tif.index(undefined, "walk_session_id", "root_path")];
+        return [
+          tif.index({ isIdempotent: true }, "walk_session_id", "root_path"),
+        ];
       },
     },
   );
@@ -294,7 +296,9 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
       },
       indexes: (props, tableName) => {
         const tif = SQLa.tableIndexesFactory(tableName, props);
-        return [tif.index(undefined, "walk_session_id", "file_path")];
+        return [
+          tif.index({ isIdempotent: true }, "walk_session_id", "file_path"),
+        ];
       },
     },
   );
@@ -329,7 +333,9 @@ export function serviceModels<EmitContext extends SQLa.SqlEmitContext>() {
       isIdempotent: true,
       indexes: (props, tableName) => {
         const tif = SQLa.tableIndexesFactory(tableName, props);
-        return [tif.index(undefined, "walk_session_id", "file_path_abs")];
+        return [
+          tif.index({ isIdempotent: true }, "walk_session_id", "file_path_abs"),
+        ];
       },
     },
   );
