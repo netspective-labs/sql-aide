@@ -375,7 +375,13 @@ export class ObservableKernel<
    * @param prototype a Notebook class (such as XyzNotebook.prototype)
    * @returns new ObservableKernel instance
    */
-  static create<Notebook>(prototype: Notebook) {
+  static create<Notebook>(
+    prototype: Notebook,
+    descriptor?: NotebookDescriptor<
+      Notebook,
+      NotebookCell<Notebook, NotebookShapeCell<Notebook>>
+    >,
+  ) {
     type ShapeCell = NotebookShapeCell<Notebook>;
     type Cell = NotebookCell<Notebook, ShapeCell>;
     type NotebookCtx = NotebookContext<Notebook, Cell>;
@@ -386,6 +392,6 @@ export class ObservableKernel<
       Cell,
       NotebookCtx,
       CellCtx
-    >(prototype, new NotebookDescriptor<Notebook, Cell>());
+    >(prototype, descriptor ?? new NotebookDescriptor<Notebook, Cell>());
   }
 }
