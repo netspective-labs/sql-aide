@@ -16,12 +16,15 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
   //    sqlite3 xyz.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 xyz.db
   // You can pass in arguments using .parameter or `sql_parameters` table, like:
   //    echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sql_notebook_cell where sql_notebook_cell_id = 'init'\")" | sqlite3 xyz.db
-  const sqlNotebook = gm.textPkTable("sql_notebook_cell", {
-    sql_notebook_cell_id: gk.textPrimaryKey(),
+  const storedNotebook = gm.textPkTable("stored_notebook_cell", {
+    stored_notebook_cell_id: gk.textPrimaryKey(),
     notebook_name: gd.text(),
     cell_name: gd.text(),
-    sql: gd.blobText(),
+    code_interpreter: gd.textNullable(), // SQL by default, shebang-style for others
+    interpretable_code: gd.blobText(),
+    is_idempotent: gd.boolean(),
     description: gd.textNullable(),
+    arguments: gd.jsonTextNullable(),
     ...gm.housekeeping.columns,
   }, {
     isIdempotent: true,
@@ -35,7 +38,8 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
 
   const infoSchemaLifecycle = gm.table("information_schema_lifecycle", {
     migration_id: gk.textPrimaryKey(),
-    sql_notebook_cell: sqlNotebook.references.sql_notebook_cell_id().optional(),
+    stored_notebook_cell_id: storedNotebook.references.stored_notebook_cell_id()
+      .optional(),
     remarks: gd.text().optional(),
     executed_at: gd.createdAt(),
     executed_by: gd.text().optional(),
@@ -64,13 +68,13 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
     last_modified: gd.createdAt(),
   }, { isIdempotent: true });
 
-  const tables = [sqlNotebook, sqlPageFiles];
-  const tableIndexes = [...sqlNotebook.indexes, ...sqlPageFiles.indexes];
+  const tables = [storedNotebook, sqlPageFiles];
+  const tableIndexes = [...storedNotebook.indexes, ...sqlPageFiles.indexes];
 
   return {
     modelsGovn,
     infoSchemaLifecycle,
-    sqlNotebook,
+    storedNotebook,
     sqliteParameters,
     sqlPageFiles,
     tables,

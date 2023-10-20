@@ -1,11 +1,6 @@
 import * as SQLa from "../../render/mod.ts";
 import * as tp from "../../pattern/typical/mod.ts";
 
-export const sqlEmitContext = <EmitContext extends SQLa.SqlEmitContext>() =>
-  SQLa.typicalSqlEmitContext({
-    sqlDialect: SQLa.sqliteDialect(),
-  }) as EmitContext;
-
 export function governance<EmitContext extends SQLa.SqlEmitContext>() {
   type DomainQS = tp.TypicalDomainQS;
   type DomainsQS = tp.TypicalDomainsQS;
@@ -14,10 +9,15 @@ export function governance<EmitContext extends SQLa.SqlEmitContext>() {
     DomainsQS,
     EmitContext
   >();
+  const sqlEmitContext = <EmitContext extends SQLa.SqlEmitContext>() =>
+    SQLa.typicalSqlEmitContext({
+      sqlDialect: SQLa.sqliteDialect(),
+    }) as EmitContext;
   return {
     keys: tp.governedKeys<DomainQS, DomainsQS, EmitContext>(),
     domains: tp.governedDomains<DomainQS, DomainsQS, EmitContext>(),
     templateState,
+    sqlEmitContext,
     model: tp.governedModel<DomainQS, DomainsQS, EmitContext>(
       templateState.ddlOptions,
     ),
