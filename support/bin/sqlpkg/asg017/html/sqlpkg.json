@@ -1,0 +1,40 @@
+{
+    "owner": "asg017",
+    "name": "html",
+    "version": "v0.1.3",
+    "repository": "https://github.com/asg017/sqlite-html",
+    "specfile": "https://github.com/nalgeon/sqlpkg/raw/main/pkg/asg017/html.json",
+    "authors": [
+        "Alex Garcia"
+    ],
+    "license": "MIT",
+    "description": "Querying, manipulating, and creating HTML elements.",
+    "keywords": [
+        "sqlite-html"
+    ],
+    "symbols": [
+        "html_attribute_get",
+        "html_attribute_has",
+        "html_count",
+        "html_debug",
+        "html_each",
+        "html_element",
+        "html_escape",
+        "html_extract",
+        "html_table",
+        "html_text",
+        "html_trim",
+        "html_unescape",
+        "html_version",
+        "html"
+    ],
+    "assets": {
+        "path": "https://github.com/asg017/sqlite-html/releases/download/v0.1.3",
+        "files": {
+            "darwin-amd64": "sqlite-html-v0.1.3-loadable-macos-x86_64.tar.gz",
+            "darwin-arm64": "sqlite-html-v0.1.3-loadable-macos-aarch64.tar.gz",
+            "linux-amd64": "sqlite-html-v0.1.3-loadable-linux-x86_64.tar.gz",
+            "windows-amd64": "sqlite-html-v0.1.3-loadable-windows-x86_64.zip"
+        }
+    }
+}

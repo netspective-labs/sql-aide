@@ -8,6 +8,7 @@
     "ts-check": "deno check --no-lock --unstable $(find . -name '*.ts' -not -path \"./support/*\")",
     "prepare-publish": "git semtag final",
     "prepare-npm": "deno run -A support/package-npm/build-npm.ts",
-    "publish-npm": "cd support/package-npm && npm publish"
+    "publish-npm": "cd support/package-npm && npm publish",
+    "sync-sqlpkg": "rsync -av --delete ~/.sqlpkg/ ./support/bin/sqlpkg/"
   }
 }

@@ -1,0 +1,39 @@
+{
+    "owner": "asg017",
+    "name": "path",
+    "version": "v0.2.1",
+    "repository": "https://github.com/asg017/sqlite-path",
+    "specfile": "https://github.com/nalgeon/sqlpkg/raw/main/pkg/asg017/path.json",
+    "authors": [
+        "Alex Garcia"
+    ],
+    "license": "MIT",
+    "description": "Parsing, generating, and querying paths.",
+    "keywords": [
+        "sqlite-path"
+    ],
+    "symbols": [
+        "path_absolute",
+        "path_basename",
+        "path_debug",
+        "path_dirname",
+        "path_extension",
+        "path_intersection",
+        "path_join",
+        "path_name",
+        "path_normalize",
+        "path_part_at",
+        "path_parts",
+        "path_root",
+        "path_version"
+    ],
+    "assets": {
+        "path": "https://github.com/asg017/sqlite-path/releases/download/v0.2.1",
+        "files": {
+            "darwin-amd64": "sqlite-path-v0.2.1-loadable-macos-x86_64.tar.gz",
+            "darwin-arm64": "sqlite-path-v0.2.1-loadable-macos-aarch64.tar.gz",
+            "linux-amd64": "sqlite-path-v0.2.1-loadable-linux-x86_64.tar.gz",
+            "windows-amd64": "sqlite-path-v0.2.1-loadable-windows-x86_64.zip"
+        }
+    }
+}

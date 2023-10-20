@@ -1,4 +1,5 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
+import { path } from "../../deps.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as sh from "../../lib/sqlite/shell.ts";
 import * as SQLa from "../../render/mod.ts";
@@ -42,7 +43,9 @@ export const sqlPkgExtnLoadSqlSupplier = (
 ): SQLa.SqlTextBehaviorSupplier<Any> => {
   const sqlPkgHome = Deno.env.has("SQLPKG_HOME")
     ? Deno.env.get("SQLPKG_HOME")
-    : `${Deno.env.get("HOME")}/.sqlpkg`;
+    : path.fromFileUrl(
+      import.meta.resolve(`../../support/bin/sqlpkg`),
+    );
   return {
     executeSqlBehavior: () => {
       return {
