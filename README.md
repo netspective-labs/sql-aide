@@ -91,6 +91,68 @@ framework.
 deno test -A --unstable
 ```
 
+## Directory Structure
+
+### `examples`
+
+The `examples` directory contains code examples that demonstrate how to use SQLa
+effectively and it meant to be copy/pasted into your own code. The examples are
+useful as inspiration, guides, and for education. These examples provide clear
+and practical guidance on leveraging SQLa's features to generate SQL code in
+TypeScript. If you're new to SQLa, this is a great place to start.
+
+### `lib`
+
+The `lib` directory serves as a general-purpose monorepo for code that is used
+by various parts of SQLa, including the `pattern` and `render` directories.
+However, it's important to note that all the code in the `lib` directory is
+designed to be highly reusable and is not tightly coupled to SQLa. You can
+easily use the code in this directory in other TypeScript runtimes or projects
+that require similar functionality.
+
+The `lib` directory contains code that does not necessarily deal with SQL so it
+can be used as a dependency even in non-SQL-oriented services and applications.
+
+### `pattern`
+
+The `pattern` directory is similar to the `examples` directory in that it
+provides code examples for using SQLa. However, the key distinction is that the
+code in the `pattern` directory is designed to showcase various architecture
+patterns, design patterns, and other reusable patterns that can serve as
+valuable starting points for your own code. These patterns can be extended
+through inheritance or function composition to streamline your SQLa-based
+projects.
+
+In essence, the `pattern` directory acts as a repository of best practices and
+proven approaches to structuring SQLa code. Whether you're building a small
+project or a complex application, exploring the patterns in this directory can
+help you make informed architectural decisions and improve the maintainability
+of your SQLa-based codebase.
+
+Feel free to leverage and adapt these patterns to meet your specific project
+requirements, ultimately saving time and effort in your development process.
+
+### `render`
+
+The `render` directory is the core of SQLa's SQL code generator. It utilizes the
+code from the `lib` directory for various functions and features. This is where
+SQLa transforms TypeScript string template literals into SQL queries. If you're
+interested in the inner workings of SQLa's SQL code generation, this directory
+is where you'll find the most important code.
+
+### `support`
+
+The `support` directory is reserved for code that supports the development of
+SQLa but is not required outside of SQLa itself. This directory may contain
+tools, scripts, or other utilities that aid in SQLa's development process.
+Additionally, it may include the source code for SQLa's documentation site,
+making it a valuable resource for contributors and maintainers.
+
+- `support/bin` contains binaries that SQLa depends upon for examples and
+  patterns (SQLa core SQL generator does not depend on any binaries other than
+  Deno or JS runtime)
+- `support/docs-astro` contains the code and content for `www-sql-aide.com`.
+
 ## Tagging and pushing commits
 
 When you're ready to push code:
