@@ -79,9 +79,8 @@ Deno.test("migration notebooks", async () => {
     ta.assertNotInstanceOf(
       edbqr,
       SqliteError,
-      edbqr.message,
+      edbqr.message + "\n\n" + sql,
     );
-    console.error(sql);
   }
 });
 
