@@ -23,6 +23,11 @@ jobs:
 
       - run: deno task doctor
 
+      - run: |
+          echo "PRAGMA compile_options;" | sqlite3
+          echo "PRAGMA compile_options;" | sqlite3 | grep -q 'ENABLE_JSON1' && echo 'JSON1 extension is enabled' || echo 'JSON1 extension is NOT enabled'
+          echo "SELECT json('{\"foo\":\"bar\"}');" | sqlite3 || (echo 'JSON functions are NOT supported' && false)
+
       # syntax check all files in case tests don't exist
       - run: deno check --no-lock --unstable $(find . -name '*.ts' -not -path './support/*')
 
