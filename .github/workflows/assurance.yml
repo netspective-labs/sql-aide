@@ -21,6 +21,8 @@ jobs:
 
       - run: deno --version
 
+      - run: deno task doctor
+
       # syntax check all files in case tests don't exist
       - run: deno check --no-lock --unstable $(find . -name '*.ts' -not -path './support/*')
 
