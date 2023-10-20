@@ -23,7 +23,13 @@ jobs:
 
       - run: deno task doctor
 
+      - uses: actions/setup-sqlite@v1
+        with:
+          sqlite-version: 3.43.1
+          sqlite-year: 2023
+
       - run: |
+          sqlite3 --version
           echo "PRAGMA compile_options;" | sqlite3
           echo "PRAGMA compile_options;" | sqlite3 | grep -q 'ENABLE_JSON1' && echo 'JSON1 extension is enabled' || echo 'JSON1 extension is NOT enabled'
           echo "SELECT json('{\"foo\":\"bar\"}');" | sqlite3 || (echo 'JSON functions are NOT supported' && false)
