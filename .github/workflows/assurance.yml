@@ -24,7 +24,8 @@ jobs:
       - run: deno task doctor
 
       - uses: pkgxdev/setup@v1
-        with: sqlite3@3.43
+        with: 
+          +: sqlite3@3.43
 
       - run: |
           sqlite3 --version
