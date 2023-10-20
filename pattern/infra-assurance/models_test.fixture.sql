@@ -1649,6 +1649,26 @@ CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "description", 
     INNER JOIN asset ast ON ast.asset_id = asser.asset_id
     INNER JOIN organization o ON o.organization_id=ast.organization_id
     INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id;
+CREATE VIEW IF NOT EXISTS "risk_register_view"("risk_register_id", "description", "risk_subject", "risk_type", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner") AS
+    SELECT rr.risk_register_id,
+    rr.description,
+    rs."value" as risk_subject,
+    rt."value" as risk_type,
+    impact_to_the_organization,
+    rating_likelihood_id,
+    rating_impact_id,
+    rating_overall_risk_id,
+    controls_in_place,
+    control_effectivenes,
+    over_all_residual_risk_rating_id,
+    mitigation_further_actions,
+    control_monitor_mitigation_actions_tracking_strategy,
+    control_monitor_action_due_date,
+    p.person_first_name  as control_monitor_risk_owner
+    FROM risk_register rr
+    INNER JOIN risk_subject rs on rs.risk_subject_id = rr.risk_subject_id
+    INNER JOIN risk_type rt on rt.risk_type_id=rr.risk_type_id
+    INNER JOIN person p on p.person_id=rr.control_monitor_risk_owner_id;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');

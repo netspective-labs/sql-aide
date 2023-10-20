@@ -2036,6 +2036,46 @@ const assetServiceView = SQLa.safeViewDefinition(
   INNER JOIN organization o ON o.organization_id=ast.organization_id
   INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id`;
 
+export const riskRegisterView = SQLa.safeViewDefinition(
+  "risk_register_view",
+  {
+    risk_register_id: udm.integer(),
+    description: udm.text(),
+    risk_subject: udm.text(),
+    risk_type: udm.text(),
+    impact_to_the_organization: udm.text(),
+    rating_likelihood_id: udm.text(),
+    rating_impact_id: udm.text(),
+    rating_overall_risk_id: udm.text(),
+    controls_in_place: udm.text(),
+    control_effectivenes: udm.text(),
+    over_all_residual_risk_rating_id: udm.text(),
+    mitigation_further_actions: udm.text(),
+    control_monitor_mitigation_actions_tracking_strategy: udm.text(),
+    control_monitor_action_due_date: udm.text(),
+    control_monitor_risk_owner: udm.text(),
+  },
+)`
+  SELECT rr.risk_register_id,
+  rr.description,
+  rs."value" as risk_subject,
+  rt."value" as risk_type,
+  impact_to_the_organization,
+  rating_likelihood_id,
+  rating_impact_id,
+  rating_overall_risk_id,
+  controls_in_place,
+  control_effectivenes,
+  over_all_residual_risk_rating_id,
+  mitigation_further_actions,
+  control_monitor_mitigation_actions_tracking_strategy,
+  control_monitor_action_due_date,
+  p.person_first_name  as control_monitor_risk_owner
+  FROM risk_register rr
+  INNER JOIN risk_subject rs on rs.risk_subject_id = rr.risk_subject_id
+  INNER JOIN risk_type rt on rt.risk_type_id=rr.risk_type_id
+  INNER JOIN person p on p.person_id=rr.control_monitor_risk_owner_id`;
+
 export const allContentViews: SQLa.ViewDefinition<
   Any,
   udm.EmitContext,
@@ -2053,6 +2093,7 @@ export const allContentViews: SQLa.ViewDefinition<
   vendorView,
   contractView,
   assetServiceView,
+  riskRegisterView,
 ];
 
 export function sqlDDL() {
