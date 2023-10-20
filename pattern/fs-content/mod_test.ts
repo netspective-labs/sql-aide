@@ -81,6 +81,7 @@ Deno.test("migration notebooks", async () => {
       SqliteError,
       edbqr.message,
     );
+    console.error(sql);
   }
 });
 
