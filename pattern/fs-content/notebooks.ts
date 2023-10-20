@@ -8,7 +8,7 @@ import * as m from "./models.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-// TODO: move this to README.md and put these explanations in JSDoc
+// TODO: move this to README.md:
 // ServiceContentHelpers creates "insertable" type-safe content objects needed by the other notebooks
 // SqlNotebookHelpers encapsulates instances of SQLa objects needed to creation of SQL text in the other notebooks
 // ConstructionSqlNotebook encapsulates DDL and table/view/entity construction
@@ -21,6 +21,7 @@ type Any = any;
 // Reminders:
 // - when sending arbitrary text to the SQL stream, use SqlTextBehaviorSupplier
 // - when sending SQL statements (which need to be ; terminated) use SqlTextSupplier
+// - use jtladeiras.vscode-inline-sql, frigus02.vscode-sql-tagged-template-literals-syntax-only or similar SQL syntax highlighters in VS Code so it's easier to edit SQL
 
 /**
  * Decorate a function with `@notIdempotent` if it's important to indicate
@@ -63,6 +64,10 @@ export const noSqliteExtnLoader: (
   }),
 });
 
+/**
+ * Creates "insertable" type-safe content objects needed by the other notebooks
+ * (especially for DML/mutation SQL).
+ */
 export class ServiceContentHelpers<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > {
@@ -93,6 +98,11 @@ export class ServiceContentHelpers<
   }
 }
 
+/**
+ * Encapsulates instances of SQLa objects needed to creation of SQL text in the
+ * other notebooks. An instance of this class is usually passed into all the
+ * other notebooks.
+ */
 export class SqlNotebookHelpers<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
@@ -196,10 +206,19 @@ export class SqlNotebookHelpers<
   }
 }
 
+/**
+ * Encapsulates SQL DDL and table/view/entity construction SQLa objects. The
+ * actual models are not managed by this class but it does include all the
+ * migration scripts which assemble the other SQL into a migration steps.
+ *
+ * TODO: add ISML-like migration capabilities so that database evoluation is
+ * managed automatically. `existingMigrations` in the constructor is the list
+ * of migrations already performed so this system needs to be smart enough to
+ * generate SQL only for migrations that have not yet been performed.
+ */
 export class ConstructionSqlNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
-  static identity = this.constructor.name;
   static readonly notIdempodentCells = new Set<keyof ConstructionSqlNotebook>();
 
   constructor(
@@ -303,11 +322,12 @@ export class ConstructionSqlNotebook<
   }
 }
 
+/**
+ * Encapsulates SQL DML and stateful table data insert/update/delete operations.
+ */
 export class MutationSqlNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
-  static identity = this.constructor.name;
-
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
   }
@@ -539,6 +559,7 @@ export class MutationSqlNotebook<
                       'SQLPageNotebook cell "${cell}" did not return SQL (found: ${typeof state.execResult})' as description;`,
           last_modified: { SQL: () => `CURRENT_TIMESTAMP` },
         }, {
+          // TODO: use pattern/typical/typical.ts::activityLogDmlPartial to add changes to the activity_log field
           onConflict: {
             SQL: () =>
               `ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP`,
@@ -556,11 +577,13 @@ export class MutationSqlNotebook<
   }
 }
 
+/**
+ * Encapsulates SQL DQL and stateless table queries that can operate all within
+ * SQLite (means they are "storable" in stored_notebook_cell table).
+ */
 export class QuerySqlNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
-  static identity = this.constructor.name;
-
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
   }
@@ -715,11 +738,13 @@ export class QuerySqlNotebook<
   }
 }
 
+/**
+ * Encapsulates SQL needed as part of multi-language (e.g. SQLite + Deno)
+ * orchestration because SQLite could not operate on its own.
+ */
 export class PolyglotSqlNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
-  static identity = this.constructor.name;
-
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
   }
@@ -770,9 +795,10 @@ export class PolyglotSqlNotebook<
 }
 
 /**
- * SqlPageNotebook has methods with the name of each [SQLPage](https://sql.ophir.dev/)
- * content that we want in the database. The MutationSqlNotebook sqlPageSeedDML
- * method "reads" the cells in the SqlPageNotebook (each method's result) and
+ * Encapsulates [SQLPage](https://sql.ophir.dev/) content. SqlPageNotebook has
+ * methods with the name of each [SQLPage](https://sql.ophir.dev/) content that
+ * we want in the database. The MutationSqlNotebook sqlPageSeedDML method
+ * "reads" the cells in the SqlPageNotebook (each method's result) and
  * generates SQL to insert the content of the page in the database in the format
  * and table expected by [SQLPage](https://sql.ophir.dev/).
  * NOTE: we break our PascalCase convention for the name of the class since SQLPage
@@ -781,8 +807,6 @@ export class PolyglotSqlNotebook<
 export class SQLPageNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
-  static identity = this.constructor.name;
-
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
   }
@@ -826,6 +850,11 @@ export class SQLPageNotebook<
   //       is contained within the DB itself.
 }
 
+/**
+ * Encapsulates instances of all the other notebooks and provides performs all
+ * the work of creating other notebook kernel factories and actually performing
+ * operations with those notebooks' cells.
+ */
 export class SqlNotebooksOrchestrator<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > {
@@ -834,6 +863,12 @@ export class SqlNotebooksOrchestrator<
   >;
   readonly mnf: ReturnType<
     typeof SQLa.sqlNotebookFactory<MutationSqlNotebook, EmitContext>
+  >;
+  readonly qnf: ReturnType<
+    typeof SQLa.sqlNotebookFactory<QuerySqlNotebook, EmitContext>
+  >;
+  readonly pnf: ReturnType<
+    typeof SQLa.sqlNotebookFactory<PolyglotSqlNotebook, EmitContext>
   >;
 
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
@@ -845,6 +880,14 @@ export class SqlNotebooksOrchestrator<
       MutationSqlNotebook.prototype,
       () => new MutationSqlNotebook<EmitContext>(nbh),
     );
+    this.qnf = SQLa.sqlNotebookFactory(
+      QuerySqlNotebook.prototype,
+      () => new QuerySqlNotebook<EmitContext>(nbh),
+    );
+    this.pnf = SQLa.sqlNotebookFactory(
+      PolyglotSqlNotebook.prototype,
+      () => new PolyglotSqlNotebook<EmitContext>(nbh),
+    );
   }
 
   separator(cell: string) {
@@ -853,5 +896,70 @@ export class SqlNotebooksOrchestrator<
         SQL: () => `\n---\n--- Cell: ${cell}\n---\n`,
       }),
     };
+  }
+
+  async storeNotebookCellsDML() {
+    const { universal: um, universal: { storedNotebook } } = this.nbh.models;
+    const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
+    const sqlDML: SQLa.SqlTextSupplier<EmitContext>[] = [];
+
+    const kernelDML = async <
+      Factory extends ReturnType<
+        typeof SQLa.sqlNotebookFactory<Any, EmitContext>
+      >,
+    >(f: Factory, notebookName: string) => {
+      // prepare the run state with list of all pages defined
+      const instance = f.instance();
+      const irs = await f.kernel.initRunState();
+      irs.runState.eventEmitter.afterCell = (cell, state) => {
+        if (state.status == "successful") {
+          sqlDML.push(storedNotebook.insertDML({
+            stored_notebook_cell_id: this.nbh.sqlEngineNewUlid,
+            notebook_name: notebookName,
+            cell_name: cell, // the class's method name is the "cell"
+            // deno-fmt-ignore
+            interpretable_code: SQLa.isSqlTextSupplier<EmitContext>(state.execResult)
+            ? state.execResult.SQL(ctx)
+            : `select 'alert' as component,
+                      'MutationSqlNotebook.SQLPageSeedDML() issue' as title,
+                      'SQLPageNotebook cell "${cell}" did not return SQL (found: ${typeof state.execResult})' as description;`,
+            is_idempotent: true,
+          }, {
+            onConflict: {
+              // TODO: use pattern/typical/typical.ts::activityLogDmlPartial to add changes to the activity_log field
+              SQL: () =>
+                `ON CONFLICT(notebook_name, cell_name) DO UPDATE SET
+                  interpretable_code = EXCLUDED.interpretable_code,
+                  is_idempotent = EXCLUDED.is_idempotent,
+                  updated_at = CURRENT_TIMESTAMP`,
+            },
+          }));
+        }
+      };
+      await f.kernel.run(instance, irs);
+    };
+
+    await kernelDML(
+      this.cnf as Any,
+      ConstructionSqlNotebook.prototype.constructor.name,
+    );
+    await kernelDML(
+      this.mnf as Any,
+      MutationSqlNotebook.prototype.constructor.name,
+    );
+    await kernelDML(
+      this.qnf as Any,
+      QuerySqlNotebook.prototype.constructor.name,
+    );
+
+    // NOTE: PolyglotSqlNotebook is not stored since its cells cannot be
+    //       executed without orchestration externally
+
+    return this.nbh.SQL`
+      ${this.nbh.optimalOpenDB}
+      ${this.nbh.loadExtnSQL("asg017/ulid/ulid0")}
+      ${sqlDML};
+      ${this.nbh.optimalCloseDB}
+      `;
   }
 }

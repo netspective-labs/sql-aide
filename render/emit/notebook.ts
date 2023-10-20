@@ -31,6 +31,7 @@ export function sqlNotebookFactory<
   return {
     nbd,
     kernel,
+    instance,
     SQL: async (
       options: {
         separator?: (

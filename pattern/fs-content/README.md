@@ -63,20 +63,21 @@ information, and JSON data for additional details and elaboration.
 - Ensure `sqlite3` is in PATH
 - Download [sqlpkg](https://sqlpkg.org/) binaries
 
-Get the SQLite extensions
+This module uses many SQLite extensions which are stored in
+`support/bin/sqlpkg`:
 
-```bash
-$ eget nalgeon/sqlpkg-cli --file="sqlpkg"
-$ sqlpkg install asg017/ulid
-$ sqlpkg install nalgeon/fileio
-$ sqlpkg install nalgeon/crypto
-$ sqlpkg install asg017/path
-$ sqlpkg install asg017/html     # https://github.com/asg017/sqlite-html/blob/main/docs.md
-$ sqlpkg install asg017/http     # https://github.com/asg017/sqlite-http/blob/main/docs.md
-$ sqlpkg install asg017/regex    # https://github.com/asg017/sqlite-regex/blob/main/docs.md
-```
+- [asg017/ulid](https://github.com/asg017/sqlite-ulid)
+- [nalgeon/fileio](https://github.com/nalgeon/sqlean/blob/main/docs/fileio.md)
+- [nalgeon/crypto](https://github.com/nalgeon/sqlean/blob/main/docs/crypto.md)
+- [asg017/path](https://github.com/asg017/sqlite-path)
+- [asg017/html](https://github.com/asg017/sqlite-html/blob/main/docs.md)
+- [asg017/http](https://github.com/asg017/sqlite-http/blob/main/docs.md)
+- [asg017/regex](https://github.com/asg017/sqlite-regex/blob/main/docs.md)
 
-Other SQLite extensions to consider:
+Follow the instructions in [support/bin/README.md](support/bin/README.md) to see
+which extensions should be installed and how to update them.
+
+Other SQLite extensions to consider as we expand functionality:
 
 - `asg017/sqlite-md` - Markdown parser similar to asg017/html (at
   https://github.com/asg017/sqlite-md, not in SqlPkg yet, requested via ticket
