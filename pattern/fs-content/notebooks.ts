@@ -24,6 +24,46 @@ type Any = any;
 // - use jtladeiras.vscode-inline-sql, frigus02.vscode-sql-tagged-template-literals-syntax-only or similar SQL syntax highlighters in VS Code so it's easier to edit SQL
 
 /**
+ * MORE TODO for README.md:
+ * Our SQL "notebook" is a library function which is responsible to pulling
+ * together all SQL we use. It's important to note we do not prefer to use ORMs
+ * that hide SQL and instead use stateless SQL generators like SQLa to produce
+ * all SQL through type-safe TypeScript functions.
+ *
+ * Because applications come and go but data lives forever, we want to allow
+ * our generated SQL to be hand-edited later if the initial generated code no
+ * longers benefits from being regenerated in the future.
+ *
+ * We go to great lengths to allow SQL to be independently executed because we
+ * don't always know the final use cases and we try to use the SQLite CLI whenever
+ * possible because performance is best that way.
+ *
+ * Because SQL is a declarative and TypeScript is imperative langauage, use each
+ * for their respective strengths. Use TypeScript to generate type-safe SQL and
+ * let the database do as much work as well.
+ * - Capture all state, valid content, invalid content, and other data in the
+ *   database so that we can run queries for observability; if everything is in
+ *   the database, including error messages, warnings, etc. we can always run
+ *   queries and not have to store logs in separate system.
+ * - Instead of imperatively creating thousands of SQL statements, let the SQL
+ *   engine use CTEs and other capabilities to do as much declarative work in
+ *   the engine as possible.
+ * - Instead of copy/pasting SQL into multiple SQL statements, modularize the
+ *   SQL in TypeScript functions and build statements using template literal
+ *   strings (`xyz${abc}`).
+ * - Wrap SQL into TypeScript as much as possible so that SQL statements can be
+ *   pulled in from URLs.
+ * - If we're importing JSON, CSV, or other files pull them in via
+ *   `import .. from "xyz" with { type: "json" }` and similar imports in case
+ *   the SQL engine cannot do the imports directly from URLs (e.g. DuckDB can
+ *   import HTTP directly and should do so, SQLite can pull from URLs too with
+ *   the http0 extension).
+ * - Whenever possible make SQL stateful functions like DDL, DML, etc. idempotent
+ *   either by using `ON CONFLICT DO NOTHING` or when a conflict occurs put the
+ *   errors or warnings into a table that the application should query.
+ */
+
+/**
  * Decorate a function with `@notIdempotent` if it's important to indicate
  * whether its SQL is idempotent or not. By default we assume all SQL is
  * idempotent but this can be set to indicate it's not.
