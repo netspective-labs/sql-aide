@@ -1,90 +1,35 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
-import { path } from "../../deps.ts";
-import * as ft from "../../lib/universal/flexible-text.ts";
-import * as sh from "../../lib/sqlite/shell.ts";
-import * as SQLa from "../../render/mod.ts";
-import * as mod from "./notebooks.ts";
+import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-class SqliteError extends Error {
-  constructor(readonly sql: ft.FlexibleTextSupplierSync, message: string) {
-    super(message);
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, SqliteError);
-    }
-
-    this.name = "SqliteError";
-  }
-}
-
-async function execDbQueryResult<Shape>(
-  sql: ft.FlexibleTextSupplierSync,
-  sqliteDb?: string,
-) {
-  let sqliteErr: SqliteError | undefined = undefined;
-  const scaj = await sh.sqliteCmdAsJSON<Shape>(
-    sqliteDb ?? ":memory:",
-    sql,
-    {
-      onError: (escResult) => {
-        sqliteErr = new SqliteError(sql, escResult.stderr());
-        return undefined;
-      },
-    },
-  );
-  return sqliteErr ?? scaj;
-}
-
-export const sqlPkgExtnLoadSqlSupplier = (
-  extnIdentity: string,
-): SQLa.SqlTextBehaviorSupplier<Any> => {
-  const sqlPkgHome = Deno.env.has("SQLPKG_HOME")
-    ? Deno.env.get("SQLPKG_HOME")
-    : path.fromFileUrl(
-      import.meta.resolve(`../../support/bin/sqlpkg`),
-    );
-  return {
-    executeSqlBehavior: () => {
-      return {
-        SQL: () => `.load ${sqlPkgHome}/${extnIdentity}`,
-      };
-    },
-  };
-};
-
-Deno.test("migration notebooks", async () => {
-  const ctx = SQLa.typicalSqlEmitContext();
-  const nbh = new mod.SqlNotebookHelpers<typeof ctx>({
-    loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
-    execDbQueryResult,
-  });
-  const sno = new mod.SqlNotebooksOrchestrator(nbh);
+Deno.test("migration and typical mutations", async () => {
+  const sno = mod.prepareOrchestrator();
 
   // deno-fmt-ignore
-  const sql = nbh.SQL`
+  const sql = sno.nbh.SQL`
     -- construct all information model objects (initialize the database)
-    ${(await sno.cnf.SQL({ separator: sno.separator }))}
+    ${(await sno.constructionNBF.SQL({ separator: sno.separator }))}
 
     -- store all SQL that is potentially reusable in the database
     ${(await sno.storeNotebookCellsDML())}
 
-    ${(await sno.mnf.SQL({}, "SQLPageSeedDML", "insertFsContentCWD"))}
+    ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
 
     -- TODO: now "run" whatever SQL we want
-    `.SQL(ctx);
+    `.SQL(sno.nbh.emitCtx);
 
-  // TODO: figure out why running this creates a `stdout;` file in current working directory
-  const edbqr = await execDbQueryResult(
+  // TODO: figure out why running sno.mutationNBF.SQL creates a `stdout;` file in current working directory
+  const edbqr = await mod.execDbQueryResult(
     sql,
+    // enable the following if you want to debug the output in SQLite, otherwise it will be :memory:
     //"fs-content-mod_test.ts.sqlite.db",
   );
-  if (edbqr instanceof SqliteError) {
+  if (edbqr instanceof mod.SqliteError) {
     ta.assertNotInstanceOf(
       edbqr,
-      SqliteError,
+      mod.SqliteError,
       edbqr.message + "\n\n" + sql,
     );
   }

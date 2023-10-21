@@ -196,7 +196,7 @@ export class SqlNotebookHelpers<
       .output /dev/null
       PRAGMA analysis_limit=400; -- make sure pragma optimize does not take too long
       PRAGMA optimize; -- gather statistics to improve query optimization
-      .output stdout`);
+      -- we do not need .output stdout since it's the last statement of the stream`);
   }
 
   /**
@@ -926,6 +926,16 @@ export class SQLPageNotebook<
   //       is contained within the DB itself.
 }
 
+export const orchestrableSqlNotebooksNames = [
+  "construction",
+  "mutation",
+  "query",
+  "polyglot",
+] as const;
+
+export type OrchestrableSqlNotebookName =
+  typeof orchestrableSqlNotebooksNames[number];
+
 /**
  * Encapsulates instances of all the other notebooks and provides performs all
  * the work of creating other notebook kernel factories and actually performing
@@ -934,33 +944,33 @@ export class SQLPageNotebook<
 export class SqlNotebooksOrchestrator<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > {
-  readonly cnf: ReturnType<
+  readonly constructionNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<ConstructionSqlNotebook, EmitContext>
   >;
-  readonly mnf: ReturnType<
+  readonly mutationNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<MutationSqlNotebook, EmitContext>
   >;
-  readonly qnf: ReturnType<
+  readonly queryNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<QuerySqlNotebook, EmitContext>
   >;
-  readonly pnf: ReturnType<
+  readonly polyglotNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<PolyglotSqlNotebook, EmitContext>
   >;
 
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
-    this.cnf = SQLa.sqlNotebookFactory(
+    this.constructionNBF = SQLa.sqlNotebookFactory(
       ConstructionSqlNotebook.prototype,
       () => new ConstructionSqlNotebook<EmitContext>(nbh, []),
     );
-    this.mnf = SQLa.sqlNotebookFactory(
+    this.mutationNBF = SQLa.sqlNotebookFactory(
       MutationSqlNotebook.prototype,
       () => new MutationSqlNotebook<EmitContext>(nbh),
     );
-    this.qnf = SQLa.sqlNotebookFactory(
+    this.queryNBF = SQLa.sqlNotebookFactory(
       QuerySqlNotebook.prototype,
       () => new QuerySqlNotebook<EmitContext>(nbh),
     );
-    this.pnf = SQLa.sqlNotebookFactory(
+    this.polyglotNBF = SQLa.sqlNotebookFactory(
       PolyglotSqlNotebook.prototype,
       () => new PolyglotSqlNotebook<EmitContext>(nbh),
     );
@@ -974,24 +984,27 @@ export class SqlNotebooksOrchestrator<
     };
   }
 
+  infoSchemaDiagram() {
+    const { nbh: { models } } = this;
+    const { universal: { modelsGovn } } = models;
+    const ctx = modelsGovn.sqlEmitContext();
+    return typical.diaPUML.plantUmlIE(ctx, function* () {
+      for (const table of models.informationSchema.tables) {
+        if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+          yield table.graphEntityDefn() as Any; // TODO: why is "Any" required here???
+        }
+      }
+    }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
+  }
+
   infoSchemaDiagramDML() {
     const { nbh: { models } } = this;
-    const { universal: { storedNotebook, modelsGovn } } = models;
-    const ctx = modelsGovn.sqlEmitContext();
-    const diagram = ft.flexibleTextList(() => {
-      return typical.diaPUML.plantUmlIE(ctx, function* () {
-        for (const table of models.informationSchema.tables) {
-          if (SQLa.isGraphEntityDefinitionSupplier(table)) {
-            yield table.graphEntityDefn() as Any; // TODO: why is "Any" required here???
-          }
-        }
-      }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
-    }).join("\n");
+    const { universal: { storedNotebook } } = models;
     return storedNotebook.insertDML({
       stored_notebook_cell_id: this.nbh.sqlEngineNewUlid,
       notebook_name: SqlNotebooksOrchestrator.prototype.constructor.name,
       cell_name: "infoSchemaDiagram",
-      interpretable_code: diagram,
+      interpretable_code: this.infoSchemaDiagram(),
       is_idempotent: true,
     }, {
       onConflict: {
@@ -1003,6 +1016,26 @@ export class SqlNotebooksOrchestrator<
             updated_at = CURRENT_TIMESTAMP`,
       },
     });
+  }
+
+  introspectedCells() {
+    const cells: {
+      readonly notebook: OrchestrableSqlNotebookName;
+      readonly cell: string;
+    }[] = [];
+    this.constructionNBF.kernel.introspectedNB.cells.forEach((cell) => {
+      cells.push({ notebook: "construction", cell: cell.nbShapeCell });
+    });
+    this.mutationNBF.kernel.introspectedNB.cells.forEach((cell) => {
+      cells.push({ notebook: "mutation", cell: cell.nbShapeCell });
+    });
+    this.queryNBF.kernel.introspectedNB.cells.forEach((cell) => {
+      cells.push({ notebook: "query", cell: cell.nbShapeCell });
+    });
+    this.polyglotNBF.kernel.introspectedNB.cells.forEach((cell) => {
+      cells.push({ notebook: "polyglot", cell: cell.nbShapeCell });
+    });
+    return cells;
   }
 
   async storeNotebookCellsDML() {
@@ -1045,15 +1078,15 @@ export class SqlNotebooksOrchestrator<
     };
 
     await kernelDML(
-      this.cnf as Any,
+      this.constructionNBF as Any,
       ConstructionSqlNotebook.prototype.constructor.name,
     );
     await kernelDML(
-      this.mnf as Any,
+      this.mutationNBF as Any,
       MutationSqlNotebook.prototype.constructor.name,
     );
     await kernelDML(
-      this.qnf as Any,
+      this.queryNBF as Any,
       QuerySqlNotebook.prototype.constructor.name,
     );
 
