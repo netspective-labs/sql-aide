@@ -1,6 +1,5 @@
 import { frontmatter as fm, ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
-import * as ft from "../../lib/universal/flexible-text.ts";
 import * as nb from "../../lib/notebook/mod.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
@@ -114,10 +113,6 @@ export class SqlNotebookHelpers<
     extn: string,
   ) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
   readonly stsOptions: SQLa.SqlTextSupplierOptions<EmitContext>;
-  readonly execDbQueryResult: <Shape>(
-    sqlSupplier: ft.FlexibleTextSupplierSync,
-    sqliteDb?: string,
-  ) => Promise<Shape[] | undefined>;
   readonly templateState: ReturnType<
     typeof m.serviceModels<EmitContext>
   >["universal"]["modelsGovn"]["templateState"];
@@ -129,10 +124,6 @@ export class SqlNotebookHelpers<
       ) => SQLa.SqlTextBehaviorSupplier<EmitContext>;
       readonly models?: ReturnType<typeof m.serviceModels<EmitContext>>;
       readonly stsOptions?: SQLa.SqlTextSupplierOptions<EmitContext>;
-      readonly execDbQueryResult?: <Shape>(
-        sqlSupplier: ft.FlexibleTextSupplierSync,
-        sqliteDb?: string,
-      ) => Promise<Shape[] | undefined>;
     },
   ) {
     super();
@@ -143,9 +134,6 @@ export class SqlNotebookHelpers<
     this.loadExtnSQL = options?.loadExtnSQL ?? noSqliteExtnLoader;
     this.stsOptions = options?.stsOptions ??
       SQLa.typicalSqlTextSupplierOptions();
-    this.execDbQueryResult = options?.execDbQueryResult ?? (() => {
-      throw Error(`this.execDbQueryResult not supplied`);
-    });
   }
 
   // type-safe wrapper for all SQL text generated in this library;
@@ -736,6 +724,16 @@ export class QuerySqlNotebook<
       );`;
   }
 
+  frontmatterCandidates() {
+    return this.nbh.SQL`
+      SELECT fs_content_id, content
+         FROM fs_content
+        WHERE (file_extn = '.md' OR file_extn = '.mdx')
+          AND content IS NOT NULL
+          AND content_fm_body_attrs IS NULL
+          AND frontmatter IS NULL;`;
+  }
+
   htmlAnchors() {
     // deno-fmt-ignore
     return this.nbh.SQL`
@@ -795,47 +793,26 @@ export class PolyglotSqlNotebook<
   }
 
   async postProcessFsContent(
-    options?: {
-      readonly ctx?: EmitContext;
-      readonly potentialFmFilesRegEx?: string;
-    },
-  ): Promise<SQLa.SqlTextSupplier<EmitContext> | undefined> {
-    const potentialFmFilesRegEx = options?.potentialFmFilesRegEx ??
-      "\\.(md|mdx)$";
-
-    const { nbh, nbh: { models, loadExtnSQL, execDbQueryResult } } = this;
-    const unparsedFM = await execDbQueryResult<
-      { fs_content_id: string; content: string }
-    >(nbh.SQL`
-      ${loadExtnSQL("asg017/regex/regex0")}
-
-      SELECT fs_content_id, content
-        FROM fs_content
-      WHERE regex_find('${potentialFmFilesRegEx}', file_path) IS NOT NULL
-        AND content IS NOT NULL
-        AND content_fm_body_attrs IS NULL
-        AND frontmatter IS NULL;`.SQL(
-      options?.ctx ?? models.universal.modelsGovn.sqlEmitContext(),
-    ));
-
-    if (unparsedFM) {
-      return {
-        SQL: (ctx) => {
-          const { quotedLiteral } = ctx.sqlTextEmitOptions;
-          const updatedFM: string[] = [];
-          for (const ufm of unparsedFM) {
-            if (fm.test(ufm.content)) {
-              const parsedFM = fm.extract(ufm.content);
-              // deno-fmt-ignore
-              updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
-            }
+    candidatesSupplier: () =>
+      | Promise<{ fs_content_id: string; content: string }[]>
+      | { fs_content_id: string; content: string }[],
+  ) {
+    const candidates = await candidatesSupplier();
+    return {
+      SQL: (ctx: EmitContext) => {
+        const { quotedLiteral } = ctx.sqlTextEmitOptions;
+        const updatedFM: string[] = [];
+        for (const ufm of candidates) {
+          if (fm.test(ufm.content)) {
+            const parsedFM = fm.extract(ufm.content);
+            // deno-fmt-ignore
+            updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
           }
-          // deno-fmt-ignore
-          return updatedFM.join("\n");
-        },
-      };
-    }
-    return undefined;
+        }
+        // deno-fmt-ignore
+        return updatedFM.join("\n");
+      },
+    };
   }
 }
 
@@ -956,6 +933,10 @@ export class SqlNotebooksOrchestrator<
   readonly polyglotNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<PolyglotSqlNotebook, EmitContext>
   >;
+  readonly constructionNB: ConstructionSqlNotebook;
+  readonly mutationNB: MutationSqlNotebook;
+  readonly queryNB: QuerySqlNotebook;
+  readonly polyglotNB: PolyglotSqlNotebook;
 
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     this.constructionNBF = SQLa.sqlNotebookFactory(
@@ -974,6 +955,11 @@ export class SqlNotebooksOrchestrator<
       PolyglotSqlNotebook.prototype,
       () => new PolyglotSqlNotebook<EmitContext>(nbh),
     );
+
+    this.constructionNB = this.constructionNBF.instance();
+    this.mutationNB = this.mutationNBF.instance();
+    this.queryNB = this.queryNBF.instance();
+    this.polyglotNB = this.polyglotNBF.instance();
   }
 
   separator(cell: string) {

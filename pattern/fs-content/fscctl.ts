@@ -61,7 +61,6 @@ export const prepareOrchestrator = () =>
   new nbooks.SqlNotebooksOrchestrator(
     new nbooks.SqlNotebookHelpers<SQLa.SqlEmitContext>({
       loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
-      execDbQueryResult: execDbQueryResult,
     }),
   );
 
@@ -167,34 +166,31 @@ async function CLI() {
         `.SQL(sno.nbh.emitCtx);
 
       await emitSQL(sql, options);
+
+      const polyglotSQL = sno.nbh.SQL`
+        ${await (sno.polyglotNB.postProcessFsContent(async () => {
+        return await execDbQueryResult<
+          { fs_content_id: string; content: string }
+        >(
+          sno.queryNB.frontmatterCandidates().SQL(sno.nbh.emitCtx),
+          options.sqliteDb,
+        ) ??
+          [];
+      }))}`;
+      await emitSQL(polyglotSQL.SQL(sno.nbh.emitCtx), options);
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())
     .command(
       "notebook",
+      // deno-fmt-ignore
       new cliffy.Command()
         .description("Emit notebook cells SQL")
-        .action(() => {
-          sno.introspectedCells().forEach((ic) =>
-            console.log(`${ic.notebook} ${ic.cell}`)
-          );
-        })
-        .command(
-          "construction",
-          notebookCommand("construction", sno.constructionNBF as Any),
-        )
-        .command(
-          "mutation",
-          notebookCommand("mutation", sno.mutationNBF as Any),
-        )
-        .command(
-          "query",
-          notebookCommand("query", sno.queryNBF as Any),
-        )
-        .command(
-          "polyglot",
-          notebookCommand("polyglot", sno.polyglotNBF as Any),
-        ),
+        .action(() => sno.introspectedCells().forEach((ic) => console.log(`${ic.notebook} ${ic.cell}`)))
+        .command("construction", notebookCommand("construction", sno.constructionNBF as Any))
+        .command("mutation", notebookCommand("mutation", sno.mutationNBF as Any))
+        .command("query", notebookCommand("query", sno.queryNBF as Any))
+        .command("polyglot", notebookCommand("polyglot", sno.polyglotNBF as Any)),
     )
     .command(
       "diagram",
