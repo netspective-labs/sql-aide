@@ -79,7 +79,7 @@ Deno.test("migration notebooks", async () => {
   // TODO: figure out why running this creates a `stdout;` file in current working directory
   const edbqr = await execDbQueryResult(
     sql,
-    "fs-content-mod_test.ts.sqlite.db",
+    //"fs-content-mod_test.ts.sqlite.db",
   );
   if (edbqr instanceof SqliteError) {
     ta.assertNotInstanceOf(
