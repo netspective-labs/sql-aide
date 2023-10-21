@@ -50,7 +50,7 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
     notebook_name: gd.text(),
     cell_name: gd.text(),
     code_interpreter: gd.textNullable(), // SQL by default, shebang-style for others
-    interpretable_code: gd.blobText(),
+    interpretable_code: gd.text(),
     is_idempotent: gd.boolean(),
     description: gd.textNullable(),
     arguments: gd.jsonTextNullable(),
@@ -93,7 +93,7 @@ export function universalModels<EmitContext extends SQLa.SqlEmitContext>() {
   // see https://github.com/lovasoa/SQLpage/tree/main#hosting-sql-files-directly-inside-the-database
   const sqlPageFiles = gm.table("sqlpage_files", {
     path: gk.textPrimaryKey(),
-    contents: gd.blobText(),
+    contents: gd.text(),
     last_modified: gd.createdAt(),
   }, { isIdempotent: true });
 

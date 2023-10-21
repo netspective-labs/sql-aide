@@ -3,6 +3,7 @@ import * as si from "../../lib/universal/sys-info.ts";
 import * as ft from "../../lib/universal/flexible-text.ts";
 import * as nb from "../../lib/notebook/mod.ts";
 import * as SQLa from "../../render/mod.ts";
+import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -106,6 +107,7 @@ export class ServiceContentHelpers<
 export class SqlNotebookHelpers<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
+  readonly emitCtx: EmitContext;
   readonly sch: ServiceContentHelpers<EmitContext>;
   readonly models: ReturnType<typeof m.serviceModels<EmitContext>>;
   readonly loadExtnSQL: (
@@ -135,6 +137,7 @@ export class SqlNotebookHelpers<
   ) {
     super();
     this.models = options?.models ?? m.serviceModels<EmitContext>();
+    this.emitCtx = this.models.universal.modelsGovn.sqlEmitContext();
     this.sch = new ServiceContentHelpers(this.models);
     this.templateState = this.models.universal.modelsGovn.templateState;
     this.loadExtnSQL = options?.loadExtnSQL ?? noSqliteExtnLoader;
@@ -196,12 +199,47 @@ export class SqlNotebookHelpers<
       .output stdout`);
   }
 
+  /**
+   * Setup the SQL bind parameters; object property values will be available as
+   * :key1, :key2, etc.
+   * @param shape is an object with key value pairs that we want to convert to SQLite parameters
+   * @returns the rewritten object (using new keys) and the associated DML
+   */
+  sqlParameters<
+    Shape extends Record<
+      string,
+      string | number | SQLa.SqlTextSupplier<EmitContext>
+    >,
+  >(shape: Shape) {
+    const { universal: { sqliteParameters: sqp } } = this.models;
+    const paramsDML = Object.entries(shape).map(([key, value]) =>
+      sqp.insertDML({
+        key: `:${key}`,
+        value: typeof value === "number" ? String(value) : value,
+      })
+    );
+
+    type SqlParameters = { [K in keyof Shape as `:${string & K}`]: Shape[K] };
+    return {
+      params: (): SqlParameters => {
+        const newShape: Partial<SqlParameters> = {};
+        for (const key in shape) {
+          const newKey = `:${key}`;
+          (newShape as Any)[newKey] = shape[key];
+        }
+        return newShape as unknown as SqlParameters;
+      },
+      paramsDML,
+    };
+  }
+
   viewDefn<ViewName extends string, DomainQS extends SQLa.SqlDomainQS>(
     viewName: ViewName,
   ) {
     return SQLa.viewDefinition<ViewName, EmitContext, DomainQS>(viewName, {
       isIdempotent: true,
       embeddedStsOptions: this.templateState.ddlOptions,
+      before: (viewName) => SQLa.dropView(viewName),
     });
   }
 }
@@ -263,6 +301,7 @@ export class ConstructionSqlNotebook<
               COALESCE(fcwpe.file_extn, '') AS file_extn,
               fcwp.root_path AS root_path,
               COUNT(fcwpe.fs_content_id) AS total_count,
+              SUM(CASE WHEN fsc.content IS NOT NULL THEN 1 ELSE 0 END) AS with_content,
               SUM(CASE WHEN fsc.frontmatter IS NOT NULL THEN 1 ELSE 0 END) AS with_frontmatter,
               AVG(fsc.file_bytes) AS average_size,
               strftime('%Y-%m-%d %H:%M:%S', datetime(MIN(fsc.file_mtime), 'unixepoch')) AS oldest,
@@ -287,6 +326,7 @@ export class ConstructionSqlNotebook<
               'ALL' AS file_extn,
               fcwp.root_path AS root_path,
               COUNT(fcwpe.fs_content_id) AS total_count,
+              SUM(CASE WHEN fsc.content IS NOT NULL THEN 1 ELSE 0 END) AS with_content,
               SUM(CASE WHEN fsc.frontmatter IS NOT NULL THEN 1 ELSE 0 END) AS with_frontmatter,
               AVG(fsc.file_bytes) AS average_size,
               strftime('%Y-%m-%d %H:%M:%S', datetime(MIN(fsc.file_mtime), 'unixepoch')) AS oldest,
@@ -310,6 +350,7 @@ export class ConstructionSqlNotebook<
           file_extn,
           root_path,
           total_count,
+          with_content,
           with_frontmatter,
           CAST(ROUND(average_size) AS INTEGER) AS average_size,
           oldest,
@@ -376,167 +417,171 @@ export class MutationSqlNotebook<
         }, { onConflict: nbh.onConflictDoNothing })};`;
   }
 
-  // TODO: convert arguments to Zod so that they can be validated from external sources?
-  async insertContent(
-    options?: {
-      deviceName?: string;
-      deviceBoundary?: string;
-      paths?: string[];
-      ignorePathsRegEx?: string;
-      blobsRegEx?: string;
-      digestsRegEx?: string;
-      maxFileIoReadBytes?: number;
-    },
-  ): Promise<SQLa.SqlTextSupplier<EmitContext>> {
-    const {
-      nbh,
-      nbh: { models, sch, sqlEngineNewUlid, onConflictDoNothing },
-    } = this;
+  async insertActiveDeviceDML() {
+    const { nbh, nbh: { models, sch, onConflictDoNothing } } = this;
+    const { universal: { sqliteParameters: sqp } } = models;
+    const { defineBind } = models.device.columnNames(nbh.emitCtx);
     const adi = await sch.activeDeviceInsertable();
-    const deviceName = options?.deviceName ?? adi.name;
-    const deviceBoundary = options?.deviceBoundary ?? adi.boundary;
 
-    // we use ON CONFLICT DO NOTHING in case this device is already defined
-    const activeDeviceDML = models.device.insertDML(adi, {
-      onConflict: onConflictDoNothing,
-    });
+    // deno-fmt-ignore
+    return nbh.SQL`
+      -- we use ON CONFLICT DO NOTHING in case this device is already defined
+      ${models.device.insertDML(adi, { onConflict: onConflictDoNothing })}
+
+      -- store this as a :device_id parameter for easier access
+      ${sqp.insertDML({
+        key: defineBind.device_id,
+        value: models.device.select({ name: adi.name, boundary: adi.boundary}),
+      })}`;
+  }
+
+  insertFsWalkSessionCWD() {
+    const { nbh, nbh: { models, sqlEngineNewUlid } } = this;
+    const {
+      universal: { sqliteParameters: sqp },
+      fsContentWalkSession: fscws,
+    } = models;
+
+    const { useBind: useDeviceBind } = models.device.columnNames(nbh.emitCtx);
+    const { defineBind } = fscws.columnNames(nbh.emitCtx);
+
+    // deno-fmt-ignore
+    return nbh.SQL`
+      -- for all regular expressions we use ags017/regex Rust extension so
+      -- test with https://regex101.com/ ("Rust" flavor)
+      ${fscws.insertDML({
+        fs_content_walk_session_id: sqlEngineNewUlid,
+        device_id: useDeviceBind.device_id,
+        walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
+        max_fileio_read_bytes: 1000000000,
+        blobs_regex: '\\.(md|mdx|html|json)$',
+        digests_regex: '.*',
+        ignore_paths_regex: '/(\\.git|node_modules)/',
+      })}
+
+      -- store all relevant walk session attributes as SQL Parameters for easy access in subsequent SQL
+      ${sqp.insertDML({ key: defineBind.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      ${sqp.insertDML({ key: defineBind.max_fileio_read_bytes, value: { SQL: () => `SELECT max_fileio_read_bytes FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      ${sqp.insertDML({ key: defineBind.blobs_regex, value: { SQL: () => `SELECT blobs_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      ${sqp.insertDML({ key: defineBind.digests_regex, value: { SQL: () => `SELECT digests_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      ${sqp.insertDML({ key: defineBind.ignore_paths_regex, value: { SQL: () => `SELECT ignore_paths_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      `;
+  }
+
+  insertFsContentPartial() {
+    const { nbh, nbh: { models } } = this;
 
     // for all regular expressions we use ags017/regex Rust extension so
     // test with https://regex101.com/ ("Rust" flavor, remove \\ and use \ for tests)
 
-    const paths = options?.paths ?? [Deno.cwd()];
-    const blobsRegEx = options?.blobsRegEx ?? "\\.(md|mdx|html|json)$";
-    const digestsRegEx = options?.digestsRegEx ?? ".*";
-    const ignorePathsRegEx = options?.ignorePathsRegEx ??
-      "/(\\.git|node_modules)/";
-    const maxFileIoReadBytes = options?.maxFileIoReadBytes ?? 1000000000;
-
     // use abbreviations for easier to read templating
     const {
-      universal: { sqliteParameters: sqp },
       fsContentWalkSession: fscws,
       fsContentWalkPath: fscwp,
       fsContent: fsc,
       fsContentWalkPathEntry: fscwpe,
     } = models;
 
-    // setup the SQL bind parameters that will be used in this block;
-    // object property values will be available as :device_id, etc.
-    const bindParams = Object.entries({
-      max_fileio_read_bytes: maxFileIoReadBytes,
-      ignore_paths_regex: ignorePathsRegEx,
-      blobs_regex: blobsRegEx,
-      digests_regex: digestsRegEx,
-      device_id: models.device.select({
-        name: deviceName,
-        boundary: deviceBoundary,
-      }),
-    }).map(([key, value]) =>
-      sqp.insertDML({
-        key: `:${key}`,
-        value: typeof value === "number" ? String(value) : value,
-      })
+    const { useBind: d_useb } = models.device.columnNames(nbh.emitCtx);
+    const { symbol: fscws_c, useBind: fscws_useb } = fscws.columnNames(
+      nbh.emitCtx,
     );
+    // const { stsb: fscwpb } = fscwp.columnNames(nbh.emitCtx);
+    // const { stsb: fscb } = fsc.columnNames(nbh.emitCtx);
 
-    return {
-      SQL: (ctx: EmitContext) => {
-        // get column names for easier to read templating
-        //
-        const { useBind: d_useb } = models.device.columnNames(ctx);
-        const { symbol: fscws_c, defineBind: fscws_defb, useBind: fscws_useb } =
-          fscws.columnNames(ctx);
-        // const { stsb: fscwpb } = fscwp.columnNames(ctx);
-        // const { stsb: fscb } = fsc.columnNames(ctx);
+    // deno-fmt-ignore
+    return nbh.SQL`
+      ${nbh.optimalOpenDB}
+      ${nbh.loadExtnSQL("asg017/ulid/ulid0")}
+      ${nbh.loadExtnSQL("nalgeon/fileio/fileio")}
+      ${nbh.loadExtnSQL("nalgeon/crypto/crypto")}
+      ${nbh.loadExtnSQL("asg017/path/path0")}
+      ${nbh.loadExtnSQL("asg017/regex/regex0")}
 
-        // deno-fmt-ignore
-        return nbh.SQL`
-          ${nbh.optimalOpenDB}
-          ${nbh.loadExtnSQL("asg017/ulid/ulid0")}
-          ${nbh.loadExtnSQL("nalgeon/fileio/fileio")}
-          ${nbh.loadExtnSQL("nalgeon/crypto/crypto")}
-          ${nbh.loadExtnSQL("asg017/path/path0")}
-          ${nbh.loadExtnSQL("asg017/regex/regex0")}
+      -- the following are expected to be defined for the remaining SQL to work
+      -- * ${d_useb.device_id}, ${fscws_useb.fs_content_walk_session_id}, ${fscws_useb.max_fileio_read_bytes}, ${fscws_useb.blobs_regex}, ${fscws_useb.digests_regex}, ${fscws_useb.ignore_paths_regex}
+      -- * root_path in ${fscwp.tableName} joined to ${fscws_useb.fs_content_walk_session_id}
 
-          ${activeDeviceDML}
+      -- if something's not working, use '.parameter list' to see the bind parameters from SQL
+      -- .parameter list
 
-          .parameter init
-          ${bindParams}
+      -- This SQL statement inserts data into the fs_content table, generating values for some columns
+      -- and conditionally computing content and hashes (content digests) for certain files based on
+      -- provided criteria and functions. It takes care to avoid inserting duplicate entries into the
+      -- table so if the file is already in the table, it does not insert it again. When a file is
+      -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
+      -- file was found in. This allows us to easily find all files that were found in a particular
+      -- walk session and we can run simple queries to see which files were added or updated in a
+      -- specific session. There is support for detecting file deletes by using path entries.
+      -- fs_content_walk_path_entry.
+      -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
+      INSERT OR IGNORE INTO ${fsc.tableName} (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
+        SELECT ulid() as fs_content_id,
+              walk_session_id,
+              fs_content_walk_path_id,
+              name AS file_path,
+              path_extension(name) as file_extn,
+              size as file_bytes,
+              mtime as file_mtime,
+              mode as file_mode,
+              fileio_mode(mode) as file_mode_human,
+              CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
+              CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE '-' END AS content_digest
+          FROM ${fscwp.tableName},
+              fileio_ls(root_path, true) as ls -- true indicates recursive listing
+        WHERE walk_session_id = :fs_content_walk_session_id
+          AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
+          AND regex_find(:ignore_paths_regex, name) IS NULL;
 
-          ${fscws.insertDML({
-            fs_content_walk_session_id: sqlEngineNewUlid,
-            device_id: d_useb.device_id,
-            walk_started_at: { SQL: () => `CURRENT_TIMESTAMP` },
-            max_fileio_read_bytes: { SQL: () => `:max_fileio_read_bytes` },
-            blobs_regex: { SQL: () => `:blobs_regex` },
-            digests_regex: { SQL: () => `:digests_regex` },
-            ignore_paths_regex: { SQL: () => `:ignore_paths_regex` },
-          })}
-          ${sqp.insertDML({ key: fscws_defb.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
+      -- this second pass walks the path again and connects all found files to the immutable fs_content
+      -- table; this is necessary so that if any files were removed in a subsequent session, the
+      -- immutable fs_content table would still contain the file for history but it would not show up in
+      -- fs_content_walk_path_entry;
+      -- NOTE: we denormalize and compute using path_dirname, path_basename, path_extension, etc. so that
+      -- the ulid(), path_*, and other extensions are only needed on inserts, not reads.
+      INSERT INTO ${fscwpe.tableName} (fs_content_walk_path_entry_id, walk_session_id, walk_path_id, fs_content_id, file_path_abs, file_path_rel_parent, file_path_rel, file_basename, file_extn)
+        SELECT ulid() as fs_content_walk_path_entry_id,
+                fscwp.walk_session_id as walk_session_id,
+                fscwp.fs_content_walk_path_id as walk_path_id,
+                fsc.fs_content_id,
+                ls.name AS file_path,
+                path_dirname(substr(ls.name, length(root_path) + 1)) AS file_path_rel_parent,
+                substr(ls.name, length(root_path) + 1) AS file_path_rel,
+                path_basename(name) as file_basename,
+                path_extension(name) as file_extn
+          FROM fileio_ls(root_path, true) as ls
+                INNER JOIN ${fscwp.tableName} as fscwp ON fscwp.walk_session_id = :fs_content_walk_session_id
+                LEFT JOIN fs_content AS fsc ON fsc.file_path = ls.name
+          WHERE ((ls.mode & 61440) = 32768  /* Regular file */ OR (ls.mode & 61440) = 40960 /* Symbolic link */)
+            AND regex_find(:ignore_paths_regex, ls.name) IS NULL
+            AND fsc.created_at = (SELECT MAX(created_at) FROM fs_content WHERE file_path = ls.name);
 
-          ${fscwp.insertDML(paths.map((root_path) => ({
-            fs_content_walk_path_id: sqlEngineNewUlid,
-            walk_session_id: fscws_useb.fs_content_walk_session_id,
-            root_path })))}
+      -- TODO: add SQLa 'updateDML' generator like insertDML
+      UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};`;
+  }
 
-          -- if something's not working, use '.parameter list' to see the bind parameters from SQL
-          -- .parameter list
+  async insertFsContentCWD(): Promise<SQLa.SqlTextSupplier<EmitContext>> {
+    const { nbh, nbh: { models, sqlEngineNewUlid } } = this;
+    const activeDeviceDML = await this.insertActiveDeviceDML();
+    const { fsContentWalkSession: fscws, fsContentWalkPath: fscwp } = models;
 
-          -- This SQL statement inserts data into the fs_content table, generating values for some columns
-          -- and conditionally computing content and hashes (content digests) for certain files based on
-          -- provided criteria and functions. It takes care to avoid inserting duplicate entries into the
-          -- table so if the file is already in the table, it does not insert it again. When a file is
-          -- inserted, it is stored with the walk_path_id that is associated with the walk_path that the
-          -- file was found in. This allows us to easily find all files that were found in a particular
-          -- walk session and we can run simple queries to see which files were added or updated in a
-          -- specific session. There is support for detecting file deletes by using path entries.
-          -- fs_content_walk_path_entry.
-          -- we use nalgeon/fileio extension to read directories and asg017/path to compute paths;
-          INSERT OR IGNORE INTO ${fsc.tableName} (fs_content_id, walk_session_id, walk_path_id, file_path, file_extn, file_bytes, file_mtime, file_mode, file_mode_human, content, content_digest)
-            SELECT ulid() as fs_content_id,
-                  walk_session_id,
-                  fs_content_walk_path_id,
-                  name AS file_path,
-                  path_extension(name) as file_extn,
-                  size as file_bytes,
-                  mtime as file_mtime,
-                  mode as file_mode,
-                  fileio_mode(mode) as file_mode_human,
-                  CASE WHEN regex_find(:blobs_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN fileio_read(name) ELSE NULL END AS content,
-                  CASE WHEN regex_find(:digests_regex, name) IS NOT NULL AND size < :max_fileio_read_bytes THEN hex(sha256(fileio_read(name))) ELSE '-' END AS content_digest
-              FROM ${fscwp.tableName},
-                  fileio_ls(root_path, true) as ls -- true indicates recursive listing
-            WHERE walk_session_id = :fs_content_walk_session_id
-              AND (file_mode_human like '-%' or file_mode_human like 'l%') -- only files or symlinks, not directories
-              AND regex_find(:ignore_paths_regex, name) IS NULL;
+    const { useBind: fscws_useb } = fscws.columnNames(nbh.emitCtx);
 
-          -- this second pass walks the path again and connects all found files to the immutable fs_content
-          -- table; this is necessary so that if any files were removed in a subsequent session, the
-          -- immutable fs_content table would still contain the file for history but it would not show up in
-          -- fs_content_walk_path_entry;
-          -- NOTE: we denormalize and compute using path_dirname, path_basename, path_extension, etc. so that
-          -- the ulid(), path_*, and other extensions are only needed on inserts, not reads.
-          INSERT INTO ${fscwpe.tableName} (fs_content_walk_path_entry_id, walk_session_id, walk_path_id, fs_content_id, file_path_abs, file_path_rel_parent, file_path_rel, file_basename, file_extn)
-            SELECT ulid() as fs_content_walk_path_entry_id,
-                    fscwp.walk_session_id as walk_session_id,
-                    fscwp.fs_content_walk_path_id as walk_path_id,
-                    fsc.fs_content_id,
-                    ls.name AS file_path,
-                    path_dirname(substr(ls.name, length(root_path) + 1)) AS file_path_rel_parent,
-                    substr(ls.name, length(root_path) + 1) AS file_path_rel,
-                    path_basename(name) as file_basename,
-                    path_extension(name) as file_extn
-              FROM fileio_ls(root_path, true) as ls
-                    INNER JOIN ${fscwp.tableName} as fscwp ON fscwp.walk_session_id = :fs_content_walk_session_id
-                    LEFT JOIN fs_content AS fsc ON fsc.file_path = ls.name
-              WHERE ((ls.mode & 61440) = 32768  /* Regular file */ OR (ls.mode & 61440) = 40960 /* Symbolic link */)
-                AND regex_find(:ignore_paths_regex, ls.name) IS NULL
-                AND fsc.created_at = (SELECT MAX(created_at) FROM fs_content WHERE file_path = ls.name);
+    // deno-fmt-ignore
+    return nbh.SQL`
+      ${nbh.optimalOpenDB}
 
-          -- TODO: add SQLa 'updateDML' generator like insertDML
-          UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};
-          ${nbh.optimalCloseDB}`.SQL(ctx);
-      },
-    };
+      .parameter init
+      ${activeDeviceDML}
+      ${this.insertFsWalkSessionCWD()}
+
+      ${fscwp.insertDML({
+        fs_content_walk_path_id: sqlEngineNewUlid,
+        walk_session_id: fscws_useb.fs_content_walk_session_id,
+        root_path: '.' })}
+
+      ${this.insertFsContentPartial()}
+      ${nbh.optimalCloseDB}`;
   }
 
   async SQLPageSeedDML() {
@@ -621,7 +666,7 @@ export class QuerySqlNotebook<
    * views for security reasons.
    */
   infoSchemaMarkdown() {
-    this.nbh.SQL`
+    return this.nbh.SQL`
       WITH TableInfo AS (
         SELECT
           m.tbl_name AS table_name,
@@ -826,19 +871,50 @@ export class SQLPageNotebook<
         'mime-types.sql' as link,
         'TODO' as description,
         'blue' as color,
+        'download' as icon;
+      SELECT 'Stored SQL Notebooks' as title,
+        'notebooks.sql' as link,
+        'TODO' as description,
+        'blue' as color,
         'download' as icon;`;
   }
 
   "fsc-walk-session-stats.sql"() {
     return this.nbh.SQL`
       SELECT 'table' as component, 1 as search, 1 as sort;
-      SELECT walk_datetime, walk_duration, file_extn, total_count, with_frontmatter, average_size from fs_content_walk_session_stats;`;
+      SELECT walk_datetime, file_extn, total_count, with_content, with_frontmatter, average_size from fs_content_walk_session_stats;`;
   }
 
   "mime-types.sql"() {
     return this.nbh.SQL`
       SELECT 'table' as component, 1 as search, 1 as sort;
       SELECT name, file_extn, description from mime_type;`;
+  }
+
+  "notebooks.sql"() {
+    const { universal: { storedNotebook: snb } } = this.nbh.models;
+    const { symbol: snbc } = snb.columnNames(this.nbh.emitCtx);
+
+    return this.nbh.SQL`
+      SELECT 'table' as component, 'Cell' as markdown, 1 as search, 1 as sort;
+      SELECT ${snbc.notebook_name},
+             '[' || ${snbc.cell_name} || '](notebook-cell.sql?notebook=' ||  ${snbc.notebook_name} || '&cell=' || ${snbc.cell_name} || ')' as Cell
+        FROM ${snb.tableName};`;
+  }
+
+  "notebook-cell.sql"() {
+    const { universal: { storedNotebook: snb } } = this.nbh.models;
+    const { symbol: snbc } = snb.columnNames(this.nbh.emitCtx);
+
+    return this.nbh.SQL`
+      SELECT 'text' as component,
+             $notebook || '.' || $cell as title,
+             '\`\`\`sql
+      ' || ${snbc.interpretable_code} || '
+      \`\`\`' as contents_md
+       FROM ${snb.tableName}
+      WHERE ${snbc.notebook_name} = $notebook
+        AND ${snbc.cell_name} = $cell;`;
   }
 
   "bad-item.sql"() {
@@ -898,6 +974,37 @@ export class SqlNotebooksOrchestrator<
     };
   }
 
+  infoSchemaDiagramDML() {
+    const { nbh: { models } } = this;
+    const { universal: { storedNotebook, modelsGovn } } = models;
+    const ctx = modelsGovn.sqlEmitContext();
+    const diagram = ft.flexibleTextList(() => {
+      return typical.diaPUML.plantUmlIE(ctx, function* () {
+        for (const table of models.informationSchema.tables) {
+          if (SQLa.isGraphEntityDefinitionSupplier(table)) {
+            yield table.graphEntityDefn() as Any; // TODO: why is "Any" required here???
+          }
+        }
+      }, typical.diaPUML.typicalPlantUmlIeOptions()).content;
+    }).join("\n");
+    return storedNotebook.insertDML({
+      stored_notebook_cell_id: this.nbh.sqlEngineNewUlid,
+      notebook_name: SqlNotebooksOrchestrator.prototype.constructor.name,
+      cell_name: "infoSchemaDiagram",
+      interpretable_code: diagram,
+      is_idempotent: true,
+    }, {
+      onConflict: {
+        // TODO: use pattern/typical/typical.ts::activityLogDmlPartial to add changes to the activity_log field
+        SQL: () =>
+          `ON CONFLICT(notebook_name, cell_name) DO UPDATE SET
+            interpretable_code = EXCLUDED.interpretable_code,
+            is_idempotent = EXCLUDED.is_idempotent,
+            updated_at = CURRENT_TIMESTAMP`,
+      },
+    });
+  }
+
   async storeNotebookCellsDML() {
     const { universal: um, universal: { storedNotebook } } = this.nbh.models;
     const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
@@ -919,10 +1026,8 @@ export class SqlNotebooksOrchestrator<
             cell_name: cell, // the class's method name is the "cell"
             // deno-fmt-ignore
             interpretable_code: SQLa.isSqlTextSupplier<EmitContext>(state.execResult)
-            ? state.execResult.SQL(ctx)
-            : `select 'alert' as component,
-                      'MutationSqlNotebook.SQLPageSeedDML() issue' as title,
-                      'SQLPageNotebook cell "${cell}" did not return SQL (found: ${typeof state.execResult})' as description;`,
+              ? state.execResult.SQL(ctx)
+              : `storeNotebookCellsDML "${cell}" did not return SQL (found: ${typeof state.execResult})`,
             is_idempotent: true,
           }, {
             onConflict: {
@@ -959,6 +1064,7 @@ export class SqlNotebooksOrchestrator<
       ${this.nbh.optimalOpenDB}
       ${this.nbh.loadExtnSQL("asg017/ulid/ulid0")}
       ${sqlDML};
+      ${this.infoSchemaDiagramDML()}
       ${this.nbh.optimalCloseDB}
       `;
   }

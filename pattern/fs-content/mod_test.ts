@@ -71,14 +71,15 @@ Deno.test("migration notebooks", async () => {
     -- store all SQL that is potentially reusable in the database
     ${(await sno.storeNotebookCellsDML())}
 
-    -- now perform service mutation operations
-    ${(await sno.mnf.SQL({ separator: sno.separator }))}
+    ${(await sno.mnf.SQL({}, "SQLPageSeedDML", "insertFsContentCWD"))}
+
+    -- TODO: now "run" whatever SQL we want
     `.SQL(ctx);
 
   // TODO: figure out why running this creates a `stdout;` file in current working directory
   const edbqr = await execDbQueryResult(
     sql,
-    // "fs-content-mod_test.ts.sqlite.db",
+    "fs-content-mod_test.ts.sqlite.db",
   );
   if (edbqr instanceof SqliteError) {
     ta.assertNotInstanceOf(
