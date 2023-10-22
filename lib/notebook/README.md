@@ -10,6 +10,8 @@ There are two types of notebooks:
 - Class-based Notebooks with methods for Cells (for traditional cell-style)
 - Action-based Notebooks with classes for Cells (for piping-style)
 
+You can mix and match the notebook styles and use in inside another.
+
 ## Class-based Notebooks with Cells as methods
 
 - Notebooks are TypeScript classes and form _documents_ comprised of _cells_.

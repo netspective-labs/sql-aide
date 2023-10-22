@@ -1,4 +1,5 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
+import * as an from "../../lib/notebook/action.ts";
 import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -6,6 +7,7 @@ type Any = any;
 
 Deno.test("migration and typical mutations", async () => {
   const sno = mod.prepareOrchestrator();
+  const actionNB = an.ActionNotebook.create();
 
   // deno-fmt-ignore
   const sql = sno.nbh.SQL`
@@ -20,19 +22,13 @@ Deno.test("migration and typical mutations", async () => {
     -- TODO: now "run" whatever SQL we want
     `.SQL(sno.nbh.emitCtx);
 
+  // enable the following if you want to debug the output in SQLite, otherwise it will be :memory:
+  // const sqlite3 = () => actionNB.sqlite3({ filename: "fs-content-mod_test.ts.sqlite.db" });
+  const sqlite3 = () => actionNB.sqlite3();
+
   // TODO: figure out why running sno.mutationNBF.SQL creates a `stdout;` file in current working directory
-  const edbqr = await mod.execDbQueryResult(
-    sql,
-    // enable the following if you want to debug the output in SQLite, otherwise it will be :memory:
-    //"fs-content-mod_test.ts.sqlite.db",
-  );
-  if (edbqr instanceof mod.SqliteError) {
-    ta.assertNotInstanceOf(
-      edbqr,
-      mod.SqliteError,
-      edbqr.message + "\n\n" + sql,
-    );
-  }
+  const sr = await sqlite3().SQL(sql).spawn();
+  ta.assertEquals(sr.code, 0);
 });
 
 // TODO: create file generator testing!?

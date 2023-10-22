@@ -1,44 +1,12 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-sys
 
 import { cliffy, path } from "./deps.ts";
-import * as ft from "../../lib/universal/flexible-text.ts";
-import * as sh from "../../lib/sqlite/shell.ts";
+import * as an from "../../lib/notebook/action.ts";
 import * as nbooks from "./notebooks.ts";
 import * as SQLa from "../../render/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
-
-export class SqliteError extends Error {
-  constructor(readonly sql: ft.FlexibleTextSupplierSync, message: string) {
-    super(message);
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, SqliteError);
-    }
-
-    this.name = "SqliteError";
-  }
-}
-
-export async function execDbQueryResult<Shape>(
-  sql: ft.FlexibleTextSupplierSync,
-  sqliteDb?: string,
-) {
-  let sqliteErr: SqliteError | undefined = undefined;
-  const scaj = await sh.sqliteCmdAsJSON<Shape>(
-    sqliteDb ?? ":memory:",
-    sql,
-    {
-      onError: (escResult) => {
-        sqliteErr = new SqliteError(sql, escResult.stderr());
-        console.error(sqliteErr);
-        return undefined;
-      },
-    },
-  );
-  return sqliteErr ?? scaj;
-}
 
 export const sqlPkgExtnLoadSqlSupplier = (
   extnIdentity: string,
@@ -63,48 +31,6 @@ export const prepareOrchestrator = () =>
       loadExtnSQL: sqlPkgExtnLoadSqlSupplier,
     }),
   );
-
-export const emitSQL = async (
-  sqlSupplier: Parameters<typeof sh.executeSqliteUA>[1],
-  options:
-    & {
-      readonly sqlDest?: string | undefined;
-      readonly sqliteDb?: string | undefined;
-      readonly verbose?: boolean;
-    }
-    & Parameters<typeof sh.executeSqliteUA>[2],
-) => {
-  if (
-    typeof options.sqlDest === "undefined" &&
-    typeof options.sqliteDb === "undefined"
-  ) {
-    console.log(ft.flexibleTextList(sqlSupplier).join("\n"));
-    return;
-  }
-
-  if (options.sqlDest) {
-    await Deno.writeTextFile(
-      options.sqlDest,
-      ft.flexibleTextList(sqlSupplier).join("\n"),
-    );
-  }
-
-  if (options.sqliteDb) {
-    if (typeof options.optimization === "undefined") {
-      options = { ...options, optimization: false };
-    }
-    await sh.executeSqliteUA(options.sqliteDb!, sqlSupplier, {
-      ...options,
-      report: {
-        verbose: options?.verbose
-          ? ((message: string) => console.log(message))
-          : undefined,
-        log: (message: string) => console.log(message),
-        error: (message: string) => console.error(message),
-      },
-    });
-  }
-};
 
 export function notebookCommand(
   nbName: nbooks.OrchestrableSqlNotebookName,
@@ -137,6 +63,7 @@ export function notebookCommand(
 
 async function CLI() {
   const sno = prepareOrchestrator();
+  const actionNB = an.ActionNotebook.create();
   const callerName = import.meta.resolve(import.meta.url);
   await new cliffy.Command()
     .name(callerName.slice(callerName.lastIndexOf("/") + 1))
@@ -152,7 +79,7 @@ async function CLI() {
       { default: `device-content.sqlite.db` },
     )
     .option("--verbose", "Show what is being done")
-    .action(async (options) => {
+    .action(async ({ sqliteDb }) => {
       // deno-fmt-ignore
       const sql = sno.nbh.SQL`
         -- construct all information model objects (initialize the database)
@@ -165,19 +92,21 @@ async function CLI() {
         ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
         `.SQL(sno.nbh.emitCtx);
 
-      await emitSQL(sql, options);
+      const sqlite3 = () => actionNB.sqlite3({ filename: sqliteDb });
 
+      // first scan all the files and use SQLite extensions to do what's
+      // possible in the DB
+      await sqlite3().SQL(sql).spawn();
+
+      // now use the data stored in the database to extract content and do
+      // what is only possible in Deno, saving the data back to the DB
       const polyglotSQL = sno.nbh.SQL`
         ${await (sno.polyglotNB.postProcessFsContent(async () => {
-        return await execDbQueryResult<
-          { fs_content_id: string; content: string }
-        >(
+        return (await sqlite3().SQL(
           sno.queryNB.frontmatterCandidates().SQL(sno.nbh.emitCtx),
-          options.sqliteDb,
-        ) ??
-          [];
+        ).json<{ fs_content_id: string; content: string }[]>()) ?? [];
       }))}`;
-      await emitSQL(polyglotSQL.SQL(sno.nbh.emitCtx), options);
+      await sqlite3().SQL(polyglotSQL.SQL(sno.nbh.emitCtx)).spawn();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())
