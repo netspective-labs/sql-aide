@@ -741,7 +741,7 @@ export class QuerySqlNotebook<
           il.name
       )
       SELECT
-        markdown_output AS markdown_result
+        markdown_output AS info_schema_markdown
       FROM
         (
           SELECT '## Tables' AS markdown_output
@@ -869,8 +869,11 @@ export class PolyglotSqlNotebook<
 export class SQLPageNotebook<
   EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
 > extends SQLa.SqlNotebook<EmitContext> {
+  readonly queryNB: QuerySqlNotebook<EmitContext>;
+
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
+    this.queryNB = new QuerySqlNotebook(this.nbh);
   }
 
   "index.sql"() {
@@ -891,6 +894,11 @@ export class SQLPageNotebook<
         'download' as icon;
       SELECT 'Stored SQL Notebooks' as title,
         'notebooks.sql' as link,
+        'TODO' as description,
+        'blue' as color,
+        'download' as icon;
+      SELECT 'Information Schema' as title,
+        'info-schema.sql' as link,
         'TODO' as description,
         'blue' as color,
         'download' as icon;`;
@@ -934,8 +942,18 @@ export class SQLPageNotebook<
         AND ${snbc.cell_name} = $cell;`;
   }
 
+  "info-schema.sql"() {
+    return this.nbh.SQL`
+      ${this.queryNB.infoSchemaMarkdown()}
+
+      -- :info_schema_markdown should be defined in the above query
+      SELECT 'text' as component,
+             'Information Schema' as title,
+             :info_schema_markdown as contents_md`;
+  }
+
   "bad-item.sql"() {
-    return "this is not a proper return type in SQLPageNotebook so it should generate an alert page in SQLPage";
+    return "this is not a proper return type in SQLPageNotebook so it should generate an alert page in SQLPage (included just for testing)";
   }
 
   // TODO: add one or more pages that will contain PlantUML or database

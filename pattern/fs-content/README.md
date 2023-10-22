@@ -10,11 +10,11 @@ information, and JSON data for additional details and elaboration.
   SQL and related code is part of the database and may be executed like this
   from the CLI:
 
-  > `$ sqlite3 xyz.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 xyz.db`
+  > `$ sqlite3 xyz.db "select sql from stored_notebook_cell where stored_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 xyz.db`
 
   You can pass in arguments using .parameter or `sql_parameters` table, like:
 
-  > `$ echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM sql_notebook_cell where sql_notebook_cell_id = 'init'\")" | sqlite3 xyz.db`
+  > `$ echo ".parameter set X Y; $(sqlite3 xyz.db \"SELECT sql FROM stored_notebook_cell where stored_notebook_cell_id = 'init'\")" | sqlite3 xyz.db`
 - `sqlpage_files`: stores [SQLPage](https://sql.ophir.dev/) app server content
 - `mime_type`: Stores MIME type information, including a ULID primary key and
   various attributes like name, description, file extension, timestamps, and
@@ -43,6 +43,10 @@ information, and JSON data for additional details and elaboration.
   - For historical logging, `fs_content` has foreign key references to both
     `fs_content_walk_session` and `fs_content_walk_path` tables to indicate
     which particular session and walk path the content was inserted for.
+  - TODO: review
+    [this explanation](https://www.specfy.io/blog/7-git-like-versioning-in-postgres#h-implementation)
+    and integrate similar explanation here because our `fs_content` storage
+    architecture and SQL-first approach is similar.
 - `fs_content_walk_path_entry`: Contains entries related to file system content
   walk paths, including a ULID primary key, references to walk session, walk
   path, and content, file paths, and JSON-valid elaboration, timestamps, and
@@ -101,7 +105,7 @@ Scan the current directory for all files and store them into
 `node_modules` directories):
 
 ```bash
-$ ./cactl.ts
+$ ./fssctl.ts                         # `fsctl` means `fs-content controller`
 ```
 
 See the contents with [SQLpage](https://github.com/lovasoa/SQLpage):
@@ -114,22 +118,21 @@ DATABASE_URL=sqlite://./device-content.sqlite.db sqlpage.bin
 Show the information schema as markdown:
 
 ```bash
-$ ./cactl.ts sql fsContentWalkSessionStats infoSchemaMarkdown | sqlite3 device-content.sqlite.db
-$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'infoSchemaMarkdown'" | sqlite3 device-content.sqlite.db
+$ ./fscctl.ts notebook query infoSchemaMarkdown | sqlite3 device-content.sqlite.db
+$ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaMarkdown'" | sqlite3 device-content.sqlite.db
 ```
 
 Show the stats:
 
 ```bash
-$ ./cactl.ts sql fsContentWalkSessionStats | sqlite3 device-content.sqlite.db --table
-$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'fsContentWalkSessionStats'" | sqlite3 device-content.sqlite.db --table
+$ sqlite3 device-content.sqlite.db "select * from fs_content_walk_session_stats" --table
 ```
 
 Show all the HTML anchors in all HTML files:
 
 ```bash
-$ ./cactl.ts sql allHtmlAnchors | sqlite3 device-content.sqlite.db --json
-$ sqlite3 device-content.sqlite.db "select sql from sql_notebook_cell where sql_notebook_cell_id = 'allHtmlAnchors'" | sqlite3 device-content.sqlite.db --json
+$ ./fscctl.ts notebook query htmlAnchors | sqlite3 device-content.sqlite.db --json
+$ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'htmlAnchors'" | sqlite3 device-content.sqlite.db --json
 ```
 
 ## Tasks

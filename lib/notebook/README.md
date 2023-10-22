@@ -12,6 +12,8 @@ Aspect-oriented Programming (AOP) style using dependency injections.
 - Cells are class methods (functions) and form the building blocks of Notebooks.
 - Kernels are the "engines" that process notebooks and cells.
 
+![Architecture](architecture.drawio.svg)
+
 ## Core Capabilities
 
 - Each notebook is defined as a set of type-safe TypeScript modules that can
@@ -35,7 +37,27 @@ Aspect-oriented Programming (AOP) style using dependency injections.
 - Notebook Cells must be able to store their own Quality System (documentation)
   content such as descriptions, lineage, stewardship, etc.
 
-## Notebook Infrastructure Status
+## October 2023 Status
+
+As of October 2023 Notebooks are primarily designed for generating and executing
+SQL but that's only the starting point.
+
+The author envisions expanding the the notebooks infrastructure into typesafe AI
+prompt generation and orchestration. In addition to generating SQL, it should
+help developers orchestrate stateful AI tasks such as initializing context from
+a library of available contexts, preparing prompts with templating, and
+interacting through one or more AI engines like ChatGPT or Claude (similar to
+[Axflow](https://github.com/axflow/axflow)).
+
+The author also envisions expanding the notebooks infrastructure into a data
+operations workflow library similar to Apache Airflow or Dagster but built for
+TypeScript-based SQL-first workflows. In addition to generating SQL, it should
+help developers orchestrate stateful SQL tasks such as acquiring source data,
+preparing SQL, loading into a database. It may also help with task scheduling,
+dependencies, retries,and more using an Aspect-oriented Programming (AOP) style
+using dependency injections.
+
+### Notebook Infrastructure Status
 
 - [x] Notebook _core_ has no external dependencies
 - [ ] Notebook uses [Effect](https://www.effect.website/docs/quickstart)
@@ -44,9 +66,15 @@ Aspect-oriented Programming (AOP) style using dependency injections.
       exhaustive Pattern Matching library, with smart type inference
 - [ ] Notebook uses Prolog consults for logic programming (and graph resolution)
 
-## Kernel Status
+### Kernel Status
 
-SQL Notebook supports multiple kernel types, depending on Notebook needs.
+SQL Notebook supports multiple kernel types, depending on Notebook needs. In
+general Notebooks and Cells should be declarative and mostly "functional"
+meaning they do not necessarily know which kernel is driving their actions. By
+staying declarative different kernels might operate and orchestrate notebooks
+differently.
+
+The basic infrastructure for using notebooks to generate SQL is in place:
 
 - [x] Each notebook can be executed as a standalone Deno script
 - [x] Each notebook can be scheduled using `cron` or other external utilities
@@ -54,15 +82,25 @@ SQL Notebook supports multiple kernel types, depending on Notebook needs.
       execution of cells, errors, and finalization through EventEmitter (`EE`)
       pattern; the EE-based approach allows workflow state or other custom
       workflow behaviors to be externalized.
-  - [ ] EventEmitter allows unlimited typed listeners for each Notebook Cell
-- [ ] Each notebook can be executed as a daemon/service
-  - [ ] Can be initiated via a webhook called from an external `poke`
-  - [ ] Can have a built-in scheduler via `croner` or similar
-  - [ ] Can be executed via a _sensor_, like a file watcher or S3 watcher check
-        an API regularly, etc..
+
+After SQL is generated:
+
+- [ ] Add SQL migrations via `sqlite3`, `duckdb`, `psql` and other script
+      execution as Kernel helpers using
+      [libpkgx](https://github.com/pkgxdev/libpkgx) runner or
+      [dax](https://github.com/dsherret/dax).
 - [ ] The Kernel can manage secrets outside of the notebook instances so that
       sensitive values and data are not seen by all developers; allow the
       secrets to managed in a type-safe way using Zod schemas
+
+More advanced use cases are being explored:
+
+- [ ] Each notebook can be executed as a daemon/service
+  - [ ] Can be initiated via a webhook called from an external `poke`
+  - [ ] Can have a built-in scheduler via
+        [croner](https://github.com/Hexagon/croner) or similar
+  - [ ] Can be executed via a _sensor_, like a file watcher or S3 watcher check
+        an API regularly, etc..
 - [ ] Notebooks (or perhaps even _steps_) can be run in parallel as web workers
 - [ ] Notebooks can be executed in a container or serverless environment
 - [ ] Notebooks can be executed by regstering them in a cloud-based Kernel
@@ -70,15 +108,15 @@ SQL Notebook supports multiple kernel types, depending on Notebook needs.
 
 ### Task-based Engine
 
-- [x] Task-based Kernel treats each function property in a class as a
-      workNotebook Cell. This is similar to how Apache Airflow works.
+- [x] Task-based Kernel treats each function property in a class as a Notebook
+      Cell. This is similar to how Apache Airflow works.
 
 ### Asset-based Engine
 
 - [ ] Asset-based Kernel treats each function property in a class as an asset
       preparation function. This is similar to how Dagster works.
 
-## Notebook Class Status
+### Notebook Cells as Class Status
 
 - [x] Each notebook is a TypeScript class
   - [x] Notebook classes do not not require any base classes or inheritence
@@ -144,7 +182,7 @@ SQL Notebook supports multiple kernel types, depending on Notebook needs.
       [Kubevirt](https://www.cncf.io/blog/2023/07/11/kubevirt-v1-0-has-landed/))
       when containers need to be run in parallel or be more scalable
 
-## Notebook Quality System
+### Notebook Quality System
 
 - [ ] Notebook execution should have options for injecting synthetic or mock
       data or provide limited (e.g. first N rows instead of all rows) data for
