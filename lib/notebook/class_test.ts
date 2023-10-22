@@ -44,7 +44,7 @@ Deno.test("simple class-based notebook cells executed in linear order", async ()
 
   const tsCells = kernel.introspectedNB.topologicallySortedCells();
   ta.assertEquals(tsCells, kernel.introspectedNB.cells);
-  ta.assertEquals(tsCells.map((s) => s.nbShapeCell), [
+  ta.assertEquals(tsCells.map((s) => s.nbCellID), [
     "simpleCell1",
     "simpleCell_two",
     "simpleCell3",
@@ -66,12 +66,12 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   // these are the complex notebook decorators (`cnd`) and you can name it anything
   type ComplexCell = mod.NotebookCell<
     ComplexNotebook,
-    mod.NotebookShapeCell<ComplexNotebook>
+    mod.NotebookCellID<ComplexNotebook>
   >;
   const cnd = new mod.NotebookDescriptor<ComplexNotebook, ComplexCell>();
   type NotebookContent = mod.NotebookContext<ComplexNotebook, ComplexCell>;
   type CellContext = mod.NotebookCellContext<ComplexNotebook, ComplexCell>;
-  type ShapeCell = mod.NotebookShapeCell<ComplexNotebook>;
+  type CellID = mod.NotebookCellID<ComplexNotebook>;
 
   class ComplexNotebook {
     readonly executed: {
@@ -79,7 +79,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
         | "constructor"
         | "beforeAllOtherCells"
         | "afterAllOtherCells"
-        | ShapeCell;
+        | CellID;
     }[] = [];
     protected cell1Result:
       | ReturnType<typeof ComplexNotebook.prototype.cell1>
@@ -105,7 +105,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
       ctx: CellContext,
       cell1Result: Error | ReturnType<typeof ComplexNotebook.prototype.cell1>,
     ) {
-      this.executed.push({ cell: ctx.current.nbShapeCell });
+      this.executed.push({ cell: ctx.current.nbCellID });
       if (cell1Result instanceof Error) throw cell1Result;
       this.cell1Result = cell1Result;
       ta.assertEquals(this.cell1Result, { isSpecial: true, value: 100 });
@@ -160,7 +160,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   ta.assert(kernel.isValid());
 
   const tsCells = kernel.introspectedNB.topologicallySortedCells();
-  ta.assertEquals(tsCells.map((s) => s.nbShapeCell), [
+  ta.assertEquals(tsCells.map((s) => s.nbCellID), [
     "cell3",
     "cell1",
     "cell2",

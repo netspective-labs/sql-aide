@@ -69,11 +69,11 @@ type Any = any;
  * idempotent but this can be set to indicate it's not.
  */
 export const notIdempotent = <Notebook>(
-  cells: Set<nb.NotebookShapeCell<Notebook>>,
+  cells: Set<nb.NotebookCellID<Notebook>>,
 ) => {
   return (
     _target: SQLa.SqlNotebook<Any>,
-    propertyKey: nb.NotebookShapeCell<Notebook>,
+    propertyKey: nb.NotebookCellID<Notebook>,
     _descriptor: PropertyDescriptor,
   ) => {
     cells.add(propertyKey);
@@ -85,11 +85,11 @@ export const notIdempotent = <Notebook>(
  * not be stored in the stored_notebook_cell table in the database.
  */
 export const dontStoreInDB = <Notebook>(
-  cells: Set<nb.NotebookShapeCell<Notebook>>,
+  cells: Set<nb.NotebookCellID<Notebook>>,
 ) => {
   return (
     _target: SQLa.SqlNotebook<Any>,
-    propertyKey: nb.NotebookShapeCell<Notebook>,
+    propertyKey: nb.NotebookCellID<Notebook>,
     _descriptor: PropertyDescriptor,
   ) => {
     cells.add(propertyKey);
@@ -1068,16 +1068,16 @@ export class SqlNotebooksOrchestrator<
       readonly cell: string;
     }[] = [];
     this.constructionNBF.kernel.introspectedNB.cells.forEach((cell) => {
-      cells.push({ notebook: "construction", cell: cell.nbShapeCell });
+      cells.push({ notebook: "construction", cell: cell.nbCellID });
     });
     this.mutationNBF.kernel.introspectedNB.cells.forEach((cell) => {
-      cells.push({ notebook: "mutation", cell: cell.nbShapeCell });
+      cells.push({ notebook: "mutation", cell: cell.nbCellID });
     });
     this.queryNBF.kernel.introspectedNB.cells.forEach((cell) => {
-      cells.push({ notebook: "query", cell: cell.nbShapeCell });
+      cells.push({ notebook: "query", cell: cell.nbCellID });
     });
     this.polyglotNBF.kernel.introspectedNB.cells.forEach((cell) => {
-      cells.push({ notebook: "polyglot", cell: cell.nbShapeCell });
+      cells.push({ notebook: "polyglot", cell: cell.nbCellID });
     });
     return cells;
   }

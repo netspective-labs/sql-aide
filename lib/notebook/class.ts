@@ -12,7 +12,7 @@ type Any = any;
  * _cell_). If the Notebook class or object has other properties that are not
  * functions those will be kept out of the type-safe shape.
  */
-export type NotebookShapeCell<Notebook> = {
+export type NotebookCellID<Notebook> = {
   [K in keyof Notebook]: Notebook[K] extends (...args: Any[]) => Any ? K
     : never;
 }[keyof Notebook];
@@ -22,9 +22,9 @@ export type NotebookShapeCell<Notebook> = {
  */
 export type NotebookCell<
   Notebook,
-  ShapeCell extends NotebookShapeCell<Notebook>,
+  CellID extends NotebookCellID<Notebook>,
 > =
-  & { readonly nbShapeCell: ShapeCell }
+  & { readonly nbCellID: CellID }
   & PropertyDescriptor;
 
 /**
@@ -32,7 +32,7 @@ export type NotebookCell<
  */
 export type NotebookContext<
   Notebook,
-  Cell extends NotebookCell<Notebook, NotebookShapeCell<Notebook>>,
+  Cell extends NotebookCell<Notebook, NotebookCellID<Notebook>>,
 > = {
   readonly cells: Cell[];
   readonly notebook: Notebook;
@@ -45,7 +45,7 @@ export type NotebookContext<
  */
 export type NotebookCellContext<
   Notebook,
-  Cell extends NotebookCell<Notebook, NotebookShapeCell<Notebook>>,
+  Cell extends NotebookCell<Notebook, NotebookCellID<Notebook>>,
 > =
   & NotebookContext<Notebook, Cell>
   & {
@@ -61,11 +61,11 @@ export type NotebookCellContext<
  */
 export class NotebookDescriptor<
   Notebook,
-  Cell extends NotebookCell<Notebook, NotebookShapeCell<Notebook>>,
+  Cell extends NotebookCell<Notebook, NotebookCellID<Notebook>>,
   NotebookShape extends {
-    [K in NotebookShapeCell<Notebook>]: Cell;
+    [K in NotebookCellID<Notebook>]: Cell;
   } = {
-    [K in NotebookShapeCell<Notebook>]: Cell;
+    [K in NotebookCellID<Notebook>]: Cell;
   },
   CellName extends keyof NotebookShape = keyof NotebookShape,
 > {
@@ -101,14 +101,14 @@ export class NotebookDescriptor<
       const pd = Object.getOwnPropertyDescriptor(notebook, pn);
       if (typeof pd?.value !== "function") continue;
 
-      const nbShapeCell = pn as NotebookShapeCell<Notebook>;
+      const nbCellID = pn as NotebookCellID<Notebook>;
       if (pd) {
         const cellMetaData: NotebookCell<
           Notebook,
-          NotebookShapeCell<Notebook>
-        > = { nbShapeCell, ...pd };
+          NotebookCellID<Notebook>
+        > = { nbCellID, ...pd };
         cells.push(cellMetaData as Cell);
-        (shape as Any)[nbShapeCell] = cellMetaData;
+        (shape as Any)[nbCellID] = cellMetaData;
       }
     }
 
@@ -216,16 +216,16 @@ export class NotebookDescriptor<
  */
 export function introspectedNotebook<
   Notebook,
-  ShapeCell extends NotebookShapeCell<Notebook>,
-  Cell extends NotebookCell<Notebook, ShapeCell>,
+  CellID extends NotebookCellID<Notebook>,
+  Cell extends NotebookCell<Notebook, CellID>,
 >(notebook: Notebook, descriptor: NotebookDescriptor<Notebook, Cell>) {
   const lintResults: { readonly message: string }[] = [];
 
-  const dagOps = g.dagDepthFirst<Cell, ShapeCell>(
-    (node) => node.nbShapeCell,
+  const dagOps = g.dagDepthFirst<Cell, CellID>(
+    (node) => node.nbCellID,
     (a, b) => {
       if (
-        typeof a.nbShapeCell === "symbol" || typeof b.nbShapeCell === "symbol"
+        typeof a.nbCellID === "symbol" || typeof b.nbCellID === "symbol"
       ) {
         throw new Error(
           "Cannot meaningfully compare symbol keys in cellsDAG",
@@ -233,13 +233,13 @@ export function introspectedNotebook<
       }
 
       if (
-        typeof a.nbShapeCell === "number" && typeof b.nbShapeCell === "number"
+        typeof a.nbCellID === "number" && typeof b.nbCellID === "number"
       ) {
-        return a.nbShapeCell - b.nbShapeCell;
+        return a.nbCellID - b.nbCellID;
       }
 
-      const aString = String(a.nbShapeCell);
-      const bString = String(b.nbShapeCell);
+      const aString = String(a.nbCellID);
+      const bString = String(b.nbCellID);
 
       if (aString < bString) {
         return -1;
@@ -269,7 +269,7 @@ export function introspectedNotebook<
     } else {
       lintResults.push({
         message: `invalid dependency: ${String(dep.dependsOn)} in ${
-          String(node.nbShapeCell)
+          String(node.nbCellID)
         }`,
       });
     }
@@ -277,12 +277,12 @@ export function introspectedNotebook<
 
   for (let i = 0; i < cells.length; i++) {
     const current = cells[i];
-    if (edges.find((e) => e.from.nbShapeCell == current.nbShapeCell)) continue;
+    if (edges.find((e) => e.from.nbCellID == current.nbCellID)) continue;
 
     let n = i + 1;
     while (n < cells.length) {
       const next = cells[n];
-      if (!edges.find((e) => e.from.nbShapeCell == next.nbShapeCell)) {
+      if (!edges.find((e) => e.from.nbCellID == next.nbCellID)) {
         edges.push({ from: current, to: next });
         break;
       }
@@ -308,7 +308,7 @@ export function introspectedNotebook<
 
 export class ObservableKernel<
   Notebook,
-  Cell extends NotebookCell<Notebook, NotebookShapeCell<Notebook>>,
+  Cell extends NotebookCell<Notebook, NotebookCellID<Notebook>>,
   KernelNotebookCtx extends NotebookContext<Notebook, Cell> = NotebookContext<
     Notebook,
     Cell
@@ -320,7 +320,7 @@ export class ObservableKernel<
     >,
 > {
   readonly introspectedNB: ReturnType<
-    typeof introspectedNotebook<Notebook, NotebookShapeCell<Notebook>, Cell>
+    typeof introspectedNotebook<Notebook, NotebookCellID<Notebook>, Cell>
   >;
   readonly lintResults: { readonly message: string }[];
 
@@ -334,7 +334,7 @@ export class ObservableKernel<
   ) {
     this.introspectedNB = introspectedNotebook<
       Notebook,
-      NotebookShapeCell<Notebook>,
+      NotebookCellID<Notebook>,
       Cell
     >(notebook, descriptor);
     this.lintResults = [
@@ -360,7 +360,7 @@ export class ObservableKernel<
       introspectedNB: ReturnType<
         typeof introspectedNotebook<
           Notebook,
-          NotebookShapeCell<Notebook>,
+          NotebookCellID<Notebook>,
           Cell
         >
       >,
@@ -370,30 +370,30 @@ export class ObservableKernel<
       initNotebook: (
         ctx: KernelNotebookCtx,
       ) => void | false | Promise<void | false>;
-      beforeCell: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
-        cellID: `${ShapeCell}`,
+      beforeCell: <CellID extends string & NotebookCellID<Notebook>>(
+        cellID: `${CellID}`,
         ctx:
           & KernelNotebookCellCtx
           & RunStateSupplier<Any>,
       ) => void | "interrupt" | Promise<void | "interrupt">;
-      afterInterrupt: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
-        cellID: `${ShapeCell}`,
+      afterInterrupt: <CellID extends string & NotebookCellID<Notebook>>(
+        cellID: `${CellID}`,
         ctx:
           & KernelNotebookCellCtx
           & RunStateSupplier<Any>,
       ) => void | Promise<void>;
-      afterError: <ShapeCell extends string & NotebookShapeCell<Notebook>>(
-        cellID: `${ShapeCell}`,
+      afterError: <CellID extends string & NotebookCellID<Notebook>>(
+        cellID: `${CellID}`,
         error: Error,
         ctx:
           & KernelNotebookCellCtx
           & RunStateSupplier<Any>,
       ) => void | "continue" | "abort" | Promise<void | "continue" | "abort">;
       afterCell: <
-        ShapeCell extends string & NotebookShapeCell<Notebook>,
+        CellID extends string & NotebookCellID<Notebook>,
         Result,
       >(
-        cellID: `${ShapeCell}`,
+        cellID: `${CellID}`,
         result: RunCellState<Result>,
         ctx:
           & KernelNotebookCellCtx
@@ -570,8 +570,8 @@ export class ObservableKernel<
       // for any external listeners to do any pre-processing for the specific
       // cell and ascertain whether the Notebook should be interrupted for any
       // reason.
-      const runCell = await ee.beforeCell<NotebookShapeCell<Notebook> & string>(
-        String(current.nbShapeCell) as Any,
+      const runCell = await ee.beforeCell<NotebookCellID<Notebook> & string>(
+        String(current.nbCellID) as Any,
         cellCtx,
       );
       if (runCell === "interrupt") {
@@ -589,7 +589,7 @@ export class ObservableKernel<
       try {
         // Each method has the following signature:
         //    cell(ctx: CellContext, ...injecteArgs, prevExecResult: Error | PreviousCellResult)
-        const execResult = await ((instance as Any)[current.nbShapeCell] as Any)
+        const execResult = await ((instance as Any)[current.nbCellID] as Any)
           .call(instance, ...callArgs[cell](cellCtx, prevCellResult));
         cellsExecuted[cell] = {
           ...rsExecStatic,
@@ -601,9 +601,9 @@ export class ObservableKernel<
         // processing the other cells or, if an external error event listener wants
         // us to abort we'll stop processing and fall out of the cells loop.
         const abortOnError = await ee.afterError<
-          NotebookShapeCell<Notebook> & string
+          NotebookCellID<Notebook> & string
         >(
-          String(current.nbShapeCell) as Any,
+          String(current.nbCellID) as Any,
           execError,
           cellCtx,
         );
@@ -627,8 +627,8 @@ export class ObservableKernel<
       // At this point execution, interruption, and error detection is complete;
       // give an opportunity for any external listeners to do any post-processing
       // for the specific cell.
-      await ee.afterCell<NotebookShapeCell<Notebook> & string, Any>(
-        String(current.nbShapeCell) as Any,
+      await ee.afterCell<NotebookCellID<Notebook> & string, Any>(
+        String(current.nbCellID) as Any,
         cellsExecuted[cell],
         cellCtx,
       );
@@ -676,11 +676,11 @@ export class ObservableKernel<
     prototype: Notebook,
     descriptor?: NotebookDescriptor<
       Notebook,
-      NotebookCell<Notebook, NotebookShapeCell<Notebook>>
+      NotebookCell<Notebook, NotebookCellID<Notebook>>
     >,
   ) {
-    type ShapeCell = NotebookShapeCell<Notebook>;
-    type Cell = NotebookCell<Notebook, ShapeCell>;
+    type CellID = NotebookCellID<Notebook>;
+    type Cell = NotebookCell<Notebook, CellID>;
     type NotebookCtx = NotebookContext<Notebook, Cell>;
     type CellCtx = NotebookCellContext<Notebook, Cell>;
 

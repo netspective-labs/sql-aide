@@ -10,7 +10,7 @@ export function sqlNotebookAnnotations<
 >() {
   return new nb.NotebookDescriptor<
     Notebook,
-    nb.NotebookCell<Notebook, nb.NotebookShapeCell<Notebook>>
+    nb.NotebookCell<Notebook, nb.NotebookCellID<Notebook>>
   >();
 }
 
@@ -22,7 +22,7 @@ export function sqlNotebookFactory<
   instance: () => Notebook,
   nbd = sqlNotebookAnnotations<Notebook, Context>(),
 ) {
-  type ShapeCell = nb.NotebookShapeCell<Notebook>;
+  type CellID = nb.NotebookCellID<Notebook>;
   const kernel = nb.ObservableKernel.create(prototype, nbd);
 
   type EventEmitter = Awaited<
@@ -43,7 +43,7 @@ export function sqlNotebookFactory<
           state: Parameters<EventEmitter["afterCell"]>[1],
         ) => s.SqlTextBehaviorSupplier<Context>;
       },
-      ...sqlIdentities: ShapeCell[]
+      ...sqlIdentities: CellID[]
     ) => {
       // prepare the run state with either a list of sql identities if passed
       // or all cells if no specific cells requested
@@ -51,7 +51,7 @@ export function sqlNotebookFactory<
         executeCells: (inb) => {
           if (sqlIdentities.length == 0) return inb.cells;
           const specific = sqlIdentities.map((si) =>
-            inb.cells.find((c) => c.nbShapeCell == si)
+            inb.cells.find((c) => c.nbCellID == si)
           ).filter((c) => c != undefined) as typeof inb.cells;
           if (specific.length > 0) return specific;
           return inb.cells;

@@ -43,7 +43,7 @@ export function notebookCommand(
     .action(async (options, ...cells) => {
       if (cells.length === 0) {
         nbf.kernel.introspectedNB.cells.forEach((cell) =>
-          console.log(cell.nbShapeCell)
+          console.log(cell.nbCellID)
         );
         return;
       }
