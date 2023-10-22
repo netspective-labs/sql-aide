@@ -5,16 +5,21 @@ TypeScript-based SQL generator workflows. It helps you orchestrate SQL
 generation tasks such as acquiring source data and assembling SQL using an
 Aspect-oriented Programming (AOP) style using dependency injections.
 
-## Concepts
+There are two types of notebooks:
+
+- Class-based Notebooks with methods for Cells (for traditional cell-style)
+- Action-based Notebooks with classes for Cells (for piping-style)
+
+## Class-based Notebooks with Cells as methods
 
 - Notebooks are TypeScript classes and form _documents_ comprised of _cells_.
   Terminology is similar to Jupyter and other _notebooks_.
 - Cells are class methods (functions) and form the building blocks of Notebooks.
 - Kernels are the "engines" that process notebooks and cells.
 
-![Architecture](architecture.drawio.svg)
+![Class Architecture](class-architecture.drawio.svg)
 
-## Core Capabilities
+**Method-based Cells Notebook (`MCN`) Core Capabilities**:
 
 - Each notebook is defined as a set of type-safe TypeScript modules that can
   operate independently as a CLI or as a library to be included by other
@@ -37,7 +42,7 @@ Aspect-oriented Programming (AOP) style using dependency injections.
 - Notebook Cells must be able to store their own Quality System (documentation)
   content such as descriptions, lineage, stewardship, etc.
 
-## October 2023 Status
+### October 2023 Method-based Cells Notebook Status
 
 As of October 2023 Notebooks are primarily designed for generating and executing
 SQL but that's only the starting point.
@@ -58,7 +63,7 @@ preparing SQL, loading into a database. It may also help with task scheduling,
 dependencies, retries,and more using an Aspect-oriented Programming (AOP) style
 using dependency injections.
 
-### Notebook Infrastructure Status
+#### `MCN` Infrastructure Status
 
 - [x] Notebook _core_ has no external dependencies
 - [ ] Notebook uses [Effect](https://www.effect.website/docs/quickstart)
@@ -67,7 +72,7 @@ using dependency injections.
       exhaustive Pattern Matching library, with smart type inference
 - [ ] Notebook uses Prolog consults for logic programming (and graph resolution)
 
-### Kernel Status
+#### `MCN` Kernel Status
 
 SQL Notebook supports multiple kernel types, depending on Notebook needs. In
 general Notebooks and Cells should be declarative and mostly "functional"
@@ -107,17 +112,17 @@ More advanced use cases are being explored:
 - [ ] Notebooks can be executed by regstering them in a cloud-based Kernel
       similar to [Inngest](https://github.com/inngest/inngest)
 
-### Task-based Engine
+#### `MCN` Task-based Engine
 
 - [x] Task-based Kernel treats each function property in a class as a Notebook
       Cell. This is similar to how Apache Airflow works.
 
-### Asset-based Engine
+#### `MCN` Asset-based Engine
 
 - [ ] Asset-based Kernel treats each function property in a class as an asset
       preparation function. This is similar to how Dagster works.
 
-### Notebook Cells as Class Status
+#### `MCN` Notebook Class Method Cells Status
 
 - [x] Each notebook is a TypeScript class
   - [x] Notebook classes do not not require any base classes or inheritence
@@ -183,8 +188,13 @@ More advanced use cases are being explored:
       [Kubevirt](https://www.cncf.io/blog/2023/07/11/kubevirt-v1-0-has-landed/))
       when containers need to be run in parallel or be more scalable
 
-### Notebook Quality System
+#### Notebook Quality System
 
 - [ ] Notebook execution should have options for injecting synthetic or mock
       data or provide limited (e.g. first N rows instead of all rows) data for
       testing flows.
+
+## Action-based Notebooks
+
+Notebooks use builder pattern for preparing and configuring action classes that
+operate as a pipe.
