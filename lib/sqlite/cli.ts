@@ -1,16 +1,91 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write
 
+import { cliffy } from "./deps.ts";
 import * as ft from "../universal/flexible-text.ts";
 import * as sh from "./shell.ts";
-import * as flow from "../flow/mod.ts";
 import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+export type DryRunnable = { readonly dryRun: boolean };
+export type VerboseCapable = { readonly verbose: boolean };
+
+export type Reportable = {
+  readonly dryRun?: (message: string) => void;
+  readonly verbose?: (message: string) => void;
+  readonly log?: (message: string) => void;
+  readonly error?: (message: string, error?: Error) => void;
+};
+
+/**
+ * Prepare the Cliffy CLI infrastructure with all the typical commands and
+ * options.
+ * @param args.resolveURI Optional function to resolve a file name (usually from import.meta.url)
+ * @param args.cliName Optional name of the CLI, defaults to the filename of the caller
+ * @param args.cliVersion Optional version of the CLI (defaults to 0.0.0.0)
+ * @param args.cliDescription Optional description of the CLI, defaults to `SQLa Flow`
+ * @returns The CLI infrastructure ready to be parsed and run.
+ */
+export function cliInfrastructure(args?: {
+  resolveURI?: (specifier?: string) => string;
+  cliName?: string;
+  cliVersion?: string;
+  cliDescription?: string;
+}) {
+  // TODO:
+  //  - support multi-/poly- storage state management: memory, fs, Deno KV, Dolt?, SQLite?
+  //  - support starting a web server and serving content like /health.json /metrics, etc.
+  //  - integrate Open Telemetry infrastructure for tracing, logging, metrics and similar observability
+  //  - integrate ../universal/event-emitter support for observability, etc.
+  //  - as we enhance the CLI, use generics for proper type-safety
+
+  const callerName = args?.resolveURI?.();
+  return {
+    ...args,
+    callerName,
+    commands: new cliffy.Command()
+      .name(
+        args?.cliName ??
+          (callerName
+            ? callerName.slice(callerName.lastIndexOf("/") + 1)
+            : `sqla`),
+      )
+      .version(args?.cliVersion ?? "0.0.0")
+      .description(args?.cliDescription ?? "SQLa Flow")
+      .command("help", new cliffy.HelpCommand().global())
+      .command("completions", new cliffy.CompletionsCommand()),
+    command: () => new cliffy.Command(),
+    reportCLI: (
+      options: Partial<DryRunnable> & Partial<VerboseCapable>,
+    ): Reportable => {
+      return {
+        dryRun: options?.dryRun
+          ? ((message: string) => console.log(message))
+          : undefined,
+        verbose: options?.verbose
+          ? ((message: string) => console.log(message))
+          : undefined,
+        log: (message: string) => console.log(message),
+        error: (message: string) => console.error(message),
+      };
+    },
+  };
+}
+
+/**
+ * Prepare a typical flow command name and default options/arguments.
+ * @returns a Cliffy CLI command which should be augumented with an action
+ */
+export function typicalFlowCommand() {
+  return new cliffy.Command()
+    .option("--dry-run", "instead of executing, just show what would be done")
+    .option("-v, --verbose", "instead of silently executing, show output");
+}
+
 export function bashCommand(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
-  args?: Parameters<typeof flow.cliInfrastructure>[0] & {
+  clii: ReturnType<typeof cliInfrastructure>,
+  args?: Parameters<typeof cliInfrastructure>[0] & {
     defaultSql?: ft.FlexibleTextSupplierSync;
   },
 ) {
@@ -31,14 +106,14 @@ export function bashCommand(
 }
 
 export function dbCommand(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
-  args?: Parameters<typeof flow.cliInfrastructure>[0] & {
+  clii: ReturnType<typeof cliInfrastructure>,
+  args?: Parameters<typeof cliInfrastructure>[0] & {
     defaultSql?: ft.FlexibleTextSupplierSync;
   },
 ) {
   // we use the "flow" command because it has the ability to dry-run/verbose
   // deno-fmt-ignore
-  return flow.typicalFlowCommand()
+  return typicalFlowCommand()
     .description("Create or update an SQLite database with SQL")
     .option("-d, --dest <file:string>", "The destination database path", { required: true })
     .option("-s, --sql-src <file:string>", "The src of SQL that should be passed into destination")
@@ -53,8 +128,8 @@ export function dbCommand(
 }
 
 export function sqlCommand<SqlIdentity extends string>(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
-  args?: Parameters<typeof flow.cliInfrastructure>[0] & {
+  clii: ReturnType<typeof cliInfrastructure>,
+  args?: Parameters<typeof cliInfrastructure>[0] & {
     readonly library?: () => Record<SqlIdentity, mod.SqlTextSupplier>;
   },
 ) {
@@ -105,7 +180,7 @@ export function sqlCommand<SqlIdentity extends string>(
 }
 
 export function diagramCommand(
-  clii: ReturnType<typeof flow.cliInfrastructure>,
+  clii: ReturnType<typeof cliInfrastructure>,
   diagramSupplier: () => ft.FlexibleText,
 ) {
   // deno-fmt-ignore
@@ -123,12 +198,12 @@ export function diagramCommand(
 }
 
 export function typicalCLI<SqlIdentity extends string>(
-  args?: Parameters<typeof flow.cliInfrastructure>[0] & {
+  args?: Parameters<typeof cliInfrastructure>[0] & {
     library?: () => Record<SqlIdentity, mod.SqlTextSupplier>;
     defaultSql?: ft.FlexibleTextSupplierSync;
   },
 ) {
-  const clii = flow.cliInfrastructure({
+  const clii = cliInfrastructure({
     ...args,
     resolveURI: (specifier) =>
       specifier ? import.meta.resolve(specifier) : import.meta.url,
