@@ -1,6 +1,6 @@
 import { frontmatter as fm, ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
-import * as nb from "../../lib/notebook/mod.ts";
+import * as nb from "../../lib/notebook/class.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";

@@ -1,5 +1,5 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
-import * as mod from "./mod.ts";
+import * as mod from "./class.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;

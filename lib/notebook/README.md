@@ -47,6 +47,7 @@ prompt generation and orchestration. In addition to generating SQL, it should
 help developers orchestrate stateful AI tasks such as initializing context from
 a library of available contexts, preparing prompts with templating, and
 interacting through one or more AI engines like ChatGPT or Claude (similar to
+[Elelem](https://github.com/jrhizor/elelem) and
 [Axflow](https://github.com/axflow/axflow)).
 
 The author also envisions expanding the notebooks infrastructure into a data

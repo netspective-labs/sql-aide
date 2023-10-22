@@ -1,4 +1,4 @@
-import * as nb from "../../lib/notebook/mod.ts";
+import * as nb from "../../lib/notebook/class.ts";
 import * as s from "./sql.ts";
 
 export abstract class SqlNotebook<Context extends s.SqlEmitContext> {
