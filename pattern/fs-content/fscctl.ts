@@ -37,9 +37,15 @@ export function notebookCommand(
   nbf: ReturnType<typeof SQLa.sqlNotebookFactory<Any, Any>>,
 ) {
   return new cliffy.Command()
+    .type(
+      "CellID",
+      new cliffy.EnumType(
+        nbf.kernel.introspectedNB.cells.map((c) => c.nbCellID),
+      ),
+    )
     .description(`Emit ${nbName} notebook cell(s) SQL`)
     .option("-d, --dest <file:string>", "Save the SQL in the provided filename")
-    .arguments("[...cell]")
+    .arguments("[...cell:CellID]")
     .action(async (options, ...cells) => {
       if (cells.length === 0) {
         nbf.kernel.introspectedNB.cells.forEach((cell) =>
