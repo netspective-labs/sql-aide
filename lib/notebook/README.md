@@ -1,27 +1,29 @@
-# SQL Aide Notebook (SQLa Notebook or SQL Notebook)
+# Notebook Library
 
-SQL Aide Notebook is a data operations notebook library built for
-TypeScript-based SQL generator workflows. It helps you orchestrate SQL
-generation tasks such as acquiring source data and assembling SQL using an
-Aspect-oriented Programming (AOP) style using dependency injections.
+Notebook is an orchestration library built for TypeScript-based SQL generator
+and data operations. It helps you orchestrate SQL generation tasks such as
+acquiring source data and assembling SQL using an Aspect-oriented Programming
+(AOP) style using the Chain of Responsibility (CoR) and Command patterns.
 
 There are two types of notebooks:
 
-- Class-based Notebooks with methods for Cells (for traditional cell-style)
-- Action-based Notebooks with classes for Cells (for piping-style)
+- Chain of Responsibility (CoR) Notebooks with each notebook being a class and
+  methods for Cells (operations) along with graph-based chaining
+- Command Notebooks with classes for Cells with UNIX pipes-style orchestration
+  capabilities
 
 You can mix and match the notebook styles and use in inside another.
 
-## Class-based Notebooks with Cells as methods
+## Chain of Responsibility (CoR) Class Notebooks with Cells as methods
 
 - Notebooks are TypeScript classes and form _documents_ comprised of _cells_.
   Terminology is similar to Jupyter and other _notebooks_.
 - Cells are class methods (functions) and form the building blocks of Notebooks.
 - Kernels are the "engines" that process notebooks and cells.
 
-![Class Architecture](class-architecture.drawio.svg)
+![Chain of Responsibility (CoR) Architecture](chain-or-architecture.drawio.svg)
 
-**Method-based Cells Notebook (`MCN`) Core Capabilities**:
+**Method-based CoR Cells Notebook (`CoR`) Core Capabilities**:
 
 - Each notebook is defined as a set of type-safe TypeScript modules that can
   operate independently as a CLI or as a library to be included by other
@@ -65,7 +67,7 @@ preparing SQL, loading into a database. It may also help with task scheduling,
 dependencies, retries,and more using an Aspect-oriented Programming (AOP) style
 using dependency injections.
 
-#### `MCN` Infrastructure Status
+#### `CoR` Infrastructure Status
 
 - [x] Notebook _core_ has no external dependencies
 - [ ] Notebook uses [Effect](https://www.effect.website/docs/quickstart)
@@ -74,7 +76,7 @@ using dependency injections.
       exhaustive Pattern Matching library, with smart type inference
 - [ ] Notebook uses Prolog consults for logic programming (and graph resolution)
 
-#### `MCN` Kernel Status
+#### `CoR` Kernel Status
 
 SQL Notebook supports multiple kernel types, depending on Notebook needs. In
 general Notebooks and Cells should be declarative and mostly "functional"
@@ -114,17 +116,17 @@ More advanced use cases are being explored:
 - [ ] Notebooks can be executed by regstering them in a cloud-based Kernel
       similar to [Inngest](https://github.com/inngest/inngest)
 
-#### `MCN` Task-based Engine
+#### `CoR` Task-based Engine
 
 - [x] Task-based Kernel treats each function property in a class as a Notebook
       Cell. This is similar to how Apache Airflow works.
 
-#### `MCN` Asset-based Engine
+#### `CoR` Asset-based Engine
 
 - [ ] Asset-based Kernel treats each function property in a class as an asset
       preparation function. This is similar to how Dagster works.
 
-#### `MCN` Notebook Class Method Cells Status
+#### `CoR` Notebook Class Method Cells Status
 
 - [x] Each notebook is a TypeScript class
   - [x] Notebook classes do not not require any base classes or inheritence
@@ -196,7 +198,7 @@ More advanced use cases are being explored:
       data or provide limited (e.g. first N rows instead of all rows) data for
       testing flows.
 
-## Action-based Notebooks
+## Command Notebooks with Cells as action classes
 
-Notebooks use builder pattern for preparing and configuring action classes that
+Notebooks use builder pattern for preparing and configuring Command classes that
 operate as a pipe.

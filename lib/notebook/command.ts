@@ -264,7 +264,7 @@ export class SqliteCell {
   }
 }
 
-export class ActionNotebook {
+export class CommandsNotebook {
   constructor() {
   }
 
@@ -273,6 +273,6 @@ export class ActionNotebook {
   }
 
   static create() {
-    return new ActionNotebook();
+    return new CommandsNotebook();
   }
 }

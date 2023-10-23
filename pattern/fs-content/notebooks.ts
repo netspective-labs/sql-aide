@@ -1,12 +1,15 @@
 import { frontmatter as fm, ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
-import * as nb from "../../lib/notebook/class.ts";
+import * as nb from "../../lib/notebook/chain-of-responsibility.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+// TODO: Integrate SQLa Quality System functionality so that documentation is not just in code but
+// makes its way into the database.
 
 // TODO: move this to README.md:
 // ServiceContentHelpers creates "insertable" type-safe content objects needed by the other notebooks

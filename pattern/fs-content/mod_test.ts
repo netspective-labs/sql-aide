@@ -1,5 +1,5 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
-import * as an from "../../lib/notebook/action.ts";
+import * as cmdNB from "../../lib/notebook/command.ts";
 import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -7,7 +7,7 @@ type Any = any;
 
 Deno.test("migration and typical mutations", async () => {
   const sno = mod.prepareOrchestrator();
-  const actionNB = an.ActionNotebook.create();
+  const actionNB = cmdNB.CommandsNotebook.create();
 
   // deno-fmt-ignore
   const sql = sno.nbh.SQL`

@@ -1,6 +1,6 @@
 import { testingAsserts as ta } from "./deps-test.ts";
 import { unindentWhitespace as uws } from "../universal/whitespace.ts";
-import * as mod from "./action.ts";
+import * as mod from "./command.ts";
 
 const syntheticSqlDDL = uws(`
   CREATE TABLE synthetic_table(
@@ -9,7 +9,7 @@ const syntheticSqlDDL = uws(`
   );`);
 
 Deno.test(`SQLite create in memory should fail`, async () => {
-  const result = await mod.ActionNotebook.create().sqlite3({
+  const result = await mod.CommandsNotebook.create().sqlite3({
     sqlSupplier: `bad SQL`,
   }).spawn();
   ta.assertEquals(result.code, 1);
@@ -21,14 +21,14 @@ Deno.test(`SQLite create in memory should fail`, async () => {
 });
 
 Deno.test(`SQLite create in memory should succeed`, async () => {
-  const result = await mod.ActionNotebook.create().sqlite3().SQL(
+  const result = await mod.CommandsNotebook.create().sqlite3().SQL(
     syntheticSqlDDL,
   ).spawn();
   ta.assertEquals(result.code, 0);
 });
 
 Deno.test(`SQLite create in memory, emit SQL, and go back into memory should succeed`, async () => {
-  const notebook = mod.ActionNotebook.create();
+  const notebook = mod.CommandsNotebook.create();
   const ddlResult = await notebook.sqlite3().SQL(syntheticSqlDDL).pragma({
     dump: true,
   }).text();
@@ -45,7 +45,7 @@ Deno.test(`SQLite create in memory, emit SQL, and go back into memory should suc
 });
 
 Deno.test(`SQLite create in memory, emit SQL, and retrieve JSON from new database should succeed`, async () => {
-  const notebook = mod.ActionNotebook.create();
+  const notebook = mod.CommandsNotebook.create();
   const json = await notebook.sqlite3()
     .SQL(syntheticSqlDDL)
     .pragma({ dump: true })

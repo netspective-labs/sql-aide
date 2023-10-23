@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-sys
 
 import { cliffy, path } from "./deps.ts";
-import * as an from "../../lib/notebook/action.ts";
+import * as cmdNB from "../../lib/notebook/command.ts";
 import * as nbooks from "./notebooks.ts";
 import * as SQLa from "../../render/mod.ts";
 
@@ -69,7 +69,7 @@ export function notebookCommand(
 
 async function CLI() {
   const sno = prepareOrchestrator();
-  const actionNB = an.ActionNotebook.create();
+  const cnb = cmdNB.CommandsNotebook.create();
   const callerName = import.meta.resolve(import.meta.url);
   await new cliffy.Command()
     .name(callerName.slice(callerName.lastIndexOf("/") + 1))
@@ -86,6 +86,10 @@ async function CLI() {
     )
     .option("--verbose", "Show what is being done")
     .action(async ({ sqliteDb }) => {
+      // TODO: figure out how to check whether migrations are done already
+      // and pass in the migrations table to the first SQL chains so that
+      // they do not perform tasks that have already been performed.
+
       // deno-fmt-ignore
       const sql = sno.nbh.SQL`
         -- construct all information model objects (initialize the database)
@@ -98,7 +102,7 @@ async function CLI() {
         ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
         `.SQL(sno.nbh.emitCtx);
 
-      const sqlite3 = () => actionNB.sqlite3({ filename: sqliteDb });
+      const sqlite3 = () => cnb.sqlite3({ filename: sqliteDb });
 
       // first scan all the files and use SQLite extensions to do what's
       // possible in the DB
