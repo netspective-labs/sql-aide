@@ -48,11 +48,11 @@ export type PipeInSupplier<NextCell> = {
  *
  * @param content - List of content items,
  * each can be a Uint8Array or synchronous text supplier, representing the data to write to `stdin`.
- * @param {Object} [options] - Optional parameters to control logging and identify the operation.
- * @param {string} [options.identity] - Identifier for the logging source, default is "stdinSupplier".
- * @param {PipeInWriterSupplier<Uint8Array>[]} [options.pipeInSuppliers] - Suppliers for data that comes
+ * @param options - Optional parameters to control logging and identify the operation.
+ * @param options.identity - Identifier for the logging source, default is "stdinSupplier".
+ * @param options.pipeInSuppliers - Suppliers for data that comes
  * from the output of previous commands in the pipeline.
- * @param {l.Logger} [options.logger] - Logger instance for logging debug information.
+ * @param options.logger - Logger instance for logging debug information.
  * @returns ssynchronous function that takes a `PipeInWriter` for `stdin` and handles the writing operation,
  * including both piped data and direct content.
  */
@@ -126,11 +126,11 @@ export const stdinSupplierFactory = (
  * including the command object, exit code, stdout, and stderr contents.
  *
  * @example
- * const execute = spawnableProcess('ls');
+ * const execute = spawnable('ls');
  * const result = await execute(['-l'], undefined, customLogger);
  * // The `result` would contain details about the 'ls -l' command execution.
  */
-export function spawnableProcess(
+export function spawnable(
   cmdSupplier:
     | string
     | URL
@@ -163,10 +163,10 @@ export function spawnableProcess(
     if (
       logger?.level == l.LogLevels.INFO || logger?.level == l.LogLevels.DEBUG
     ) {
-      logger.info("spawnableProcess", { command, args, stdinSupplier, code });
+      logger.info("spawnable", { command, args, stdinSupplier, code });
     }
     if (logger?.level == l.LogLevels.DEBUG) {
-      logger.debug("spawnableProcess", {
+      logger.debug("spawnable", {
         "Deno.Command": cmd,
         stdinSupplier,
         stdout,
@@ -238,6 +238,10 @@ export class ContentCell {
     });
     return action.pipeIn(sis);
   }
+
+  static content(options?: ConstructorParameters<typeof ContentCell>[0]) {
+    return new ContentCell(options);
+  }
 }
 
 export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
@@ -246,7 +250,7 @@ export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
     readonly cause: Error,
     readonly cell: Cell,
     readonly spawnResult?: Awaited<
-      ReturnType<ReturnType<typeof spawnableProcess>>
+      ReturnType<ReturnType<typeof spawnable>>
     >,
   ) {
     super(cause.message);
@@ -265,7 +269,7 @@ export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
     readonly cause: Error,
     readonly cell: Cell,
     readonly spawnResult: Awaited<
-      ReturnType<ReturnType<typeof spawnableProcess>>
+      ReturnType<ReturnType<typeof spawnable>>
     >,
   ) {
     super(cause.message);
@@ -292,7 +296,7 @@ export class SpawnableProcessCell {
   #pipeInSuppliers?: PipeInWriterSupplier<Uint8Array>[];
 
   constructor(
-    readonly process: ReturnType<typeof spawnableProcess>,
+    readonly process: ReturnType<typeof spawnable>,
     readonly options?: {
       readonly identity?: string;
       readonly stdinLogger?: l.Logger;
@@ -370,6 +374,13 @@ export class SpawnableProcessCell {
       await writer.write(sr.stdout);
     });
   }
+
+  static process(
+    process: ConstructorParameters<typeof SpawnableProcessCell>[0],
+    options?: ConstructorParameters<typeof SpawnableProcessCell>[1],
+  ) {
+    return new SpawnableProcessCell(process, options);
+  }
 }
 
 /**
@@ -381,7 +392,7 @@ export class SpawnableProcessCell {
  */
 export class SqliteCell extends SpawnableProcessCell {
   static readonly COMMAND = "sqlite3";
-  static readonly process = spawnableProcess(SqliteCell.COMMAND);
+  static readonly sqliteSP = spawnable(SqliteCell.COMMAND);
 
   #filename = ":memory:";
 
@@ -393,7 +404,7 @@ export class SqliteCell extends SpawnableProcessCell {
       readonly sqlite3Logger?: l.Logger;
     },
   ) {
-    super(SqliteCell.process, {
+    super(SqliteCell.sqliteSP, {
       identity: SqliteCell.COMMAND,
       stdinLogger: options?.sqlLogger,
       processLogger: options?.sqlite3Logger,
@@ -448,28 +459,12 @@ export class SqliteCell extends SpawnableProcessCell {
   async json<Shape>(argsSupplier?: FlexibleTextSupplierSync) {
     return await super.json<Shape>(argsSupplier ?? [this.#filename, "--json"]);
   }
-}
 
-export class CommandsNotebook {
-  constructor() {
-  }
-
-  content(options?: ConstructorParameters<typeof ContentCell>[0]) {
-    return new ContentCell(options);
-  }
-
-  process(
-    process: ConstructorParameters<typeof SpawnableProcessCell>[0],
-    options?: ConstructorParameters<typeof SpawnableProcessCell>[1],
-  ) {
-    return new SpawnableProcessCell(process, options);
-  }
-
-  sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {
+  static sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {
     return new SqliteCell(options);
   }
-
-  static create() {
-    return new CommandsNotebook();
-  }
 }
+
+export const content = ContentCell.content;
+export const process = SpawnableProcessCell.process;
+export const sqlite3 = SqliteCell.sqlite3;

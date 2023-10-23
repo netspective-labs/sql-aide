@@ -3,14 +3,12 @@ import { unindentWhitespace as uws } from "../universal/whitespace.ts";
 import * as mod from "./command.ts";
 
 Deno.test(`SpawnableProcessCell`, async (tc) => {
-  const cnb = mod.CommandsNotebook.create();
-
   await tc.step(
     `untyped sqlite3 spawnable process with piped content`,
     async () => {
-      const p = await cnb.content()
+      const p = await mod.content()
         .content("bad sql")
-        .pipe(cnb.process(mod.spawnableProcess("sqlite3")))
+        .pipe(mod.process(mod.spawnable("sqlite3")))
         .spawn();
       ta.assertEquals(p.code, 1);
       ta.assert(
@@ -24,7 +22,7 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
   await tc.step(
     `untyped sqlite3 spawnable process with direct SQL`,
     async () => {
-      const p = await cnb.process(mod.spawnableProcess("sqlite3"))
+      const p = await mod.process(mod.spawnable("sqlite3"))
         .stdin("bad sql")
         .spawn();
       ta.assertEquals(p.code, 1);
@@ -38,7 +36,6 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
 });
 
 Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
-  const cnb = mod.CommandsNotebook.create();
   const syntheticSqlDDL = uws(`
   CREATE TABLE synthetic_table(
     column1 text,
@@ -46,7 +43,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   );`);
 
   await tc.step(`create in memory should fail`, async () => {
-    const result = await mod.CommandsNotebook.create().sqlite3({
+    const result = await mod.sqlite3({
       sqlSupplier: `bad SQL`,
     }).spawn();
     ta.assertEquals(result.code, 1);
@@ -58,7 +55,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   });
 
   await tc.step(`create in memory should succeed`, async () => {
-    const result = await mod.CommandsNotebook.create().sqlite3().SQL(
+    const result = await mod.sqlite3().SQL(
       syntheticSqlDDL,
     ).spawn();
     ta.assertEquals(result.code, 0);
@@ -67,12 +64,12 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   await tc.step(
     `create in memory, emit SQL, and go back into memory should succeed`,
     async () => {
-      const ddlResult = await cnb.sqlite3().SQL(syntheticSqlDDL).pragma({
+      const ddlResult = await mod.sqlite3().SQL(syntheticSqlDDL).pragma({
         dump: true,
       }).text();
       ta.assert(ddlResult);
 
-      const finalResult = await cnb.sqlite3({ sqlSupplier: ddlResult })
+      const finalResult = await mod.sqlite3({ sqlSupplier: ddlResult })
         .SQL(
           uws(`
         insert into synthetic_table VALUES ('test', 1);
@@ -87,10 +84,10 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   await tc.step(
     `create in memory, emit SQL, and retrieve JSON from new database should succeed`,
     async () => {
-      const json = await cnb.sqlite3()
+      const json = await mod.sqlite3()
         .SQL(syntheticSqlDDL)
         .pragma({ dump: true })
-        .pipe(cnb.sqlite3())
+        .pipe(mod.sqlite3())
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
@@ -106,10 +103,10 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   await tc.step(
     `create in memory in untyped process, emit SQL, and retrieve JSON from typed command`,
     async () => {
-      const json = await cnb.process(mod.spawnableProcess("sqlite3"))
+      const json = await mod.process(mod.spawnable("sqlite3"))
         .stdin(syntheticSqlDDL)
         .stdin("\n.dump")
-        .pipe(cnb.sqlite3())
+        .pipe(mod.sqlite3())
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))

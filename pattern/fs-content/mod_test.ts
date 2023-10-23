@@ -1,5 +1,6 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
+import * as SQLa from "../../render/mod.ts";
 import * as mod from "./mod.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -7,7 +8,6 @@ type Any = any;
 
 Deno.test("migration and typical mutations", async () => {
   const sno = mod.prepareOrchestrator();
-  const actionNB = cmdNB.CommandsNotebook.create();
 
   // deno-fmt-ignore
   const sql = sno.nbh.SQL`
@@ -20,14 +20,19 @@ Deno.test("migration and typical mutations", async () => {
     ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
 
     -- TODO: now "run" whatever SQL we want
-    `.SQL(sno.nbh.emitCtx);
+    `;
 
   // enable the following if you want to debug the output in SQLite, otherwise it will be :memory:
-  // const sqlite3 = () => actionNB.sqlite3({ filename: "fs-content-mod_test.ts.sqlite.db" });
-  const sqlite3 = () => actionNB.sqlite3();
+  // const sqlite3 = () => cmdNB.sqlite3({ filename: "fs-content-mod_test.ts.sqlite.db" });
+  const sqlite3 = () => cmdNB.sqlite3();
+  const renderSQL = () =>
+    SQLa.RenderSqlCommand.renderSQL((sts) => sts.SQL(sno.nbh.emitCtx));
 
-  // TODO: figure out why running sno.mutationNBF.SQL creates a `stdout;` file in current working directory
-  const sr = await sqlite3().SQL(sql).spawn();
+  // we're using the Command Notebook pattern where each cell is a chainable command with piping
+  const sr = await renderSQL()
+    .SQL(sql)
+    .pipe(sqlite3())
+    .spawn();
   ta.assertEquals(sr.code, 0);
 });
 

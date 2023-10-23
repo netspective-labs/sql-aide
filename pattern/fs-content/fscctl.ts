@@ -69,7 +69,6 @@ export function notebookCommand(
 
 async function CLI() {
   const sno = prepareOrchestrator();
-  const cnb = cmdNB.CommandsNotebook.create();
   const callerName = import.meta.resolve(import.meta.url);
   await new cliffy.Command()
     .name(callerName.slice(callerName.lastIndexOf("/") + 1))
@@ -100,23 +99,30 @@ async function CLI() {
 
         -- insert the SQLPage content and current working directory fs content into the database
         ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
-        `.SQL(sno.nbh.emitCtx);
+        `;
 
-      const sqlite3 = () => cnb.sqlite3({ filename: sqliteDb });
+      const sqlite3 = () => cmdNB.sqlite3({ filename: sqliteDb });
+      const renderSQL = () =>
+        SQLa.RenderSqlCommand.renderSQL((sts) => sts.SQL(sno.nbh.emitCtx));
 
-      // first scan all the files and use SQLite extensions to do what's
-      // possible in the DB
-      await sqlite3().SQL(sql).spawn();
+      // first scan all the files and use SQLite extensions to do what's possible in the DB
+      await renderSQL()
+        .SQL(sql)
+        .pipe(sqlite3())
+        .spawn();
 
-      // now use the data stored in the database to extract content and do
-      // what is only possible in Deno, saving the data back to the DB
-      const polyglotSQL = sno.nbh.SQL`
-        ${await (sno.polyglotNB.postProcessFsContent(async () => {
-        return (await sqlite3().SQL(
-          sno.queryNB.frontmatterCandidates().SQL(sno.nbh.emitCtx),
-        ).json<{ fs_content_id: string; content: string }[]>()) ?? [];
-      }))}`;
-      await sqlite3().SQL(polyglotSQL.SQL(sno.nbh.emitCtx)).spawn();
+      // now use the data stored in the database to extract content and do what is only possible in Deno, saving the data back to the DB
+      // TODO: convert this to an anonymous class that implements Command pattern
+      // TODO: figure out how to pass structure stdin instead of raw only
+      await renderSQL()
+        .SQL(sno.nbh.SQL`
+          ${await (sno.polyglotNB.postProcessFsContent(async () => {
+          return (await sqlite3().SQL(
+            sno.queryNB.frontmatterCandidates().SQL(sno.nbh.emitCtx),
+          ).json<{ fs_content_id: string; content: string }[]>()) ?? [];
+        }))}`)
+        .pipe(sqlite3())
+        .spawn();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())
