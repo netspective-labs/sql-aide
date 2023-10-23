@@ -1,24 +1,35 @@
-import { Logger, LogLevels } from "https://deno.land/std@0.204.0/log/mod.ts";
+import { stdLog as l } from "./deps.ts";
 
 import {
   flexibleTextList,
   FlexibleTextSupplierSync,
 } from "../universal/flexible-text.ts";
+import { LogLevels } from "https://deno.land/std@0.204.0/log/levels.ts";
+import { Logger } from "https://deno.land/std@0.204.0/log/logger.ts";
 
-export function cliOrchestrator(
-  cmdSupplier: string | ((...args: string[]) => string | URL),
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
+export type PipeInWriter<W = Any> = { write(chunk: W): Promise<void> };
+export type PipeInSupplier<W = Any> = (
+  stdin: PipeInWriter<W>,
+) => Promise<void> | void;
+
+export function spawnableProcess(
+  cmdSupplier:
+    | string
+    | URL
+    | ((purpose: "spawn", ...args: string[]) => string | URL),
 ) {
-  async function spawn(
+  return async function spawn(
     argsSupplier: FlexibleTextSupplierSync,
-    stdinSupplier?: (
-      stdin: WritableStreamDefaultWriter<Uint8Array>,
-    ) => Promise<void> | void,
-    logger?: Logger,
+    stdinSupplier?: PipeInSupplier<Uint8Array>,
+    logger?: l.Logger,
   ) {
     const args = flexibleTextList(argsSupplier);
-    const command = typeof cmdSupplier === "string"
-      ? cmdSupplier
-      : cmdSupplier("withStdin", ...args);
+    const command = typeof cmdSupplier === "function"
+      ? cmdSupplier("spawn", ...args)
+      : cmdSupplier;
     const cmd = new Deno.Command(command, {
       args: flexibleTextList(argsSupplier),
       stdin: "piped",
@@ -33,118 +44,214 @@ export function cliOrchestrator(
       stdInWriter.close();
     }
 
-    const { code, stdout: stdoutRaw, stderr: stderrRaw } = await child.output();
-    if (logger?.level == LogLevels.INFO || logger?.level == LogLevels.DEBUG) {
+    const { code, stdout, stderr } = await child.output();
+    if (
+      logger?.level == l.LogLevels.INFO || logger?.level == l.LogLevels.DEBUG
+    ) {
       logger.info("cliOrchestrator", { command, args, stdinSupplier, code });
     }
-    if (logger?.level == LogLevels.DEBUG) {
+    if (logger?.level == l.LogLevels.DEBUG) {
       logger.debug("cliOrchestrator", {
         "Deno.Command": cmd,
         stdinSupplier,
-        stdoutRaw,
-        stderrRaw,
+        stdout,
+        stderr,
       });
     }
-    return {
-      command: cmd,
-      code,
-      stdoutRaw,
-      stderrRaw,
-      stdout: () => new TextDecoder().decode(stdoutRaw),
-      stderr: () => new TextDecoder().decode(stderrRaw),
-    };
-  }
-
-  async function safeSpawn<StdoutShape>(
-    argsSupplier: FlexibleTextSupplierSync,
-    resultSupplier: (
-      spawnResult: Awaited<ReturnType<typeof spawn>>,
-    ) => Promise<StdoutShape | undefined> | StdoutShape | undefined,
-    options?: {
-      readonly logger?: Logger;
-      readonly stdinSupplier?: (
-        stdin: WritableStreamDefaultWriter<Uint8Array>,
-      ) => Promise<void> | void;
-      readonly onSpawnNonZeroCode?: (
-        spawnResult: Awaited<ReturnType<typeof spawn>>,
-      ) =>
-        | StdoutShape
-        | undefined
-        | Promise<StdoutShape | undefined>;
-      readonly onError?: (
-        error: Error,
-        spawnResult?: Awaited<ReturnType<typeof spawn>>,
-      ) =>
-        | StdoutShape
-        | undefined
-        | Promise<StdoutShape | undefined>;
-    },
-  ) {
-    let spawnResult: Awaited<ReturnType<typeof spawn>> | undefined;
-    try {
-      spawnResult = await spawn(
-        argsSupplier,
-        options?.stdinSupplier,
-        options?.logger,
-      );
-      if (spawnResult.code != 0) {
-        return options?.onSpawnNonZeroCode?.(spawnResult) ?? undefined;
-      }
-      return resultSupplier(spawnResult);
-    } catch (err) {
-      return options?.onError?.(err, spawnResult) ?? undefined;
-    }
-  }
-
-  return { spawn, safeSpawn };
+    return { command: cmd, code, stdout, stderr };
+  };
 }
 
-// TODO: in safeSpawn construct a proper SqliteCellError
-export class SqliteCellError extends Error {
-  constructor(readonly sc: SqliteCell, message: string) {
-    super(message);
+export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
+  extends Error {
+  constructor(
+    readonly cause: Error,
+    readonly cell: Cell,
+    readonly spawnResult?: Awaited<
+      ReturnType<ReturnType<typeof spawnableProcess>>
+    >,
+  ) {
+    super(cause.message);
 
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, SqliteCellError);
+      Error.captureStackTrace(this, SpawnableProcessCellError<Cell>);
     }
 
     this.name = "SqliteCellError";
   }
 }
 
-export class SqliteCell {
-  static readonly COMMAND = "sqlite3";
-  static readonly CLI = cliOrchestrator(SqliteCell.COMMAND);
+export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
+  extends Error {
+  constructor(
+    readonly cause: Error,
+    readonly cell: Cell,
+    readonly spawnResult: Awaited<
+      ReturnType<ReturnType<typeof spawnableProcess>>
+    >,
+  ) {
+    super(cause.message);
 
-  #sqlLogger?: Logger;
-  #sqlite3Logger?: Logger; // TODO
-  #filename = ":memory:";
-  #sqlSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
-  #stdInSupplier?: (
-    stdin: WritableStreamDefaultWriter<Uint8Array>,
-  ) => Promise<void> | void;
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, SpawnableProcessJsonError<Cell>);
+    }
+
+    this.name = "SqliteCellError";
+  }
+}
+
+export class SpawnableProcessCell {
+  #stdinLogger?: Logger;
+  #processLogger?: Logger;
+  #argsSupplier?: FlexibleTextSupplierSync;
+  #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
+  #pipeInSupplier?: PipeInSupplier<Uint8Array>;
 
   constructor(
+    readonly process: ReturnType<typeof spawnableProcess>,
     readonly options?: {
+      readonly identity?: string;
+      readonly stdinLogger?: Logger;
+      readonly processLogger?: Logger;
+    },
+  ) {
+    if (options?.stdinLogger) this.stdinLogger(options.stdinLogger);
+    if (options?.processLogger) this.processLogger(options.processLogger);
+  }
+
+  stdinLogger(logger: Logger) {
+    this.#stdinLogger = logger;
+    return this;
+  }
+
+  processLogger(logger: Logger) {
+    this.#processLogger = logger;
+    return this;
+  }
+
+  args(argsSupplier: FlexibleTextSupplierSync) {
+    this.#argsSupplier = argsSupplier;
+    return this;
+  }
+
+  stdin(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
+    this.#stdinSuppliers.push(sqlSupplier);
+    return this;
+  }
+
+  pipeIn(stdInSupplier: PipeInSupplier<Uint8Array>) {
+    this.#pipeInSupplier = stdInSupplier;
+    return this;
+  }
+
+  get stdinSupplier() {
+    return async (stdin: PipeInWriter<Uint8Array>) => {
+      // this is usually the result of a pipe from a previous command so grab
+      // that output first
+      if (this.#pipeInSupplier) await this.#pipeInSupplier(stdin);
+
+      // now, the rest of the stdin comes from what was supplied in this instance
+      for (const stdinSupplier of this.#stdinSuppliers) {
+        if (stdinSupplier instanceof Uint8Array) {
+          await stdin.write(stdinSupplier);
+          if (this.#stdinLogger?.level == LogLevels.DEBUG) {
+            const te = new TextDecoder();
+            this.#stdinLogger?.debug(
+              this.options?.identity ??
+                SpawnableProcessCell.prototype.constructor.name,
+              te.decode(stdinSupplier),
+            );
+          }
+        } else {
+          const te = new TextEncoder();
+          for (const text of flexibleTextList(stdinSupplier)) {
+            await stdin.write(te.encode(text));
+            if (this.#stdinLogger?.level == LogLevels.DEBUG) {
+              this.#stdinLogger?.debug(
+                this.options?.identity ??
+                  SpawnableProcessCell.prototype.constructor.name,
+                text,
+              );
+            }
+          }
+        }
+      }
+    };
+  }
+
+  async spawn(argsSupplier?: FlexibleTextSupplierSync) {
+    try {
+      return await this.process(
+        argsSupplier ?? this.#argsSupplier ?? [],
+        this.stdinSupplier,
+        this.#processLogger,
+      );
+    } catch (err) {
+      throw new SpawnableProcessCellError(err, this, undefined);
+    }
+  }
+
+  async text(argsSupplier?: FlexibleTextSupplierSync) {
+    return new TextDecoder().decode((await this.spawn(argsSupplier)).stdout);
+  }
+
+  /**
+   * Send all the text given via this.stdin() as one big string to the process.
+   * @returns result of STDOUT of process as JSON object
+   */
+  async json<Shape>(argsSupplier?: FlexibleTextSupplierSync) {
+    const sr = await this.spawn(argsSupplier);
+    try {
+      if (sr.code == 0) {
+        return JSON.parse(new TextDecoder().decode(sr.stdout)) as Shape;
+      }
+    } catch (err) {
+      throw new SpawnableProcessJsonError(err, this, sr);
+    }
+  }
+
+  pipe<
+    NextAction extends {
+      pipeIn(stdInSupplier: PipeInSupplier<Uint8Array>): NextAction;
+    },
+  >(action: NextAction) {
+    return action.pipeIn(async (writer) => {
+      const sr = await this.spawn();
+      await writer.write(sr.stdout);
+    });
+  }
+}
+
+export class SqliteCell extends SpawnableProcessCell {
+  static readonly COMMAND = "sqlite3";
+  static readonly process = spawnableProcess(SqliteCell.COMMAND);
+
+  #filename = ":memory:";
+
+  constructor(
+    options?: {
       readonly filename?: string;
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
       readonly sqlLogger?: Logger;
       readonly sqlite3Logger?: Logger;
     },
   ) {
+    super(SqliteCell.process, {
+      identity: SqliteCell.COMMAND,
+      stdinLogger: options?.sqlLogger,
+      processLogger: options?.sqlite3Logger,
+    });
     if (options?.filename) this.#filename = options.filename;
     if (options?.sqlSupplier) this.SQL(options.sqlSupplier);
-    if (options?.sqlLogger) this.#sqlLogger = options.sqlLogger;
-    if (options?.sqlite3Logger) this.#sqlLogger = options.sqlite3Logger;
   }
 
   sqlLogger(logger: Logger) {
-    this.#sqlLogger = logger;
+    this.stdinLogger(logger);
     return this;
   }
 
   sqlite3Logger(logger: Logger) {
-    this.#sqlite3Logger = logger;
+    this.processLogger(logger);
     return this;
   }
 
@@ -153,17 +260,8 @@ export class SqliteCell {
     return this;
   }
 
-  stdIn(
-    stdInSupplier: (
-      stdin: WritableStreamDefaultWriter<Uint8Array>,
-    ) => Promise<void> | void,
-  ) {
-    this.#stdInSupplier = stdInSupplier;
-    return this;
-  }
-
   SQL(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
-    this.#sqlSuppliers.push(sqlSupplier);
+    this.stdin(sqlSupplier);
     return this;
   }
 
@@ -178,94 +276,32 @@ export class SqliteCell {
     return this;
   }
 
-  get stdinSupplier() {
-    return async (stdin: WritableStreamDefaultWriter<Uint8Array>) => {
-      // this is usually the result of a pipe from a previous command so grab
-      // that output first
-      if (this.#stdInSupplier) await this.#stdInSupplier(stdin);
-
-      // now, the rest of the SQL comes from what was supplied in this instance
-      for (const sqlSupplier of this.#sqlSuppliers) {
-        if (sqlSupplier instanceof Uint8Array) {
-          stdin.write(sqlSupplier);
-          if (this.#sqlLogger?.level == LogLevels.DEBUG) {
-            const te = new TextDecoder();
-            this.#sqlLogger?.debug(
-              SqliteCell.prototype.constructor.name,
-              te.decode(sqlSupplier),
-            );
-          }
-        } else {
-          const te = new TextEncoder();
-          for (const SQL of flexibleTextList(sqlSupplier)) {
-            stdin.write(te.encode(SQL));
-            if (this.#sqlLogger?.level == LogLevels.DEBUG) {
-              this.#sqlLogger?.debug(
-                SqliteCell.prototype.constructor.name,
-                SQL,
-              );
-            }
-          }
-        }
-      }
-    };
-  }
-
   /**
    * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
    * @returns result of Deno.command.spawn and other properties
    */
-  async spawn() {
-    return await SqliteCell.CLI.spawn(
-      [this.#filename],
-      this.stdinSupplier,
-      this.#sqlite3Logger,
-    );
-  }
-
-  /**
-   * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
-   * @returns result of stdout as text
-   */
-  async text() {
-    return (await this.spawn()).stdout;
+  async spawn(argsSupplier?: FlexibleTextSupplierSync) {
+    return await super.spawn(argsSupplier ?? [this.#filename]);
   }
 
   /**
    * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
    * @returns result of STDOUT of sqlite3 shell as JSON object
    */
-  async json<Shape>() {
-    const args = [this.#filename, "--json"];
-    return await SqliteCell.CLI.safeSpawn<Shape>(
-      args,
-      (sr) => JSON.parse(sr.stdout()),
-      {
-        // TODO: construct a proper SqliteCellError
-        stdinSupplier: this.stdinSupplier,
-        logger: this.#sqlite3Logger,
-      },
-    );
-  }
-
-  pipe<
-    NextAction extends {
-      stdIn(
-        stdInSupplier: (
-          stdin: WritableStreamDefaultWriter<Uint8Array>,
-        ) => Promise<void> | void,
-      ): NextAction;
-    },
-  >(action: NextAction) {
-    return action.stdIn(async (writer) => {
-      const sr = await this.spawn();
-      writer.write(sr.stdoutRaw);
-    });
+  async json<Shape>(argsSupplier?: FlexibleTextSupplierSync) {
+    return await super.json<Shape>(argsSupplier ?? [this.#filename, "--json"]);
   }
 }
 
 export class CommandsNotebook {
   constructor() {
+  }
+
+  process(
+    process: ConstructorParameters<typeof SpawnableProcessCell>[0],
+    options?: ConstructorParameters<typeof SpawnableProcessCell>[1],
+  ) {
+    return new SpawnableProcessCell(process, options);
   }
 
   sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {

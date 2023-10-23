@@ -202,3 +202,14 @@ More advanced use cases are being explored:
 
 Notebooks use builder pattern for preparing and configuring Command classes that
 operate as a pipe.
+
+- [x] `process` general purpose untyped external CLI task with pipe, JSON, and
+      text output
+- [x] `sqlite3` typed SQL CLI task with pipe, JSON, and text output
+- [ ] `duckdb` typed SQL CLI task with pipe, JSON, and text output
+- [ ] `osquery` typed SQL CLI task with pipe, JSON, and text output
+- [ ] port all other `netspective-labs/aide/sql/engine` integrations
+- [ ] `fetch` task with pipe, JSON, and text output for file upload/download/API
+      calls (port from `netspective-labs/aide/task`)
+- [ ] `vfs` task with SQLa Virtual File System (VFS) for file and ZIP archive
+      import/export
