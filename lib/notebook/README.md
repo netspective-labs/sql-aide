@@ -200,8 +200,11 @@ More advanced use cases are being explored:
 
 ## Command Notebooks with Cells as action classes
 
-Notebooks use builder pattern for preparing and configuring Command classes that
-operate as a pipe.
+Command Notebooks use builder pattern for preparing and configuring Command
+classes that operate as a pipe. Command Cells follow contracts for a system
+where data can be piped from one stage to another, similar to UNIX-style
+pipelines. The actual mechanics and data flow would depend on the cell
+implementation classes or functions implementing these interfaces.
 
 - [x] `process` general purpose untyped external CLI task with pipe, JSON, and
       text output
@@ -213,3 +216,27 @@ operate as a pipe.
       calls (port from `netspective-labs/aide/task`)
 - [ ] `vfs` task with SQLa Virtual File System (VFS) for file and ZIP archive
       import/export
+
+## Command Notebooks Architecture
+
+- `spawnableProcess` function: is a factory function that creates a new
+  asynchronous spawn function designed for executing system processes.
+- `ContentCell` class: represents a configurable content unit within a command
+  pattern structure, particularly designed for handling UNIX-style command data
+  piping. This class maintains internal content and supports operations like
+  logging and content manipulation.
+- `SpawnableProcessCell` class: serves as a versatile wrapper and base class for
+  spawning, managing, and interfacing with child processes, particularly in a
+  context where UNIX-style pipelining and redirection are relevant.
+  - The class provides methods for configuring, executing, and handling the
+    output of these processes in various forms, like text, JSON, or streaming it
+    into another process or operation.
+  - The class is designed to operate indepdently as an "untyped" process engine
+    but can also be inherited by subclasses for "typed" processes to specific
+    commands with special needs.
+- `SqliteCell` class: an extension of the `SpawnableProcessCell` class,
+  specialized for managing interactions with SQLite databases. This class
+  simplifies the execution of SQLite commands from within a Node.js application,
+  allowing for direct command execution, data queries, and other database
+  interactions without needing to manually construct system calls or manage
+  input/output streams.

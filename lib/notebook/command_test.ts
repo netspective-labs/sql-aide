@@ -5,21 +5,39 @@ import * as mod from "./command.ts";
 Deno.test(`SpawnableProcessCell`, async (tc) => {
   const cnb = mod.CommandsNotebook.create();
 
-  await tc.step(`untyped sqlite3 spawnable process`, async () => {
-    const p = await cnb.content()
-      .content("bad sql")
-      .pipe(cnb.process(mod.spawnableProcess("sqlite3")))
-      .spawn();
-    ta.assertEquals(p.code, 1);
-    ta.assert(
-      new TextDecoder().decode(p.stderr).startsWith(
-        `Parse error near line 1: near "bad": syntax error`,
-      ),
-    );
-  });
+  await tc.step(
+    `untyped sqlite3 spawnable process with piped content`,
+    async () => {
+      const p = await cnb.content()
+        .content("bad sql")
+        .pipe(cnb.process(mod.spawnableProcess("sqlite3")))
+        .spawn();
+      ta.assertEquals(p.code, 1);
+      ta.assert(
+        new TextDecoder().decode(p.stderr).startsWith(
+          `Parse error near line 1: near "bad": syntax error`,
+        ),
+      );
+    },
+  );
+
+  await tc.step(
+    `untyped sqlite3 spawnable process with direct SQL`,
+    async () => {
+      const p = await cnb.process(mod.spawnableProcess("sqlite3"))
+        .stdin("bad sql")
+        .spawn();
+      ta.assertEquals(p.code, 1);
+      ta.assert(
+        new TextDecoder().decode(p.stderr).startsWith(
+          `Parse error near line 1: near "bad": syntax error`,
+        ),
+      );
+    },
+  );
 });
 
-Deno.test(`SqliteCell typed sqlite3 spawnable process`, async (tc) => {
+Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   const cnb = mod.CommandsNotebook.create();
   const syntheticSqlDDL = uws(`
   CREATE TABLE synthetic_table(
