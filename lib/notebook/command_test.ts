@@ -6,8 +6,9 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
   const cnb = mod.CommandsNotebook.create();
 
   await tc.step(`untyped sqlite3 spawnable process`, async () => {
-    const p = await cnb.process(mod.spawnableProcess("sqlite3"))
-      .stdin("bad sql")
+    const p = await cnb.content()
+      .content("bad sql")
+      .pipe(cnb.process(mod.spawnableProcess("sqlite3")))
       .spawn();
     ta.assertEquals(p.code, 1);
     ta.assert(

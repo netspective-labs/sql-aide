@@ -59,6 +59,110 @@ export function spawnableProcess(
   };
 }
 
+export const stdinSupplierFactory = (
+  content: (Uint8Array | FlexibleTextSupplierSync)[],
+  options?: {
+    readonly identity?: string;
+    readonly pipeInSuppliers?: PipeInSupplier<Uint8Array>[];
+    readonly logger?: l.Logger;
+  },
+) => {
+  return async (stdin: PipeInWriter<Uint8Array>) => {
+    // this is usually the result of a pipe from a previous command so grab
+    // that output first
+    if (options?.pipeInSuppliers) {
+      for (const pi of options.pipeInSuppliers) {
+        await pi(stdin);
+      }
+    }
+
+    // now, the rest of the stdin comes from what was supplied in this instance
+    const logger = options?.logger;
+    for (const c of content) {
+      if (c instanceof Uint8Array) {
+        await stdin.write(c);
+        if (logger?.level == l.LogLevels.DEBUG) {
+          const te = new TextDecoder();
+          logger?.debug(
+            options?.identity ?? "stdinSupplier",
+            te.decode(c),
+          );
+        }
+      } else {
+        const te = new TextEncoder();
+        for (const text of flexibleTextList(c)) {
+          await stdin.write(te.encode(text));
+          if (logger?.level == l.LogLevels.DEBUG) {
+            logger?.debug(
+              options?.identity ?? "stdinSupplier",
+              text,
+            );
+          }
+        }
+      }
+    }
+  };
+};
+
+export class ContentCell {
+  #logger?: l.Logger;
+  #content: (Uint8Array | FlexibleTextSupplierSync)[] = [];
+  #pipeInSuppliers?: PipeInSupplier<Uint8Array>[];
+
+  constructor(
+    readonly options?: {
+      readonly identity?: string;
+      readonly content?: (Uint8Array | FlexibleTextSupplierSync)[];
+      readonly stdinLogger?: l.Logger;
+      readonly processLogger?: l.Logger;
+    },
+  ) {
+    if (options?.stdinLogger) this.logger(options.stdinLogger);
+    if (options?.content) this.content(...options.content);
+  }
+
+  logger(logger: l.Logger) {
+    this.#logger = logger;
+    return this;
+  }
+
+  content(...content: (Uint8Array | FlexibleTextSupplierSync)[]) {
+    this.#content.push(...content);
+    return this;
+  }
+
+  async text() {
+    const sis = stdinSupplierFactory(this.#content, {
+      identity: this.options?.identity,
+      pipeInSuppliers: this.#pipeInSuppliers,
+      logger: this.#logger,
+    });
+    const buffer: Uint8Array[] = [];
+    await sis({
+      // deno-lint-ignore require-await
+      write: async (content) => {
+        buffer.push(content);
+      },
+    });
+    const td = new TextDecoder();
+    const strings = buffer.map((b) => td.decode(b));
+    return strings.join();
+  }
+
+  pipe<
+    NextAction extends {
+      pipeIn(stdInSupplier: PipeInSupplier<Uint8Array>): NextAction;
+    },
+  >(action: NextAction) {
+    const sis = stdinSupplierFactory(this.#content, {
+      identity: this.options?.identity,
+      pipeInSuppliers: this.#pipeInSuppliers,
+      logger: this.#logger,
+    });
+    return action.pipeIn(sis);
+  }
+}
+
 export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
   extends Error {
   constructor(
@@ -102,7 +206,7 @@ export class SpawnableProcessCell {
   #processLogger?: l.Logger;
   #argsSupplier?: FlexibleTextSupplierSync;
   #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
-  #pipeInSupplier?: PipeInSupplier<Uint8Array>;
+  #pipeInSuppliers?: PipeInSupplier<Uint8Array>[];
 
   constructor(
     readonly process: ReturnType<typeof spawnableProcess>,
@@ -137,50 +241,20 @@ export class SpawnableProcessCell {
   }
 
   pipeIn(stdInSupplier: PipeInSupplier<Uint8Array>) {
-    this.#pipeInSupplier = stdInSupplier;
+    if (this.#pipeInSuppliers === undefined) this.#pipeInSuppliers = [];
+    this.#pipeInSuppliers.push(stdInSupplier);
     return this;
-  }
-
-  get stdinSupplier() {
-    return async (stdin: PipeInWriter<Uint8Array>) => {
-      // this is usually the result of a pipe from a previous command so grab
-      // that output first
-      if (this.#pipeInSupplier) await this.#pipeInSupplier(stdin);
-
-      // now, the rest of the stdin comes from what was supplied in this instance
-      for (const stdinSupplier of this.#stdinSuppliers) {
-        if (stdinSupplier instanceof Uint8Array) {
-          await stdin.write(stdinSupplier);
-          if (this.#stdinLogger?.level == l.LogLevels.DEBUG) {
-            const te = new TextDecoder();
-            this.#stdinLogger?.debug(
-              this.options?.identity ??
-                SpawnableProcessCell.prototype.constructor.name,
-              te.decode(stdinSupplier),
-            );
-          }
-        } else {
-          const te = new TextEncoder();
-          for (const text of flexibleTextList(stdinSupplier)) {
-            await stdin.write(te.encode(text));
-            if (this.#stdinLogger?.level == l.LogLevels.DEBUG) {
-              this.#stdinLogger?.debug(
-                this.options?.identity ??
-                  SpawnableProcessCell.prototype.constructor.name,
-                text,
-              );
-            }
-          }
-        }
-      }
-    };
   }
 
   async spawn(argsSupplier?: FlexibleTextSupplierSync) {
     try {
       return await this.process(
         argsSupplier ?? this.#argsSupplier ?? [],
-        this.stdinSupplier,
+        stdinSupplierFactory(this.#stdinSuppliers, {
+          identity: this.options?.identity,
+          pipeInSuppliers: this.#pipeInSuppliers,
+          logger: this.#stdinLogger,
+        }),
         this.#processLogger,
       );
     } catch (err) {
@@ -292,6 +366,10 @@ export class SqliteCell extends SpawnableProcessCell {
 
 export class CommandsNotebook {
   constructor() {
+  }
+
+  content(options?: ConstructorParameters<typeof ContentCell>[0]) {
+    return new ContentCell(options);
   }
 
   process(
