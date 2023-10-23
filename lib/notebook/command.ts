@@ -4,9 +4,6 @@ import {
   flexibleTextList,
   FlexibleTextSupplierSync,
 } from "../universal/flexible-text.ts";
-import { LogLevels } from "https://deno.land/std@0.204.0/log/levels.ts";
-import { Logger } from "https://deno.land/std@0.204.0/log/logger.ts";
-
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
@@ -101,8 +98,8 @@ export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
 }
 
 export class SpawnableProcessCell {
-  #stdinLogger?: Logger;
-  #processLogger?: Logger;
+  #stdinLogger?: l.Logger;
+  #processLogger?: l.Logger;
   #argsSupplier?: FlexibleTextSupplierSync;
   #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
   #pipeInSupplier?: PipeInSupplier<Uint8Array>;
@@ -111,20 +108,20 @@ export class SpawnableProcessCell {
     readonly process: ReturnType<typeof spawnableProcess>,
     readonly options?: {
       readonly identity?: string;
-      readonly stdinLogger?: Logger;
-      readonly processLogger?: Logger;
+      readonly stdinLogger?: l.Logger;
+      readonly processLogger?: l.Logger;
     },
   ) {
     if (options?.stdinLogger) this.stdinLogger(options.stdinLogger);
     if (options?.processLogger) this.processLogger(options.processLogger);
   }
 
-  stdinLogger(logger: Logger) {
+  stdinLogger(logger: l.Logger) {
     this.#stdinLogger = logger;
     return this;
   }
 
-  processLogger(logger: Logger) {
+  processLogger(logger: l.Logger) {
     this.#processLogger = logger;
     return this;
   }
@@ -154,7 +151,7 @@ export class SpawnableProcessCell {
       for (const stdinSupplier of this.#stdinSuppliers) {
         if (stdinSupplier instanceof Uint8Array) {
           await stdin.write(stdinSupplier);
-          if (this.#stdinLogger?.level == LogLevels.DEBUG) {
+          if (this.#stdinLogger?.level == l.LogLevels.DEBUG) {
             const te = new TextDecoder();
             this.#stdinLogger?.debug(
               this.options?.identity ??
@@ -166,7 +163,7 @@ export class SpawnableProcessCell {
           const te = new TextEncoder();
           for (const text of flexibleTextList(stdinSupplier)) {
             await stdin.write(te.encode(text));
-            if (this.#stdinLogger?.level == LogLevels.DEBUG) {
+            if (this.#stdinLogger?.level == l.LogLevels.DEBUG) {
               this.#stdinLogger?.debug(
                 this.options?.identity ??
                   SpawnableProcessCell.prototype.constructor.name,
@@ -232,8 +229,8 @@ export class SqliteCell extends SpawnableProcessCell {
     options?: {
       readonly filename?: string;
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
-      readonly sqlLogger?: Logger;
-      readonly sqlite3Logger?: Logger;
+      readonly sqlLogger?: l.Logger;
+      readonly sqlite3Logger?: l.Logger;
     },
   ) {
     super(SqliteCell.process, {
@@ -245,12 +242,12 @@ export class SqliteCell extends SpawnableProcessCell {
     if (options?.sqlSupplier) this.SQL(options.sqlSupplier);
   }
 
-  sqlLogger(logger: Logger) {
+  sqlLogger(logger: l.Logger) {
     this.stdinLogger(logger);
     return this;
   }
 
-  sqlite3Logger(logger: Logger) {
+  sqlite3Logger(logger: l.Logger) {
     this.processLogger(logger);
     return this;
   }
