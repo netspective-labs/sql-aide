@@ -136,7 +136,8 @@ async function CLI() {
         .command("construction", notebookCommand("construction", sno.constructionNBF as Any))
         .command("mutation", notebookCommand("mutation", sno.mutationNBF as Any))
         .command("query", notebookCommand("query", sno.queryNBF as Any))
-        .command("polyglot", notebookCommand("polyglot", sno.polyglotNBF as Any)),
+        .command("polyglot", notebookCommand("polyglot", sno.polyglotNBF as Any))
+        .command("assurance", notebookCommand("assurance", sno.assuranceNBF as Any)),
     )
     .command(
       "diagram",

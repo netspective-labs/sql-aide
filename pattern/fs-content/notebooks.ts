@@ -18,6 +18,7 @@ type Any = any;
 // ConstructionSqlNotebook encapsulates DDL and table/view/entity construction
 // MutationSqlNotebook encapsulates DML and stateful table data insert/update/delete
 // QuerySqlNotebook encapsulates DQL and stateless table queries that can operate all within SQLite
+// AssuranceSqlNotebook encapsulates DQL and stateless TAP-formatted test cases
 // PolyglotSqlNotebook encapsulates SQL needed as part of multi-language (e.g. SQLite + Deno) orchestration because SQLite could not operate on its own
 // SQLPageNotebook encapsulates [SQLPage](https://sql.ophir.dev/) content
 // SqlNotebooksOrchestrator encapsulates instances of all the other notebooks and provides performs all the work
@@ -1057,11 +1058,41 @@ export class SQLPageNotebook<
   //       is contained within the DB itself.
 }
 
+export class AssuranceSqlNotebook<
+  EmitContext extends SQLa.SqlEmitContext = SQLa.SqlEmitContext,
+> extends SQLa.SqlNotebook<EmitContext> {
+  readonly queryNB: QuerySqlNotebook<EmitContext>;
+
+  constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
+    super();
+    this.queryNB = new QuerySqlNotebook(this.nbh);
+  }
+
+  test1() {
+    return this.nbh.SQL`
+      WITH test_plan AS (
+          SELECT '1..1' AS tap_output
+      ),
+      test1 AS (  -- Check if the 'fileio' extension is loaded by calling the 'readfile' function
+          SELECT
+              CASE
+                  WHEN readfile('README.md') IS NOT NULL THEN 'ok 1 - fileio extension is loaded.'
+                  ELSE 'not ok 1 - fileio extension is not loaded.'
+              END AS tap_output
+          FROM (SELECT 1) -- This is a dummy table of one row to ensure the SELECT runs.
+      )
+      SELECT tap_output FROM test_plan
+      UNION ALL
+      SELECT tap_output FROM test1;`;
+  }
+}
+
 export const orchestrableSqlNotebooksNames = [
   "construction",
   "mutation",
   "query",
   "polyglot",
+  "assurance",
 ] as const;
 
 export type OrchestrableSqlNotebookName =
@@ -1087,10 +1118,14 @@ export class SqlNotebooksOrchestrator<
   readonly polyglotNBF: ReturnType<
     typeof SQLa.sqlNotebookFactory<PolyglotSqlNotebook, EmitContext>
   >;
+  readonly assuranceNBF: ReturnType<
+    typeof SQLa.sqlNotebookFactory<AssuranceSqlNotebook, EmitContext>
+  >;
   readonly constructionNB: ConstructionSqlNotebook;
   readonly mutationNB: MutationSqlNotebook;
   readonly queryNB: QuerySqlNotebook;
   readonly polyglotNB: PolyglotSqlNotebook;
+  readonly assuranceNB: AssuranceSqlNotebook;
 
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     this.constructionNBF = SQLa.sqlNotebookFactory(
@@ -1109,11 +1144,16 @@ export class SqlNotebooksOrchestrator<
       PolyglotSqlNotebook.prototype,
       () => new PolyglotSqlNotebook<EmitContext>(nbh),
     );
+    this.assuranceNBF = SQLa.sqlNotebookFactory(
+      AssuranceSqlNotebook.prototype,
+      () => new AssuranceSqlNotebook<EmitContext>(nbh),
+    );
 
     this.constructionNB = this.constructionNBF.instance();
     this.mutationNB = this.mutationNBF.instance();
     this.queryNB = this.queryNBF.instance();
     this.polyglotNB = this.polyglotNBF.instance();
+    this.assuranceNB = this.assuranceNBF.instance();
   }
 
   separator(cell: string) {
@@ -1175,6 +1215,9 @@ export class SqlNotebooksOrchestrator<
     this.polyglotNBF.kernel.introspectedNB.cells.forEach((cell) => {
       cells.push({ notebook: "polyglot", cell: cell.nbCellID });
     });
+    this.assuranceNBF.kernel.introspectedNB.cells.forEach((cell) => {
+      cells.push({ notebook: "assurance", cell: cell.nbCellID });
+    });
     return cells;
   }
 
@@ -1228,6 +1271,10 @@ export class SqlNotebooksOrchestrator<
     await kernelDML(
       this.queryNBF as Any,
       QuerySqlNotebook.prototype.constructor.name,
+    );
+    await kernelDML(
+      this.assuranceNBF as Any,
+      AssuranceSqlNotebook.prototype.constructor.name,
     );
 
     // NOTE: PolyglotSqlNotebook is not stored since its cells cannot be
