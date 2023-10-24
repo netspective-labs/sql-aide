@@ -115,10 +115,17 @@ eget lovasoa/SQLpage   # if you don't already have it downloaded
 DATABASE_URL=sqlite://./device-content.sqlite.db sqlpage.bin
 ```
 
-Show the information schema as markdown:
+Export the information schema as markdown:
 
 ```bash
-$ ./fscctl.ts notebook query infoSchemaMarkdown | sqlite3 device-content.sqlite.db
+$ ./fscctl.ts notebook query infoSchemaOsQueryATCs | sqlite3 device-content.sqlite.db | jq
+$ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaOsQueryATCs'" | sqlite3 device-content.sqlite.db
+```
+
+Export the information schema as osQuery ATC:
+
+```bash
+$ ./fscctl.ts notebook query infoSchemaOsQueryATCs | sqlite3 device-content.sqlite.db > 
 $ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaMarkdown'" | sqlite3 device-content.sqlite.db
 ```
 

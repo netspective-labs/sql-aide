@@ -682,19 +682,70 @@ export class QuerySqlNotebook<
    */
   infoSchema() {
     return this.nbh.SQL`
-      SELECT
-          tbl_name AS table_name,
-          c.cid AS column_id,
-          c.name AS column_name,
-          c."type" AS "type",
-          c."notnull" AS "notnull",
-          c.dflt_value as "default_value",
-          c.pk AS primary_key
-      FROM
-          sqlite_master m,
-          pragma_table_info(m.tbl_name) c
-      WHERE
-          m.type = 'table';`;
+      SELECT tbl_name AS table_name,
+             c.cid AS column_id,
+             c.name AS column_name,
+             c."type" AS "type",
+             c."notnull" AS "notnull",
+             c.dflt_value as "default_value",
+             c.pk AS primary_key
+        FROM sqlite_master m,
+             pragma_table_info(m.tbl_name) c
+       WHERE m.type = 'table';`;
+  }
+
+  /**
+   * Generates a JSON configuration for osquery's auto_table_construction
+   * feature by inspecting the SQLite database schema. The SQL creates a
+   * structured JSON object detailing each table within the database. For
+   * every table, the object includes a standard SELECT query, the relevant
+   * columns, and the database file path.
+   *
+   * @example
+   * // The resultant JSON object is structured as follows:
+   * {
+   *   "auto_table_construction": {
+   *     "table_name1": {
+   *       "query": "SELECT column1, column2, ... FROM table_name1",
+   *       "columns": ["column1", "column2", ...],
+   *       "path": "./sqlite-src.db"
+   *     },
+   *     ...
+   *   }
+   * }
+   */
+  infoSchemaOsQueryATCs() {
+    return this.nbh.SQL`
+      WITH table_columns AS (
+          SELECT m.tbl_name AS table_name,
+                 group_concat(c.name) AS column_names_for_select,
+                 json_group_array(c.name) AS column_names_for_atc_json
+            FROM sqlite_master m,
+                 pragma_table_info(m.tbl_name) c
+           WHERE m.type = 'table'
+        GROUP BY m.tbl_name
+      ),
+      target AS (
+        -- set SQLite parameter :osquery_atc_path to assign a different path
+        SELECT COALESCE(:osquery_atc_path, 'SQLITEDB_PATH') AS path
+      ),
+      table_query AS (
+          SELECT table_name,
+                 'SELECT ' || column_names_for_select || ' FROM ' || table_name AS query,
+                 column_names_for_atc_json
+            FROM table_columns
+      )
+      SELECT json_object('auto_table_construction',
+                json_group_object(
+                    table_name,
+                    json_object(
+                        'query', query,
+                        'columns', json(column_names_for_atc_json),
+                        'path', path
+                    )
+                )
+             ) AS osquery_auto_table_construction
+        FROM table_query, target;`;
   }
 
   /**
