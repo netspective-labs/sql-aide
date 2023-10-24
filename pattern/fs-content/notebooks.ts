@@ -1,6 +1,7 @@
 import { frontmatter as fm, ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
-import * as nb from "../../lib/notebook/chain-of-responsibility.ts";
+import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
+import * as cmdNB from "../../lib/notebook/command.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";
@@ -72,11 +73,11 @@ type Any = any;
  * idempotent but this can be set to indicate it's not.
  */
 export const notIdempotent = <Notebook>(
-  cells: Set<nb.NotebookCellID<Notebook>>,
+  cells: Set<chainNB.NotebookCellID<Notebook>>,
 ) => {
   return (
     _target: SQLa.SqlNotebook<Any>,
-    propertyKey: nb.NotebookCellID<Notebook>,
+    propertyKey: chainNB.NotebookCellID<Notebook>,
     _descriptor: PropertyDescriptor,
   ) => {
     cells.add(propertyKey);
@@ -88,11 +89,11 @@ export const notIdempotent = <Notebook>(
  * not be stored in the stored_notebook_cell table in the database.
  */
 export const dontStoreInDB = <Notebook>(
-  cells: Set<nb.NotebookCellID<Notebook>>,
+  cells: Set<chainNB.NotebookCellID<Notebook>>,
 ) => {
   return (
     _target: SQLa.SqlNotebook<Any>,
-    propertyKey: nb.NotebookCellID<Notebook>,
+    propertyKey: chainNB.NotebookCellID<Notebook>,
     _descriptor: PropertyDescriptor,
   ) => {
     cells.add(propertyKey);
@@ -616,7 +617,7 @@ export class MutationSqlNotebook<
   }
 
   async SQLPageSeedDML() {
-    const kernel = nb.ObservableKernel.create(SQLPageNotebook.prototype);
+    const kernel = chainNB.ObservableKernel.create(SQLPageNotebook.prototype);
     const { universal: um } = this.nbh.models;
     const ctx = um.modelsGovn.sqlEmitContext<EmitContext>();
 
@@ -835,27 +836,54 @@ export class PolyglotSqlNotebook<
     super();
   }
 
-  async postProcessFsContent(
-    candidatesSupplier: () =>
-      | Promise<{ fs_content_id: string; content: string }[]>
-      | { fs_content_id: string; content: string }[],
-  ) {
-    const candidates = await candidatesSupplier();
-    return {
-      SQL: (ctx: EmitContext) => {
-        const { quotedLiteral } = ctx.sqlTextEmitOptions;
-        const updatedFM: string[] = [];
-        for (const ufm of candidates) {
-          if (fm.test(ufm.content)) {
-            const parsedFM = fm.extract(ufm.content);
-            // deno-fmt-ignore
-            updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
-          }
+  insertFrontmatterCommand() {
+    const render = (sts: SQLa.SqlTextSupplier<EmitContext>) =>
+      sts.SQL(this.nbh.emitCtx);
+    type Row = { fs_content_id: string; content: string };
+    class Command {
+      #pics?: cmdNB.PipeInConsumerSupplier<Row[]>;
+
+      async insertDML() {
+        let SQL: SQLa.SqlTextSupplier<EmitContext> | undefined;
+        if (this.#pics) {
+          await this.#pics({
+            // deno-lint-ignore require-await
+            accept: async (shape) => {
+              SQL = {
+                SQL: (ctx: EmitContext) => {
+                  const { quotedLiteral } = ctx.sqlTextEmitOptions;
+                  const updatedFM: string[] = [];
+                  for (const ufm of shape) {
+                    if (fm.test(ufm.content)) {
+                      const parsedFM = fm.extract(ufm.content);
+                      // deno-fmt-ignore
+                      updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
+                    }
+                  }
+                  // deno-fmt-ignore
+                  return updatedFM.join("\n");
+                },
+              };
+            },
+            // deno-lint-ignore require-await
+            error: async (errMsg, _error) => {
+              SQL = {
+                SQL: () => `-- this.#candidates is undefined [${errMsg}]`,
+              };
+            },
+          });
         }
-        // deno-fmt-ignore
-        return updatedFM.join("\n");
-      },
-    };
+        return SQLa.RenderSqlCommand.renderSQL(render, {
+          SQL: SQL ? [SQL] : undefined,
+        });
+      }
+
+      jsonIn(pics: cmdNB.PipeInConsumerSupplier<Row[]>) {
+        this.#pics = pics;
+        return this;
+      }
+    }
+    return new Command();
   }
 }
 

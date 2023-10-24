@@ -91,7 +91,8 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
-        .json<{ column1: string; column2: number }[]>();
+        .json(new mod.ValueCell<{ column1: string; column2: number }[]>())
+        .value();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);
@@ -110,7 +111,8 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
-        .json<{ column1: string; column2: number }[]>();
+        .json(new mod.ValueCell<{ column1: string; column2: number }[]>())
+        .value();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);

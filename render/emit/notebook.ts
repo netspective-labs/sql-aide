@@ -13,7 +13,7 @@ import * as s from "./sql.ts";
  */
 export class RenderSqlCommand<Context extends s.SqlEmitContext> {
   #sqlTextSuppliers: s.SqlTextSupplier<Context>[] = [];
-  #pipeInSuppliers?: cmdNB.PipeInWriterSupplier<Uint8Array>[];
+  #pipeInRawSuppliers?: cmdNB.PipeInRawWriterSupplier<Uint8Array>[];
 
   constructor(
     readonly render: (sts: s.SqlTextSupplier<Context>) => string,
@@ -30,23 +30,23 @@ export class RenderSqlCommand<Context extends s.SqlEmitContext> {
     return this;
   }
 
-  pipeIn(stdInSupplier: cmdNB.PipeInWriterSupplier<Uint8Array>) {
-    if (this.#pipeInSuppliers === undefined) this.#pipeInSuppliers = [];
-    this.#pipeInSuppliers.push(stdInSupplier);
+  pipeInRaw(pirws: cmdNB.PipeInRawWriterSupplier<Uint8Array>) {
+    if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
+    this.#pipeInRawSuppliers.push(pirws);
     return this;
   }
 
-  pipe<NextAction extends cmdNB.PipeInSupplier<NextAction>>(
+  pipe<NextAction extends cmdNB.PipeInRawSupplier<NextAction>>(
     action: NextAction,
   ) {
-    const sis = cmdNB.stdinSupplierFactory(
+    const sis = cmdNB.pipeInRawSupplierFactory(
       this.#sqlTextSuppliers.map((sts) => this.render(sts)),
       {
         identity: this.options?.identity,
-        pipeInSuppliers: this.#pipeInSuppliers,
+        pipeInRawSuppliers: this.#pipeInRawSuppliers,
       },
     );
-    return action.pipeIn(sis);
+    return action.pipeInRaw(sis);
   }
 
   static renderSQL<Context extends s.SqlEmitContext>(

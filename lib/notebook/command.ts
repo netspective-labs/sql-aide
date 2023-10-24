@@ -8,36 +8,62 @@ import {
 type Any = any;
 
 /**
- * Represents an object capable of writing data, possibly asynchronously.
- * The writer can write chunks of data of type `W`, which can be any type.
+ * Represents an object capable of writing unstructured data, possibly
+ * asynchronously. The writer can write chunks of data of type `W`,
+ * which can be any type but is typically a Uint8Array.
  *
  * @template W - The type of data chunk that the writer can handle.
  */
-export type PipeInWriter<W = Any> = { write(chunk: W): Promise<void> | void };
+export type PipeInRawWriter<W = Any> = {
+  write(chunk: W): Promise<void>;
+};
 
 /**
- * A supplier function that provides a `PipeInWriter` instance to handle
+ * A supplier function that provides a `PipeInRawWriter` instance to handle
  * input (often for piping purposes). It is expected to complete a side
  * effect, such as writing data, and may do so asynchronously.
  *
- * @template W - The type of data chunk that the corresponding `PipeInWriter` can handle.
+ * @template W - The type of data chunk that the corresponding `PipeInRawWriter` can handle.
  */
-export type PipeInWriterSupplier<W = Any> = (
-  stdin: PipeInWriter<W>,
+export type PipeInRawWriterSupplier<W = Any> = (
+  stdin: PipeInRawWriter<W>,
 ) => Promise<void> | void;
 
 /**
- * Represents an object capable of receiving a `PipeInWriterSupplier` and
+ * Represents an object capable of receiving a `PipeInRawWriterSupplier` and
  * using it to supply data. This is typically part of a piping operation
- * where data flows from one command to another. The method `pipeIn` is
+ * where data flows from one command to another. The method `pipeInRaw` is
  * used to connect the supplier in the pipeline.
  *
  * @template NextCell - The type of the next step or stage in the pipeline
  * following the current operation, allowing for chaining of operations.
  */
-export type PipeInSupplier<NextCell> = {
-  pipeIn(stdInSupplier: PipeInWriterSupplier<Uint8Array>): NextCell;
+export type PipeInRawSupplier<NextCell> = {
+  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>): NextCell;
 };
+
+/**
+ * Represents an object capable of writing structured data, possibly
+ * asynchronously. The consumer can accept chunks of data of type `Shape`,
+ * which can be any type.
+ *
+ * @template Shape - The type of structured data that the consumer can accept.
+ */
+export type PipeInConsumer<Shape> = {
+  accept(shape: Shape): Promise<void>;
+  error?(message: string, error?: Error): Promise<void>;
+};
+
+/**
+ * A supplier function that provides a `PipeInConsumer` instance to handle
+ * input (for structured piping purposes). It is expected to complete a side
+ * effect, providing data to a consumer, and may do so asynchronously.
+ *
+ * @template W - The type of data chunk that the corresponding `PipeInRawWriter` can handle.
+ */
+export type PipeInConsumerSupplier<Shape> = (
+  consumer: PipeInConsumer<Shape>,
+) => Promise<void> | void;
 
 /**
  * Factory function to create a supplier capable of writing both piped data
@@ -50,25 +76,25 @@ export type PipeInSupplier<NextCell> = {
  * each can be a Uint8Array or synchronous text supplier, representing the data to write to `stdin`.
  * @param options - Optional parameters to control logging and identify the operation.
  * @param options.identity - Identifier for the logging source, default is "stdinSupplier".
- * @param options.pipeInSuppliers - Suppliers for data that comes
+ * @param options.pipeInRawSuppliers - Suppliers for data that comes
  * from the output of previous commands in the pipeline.
  * @param options.logger - Logger instance for logging debug information.
- * @returns ssynchronous function that takes a `PipeInWriter` for `stdin` and handles the writing operation,
+ * @returns ssynchronous function that takes a `PipeInRawWriter` for `stdin` and handles the writing operation,
  * including both piped data and direct content.
  */
-export const stdinSupplierFactory = (
+export const pipeInRawSupplierFactory = (
   content: (Uint8Array | FlexibleTextSupplierSync)[],
   options?: {
     readonly identity?: string;
-    readonly pipeInSuppliers?: PipeInWriterSupplier<Uint8Array>[];
+    readonly pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
     readonly logger?: l.Logger;
   },
 ) => {
-  return async (stdin: PipeInWriter<Uint8Array>) => {
+  return async (stdin: PipeInRawWriter<Uint8Array>) => {
     // this is usually the result of a pipe from a previous command so grab
     // that output first
-    if (options?.pipeInSuppliers) {
-      for (const pi of options.pipeInSuppliers) {
+    if (options?.pipeInRawSuppliers) {
+      for (const pi of options.pipeInRawSuppliers) {
         await pi(stdin);
       }
     }
@@ -100,6 +126,42 @@ export const stdinSupplierFactory = (
     }
   };
 };
+
+// pass this as a NextAction into .json() if you just want to consume the JSON
+// and not send it anywhere else
+export class ValueCell<Shape> {
+  #pics?: PipeInConsumerSupplier<Shape>;
+  #shape?: Shape;
+  #errMsg?: string;
+  #error?: Error;
+
+  async value() {
+    if (this.#pics) {
+      await this.#pics({
+        // deno-lint-ignore require-await
+        accept: async (shape) => {
+          this.#shape = shape;
+        },
+        // deno-lint-ignore require-await
+        error: async (errMsg, error) => {
+          this.#errMsg = errMsg;
+          this.#error = error;
+        },
+      });
+    }
+    return this.#shape;
+  }
+
+  // deno-lint-ignore require-await
+  async error() {
+    return [this.#errMsg, this.#error];
+  }
+
+  jsonIn(pics: PipeInConsumerSupplier<Shape>) {
+    this.#pics = pics;
+    return this;
+  }
+}
 
 /**
  * Creates a `spawn` function capable of executing a command or process.
@@ -138,7 +200,7 @@ export function spawnable(
 ) {
   return async function spawn(
     argsSupplier: FlexibleTextSupplierSync,
-    stdinSupplier?: PipeInWriterSupplier<Uint8Array>,
+    stdinSupplier?: PipeInRawWriterSupplier<Uint8Array>,
     logger?: l.Logger,
   ) {
     const args = flexibleTextList(argsSupplier);
@@ -189,7 +251,7 @@ export function spawnable(
 export class ContentCell {
   #logger?: l.Logger;
   #content: (Uint8Array | FlexibleTextSupplierSync)[] = [];
-  #pipeInSuppliers?: PipeInWriterSupplier<Uint8Array>[];
+  #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
 
   constructor(
     readonly options?: {
@@ -214,14 +276,15 @@ export class ContentCell {
   }
 
   async text() {
-    const sis = stdinSupplierFactory(this.#content, {
+    const sis = pipeInRawSupplierFactory(this.#content, {
       identity: this.options?.identity,
-      pipeInSuppliers: this.#pipeInSuppliers,
+      pipeInRawSuppliers: this.#pipeInRawSuppliers,
       logger: this.#logger,
     });
     const buffer: Uint8Array[] = [];
     await sis({
-      write: (content) => {
+      // deno-lint-ignore require-await
+      write: async (content) => {
         buffer.push(content);
       },
     });
@@ -230,13 +293,32 @@ export class ContentCell {
     return strings.join();
   }
 
-  pipe<NextAction extends PipeInSupplier<NextAction>>(action: NextAction) {
-    const sis = stdinSupplierFactory(this.#content, {
+  pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
+    const sis = pipeInRawSupplierFactory(this.#content, {
       identity: this.options?.identity,
-      pipeInSuppliers: this.#pipeInSuppliers,
+      pipeInRawSuppliers: this.#pipeInRawSuppliers,
       logger: this.#logger,
     });
-    return action.pipeIn(sis);
+    return action.pipeInRaw(sis);
+  }
+
+  json<
+    Shape,
+    NextAction extends {
+      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
+    },
+  >(action: NextAction) {
+    return action.jsonIn(async (consumer) => {
+      try {
+        await consumer.accept(JSON.parse(await this.text()) as Shape);
+      } catch (err) {
+        if (consumer.error) {
+          await consumer.error(`ContentCell.json() error: ${err.message}`, err);
+        } else {
+          throw err;
+        }
+      }
+    });
   }
 
   static content(options?: ConstructorParameters<typeof ContentCell>[0]) {
@@ -293,7 +375,7 @@ export class SpawnableProcessCell {
   #processLogger?: l.Logger;
   #argsSupplier?: FlexibleTextSupplierSync;
   #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
-  #pipeInSuppliers?: PipeInWriterSupplier<Uint8Array>[];
+  #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
 
   constructor(
     readonly process: ReturnType<typeof spawnable>,
@@ -327,9 +409,9 @@ export class SpawnableProcessCell {
     return this;
   }
 
-  pipeIn(stdInSupplier: PipeInWriterSupplier<Uint8Array>) {
-    if (this.#pipeInSuppliers === undefined) this.#pipeInSuppliers = [];
-    this.#pipeInSuppliers.push(stdInSupplier);
+  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>) {
+    if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
+    this.#pipeInRawSuppliers.push(pirws);
     return this;
   }
 
@@ -337,9 +419,9 @@ export class SpawnableProcessCell {
     try {
       return await this.process(
         argsSupplier ?? this.#argsSupplier ?? [],
-        stdinSupplierFactory(this.#stdinSuppliers, {
+        pipeInRawSupplierFactory(this.#stdinSuppliers, {
           identity: this.options?.identity,
-          pipeInSuppliers: this.#pipeInSuppliers,
+          pipeInRawSuppliers: this.#pipeInRawSuppliers,
           logger: this.#stdinLogger,
         }),
         this.#processLogger,
@@ -353,25 +435,48 @@ export class SpawnableProcessCell {
     return new TextDecoder().decode((await this.spawn(argsSupplier)).stdout);
   }
 
-  /**
-   * Send all the text given via this.stdin() as one big string to the process.
-   * @returns result of STDOUT of process as JSON object
-   */
-  async json<Shape>(argsSupplier?: FlexibleTextSupplierSync) {
-    const sr = await this.spawn(argsSupplier);
-    try {
-      if (sr.code == 0) {
-        return JSON.parse(new TextDecoder().decode(sr.stdout)) as Shape;
-      }
-    } catch (err) {
-      throw new SpawnableProcessJsonError(err, this, sr);
-    }
-  }
-
-  pipe<NextAction extends PipeInSupplier<NextAction>>(action: NextAction) {
-    return action.pipeIn(async (writer) => {
+  pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
+    return action.pipeInRaw(async (writer) => {
       const sr = await this.spawn();
       await writer.write(sr.stdout);
+      // TODO: what do we do if sr.code != 0?
+      // TODO: do what we in json()?
+    });
+  }
+
+  json<
+    Shape,
+    NextAction extends {
+      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
+    },
+  >(action: NextAction, argsSupplier?: FlexibleTextSupplierSync) {
+    return action.jsonIn(async (consumer) => {
+      const sr = await this.spawn(argsSupplier);
+      try {
+        if (sr.code == 0) {
+          await consumer.accept(
+            JSON.parse(new TextDecoder().decode(sr.stdout)),
+          );
+        } else {
+          const err = new SpawnableProcessCellError(
+            new Error(
+              `SpawnableProcessCell.json() error: non-zero spawn result: ${sr.code}`,
+            ),
+            this,
+          );
+          await consumer.error?.(err.message, err);
+        }
+      } catch (err) {
+        const spejErr = new SpawnableProcessJsonError(err, this, sr);
+        if (consumer.error) {
+          await consumer.error(
+            `SpawnableProcessCell.json() error: ${err.message}`,
+            spejErr,
+          );
+        } else {
+          throw spejErr;
+        }
+      }
     });
   }
 
@@ -452,12 +557,16 @@ export class SqliteCell extends SpawnableProcessCell {
     return await super.spawn(argsSupplier ?? [this.#filename]);
   }
 
-  /**
-   * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
-   * @returns result of STDOUT of sqlite3 shell as JSON object
-   */
-  async json<Shape>(argsSupplier?: FlexibleTextSupplierSync) {
-    return await super.json<Shape>(argsSupplier ?? [this.#filename, "--json"]);
+  json<
+    Shape,
+    NextAction extends {
+      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
+    },
+  >(action: NextAction, argsSupplier?: FlexibleTextSupplierSync) {
+    return super.json<Shape, NextAction>(
+      action,
+      argsSupplier ?? [this.#filename, "--json"],
+    );
   }
 
   static sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {
