@@ -2,6 +2,19 @@ import { testingAsserts as ta } from "./deps-test.ts";
 import { unindentWhitespace as uws } from "../universal/whitespace.ts";
 import * as mod from "./command.ts";
 
+Deno.test(`Command`, async (tc) => {
+  await tc.step(
+    `transformed content`,
+    async () => {
+      const json = await mod.content()
+        .content(`{ "isJSON": true }`)
+        .pipe(mod.transformJSON<{ isJSON: true }>())
+        .json();
+      ta.assertEquals(json.isJSON, true);
+    },
+  );
+});
+
 Deno.test(`SpawnableProcessCell`, async (tc) => {
   await tc.step(
     `untyped sqlite3 spawnable process with piped content`,
@@ -9,7 +22,7 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
       const p = await mod.content()
         .content("bad sql")
         .pipe(mod.process(mod.spawnable("sqlite3")))
-        .spawn();
+        .execute();
       ta.assertEquals(p.code, 1);
       ta.assert(
         new TextDecoder().decode(p.stderr).startsWith(
@@ -24,7 +37,7 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
     async () => {
       const p = await mod.process(mod.spawnable("sqlite3"))
         .stdin("bad sql")
-        .spawn();
+        .execute();
       ta.assertEquals(p.code, 1);
       ta.assert(
         new TextDecoder().decode(p.stderr).startsWith(
@@ -45,7 +58,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   await tc.step(`create in memory should fail`, async () => {
     const result = await mod.sqlite3({
       sqlSupplier: `bad SQL`,
-    }).spawn();
+    }).execute();
     ta.assertEquals(result.code, 1);
     ta.assert(
       new TextDecoder().decode(result.stderr).startsWith(
@@ -57,7 +70,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
   await tc.step(`create in memory should succeed`, async () => {
     const result = await mod.sqlite3().SQL(
       syntheticSqlDDL,
-    ).spawn();
+    ).execute();
     ta.assertEquals(result.code, 0);
   });
 
@@ -75,7 +88,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
         insert into synthetic_table VALUES ('test', 1);
         select count(*) from synthetic_table;
       `),
-        ).spawn();
+        ).execute();
       ta.assertEquals(finalResult.code, 0);
       ta.assertEquals(finalResult.stdout, new TextEncoder().encode("1\n"));
     },
@@ -91,8 +104,9 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
-        .json(new mod.ValueCell<{ column1: string; column2: number }[]>())
-        .value();
+        .outputJSON()
+        .pipe(mod.transformJSON<{ column1: string; column2: number }[]>())
+        .json();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);
@@ -107,12 +121,12 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
       const json = await mod.process(mod.spawnable("sqlite3"))
         .stdin(syntheticSqlDDL)
         .stdin("\n.dump")
-        .pipe(mod.sqlite3())
+        .pipe(mod.sqlite3({ outputJSON: true }))
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
-        .json(new mod.ValueCell<{ column1: string; column2: number }[]>())
-        .value();
+        .pipe(mod.transformJSON<{ column1: string; column2: number }[]>())
+        .json();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);

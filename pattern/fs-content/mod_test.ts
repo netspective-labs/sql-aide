@@ -32,7 +32,7 @@ Deno.test("migration and typical mutations", async () => {
   const sr = await renderSQL()
     .SQL(sql)
     .pipe(sqlite3())
-    .spawn();
+    .execute();
   ta.assertEquals(sr.code, 0);
 });
 

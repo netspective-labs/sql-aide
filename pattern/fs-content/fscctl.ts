@@ -109,19 +109,21 @@ async function CLI() {
       await sno.nbh.renderSqlCmd()
         .SQL(initSQL)
         .pipe(sqlite3())
-        .spawn();
+        .execute();
 
       // now use the data stored in the database to extract content and do what
       // is only possible in Deno (SQLite does not have frontmatter extensions)
       const fmInsertDML = await sno.nbh.renderSqlCmd()
         .SQL(sno.queryNB.frontmatterCandidates())
         .pipe(sqlite3())
-        .json(sno.polyglotNB.insertFrontmatterCommand())
+        .outputJSON()
+        .pipe(cmdNB.transformJSON())
+        .pipe(sno.polyglotNB.insertFrontmatterCommand())
         .insertDML();
 
       // now execute insert DML in the database
       // TODO: figure out how to fix sync/async issue so it can be done as one pipeline
-      await fmInsertDML.pipe(sqlite3()).spawn();
+      await fmInsertDML.pipe(sqlite3()).execute();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())

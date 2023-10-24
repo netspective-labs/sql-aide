@@ -127,6 +127,65 @@ export const pipeInRawSupplierFactory = (
   };
 };
 
+/**
+ * Convert a set of PipeInRawWriterSupplier<Uint8Array>[] instances to a single
+ * string.
+ * @param pirs the function that will generate incoming pipe data
+ * @returns string representation of all the items in pirs
+ */
+export async function pipeInRawSuppliersText(
+  pirs: ReturnType<typeof pipeInRawSupplierFactory>,
+) {
+  const buffer: Uint8Array[] = [];
+  await pirs({
+    // deno-lint-ignore require-await
+    write: async (content) => {
+      buffer.push(content);
+    },
+  });
+  const td = new TextDecoder();
+  const strings = buffer.map((b) => td.decode(b));
+  return strings.join();
+}
+
+export class TransformJsonCell<Shape> {
+  #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
+
+  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>) {
+    if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
+    this.#pipeInRawSuppliers.push(pirws);
+    return this;
+  }
+
+  async json() {
+    const text = await pipeInRawSuppliersText(
+      pipeInRawSupplierFactory([], {
+        pipeInRawSuppliers: this.#pipeInRawSuppliers,
+      }),
+    );
+    return JSON.parse(text) as Shape;
+  }
+
+  pipe<
+    NextAction extends {
+      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
+    },
+  >(action: NextAction) {
+    return action.jsonIn(async (consumer) => {
+      const text = await pipeInRawSuppliersText(
+        pipeInRawSupplierFactory([], {
+          pipeInRawSuppliers: this.#pipeInRawSuppliers,
+        }),
+      );
+      await consumer.accept(JSON.parse(text));
+    });
+  }
+
+  static transformJSON<Shape>() {
+    return new TransformJsonCell<Shape>();
+  }
+}
+
 // pass this as a NextAction into .json() if you just want to consume the JSON
 // and not send it anywhere else
 export class ValueCell<Shape> {
@@ -276,21 +335,13 @@ export class ContentCell {
   }
 
   async text() {
-    const sis = pipeInRawSupplierFactory(this.#content, {
-      identity: this.options?.identity,
-      pipeInRawSuppliers: this.#pipeInRawSuppliers,
-      logger: this.#logger,
-    });
-    const buffer: Uint8Array[] = [];
-    await sis({
-      // deno-lint-ignore require-await
-      write: async (content) => {
-        buffer.push(content);
-      },
-    });
-    const td = new TextDecoder();
-    const strings = buffer.map((b) => td.decode(b));
-    return strings.join();
+    return await pipeInRawSuppliersText(
+      pipeInRawSupplierFactory(this.#content, {
+        identity: this.options?.identity,
+        pipeInRawSuppliers: this.#pipeInRawSuppliers,
+        logger: this.#logger,
+      }),
+    );
   }
 
   pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
@@ -300,25 +351,6 @@ export class ContentCell {
       logger: this.#logger,
     });
     return action.pipeInRaw(sis);
-  }
-
-  json<
-    Shape,
-    NextAction extends {
-      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
-    },
-  >(action: NextAction) {
-    return action.jsonIn(async (consumer) => {
-      try {
-        await consumer.accept(JSON.parse(await this.text()) as Shape);
-      } catch (err) {
-        if (consumer.error) {
-          await consumer.error(`ContentCell.json() error: ${err.message}`, err);
-        } else {
-          throw err;
-        }
-      }
-    });
   }
 
   static content(options?: ConstructorParameters<typeof ContentCell>[0]) {
@@ -415,7 +447,7 @@ export class SpawnableProcessCell {
     return this;
   }
 
-  async spawn(argsSupplier?: FlexibleTextSupplierSync) {
+  async execute(argsSupplier?: FlexibleTextSupplierSync) {
     try {
       return await this.process(
         argsSupplier ?? this.#argsSupplier ?? [],
@@ -432,51 +464,15 @@ export class SpawnableProcessCell {
   }
 
   async text(argsSupplier?: FlexibleTextSupplierSync) {
-    return new TextDecoder().decode((await this.spawn(argsSupplier)).stdout);
+    return new TextDecoder().decode((await this.execute(argsSupplier)).stdout);
   }
 
   pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
     return action.pipeInRaw(async (writer) => {
-      const sr = await this.spawn();
+      const sr = await this.execute();
       await writer.write(sr.stdout);
       // TODO: what do we do if sr.code != 0?
       // TODO: do what we in json()?
-    });
-  }
-
-  json<
-    Shape,
-    NextAction extends {
-      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
-    },
-  >(action: NextAction, argsSupplier?: FlexibleTextSupplierSync) {
-    return action.jsonIn(async (consumer) => {
-      const sr = await this.spawn(argsSupplier);
-      try {
-        if (sr.code == 0) {
-          await consumer.accept(
-            JSON.parse(new TextDecoder().decode(sr.stdout)),
-          );
-        } else {
-          const err = new SpawnableProcessCellError(
-            new Error(
-              `SpawnableProcessCell.json() error: non-zero spawn result: ${sr.code}`,
-            ),
-            this,
-          );
-          await consumer.error?.(err.message, err);
-        }
-      } catch (err) {
-        const spejErr = new SpawnableProcessJsonError(err, this, sr);
-        if (consumer.error) {
-          await consumer.error(
-            `SpawnableProcessCell.json() error: ${err.message}`,
-            spejErr,
-          );
-        } else {
-          throw spejErr;
-        }
-      }
     });
   }
 
@@ -499,6 +495,7 @@ export class SqliteCell extends SpawnableProcessCell {
   static readonly COMMAND = "sqlite3";
   static readonly sqliteSP = spawnable(SqliteCell.COMMAND);
 
+  #extraArgs: string[] = [];
   #filename = ":memory:";
 
   constructor(
@@ -507,6 +504,7 @@ export class SqliteCell extends SpawnableProcessCell {
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
       readonly sqlLogger?: l.Logger;
       readonly sqlite3Logger?: l.Logger;
+      readonly outputJSON?: boolean;
     },
   ) {
     super(SqliteCell.sqliteSP, {
@@ -516,6 +514,7 @@ export class SqliteCell extends SpawnableProcessCell {
     });
     if (options?.filename) this.#filename = options.filename;
     if (options?.sqlSupplier) this.SQL(options.sqlSupplier);
+    if (options?.outputJSON) this.outputJSON();
   }
 
   sqlLogger(logger: l.Logger) {
@@ -530,6 +529,11 @@ export class SqliteCell extends SpawnableProcessCell {
 
   filename(filename: string) {
     this.#filename = filename;
+    return this;
+  }
+
+  outputJSON() {
+    this.#extraArgs.push("--json");
     return this;
   }
 
@@ -553,19 +557,9 @@ export class SqliteCell extends SpawnableProcessCell {
    * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
    * @returns result of Deno.command.spawn and other properties
    */
-  async spawn(argsSupplier?: FlexibleTextSupplierSync) {
-    return await super.spawn(argsSupplier ?? [this.#filename]);
-  }
-
-  json<
-    Shape,
-    NextAction extends {
-      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
-    },
-  >(action: NextAction, argsSupplier?: FlexibleTextSupplierSync) {
-    return super.json<Shape, NextAction>(
-      action,
-      argsSupplier ?? [this.#filename, "--json"],
+  async execute(argsSupplier?: FlexibleTextSupplierSync) {
+    return await super.execute(
+      argsSupplier ?? [this.#filename, ...this.#extraArgs],
     );
   }
 
@@ -574,6 +568,7 @@ export class SqliteCell extends SpawnableProcessCell {
   }
 }
 
+export const transformJSON = TransformJsonCell.transformJSON;
 export const content = ContentCell.content;
 export const process = SpawnableProcessCell.process;
 export const sqlite3 = SqliteCell.sqlite3;
