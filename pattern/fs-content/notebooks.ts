@@ -699,6 +699,10 @@ export class QuerySqlNotebook<
    */
   infoSchemaMarkdown() {
     return this.nbh.SQL`
+      -- TODO: https://github.com/lovasoa/SQLpage/discussions/109#discussioncomment-7359513
+      --       see the above for how to fix for SQLPage but figure out to use the same SQL
+      --       in and out of SQLPage (maybe do what Ophir said in discussion and create
+      --       custom output for SQLPage using componetns?)
       WITH TableInfo AS (
         SELECT
           m.tbl_name AS table_name,
@@ -707,7 +711,7 @@ export class QuerySqlNotebook<
           c."type" AS column_type,
           CASE WHEN c."notnull" THEN '*' ELSE '' END AS not_null,
           COALESCE(c.dflt_value, '') AS default_value,
-          COALESCE((SELECT pfkl.'table' || '.' || pfkl.'to' FROM pragma_foreign_key_list(m.tbl_name) AS pfkl WHERE pfkl.'from' = c.name), '') as fk_refs,
+          COALESCE((SELECT pfkl."table" || '.' || pfkl."to" FROM pragma_foreign_key_list(m.tbl_name) AS pfkl WHERE pfkl."from" = c.name), '') as fk_refs,
           ROW_NUMBER() OVER (PARTITION BY m.tbl_name ORDER BY c.cid) AS row_num
         FROM sqlite_master m JOIN pragma_table_info(m.tbl_name) c ON 1=1
         WHERE m.type = 'table'
@@ -745,7 +749,7 @@ export class QuerySqlNotebook<
           il.name
       )
       SELECT
-        markdown_output AS info_schema_markdown
+          markdown_output AS info_schema_markdown
       FROM
         (
           SELECT '## Tables' AS markdown_output
@@ -768,6 +772,8 @@ export class QuerySqlNotebook<
       );`;
   }
 
+  // TODO: use SQLa.select() with type-safety and see if it carries properly
+  // over to type-safe Command Pattern in pipelines
   frontmatterCandidates() {
     return this.nbh.SQL`
       SELECT fs_content_id, content

@@ -105,13 +105,16 @@ async function CLI() {
       const renderSQL = () =>
         SQLa.RenderSqlCommand.renderSQL((sts) => sts.SQL(sno.nbh.emitCtx));
 
-      // first scan all the files and use SQLite extensions to do what's possible in the DB
+      // first initialize all the SQL (create tables, etc.) in case it's a new
+      // database then scan all the files and use SQLite extensions to do what's
+      // possible in the DB (using fileio_ls, fileio_read, etc.)
       await renderSQL()
         .SQL(initSQL)
         .pipe(sqlite3())
         .spawn();
 
-      // now use the data stored in the database to extract content and do what is only possible in Deno
+      // now use the data stored in the database to extract content and do what
+      // is only possible in Deno (SQLite does not have frontmatter extensions)
       const fmInsertDML = await renderSQL()
         .SQL(sno.queryNB.frontmatterCandidates())
         .pipe(sqlite3())
