@@ -187,6 +187,12 @@ export class SqlNotebookHelpers<
     return SQLa.SQL<EmitContext>(this.templateState.ddlOptions);
   }
 
+  renderSqlCmd() {
+    return SQLa.RenderSqlCommand.renderSQL<EmitContext>((sts) =>
+      sts.SQL(this.emitCtx)
+    );
+  }
+
   // type-safe wrapper for all SQL that should not be treated as SQL statements
   // but as arbitrary text to send to the SQL stream
   sqlBehavior(
@@ -843,11 +849,15 @@ export class PolyglotSqlNotebook<
   }
 
   insertFrontmatterCommand() {
-    const render = (sts: SQLa.SqlTextSupplier<EmitContext>) =>
-      sts.SQL(this.nbh.emitCtx);
+    const renderSqlCmd = this.nbh.renderSqlCmd();
     type Row = { fs_content_id: string; content: string };
     class Command {
       #pics?: cmdNB.PipeInConsumerSupplier<Row[]>;
+
+      jsonIn(pics: cmdNB.PipeInConsumerSupplier<Row[]>) {
+        this.#pics = pics;
+        return this;
+      }
 
       async insertDML() {
         let SQL: SQLa.SqlTextSupplier<EmitContext> | undefined;
@@ -874,19 +884,17 @@ export class PolyglotSqlNotebook<
             // deno-lint-ignore require-await
             error: async (errMsg, _error) => {
               SQL = {
-                SQL: () => `-- this.#candidates is undefined [${errMsg}]`,
+                SQL: () =>
+                  `-- insertFrontmatterCommand candidates not available [${errMsg}]`,
               };
             },
           });
         }
-        return SQLa.RenderSqlCommand.renderSQL(render, {
-          SQL: SQL ? [SQL] : undefined,
-        });
-      }
-
-      jsonIn(pics: cmdNB.PipeInConsumerSupplier<Row[]>) {
-        this.#pics = pics;
-        return this;
+        return renderSqlCmd.SQL(
+          SQL ?? {
+            SQL: () => `-- insertFrontmatterCommand no SQL available`,
+          },
+        );
       }
     }
     return new Command();
