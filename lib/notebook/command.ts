@@ -8,6 +8,13 @@ import {
 type Any = any;
 
 /**
+ * Represents an object capable of being "executed" in order to product a result.
+ */
+export type ExecutableCell<ExecuteResult> = {
+  execute(): ExecuteResult;
+};
+
+/**
  * Represents an object capable of writing unstructured data, possibly
  * asynchronously. The writer can write chunks of data of type `W`,
  * which can be any type but is typically a Uint8Array.
@@ -35,11 +42,11 @@ export type PipeInRawWriterSupplier<W = Any> = (
  * where data flows from one command to another. The method `pipeInRaw` is
  * used to connect the supplier in the pipeline.
  *
- * @template NextCell - The type of the next step or stage in the pipeline
+ * @template ToCell - The type of the next step or stage in the pipeline
  * following the current operation, allowing for chaining of operations.
  */
-export type PipeInRawSupplier<NextCell> = {
-  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>): NextCell;
+export type PipeInRawSupplier<FromCell, ToCell> = {
+  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>, from: FromCell): ToCell;
 };
 
 /**
@@ -344,13 +351,15 @@ export class ContentCell {
     );
   }
 
-  pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
+  pipe<NextAction extends PipeInRawSupplier<typeof this, NextAction>>(
+    action: NextAction,
+  ) {
     const sis = pipeInRawSupplierFactory(this.#content, {
       identity: this.options?.identity,
       pipeInRawSuppliers: this.#pipeInRawSuppliers,
       logger: this.#logger,
     });
-    return action.pipeInRaw(sis);
+    return action.pipeInRaw(sis, this);
   }
 
   static content(options?: ConstructorParameters<typeof ContentCell>[0]) {
@@ -402,10 +411,11 @@ export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
  * command-line arguments, and output handling. The class supports chaining and composition paradigms, allowing
  * the construction of complex command pipelines and process workflows.
  */
-export class SpawnableProcessCell {
+export class SpawnableProcessCell
+  implements ExecutableCell<ReturnType<ReturnType<typeof spawnable>>> {
+  #suppliedArgs: string[] = [];
   #stdinLogger?: l.Logger;
   #processLogger?: l.Logger;
-  #argsSupplier?: FlexibleTextSupplierSync;
   #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
   #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
 
@@ -431,9 +441,13 @@ export class SpawnableProcessCell {
     return this;
   }
 
-  args(argsSupplier: FlexibleTextSupplierSync) {
-    this.#argsSupplier = argsSupplier;
+  args(...args: string[]) {
+    this.#suppliedArgs.push(...args);
     return this;
+  }
+
+  executeArgs() {
+    return this.#suppliedArgs;
   }
 
   stdin(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
@@ -447,10 +461,10 @@ export class SpawnableProcessCell {
     return this;
   }
 
-  async execute(argsSupplier?: FlexibleTextSupplierSync) {
+  async execute() {
     try {
       return await this.process(
-        argsSupplier ?? this.#argsSupplier ?? [],
+        this.executeArgs(),
         pipeInRawSupplierFactory(this.#stdinSuppliers, {
           identity: this.options?.identity,
           pipeInRawSuppliers: this.#pipeInRawSuppliers,
@@ -463,17 +477,19 @@ export class SpawnableProcessCell {
     }
   }
 
-  async text(argsSupplier?: FlexibleTextSupplierSync) {
-    return new TextDecoder().decode((await this.execute(argsSupplier)).stdout);
+  async text() {
+    return new TextDecoder().decode((await this.execute()).stdout);
   }
 
-  pipe<NextAction extends PipeInRawSupplier<NextAction>>(action: NextAction) {
+  pipe<NextAction extends PipeInRawSupplier<typeof this, NextAction>>(
+    action: NextAction,
+  ) {
     return action.pipeInRaw(async (writer) => {
       const sr = await this.execute();
       await writer.write(sr.stdout);
       // TODO: what do we do if sr.code != 0?
       // TODO: do what we in json()?
-    });
+    }, this);
   }
 
   static process(
@@ -495,7 +511,6 @@ export class SqliteCell extends SpawnableProcessCell {
   static readonly COMMAND = "sqlite3";
   static readonly sqliteSP = spawnable(SqliteCell.COMMAND);
 
-  #extraArgs: string[] = [];
   #filename = ":memory:";
 
   constructor(
@@ -533,7 +548,7 @@ export class SqliteCell extends SpawnableProcessCell {
   }
 
   outputJSON() {
-    this.#extraArgs.push("--json");
+    this.args("--json");
     return this;
   }
 
@@ -553,14 +568,8 @@ export class SqliteCell extends SpawnableProcessCell {
     return this;
   }
 
-  /**
-   * Send all the text given via this.SQL() as one big string to the sqlite3 shell.
-   * @returns result of Deno.command.spawn and other properties
-   */
-  async execute(argsSupplier?: FlexibleTextSupplierSync) {
-    return await super.execute(
-      argsSupplier ?? [this.#filename, ...this.#extraArgs],
-    );
+  executeArgs() {
+    return [this.#filename, ...super.executeArgs()];
   }
 
   static sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {

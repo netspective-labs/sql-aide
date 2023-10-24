@@ -36,7 +36,7 @@ export class RenderSqlCommand<Context extends s.SqlEmitContext> {
     return this;
   }
 
-  pipe<NextAction extends cmdNB.PipeInRawSupplier<NextAction>>(
+  pipe<NextAction extends cmdNB.PipeInRawSupplier<typeof this, NextAction>>(
     action: NextAction,
   ) {
     const sis = cmdNB.pipeInRawSupplierFactory(
@@ -46,7 +46,7 @@ export class RenderSqlCommand<Context extends s.SqlEmitContext> {
         pipeInRawSuppliers: this.#pipeInRawSuppliers,
       },
     );
-    return action.pipeInRaw(sis);
+    return action.pipeInRaw(sis, this);
   }
 
   static renderSQL<Context extends s.SqlEmitContext>(
