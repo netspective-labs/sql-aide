@@ -1,5 +1,4 @@
 import { stdLog as l } from "./deps.ts";
-
 import {
   flexibleTextList,
   FlexibleTextSupplierSync,
@@ -13,6 +12,13 @@ type Any = any;
 export type ExecutableCell<ExecuteResult> = {
   execute(): ExecuteResult;
 };
+
+export function isExecutableCell<ExecuteResult>(
+  cell: unknown,
+): cell is ExecutableCell<ExecuteResult> {
+  if (cell && typeof cell === "object" && "execute" in cell) return true;
+  return false;
+}
 
 /**
  * Represents an object capable of writing unstructured data, possibly
@@ -351,7 +357,7 @@ export class ContentCell {
     );
   }
 
-  pipe<NextAction extends PipeInRawSupplier<typeof this, NextAction>>(
+  pipe<NextAction extends PipeInRawSupplier<Any, NextAction>>(
     action: NextAction,
   ) {
     const sis = pipeInRawSupplierFactory(this.#content, {
@@ -455,7 +461,10 @@ export class SpawnableProcessCell
     return this;
   }
 
-  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>) {
+  pipeInRaw(
+    pirws: PipeInRawWriterSupplier<Uint8Array>,
+    _from: ExecutableCell<Any>,
+  ) {
     if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
     this.#pipeInRawSuppliers.push(pirws);
     return this;
@@ -481,7 +490,7 @@ export class SpawnableProcessCell
     return new TextDecoder().decode((await this.execute()).stdout);
   }
 
-  pipe<NextAction extends PipeInRawSupplier<typeof this, NextAction>>(
+  pipe<NextAction extends PipeInRawSupplier<Any, NextAction>>(
     action: NextAction,
   ) {
     return action.pipeInRaw(async (writer) => {

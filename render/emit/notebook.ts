@@ -2,6 +2,9 @@ import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
 import * as s from "./sql.ts";
 
+// deno-lint-ignore no-explicit-any
+type Any = any;
+
 /**
  * Represents a set of SQL in a command pipeline. Instances of
  * `RenderSqlCommandCell` carry SqlTextSupplier content, transform it to text,
@@ -36,7 +39,7 @@ export class RenderSqlCommand<Context extends s.SqlEmitContext> {
     return this;
   }
 
-  pipe<NextAction extends cmdNB.PipeInRawSupplier<typeof this, NextAction>>(
+  pipe<NextAction extends cmdNB.PipeInRawSupplier<Any, NextAction>>(
     action: NextAction,
   ) {
     const sis = cmdNB.pipeInRawSupplierFactory(
