@@ -119,13 +119,13 @@ Export the information schema as markdown:
 
 ```bash
 $ ./fscctl.ts notebook query infoSchemaOsQueryATCs | sqlite3 device-content.sqlite.db | jq
-$ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaOsQueryATCs'" | sqlite3 device-content.sqlite.db
+$ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaOsQueryATCs'" | sqlite3 device-content.sqlite.db | jq
 ```
 
 Export the information schema as osQuery ATC:
 
 ```bash
-$ ./fscctl.ts notebook query infoSchemaOsQueryATCs | sqlite3 device-content.sqlite.db > 
+$ ./fscctl.ts notebook query infoSchemaOsQueryATCs | sqlite3 device-content.sqlite.db
 $ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebook_cell where cell_name = 'infoSchemaMarkdown'" | sqlite3 device-content.sqlite.db
 ```
 
