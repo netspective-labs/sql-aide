@@ -13,15 +13,66 @@ Deno.test(`Command`, async (tc) => {
       ta.assertEquals(json.isJSON, true);
     },
   );
+
+  await tc.step(
+    `multiple pipes executing at the end`,
+    async () => {
+      const echo = mod.spawnable("echo");
+      const cat = mod.spawnable("cat");
+      const sr = await mod.process(echo)
+        .args(`first echo`)
+        .pipe(mod.process(cat))
+        .stdin("second cat\n")
+        .pipe(mod.process(cat))
+        .stdin("third cat")
+        .execute();
+      ta.assertEquals(
+        new TextDecoder().decode(sr.stdout),
+        `first echo\nsecond cat\nthird cat`,
+      );
+    },
+  );
 });
 
 Deno.test(`SpawnableProcessCell`, async (tc) => {
+  // spawnableSqlite3 can be safely reused
+  const spawnableSqlite3 = mod.spawnable("sqlite3");
+
+  await tc.step(
+    `untyped sqlite3 idemptency`,
+    async () => {
+      const sqlite3 = mod.content()
+        .content("bad sql") // prepare STDIN
+        .pipe(mod.process(spawnableSqlite3)); // use STDIN for sqlite3
+
+      ta.assertEquals(sqlite3.executionState(), "not-executed");
+      const p1 = await sqlite3.execute();
+      ta.assertEquals(sqlite3.executionState(), "executed");
+
+      ta.assertEquals(p1.code, 1);
+      ta.assert(
+        new TextDecoder().decode(p1.stderr).startsWith(
+          `Parse error near line 1: near "bad": syntax error`,
+        ),
+      );
+
+      // if sqlite3 is idempotent, then it will not run again but return previous result
+      const p2 = await sqlite3.execute();
+      ta.assertEquals(p2.code, 1);
+      ta.assert(
+        new TextDecoder().decode(p2.stderr).startsWith(
+          `Parse error near line 1: near "bad": syntax error`,
+        ),
+      );
+    },
+  );
+
   await tc.step(
     `untyped sqlite3 spawnable process with piped content`,
     async () => {
       const p = await mod.content()
         .content("bad sql")
-        .pipe(mod.process(mod.spawnable("sqlite3")))
+        .pipe(mod.process(spawnableSqlite3))
         .execute();
       ta.assertEquals(p.code, 1);
       ta.assert(
@@ -35,7 +86,7 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
   await tc.step(
     `untyped sqlite3 spawnable process with direct SQL`,
     async () => {
-      const p = await mod.process(mod.spawnable("sqlite3"))
+      const p = await mod.process(spawnableSqlite3)
         .stdin("bad sql")
         .execute();
       ta.assertEquals(p.code, 1);

@@ -8,14 +8,24 @@ type Any = any;
 
 /**
  * Represents an object capable of being "executed" in order to product a result.
+ * Executables should be idempotency-aware and should only execute once if their
+ * results are not idempotent unless force? is used.
  */
-export type ExecutableCell<ExecuteResult> = {
-  execute(): ExecuteResult;
+export type ExecutableCell<
+  ExecuteResult,
+  ExecuteState,
+> = {
+  readonly execute: (force?: boolean) => Promise<ExecuteResult>;
+  readonly executionState: () => ExecuteState;
+  readonly executedResult: () => ExecuteResult;
 };
 
-export function isExecutableCell<ExecuteResult>(
+export function isExecutableCell<
+  ExecuteResult,
+  State,
+>(
   cell: unknown,
-): cell is ExecutableCell<ExecuteResult> {
+): cell is ExecutableCell<ExecuteResult, State> {
   if (cell && typeof cell === "object" && "execute" in cell) return true;
   return false;
 }
@@ -290,6 +300,7 @@ export function spawnable(
     if (stdinSupplier) {
       const stdInWriter = child.stdin.getWriter();
       await stdinSupplier(stdInWriter);
+      await stdInWriter.ready;
       stdInWriter.close();
     }
 
@@ -307,6 +318,8 @@ export function spawnable(
         stderr,
       });
     }
+    // Ensure that the status of the child process does not block the Deno process from exiting.
+    child.unref();
     return { command: cmd, code, stdout, stderr };
   };
 }
@@ -417,13 +430,20 @@ export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
  * command-line arguments, and output handling. The class supports chaining and composition paradigms, allowing
  * the construction of complex command pipelines and process workflows.
  */
-export class SpawnableProcessCell
-  implements ExecutableCell<ReturnType<ReturnType<typeof spawnable>>> {
+export class SpawnableProcessCell implements
+  ExecutableCell<
+    Awaited<ReturnType<ReturnType<typeof spawnable>>>,
+    "not-executed" | "executed"
+  > {
   #suppliedArgs: string[] = [];
   #stdinLogger?: l.Logger;
   #processLogger?: l.Logger;
   #stdinSuppliers: (Uint8Array | FlexibleTextSupplierSync)[] = [];
+  #pipeInFrom?: ExecutableCell<Any, Any>[];
   #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
+
+  #executeState: "not-executed" | "executed" = "not-executed";
+  #executedResult?: Awaited<ReturnType<ReturnType<typeof spawnable>>>;
 
   constructor(
     readonly process: ReturnType<typeof spawnable>,
@@ -463,16 +483,47 @@ export class SpawnableProcessCell
 
   pipeInRaw(
     pirws: PipeInRawWriterSupplier<Uint8Array>,
-    _from: ExecutableCell<Any>,
+    from: ExecutableCell<Any, Any>,
   ) {
+    if (isExecutableCell(this.#pipeInFrom)) {
+      if (this.#pipeInFrom === undefined) this.#pipeInFrom = [];
+      this.#pipeInFrom.push(from);
+    }
+
     if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
     this.#pipeInRawSuppliers.push(pirws);
     return this;
   }
 
-  async execute() {
+  executionState() {
+    return this.#executeState;
+  }
+
+  executedResult() {
+    if (this.#executeState !== "executed") {
+      throw Error(
+        "Only call SpawnableProcessCell.executedResult if executionState() is 'executed'",
+      );
+    }
+    return this.#executedResult!;
+  }
+
+  async execute(force?: boolean) {
+    // we're idempotent so don't re-execute unless forced to
+    if (!force && this.executionState() == "executed") {
+      return this.executedResult();
+    }
+
+    // if we have some "from" pipes that have not run yet, do so now
+    if (this.#pipeInFrom && this.#pipeInFrom.length > 0) {
+      for (const from of this.#pipeInFrom) {
+        await from.execute(force);
+      }
+    }
+
+    // if we get to here we're "forcing" (overriding idempotency)
     try {
-      return await this.process(
+      this.#executedResult = await this.process(
         this.executeArgs(),
         pipeInRawSupplierFactory(this.#stdinSuppliers, {
           identity: this.options?.identity,
@@ -481,6 +532,8 @@ export class SpawnableProcessCell
         }),
         this.#processLogger,
       );
+      this.#executeState = "executed";
+      return this.#executedResult!;
     } catch (err) {
       throw new SpawnableProcessCellError(err, this, undefined);
     }
