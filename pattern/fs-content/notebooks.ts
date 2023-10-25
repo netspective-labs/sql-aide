@@ -1,7 +1,6 @@
-import { frontmatter as fm, ulid } from "./deps.ts";
+import { ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
 import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
-import * as cmdNB from "../../lib/notebook/command.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";
@@ -830,18 +829,6 @@ export class QuerySqlNotebook<
       );`;
   }
 
-  // TODO: use SQLa.select() with type-safety and see if it carries properly
-  // over to type-safe Command Pattern in pipelines
-  frontmatterCandidates() {
-    return this.nbh.SQL`
-      SELECT fs_content_id, content
-         FROM fs_content
-        WHERE (file_extn = '.md' OR file_extn = '.mdx')
-          AND content IS NOT NULL
-          AND content_fm_body_attrs IS NULL
-          AND frontmatter IS NULL;`;
-  }
-
   htmlAnchors() {
     // deno-fmt-ignore
     return this.nbh.SQL`
@@ -898,58 +885,6 @@ export class PolyglotSqlNotebook<
 > extends SQLa.SqlNotebook<EmitContext> {
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
-  }
-
-  insertFrontmatterCommand() {
-    const renderSqlCmd = this.nbh.renderSqlCmd();
-    type Row = { fs_content_id: string; content: string };
-    class Command {
-      #pics?: cmdNB.PipeInConsumerSupplier<Row[]>;
-
-      jsonIn(pics: cmdNB.PipeInConsumerSupplier<Row[]>) {
-        this.#pics = pics;
-        return this;
-      }
-
-      async insertDML() {
-        let SQL: SQLa.SqlTextSupplier<EmitContext> | undefined;
-        if (this.#pics) {
-          await this.#pics({
-            // deno-lint-ignore require-await
-            accept: async (shape) => {
-              SQL = {
-                SQL: (ctx: EmitContext) => {
-                  const { quotedLiteral } = ctx.sqlTextEmitOptions;
-                  const updatedFM: string[] = [];
-                  for (const ufm of shape) {
-                    if (fm.test(ufm.content)) {
-                      const parsedFM = fm.extract(ufm.content);
-                      // deno-fmt-ignore
-                      updatedFM.push(`UPDATE fs_content SET frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]}, content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]} where fs_content_id = '${ufm.fs_content_id}';`);
-                    }
-                  }
-                  // deno-fmt-ignore
-                  return updatedFM.join("\n");
-                },
-              };
-            },
-            // deno-lint-ignore require-await
-            error: async (errMsg, _error) => {
-              SQL = {
-                SQL: () =>
-                  `-- insertFrontmatterCommand candidates not available [${errMsg}]`,
-              };
-            },
-          });
-        }
-        return renderSqlCmd.SQL(
-          SQL ?? {
-            SQL: () => `-- insertFrontmatterCommand no SQL available`,
-          },
-        );
-      }
-    }
-    return new Command();
   }
 }
 

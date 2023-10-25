@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-sys
 
-import { cliffy, path } from "./deps.ts";
+import { cliffy, frontmatter as fm, path } from "./deps.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
 import * as nbooks from "./notebooks.ts";
 import * as SQLa from "../../render/mod.ts";
@@ -103,27 +103,47 @@ async function CLI() {
 
       const sqlite3 = () => cmdNB.sqlite3({ filename: sqliteDb });
 
-      // first initialize all the SQL (create tables, etc.) in case it's a new
-      // database then scan all the files and use SQLite extensions to do what's
-      // possible in the DB (using fileio_ls, fileio_read, etc.)
+      // - Pass 1 sends all the SQL DDL and creates tables and scans all the
+      //   files and use SQLite extensions to do what's possible in the DB
+      //   (using fileio_ls, fileio_read, etc.).
+      // - Pass 2 finds all frontmatter candidates, returning SQL result as
+      //   rows array and generates `UPDATE` SQL DML to update them.
+      // - Pass 3 executes the DML from Pass 2 which mutates the database.
+      // If you want to capture any SQL or spawn logs, use Command loggers.
+      // deno-fmt-ignore
       await sno.nbh.renderSqlCmd()
         .SQL(initSQL)
-        .pipe(sqlite3())
-        .execute();
-
-      // now use the data stored in the database to extract content and do what
-      // is only possible in Deno (SQLite does not have frontmatter extensions)
-      const fmInsertDML = await sno.nbh.renderSqlCmd()
-        .SQL(sno.queryNB.frontmatterCandidates())
-        .pipe(sqlite3())
-        .outputJSON()
-        .pipe(cmdNB.transformJSON())
-        .pipe(sno.polyglotNB.insertFrontmatterCommand())
-        .insertDML();
-
-      // now execute insert DML in the database
-      // TODO: figure out how to fix sync/async issue so it can be done as one pipeline
-      await fmInsertDML.pipe(sqlite3()).execute();
+        .pipe(/* pass 1 */ sqlite3())
+          .pipe(/* pass 2 */ sqlite3())
+          .SQL(`SELECT fs_content_id, content
+                  FROM fs_content
+                WHERE (file_extn = '.md' OR file_extn = '.mdx')
+                  AND content IS NOT NULL
+                  AND content_fm_body_attrs IS NULL
+                  AND frontmatter IS NULL;`)
+          .outputJSON() // passes "--json" to * pass 2 */ SQLite
+          .pipe(/* pass 3 */ sqlite3(), {
+            // safeStdIn will be called with STDOUT from previous SQL statement;
+            // we will take result of `SELECT fs_content_id, content...` and
+            // convert it JSON then loop through each row to prepare SQL
+            // DML (`UPDATE`) to set the frontmatter. The function prepares the
+            // SQL and hands it to another SQLite shell for execution.
+            // deno-lint-ignore require-await
+            safeStdIn: async (sc, writer) => {
+              const { quotedLiteral } = sno.nbh.emitCtx.sqlTextEmitOptions;
+              const te = new TextEncoder();
+              sc.json<{ fs_content_id: string; content: string }[]>().forEach((fmc) => {
+                if (fm.test(fmc.content)) {
+                  const parsedFM = fm.extract(fmc.content);
+                  writer.write(te.encode(
+                    `UPDATE fs_content SET
+                        frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
+                        content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
+                     WHERE fs_content_id = '${fmc.fs_content_id}';\n`));
+                }
+              });
+            },
+          }).execute();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())

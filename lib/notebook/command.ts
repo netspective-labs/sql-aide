@@ -15,7 +15,13 @@ export type ExecutableCell<
   ExecuteResult,
   ExecuteState,
 > = {
-  readonly execute: (force?: boolean) => Promise<ExecuteResult>;
+  readonly execute: (
+    options?: {
+      readonly force?: boolean;
+      readonly onSuccess?: (er: ExecuteResult) => Promise<ExecuteResult>;
+      readonly onError?: (err: Error) => Promise<ExecuteResult>;
+    },
+  ) => Promise<ExecuteResult>;
   readonly executionState: () => ExecuteState;
   readonly executedResult: () => ExecuteResult;
 };
@@ -61,32 +67,12 @@ export type PipeInRawWriterSupplier<W = Any> = (
  * @template ToCell - The type of the next step or stage in the pipeline
  * following the current operation, allowing for chaining of operations.
  */
-export type PipeInRawSupplier<FromCell, ToCell> = {
+export type PipeInRawSupplier<
+  FromCell extends ExecutableCell<Any, Any>,
+  ToCell,
+> = {
   pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>, from: FromCell): ToCell;
 };
-
-/**
- * Represents an object capable of writing structured data, possibly
- * asynchronously. The consumer can accept chunks of data of type `Shape`,
- * which can be any type.
- *
- * @template Shape - The type of structured data that the consumer can accept.
- */
-export type PipeInConsumer<Shape> = {
-  accept(shape: Shape): Promise<void>;
-  error?(message: string, error?: Error): Promise<void>;
-};
-
-/**
- * A supplier function that provides a `PipeInConsumer` instance to handle
- * input (for structured piping purposes). It is expected to complete a side
- * effect, providing data to a consumer, and may do so asynchronously.
- *
- * @template W - The type of data chunk that the corresponding `PipeInRawWriter` can handle.
- */
-export type PipeInConsumerSupplier<Shape> = (
-  consumer: PipeInConsumer<Shape>,
-) => Promise<void> | void;
 
 /**
  * Factory function to create a supplier capable of writing both piped data
@@ -171,80 +157,6 @@ export async function pipeInRawSuppliersText(
   return strings.join();
 }
 
-export class TransformJsonCell<Shape> {
-  #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
-
-  pipeInRaw(pirws: PipeInRawWriterSupplier<Uint8Array>) {
-    if (this.#pipeInRawSuppliers === undefined) this.#pipeInRawSuppliers = [];
-    this.#pipeInRawSuppliers.push(pirws);
-    return this;
-  }
-
-  async json() {
-    const text = await pipeInRawSuppliersText(
-      pipeInRawSupplierFactory([], {
-        pipeInRawSuppliers: this.#pipeInRawSuppliers,
-      }),
-    );
-    return JSON.parse(text) as Shape;
-  }
-
-  pipe<
-    NextAction extends {
-      jsonIn(pics: PipeInConsumerSupplier<Shape>): NextAction;
-    },
-  >(action: NextAction) {
-    return action.jsonIn(async (consumer) => {
-      const text = await pipeInRawSuppliersText(
-        pipeInRawSupplierFactory([], {
-          pipeInRawSuppliers: this.#pipeInRawSuppliers,
-        }),
-      );
-      await consumer.accept(JSON.parse(text));
-    });
-  }
-
-  static transformJSON<Shape>() {
-    return new TransformJsonCell<Shape>();
-  }
-}
-
-// pass this as a NextAction into .json() if you just want to consume the JSON
-// and not send it anywhere else
-export class ValueCell<Shape> {
-  #pics?: PipeInConsumerSupplier<Shape>;
-  #shape?: Shape;
-  #errMsg?: string;
-  #error?: Error;
-
-  async value() {
-    if (this.#pics) {
-      await this.#pics({
-        // deno-lint-ignore require-await
-        accept: async (shape) => {
-          this.#shape = shape;
-        },
-        // deno-lint-ignore require-await
-        error: async (errMsg, error) => {
-          this.#errMsg = errMsg;
-          this.#error = error;
-        },
-      });
-    }
-    return this.#shape;
-  }
-
-  // deno-lint-ignore require-await
-  async error() {
-    return [this.#errMsg, this.#error];
-  }
-
-  jsonIn(pics: PipeInConsumerSupplier<Shape>) {
-    this.#pics = pics;
-    return this;
-  }
-}
-
 /**
  * Creates a `spawn` function capable of executing a command or process.
  * The command to run can be specified as a string, URL, or a supplier function.
@@ -321,6 +233,18 @@ export function spawnable(
     // Ensure that the status of the child process does not block the Deno process from exiting.
     child.unref();
     return { command: cmd, code, stdout, stderr };
+  };
+}
+
+export type Spawnable = ReturnType<typeof spawnable>;
+export type SpawnableResult = Awaited<ReturnType<Spawnable>>;
+
+export function spawnableContent(sr: SpawnableResult) {
+  const td = new TextDecoder();
+  return {
+    ...sr,
+    text: () => td.decode(sr.stdout),
+    json: <Shape>() => JSON.parse(td.decode(sr.stdout)) as Shape,
   };
 }
 
@@ -425,16 +349,19 @@ export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
 }
 
 /**
- * Represents a notebook cell (manageable unit) for a spawnable process within a larger command orchestration system.
- * It's designed to create, configure, and manage the lifecycle of a child process, including its standard input,
- * command-line arguments, and output handling. The class supports chaining and composition paradigms, allowing
- * the construction of complex command pipelines and process workflows.
+ * Represents a notebook cell (manageable unit) for a spawnable process within
+ * a larger command orchestration system. It's designed to create, configure,
+ * and manage the lifecycle of a child process, including its standard input,
+ * command-line arguments, and output handling. The class supports chaining and
+ * composition paradigms, allowing the construction of complex command
+ * pipelines and process workflows using the Builder pattern.
+ *
+ * This is an idempotent cell and will only be executed once, memoize its
+ * results, and return the memoized value if execute is called more than once
+ * unless force is supplied.
  */
-export class SpawnableProcessCell implements
-  ExecutableCell<
-    Awaited<ReturnType<ReturnType<typeof spawnable>>>,
-    "not-executed" | "executed"
-  > {
+export class SpawnableProcessCell
+  implements ExecutableCell<SpawnableResult, "not-executed" | "executed"> {
   #suppliedArgs: string[] = [];
   #stdinLogger?: l.Logger;
   #processLogger?: l.Logger;
@@ -443,7 +370,7 @@ export class SpawnableProcessCell implements
   #pipeInRawSuppliers?: PipeInRawWriterSupplier<Uint8Array>[];
 
   #executeState: "not-executed" | "executed" = "not-executed";
-  #executedResult?: Awaited<ReturnType<ReturnType<typeof spawnable>>>;
+  #executedResult?: SpawnableResult;
 
   constructor(
     readonly process: ReturnType<typeof spawnable>,
@@ -451,6 +378,7 @@ export class SpawnableProcessCell implements
       readonly identity?: string;
       readonly stdinLogger?: l.Logger;
       readonly processLogger?: l.Logger;
+      readonly onError?: (error?: Error) => Promise<SpawnableResult>;
     },
   ) {
     if (options?.stdinLogger) this.stdinLogger(options.stdinLogger);
@@ -467,20 +395,27 @@ export class SpawnableProcessCell implements
     return this;
   }
 
+  // add arguments to the command that will be executed by execute()
   args(...args: string[]) {
     this.#suppliedArgs.push(...args);
     return this;
   }
 
+  // allows subclasses to organize and provide the "final" commands when execute() is called
   executeArgs() {
-    return this.#suppliedArgs;
+    // remove duplicates and maintain insertion order
+    return [...new Set(this.#suppliedArgs)];
   }
 
+  // add content that will be passed in via stdin when execute() is called
   stdin(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
     this.#stdinSuppliers.push(sqlSupplier);
     return this;
   }
 
+  // called by pipe() command as a way of informing the next cell about the
+  // previous cell's output (meaning stdout from previous cell becomes stdin for
+  // this cell)
   pipeInRaw(
     pirws: PipeInRawWriterSupplier<Uint8Array>,
     from: ExecutableCell<Any, Any>,
@@ -508,16 +443,19 @@ export class SpawnableProcessCell implements
     return this.#executedResult!;
   }
 
-  async execute(force?: boolean) {
+  async execute(
+    options?: Parameters<ExecutableCell<Any, Any>["execute"]>[0],
+  ): Promise<SpawnableResult> {
     // we're idempotent so don't re-execute unless forced to
-    if (!force && this.executionState() == "executed") {
+    if (!options?.force && this.executionState() == "executed") {
+      if (options?.onSuccess) return options.onSuccess(this.executedResult());
       return this.executedResult();
     }
 
     // if we have some "from" pipes that have not run yet, do so now
     if (this.#pipeInFrom && this.#pipeInFrom.length > 0) {
       for (const from of this.#pipeInFrom) {
-        await from.execute(force);
+        await from.execute(options);
       }
     }
 
@@ -533,8 +471,11 @@ export class SpawnableProcessCell implements
         this.#processLogger,
       );
       this.#executeState = "executed";
+      if (options?.onSuccess) return options.onSuccess(this.#executedResult!);
       return this.#executedResult!;
     } catch (err) {
+      if (options?.onError) return options.onError(err);
+      if (this.options?.onError) return this.options.onError(err);
       throw new SpawnableProcessCellError(err, this, undefined);
     }
   }
@@ -543,14 +484,32 @@ export class SpawnableProcessCell implements
     return new TextDecoder().decode((await this.execute()).stdout);
   }
 
+  async json<Shape>() {
+    return JSON.parse(await this.text()) as Shape;
+  }
+
   pipe<NextAction extends PipeInRawSupplier<Any, NextAction>>(
     action: NextAction,
+    options?: {
+      readonly stdIn?: (
+        sr: SpawnableResult,
+        writer: PipeInRawWriter<Uint8Array>,
+      ) => Promise<void>;
+      readonly safeStdIn?: (
+        sc: ReturnType<typeof spawnableContent>,
+        writer: PipeInRawWriter<Uint8Array>,
+      ) => Promise<void>;
+    },
   ) {
     return action.pipeInRaw(async (writer) => {
-      const sr = await this.execute();
-      await writer.write(sr.stdout);
-      // TODO: what do we do if sr.code != 0?
-      // TODO: do what we in json()?
+      const er = await this.execute();
+      if (options?.stdIn) {
+        await options.stdIn(er, writer);
+      } else if (options?.safeStdIn) {
+        await options.safeStdIn(spawnableContent(er), writer);
+      } else {
+        await writer.write(er.stdout);
+      }
     }, this);
   }
 
@@ -563,11 +522,15 @@ export class SpawnableProcessCell implements
 }
 
 /**
- * Represents a specialized cell designed to interact with an SQLite database.
- * This class encapsulates the functionality for constructing, executing, and managing SQLite commands,
- * leveraging the capabilities provided by the `SpawnableProcessCell` for process management.
- * It allows direct interactions with the database, including executing SQL commands, changing database files,
- * and parsing responses, while abstracting away the lower-level details of process management and I/O handling.
+ * A convenience class which wraps SpawnableProcessCell for the `sqlite3` or
+ * any other SQLite shell.
+ *
+ * This class encapsulates the functionality for constructing, executing, and
+ * managing SQLite commands, leveraging the capabilities provided by the
+ * `SpawnableProcessCell` for process management. It allows direct interactions
+ * with the database, including executing SQL commands, changing database files,
+ * and parsing responses, while abstracting away the lower-level details of
+ * process management and I/O handling.
  */
 export class SqliteCell extends SpawnableProcessCell {
   static readonly COMMAND = "sqlite3";
@@ -577,6 +540,7 @@ export class SqliteCell extends SpawnableProcessCell {
 
   constructor(
     options?: {
+      readonly process?: ReturnType<typeof spawnable>;
       readonly filename?: string;
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
       readonly sqlLogger?: l.Logger;
@@ -584,7 +548,7 @@ export class SqliteCell extends SpawnableProcessCell {
       readonly outputJSON?: boolean;
     },
   ) {
-    super(SqliteCell.sqliteSP, {
+    super(options?.process ?? SqliteCell.sqliteSP, {
       identity: SqliteCell.COMMAND,
       stdinLogger: options?.sqlLogger,
       processLogger: options?.sqlite3Logger,
@@ -634,12 +598,16 @@ export class SqliteCell extends SpawnableProcessCell {
     return [this.#filename, ...super.executeArgs()];
   }
 
+  async json<Shape>() {
+    this.outputJSON(); // make sure to pass in "--json" to SQLite arguments
+    return await super.json<Shape>();
+  }
+
   static sqlite3(options?: ConstructorParameters<typeof SqliteCell>[0]) {
     return new SqliteCell(options);
   }
 }
 
-export const transformJSON = TransformJsonCell.transformJSON;
 export const content = ContentCell.content;
 export const process = SpawnableProcessCell.process;
 export const sqlite3 = SqliteCell.sqlite3;

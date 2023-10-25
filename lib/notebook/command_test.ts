@@ -4,17 +4,6 @@ import * as mod from "./command.ts";
 
 Deno.test(`Command`, async (tc) => {
   await tc.step(
-    `transformed content`,
-    async () => {
-      const json = await mod.content()
-        .content(`{ "isJSON": true }`)
-        .pipe(mod.transformJSON<{ isJSON: true }>())
-        .json();
-      ta.assertEquals(json.isJSON, true);
-    },
-  );
-
-  await tc.step(
     `multiple pipes executing at the end`,
     async () => {
       const echo = mod.spawnable("echo");
@@ -68,7 +57,7 @@ Deno.test(`SpawnableProcessCell`, async (tc) => {
   );
 
   await tc.step(
-    `untyped sqlite3 spawnable process with piped content`,
+    `untyped sqlite3 spawnable process with single piped content`,
     async () => {
       const p = await mod.content()
         .content("bad sql")
@@ -156,8 +145,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
         .outputJSON()
-        .pipe(mod.transformJSON<{ column1: string; column2: number }[]>())
-        .json();
+        .json<{ column1: string; column2: number }[]>();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);
@@ -176,8 +164,7 @@ Deno.test(`SqliteCell type-safe sqlite3 spawnable process`, async (tc) => {
         .SQL(uws(`
               insert into synthetic_table VALUES ('test', 1);
               select * from synthetic_table;`))
-        .pipe(mod.transformJSON<{ column1: string; column2: number }[]>())
-        .json();
+        .json<{ column1: string; column2: number }[]>();
 
       ta.assert(json);
       ta.assertEquals(json.length, 1);
