@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-sys
 
-import { cliffy, frontmatter as fm, path } from "./deps.ts";
+import { cliffy, path } from "./deps.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
 import * as nbooks from "./notebooks.ts";
 import * as SQLa from "../../render/mod.ts";
@@ -105,62 +105,25 @@ async function CLI() {
         -- store all SQL that is potentially reusable in the database
         ${await sno.storeNotebookCellsDML()}
 
-        -- insert the SQLPage content and current working directory fs content into the database
+        -- insert MIME types seed data and SQLPage content
         ${await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML")}
 
-        -- insert the fs content for the given path into the database
+        -- insert the fs content for the given path
         ${await sno.mutationNB.insertFsContent(rootPath)}
         `;
 
-      const sqlite3 = (identity: string) =>
-        cmdNB.sqlite3({ filename: sqliteDb, identity });
-
-      // - Pass 1 sends all the SQL DDL and creates tables plus scans all the
-      //   files and uses SQLite extensions to insert what's possible from the
-      //   DB itself (using fileio_ls, fileio_read, etc.). SQLite does not have
-      //   frontmatter extensions so Pass2 handles what cannot be done in DB.
-      // - Pass 2 finds all frontmatter candidates from Pass1, returning SQL
-      //   result as JSON rows array to STDOUT. Pass 2 has no side effects.
-      // - Pass 3 generates `UPDATE` SQL DML for all frontmatter candidates and
-      //   then executes the DML from Pass 2 which mutates the database.
+      // - First sqlite3 command sends all the SQL DDL and creates tables plus
+      //   scans all the files by using SQLite extensions to insert what's
+      //   possible from the DB itself (using fileio_ls, fileio_read, etc.).
       // If you want to capture any SQL or spawn logs, use Command loggers.
-      // TODO: there is a lot direct SQL injection so let's figure out if bind
-      //       variables and prepared statements through SQLite shell are safer
-      //       or faster?
-      // deno-fmt-ignore
       await nbh.renderSqlCmd()
         .SQL(initSQL)
-        .pipe(sqlite3("pass 1"))
-          .pipe(sqlite3("pass 2"))
-            .SQL(`SELECT fs_content_id, content
-                    FROM fs_content
-                  WHERE (file_extn = '.md' OR file_extn = '.mdx')
-                    AND content IS NOT NULL
-                    AND content_fm_body_attrs IS NULL
-                    AND frontmatter IS NULL;`)
-            .outputJSON() // adds "--json" arg to SQLite pass 2
-            .pipe(sqlite3("pass 3"), {
-              // stdIn will be called with STDOUT from previous SQL statement;
-              // we will take result of `SELECT fs_content_id, content...` and
-              // convert it JSON then loop through each row to prepare SQL
-              // DML (`UPDATE`) to set the frontmatter. The function prepares the
-              // SQL and hands it to a SQLite shell for execution.
-              // deno-lint-ignore require-await
-              stdIn: nbh.pipeInSpawnedRows<{ fs_content_id: string; content: string }>(async (rows, emitStdIn, nbh) => {
-                const { quotedLiteral } = nbh.emitCtx.sqlTextEmitOptions;
-                rows.forEach((row) => {
-                  if (fm.test(row.content)) {
-                    const parsedFM = fm.extract(row.content);
-                    // each write() call adds content into the SQLite stdin
-                    // stream that will be sent to Deno.Command
-                    emitStdIn(`UPDATE fs_content SET
-                                 frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
-                                 content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
-                               WHERE fs_content_id = '${row.fs_content_id}';\n`);
-                  }
-                });
-              }),
-            }).execute();
+        .pipe(cmdNB.sqlite3({ filename: sqliteDb })) // takes initSQL and runs it through sqlite
+        .execute();
+
+      // - SQLite does not have frontmatter extensions so Pass 2 handles what
+      //   cannot be done in DB using polyglotNB.mutateFrontmatterCommands.
+      await sno.polyglotNB.frontmatterMutationCommands(sqliteDb).execute();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())

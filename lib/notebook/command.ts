@@ -332,7 +332,7 @@ export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
       Error.captureStackTrace(this, SpawnableProcessCellError<Cell>);
     }
 
-    this.name = "SqliteCellError";
+    this.name = "SpawnableProcessCellError";
   }
 }
 
@@ -522,17 +522,51 @@ export class SpawnableProcessCell
 }
 
 /**
- * A convenience class which wraps SpawnableProcessCell for the `sqlite3` or
- * any other SQLite shell.
+ * A convenience class which wraps SpawnableProcessCell for any type of CLI
+ * shell that can accept SQL and emit text or JSON output. Examples include
+ * SQLite shell, PostgreSQL psql, and DuckDB.
  *
  * This class encapsulates the functionality for constructing, executing, and
- * managing SQLite commands, leveraging the capabilities provided by the
+ * managing SQL shell commands, leveraging the capabilities provided by the
  * `SpawnableProcessCell` for process management. It allows direct interactions
  * with the database, including executing SQL commands, changing database files,
  * and parsing responses, while abstracting away the lower-level details of
  * process management and I/O handling.
  */
-export class SqliteCell extends SpawnableProcessCell {
+export class SqlShellCell extends SpawnableProcessCell {
+  constructor(
+    readonly process: ReturnType<typeof spawnable>,
+    options?: {
+      readonly identity?: string;
+      readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
+      readonly sqlLogger?: l.Logger;
+      readonly processLogger?: l.Logger;
+    },
+  ) {
+    super(process, {
+      identity: options?.identity,
+      stdinLogger: options?.sqlLogger,
+      processLogger: options?.processLogger,
+    });
+    if (options?.sqlSupplier) this.SQL(options.sqlSupplier);
+  }
+
+  sqlLogger(logger: l.Logger) {
+    this.stdinLogger(logger);
+    return this;
+  }
+
+  SQL(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
+    this.stdin(sqlSupplier);
+    return this;
+  }
+}
+
+/**
+ * A convenience class which wraps SqlShellCell for the `sqlite3` or any other
+ * SQLite shell.
+ */
+export class SqliteCell extends SqlShellCell {
   static readonly COMMAND = "sqlite3";
   static readonly sqliteSP = spawnable(SqliteCell.COMMAND);
 
@@ -545,28 +579,18 @@ export class SqliteCell extends SpawnableProcessCell {
       readonly filename?: string;
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
       readonly sqlLogger?: l.Logger;
-      readonly sqlite3Logger?: l.Logger;
+      readonly processLogger?: l.Logger;
       readonly outputJSON?: boolean;
     },
   ) {
     super(options?.process ?? SqliteCell.sqliteSP, {
       identity: options?.identity ?? SqliteCell.COMMAND,
-      stdinLogger: options?.sqlLogger,
-      processLogger: options?.sqlite3Logger,
+      sqlLogger: options?.sqlLogger,
+      processLogger: options?.processLogger,
     });
     if (options?.filename) this.#filename = options.filename;
     if (options?.sqlSupplier) this.SQL(options.sqlSupplier);
     if (options?.outputJSON) this.outputJSON();
-  }
-
-  sqlLogger(logger: l.Logger) {
-    this.stdinLogger(logger);
-    return this;
-  }
-
-  sqlite3Logger(logger: l.Logger) {
-    this.processLogger(logger);
-    return this;
   }
 
   filename(filename: string) {
@@ -576,11 +600,6 @@ export class SqliteCell extends SpawnableProcessCell {
 
   outputJSON() {
     this.args("--json");
-    return this;
-  }
-
-  SQL(sqlSupplier: Uint8Array | FlexibleTextSupplierSync) {
-    this.stdin(sqlSupplier);
     return this;
   }
 

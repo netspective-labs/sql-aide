@@ -1,4 +1,4 @@
-import { ulid } from "./deps.ts";
+import { frontmatter as fm, ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
 import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
@@ -933,6 +933,58 @@ export class PolyglotSqlNotebook<
 > extends SQLa.SqlNotebook<EmitContext> {
   constructor(readonly nbh: SqlNotebookHelpers<EmitContext>) {
     super();
+  }
+
+  /**
+   * Factory method to construct Command instances that will find all
+   * frontmatter candidates and update their fs_content table rows with
+   * parsed frontmatter.
+   *
+   * - First sqlite3 command finds all frontmatter candidates in DB, returning
+   *   SQL result as JSON rows array to STDOUT without any DB side effects.
+   * - Second sqlite3 command generates `UPDATE` SQL DML for all frontmatter
+   *   candidates and then executes the DML from Pass 2 which mutates the
+   *   database.
+   *
+   * If you want to capture any SQL or spawn logs, use Command loggers.
+   *
+   * @param sqliteDb the SQLite database to operate on
+   * @returns Command pattern instances which have promises that need to be resolved
+   */
+  frontmatterMutationCommands(sqliteDb: string) {
+    return cmdNB.sqlite3({ filename: sqliteDb })
+      .SQL(`SELECT fs_content_id, content
+            FROM fs_content
+           WHERE (file_extn = '.md' OR file_extn = '.mdx')
+             AND content IS NOT NULL
+             AND content_fm_body_attrs IS NULL
+             AND frontmatter IS NULL;`)
+      .outputJSON() // adds "--json" arg to SQLite pass 2
+      .pipe(cmdNB.sqlite3({ filename: sqliteDb }), {
+        // stdIn will be called with STDOUT from previous SQL statement;
+        // we will take result of `SELECT fs_content_id, content...` and
+        // convert it JSON then loop through each row to prepare SQL
+        // DML (`UPDATE`) to set the frontmatter. The function prepares the
+        // SQL and hands it to a SQLite shell for execution.
+        stdIn: this.nbh.pipeInSpawnedRows<
+          { fs_content_id: string; content: string }
+        > // deno-lint-ignore require-await
+        (async (rows, emitStdIn, nbh) => {
+          const { quotedLiteral } = nbh.emitCtx.sqlTextEmitOptions;
+          rows.forEach((row) => {
+            if (fm.test(row.content)) {
+              const parsedFM = fm.extract(row.content);
+              // each write() call adds content into the SQLite stdin
+              // stream that will be sent to Deno.Command
+              // deno-fmt-ignore
+              emitStdIn(`UPDATE fs_content SET
+                         frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
+                         content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
+                       WHERE fs_content_id = '${row.fs_content_id}';\n`);
+            }
+          });
+        }),
+      });
   }
 }
 
