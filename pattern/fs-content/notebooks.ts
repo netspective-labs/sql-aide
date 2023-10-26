@@ -1,6 +1,7 @@
 import { ulid } from "./deps.ts";
 import * as si from "../../lib/universal/sys-info.ts";
 import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
+import * as cmdNB from "../../lib/notebook/command.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as typical from "../typical/mod.ts";
 import * as m from "./models.ts";
@@ -279,6 +280,34 @@ export class SqlNotebookHelpers<
       embeddedStsOptions: this.templateState.ddlOptions,
       before: (viewName) => SQLa.dropView(viewName),
     });
+  }
+
+  /**
+   * Handler which can be passed into Command Notebook pipe options.stdIn to
+   * automatically wrap the spawn results into database rows for convenient
+   * access to strongly typed data from previous command's execution result.
+   * @param handler function which accepts spawned content and writes to STDIN for next command
+   * @returns a handler function to pass into pipe options.stdIn
+   */
+  pipeInSpawnedRows<Row>(
+    handler: (
+      rows: Row[],
+      write: (text: string | SQLa.SqlTextSupplier<EmitContext>) => void,
+      nbh: SqlNotebookHelpers<EmitContext>,
+    ) => Promise<void>,
+  ): cmdNB.SpawnedResultPipeInWriter {
+    const te = new TextEncoder();
+    const td = new TextDecoder();
+    return async (sr, rawWriter) => {
+      const writer = (text: string | SQLa.SqlTextSupplier<EmitContext>) => {
+        if (typeof text === "string") {
+          rawWriter.write(te.encode(text));
+        } else {
+          rawWriter.write(te.encode(text.SQL(this.emitCtx)));
+        }
+      };
+      await handler(JSON.parse(td.decode(sr.stdout)) as Row[], writer, this);
+    };
   }
 }
 

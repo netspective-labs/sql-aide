@@ -239,7 +239,7 @@ export function spawnable(
 export type Spawnable = ReturnType<typeof spawnable>;
 export type SpawnableResult = Awaited<ReturnType<Spawnable>>;
 
-export function spawnableContent(sr: SpawnableResult) {
+export function spawnedContent(sr: SpawnableResult) {
   const td = new TextDecoder();
   return {
     ...sr,
@@ -249,6 +249,11 @@ export function spawnableContent(sr: SpawnableResult) {
     array: <Shape>() => JSON.parse(td.decode(sr.stdout)) as Shape[],
   };
 }
+
+export type SpawnedResultPipeInWriter = (
+  sr: SpawnableResult,
+  writer: PipeInRawWriter<Uint8Array>,
+) => Promise<void>;
 
 /**
  * Represents a single content cell in a command pipeline, managing internal content
@@ -331,23 +336,20 @@ export class SpawnableProcessCellError<Cell extends SpawnableProcessCell>
   }
 }
 
-export class SpawnableProcessJsonError<Cell extends SpawnableProcessCell>
-  extends Error {
-  constructor(
-    readonly cause: Error,
-    readonly cell: Cell,
-    readonly spawnResult: Awaited<
-      ReturnType<ReturnType<typeof spawnable>>
-    >,
-  ) {
-    super(cause.message);
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, SpawnableProcessJsonError<Cell>);
-    }
-
-    this.name = "SqliteCellError";
-  }
+/**
+ * Handler which can be passed into pipe options.stdIn to automatically
+ * wrap the spawn results into spawn content for convenient access to
+ * strongly typed data from previous command's execution result.
+ * @param handler function which accepts spawned content and writes to STDIN for next command
+ * @returns a handler function to pass into pipe options.stdIn
+ */
+export function pipeInSpawnedContent(
+  handler: (
+    sc: ReturnType<typeof spawnedContent>,
+    writer: PipeInRawWriter<Uint8Array>,
+  ) => Promise<void>,
+): SpawnedResultPipeInWriter {
+  return async (sr, writer) => await handler(spawnedContent(sr), writer);
 }
 
 /**
@@ -490,25 +492,21 @@ export class SpawnableProcessCell
     return JSON.parse(await this.text()) as Shape;
   }
 
+  /**
+   * Accept a "next action" which will take the content from this cell's STDOUT
+   * and send it as STDIN for the next action. If
+   * @param action the next action cell instance
+   * @param options optional configuration
+   * @returns next action instance with pipe flows setup
+   */
   pipe<NextAction extends PipeInRawSupplier<Any, NextAction>>(
     action: NextAction,
-    options?: {
-      readonly stdIn?: (
-        sr: SpawnableResult,
-        writer: PipeInRawWriter<Uint8Array>,
-      ) => Promise<void>;
-      readonly safeStdIn?: (
-        sc: ReturnType<typeof spawnableContent>,
-        writer: PipeInRawWriter<Uint8Array>,
-      ) => Promise<void>;
-    },
+    options?: { readonly stdIn?: SpawnedResultPipeInWriter },
   ) {
     return action.pipeInRaw(async (writer) => {
       const er = await this.execute();
       if (options?.stdIn) {
         await options.stdIn(er, writer);
-      } else if (options?.safeStdIn) {
-        await options.safeStdIn(spawnableContent(er), writer);
       } else {
         await writer.write(er.stdout);
       }

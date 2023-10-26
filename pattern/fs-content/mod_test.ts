@@ -35,7 +35,7 @@ Deno.test("migration and typical mutations", async () => {
     .pipe(sqlite3())
     .execute();
   if (sr.code != 0) {
-    const sc = cmdNB.spawnableContent(sr);
+    const sc = cmdNB.spawnedContent(sr);
     Deno.writeTextFileSync(
       path.fromFileUrl(
         import.meta.resolve("./DELETE_ME_DEBUG_mod_test-error.ts.sql"),

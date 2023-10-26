@@ -69,6 +69,8 @@ export function notebookCommand(
 
 async function CLI() {
   const sno = prepareOrchestrator();
+  const { nbh } = sno;
+
   const callerName = import.meta.resolve(import.meta.url);
   await new cliffy.Command()
     .name(callerName.slice(callerName.lastIndexOf("/") + 1))
@@ -95,7 +97,7 @@ async function CLI() {
       // they do not perform tasks that have already been performed.
 
       // deno-fmt-ignore
-      const initSQL = sno.nbh.SQL`
+      const initSQL = nbh.SQL`
         -- because no specific SQL cell is named, send all the all information
         -- model objects (initialize the database) in the 'construction' NB
         ${await sno.constructionNBF.SQL({ separator: sno.separator })}
@@ -126,7 +128,7 @@ async function CLI() {
       //       variables and prepared statements through SQLite shell are safer
       //       or faster?
       // deno-fmt-ignore
-      await sno.nbh.renderSqlCmd()
+      await nbh.renderSqlCmd()
         .SQL(initSQL)
         .pipe(sqlite3("pass 1"))
           .pipe(sqlite3("pass 2"))
@@ -138,28 +140,26 @@ async function CLI() {
                     AND frontmatter IS NULL;`)
             .outputJSON() // adds "--json" arg to SQLite pass 2
             .pipe(sqlite3("pass 3"), {
-              // safeStdIn will be called with STDOUT from previous SQL statement;
+              // stdIn will be called with STDOUT from previous SQL statement;
               // we will take result of `SELECT fs_content_id, content...` and
               // convert it JSON then loop through each row to prepare SQL
               // DML (`UPDATE`) to set the frontmatter. The function prepares the
-              // SQL and hands it to another SQLite shell for execution.
+              // SQL and hands it to a SQLite shell for execution.
               // deno-lint-ignore require-await
-              safeStdIn: async (sc, writer) => {
-                const { quotedLiteral } = sno.nbh.emitCtx.sqlTextEmitOptions;
-                const te = new TextEncoder();
-                sc.array<{ fs_content_id: string; content: string }>().forEach((fmc) => {
-                  if (fm.test(fmc.content)) {
-                    const parsedFM = fm.extract(fmc.content);
-                    // each writer.write() call adds content into the SQLite stdin
+              stdIn: nbh.pipeInSpawnedRows<{ fs_content_id: string; content: string }>(async (rows, emitStdIn, nbh) => {
+                const { quotedLiteral } = nbh.emitCtx.sqlTextEmitOptions;
+                rows.forEach((row) => {
+                  if (fm.test(row.content)) {
+                    const parsedFM = fm.extract(row.content);
+                    // each write() call adds content into the SQLite stdin
                     // stream that will be sent to Deno.Command
-                    writer.write(te.encode(
-                      `UPDATE fs_content SET
-                          frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
-                          content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
-                      WHERE fs_content_id = '${fmc.fs_content_id}';\n`));
+                    emitStdIn(`UPDATE fs_content SET
+                                 frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
+                                 content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
+                               WHERE fs_content_id = '${row.fs_content_id}';\n`);
                   }
                 });
-              },
+              }),
             }).execute();
     })
     .command("help", new cliffy.HelpCommand().global())
