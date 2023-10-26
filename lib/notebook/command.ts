@@ -244,7 +244,9 @@ export function spawnableContent(sr: SpawnableResult) {
   return {
     ...sr,
     text: () => td.decode(sr.stdout),
+    errText: () => td.decode(sr.stderr),
     json: <Shape>() => JSON.parse(td.decode(sr.stdout)) as Shape,
+    array: <Shape>() => JSON.parse(td.decode(sr.stdout)) as Shape[],
   };
 }
 
@@ -540,6 +542,7 @@ export class SqliteCell extends SpawnableProcessCell {
 
   constructor(
     options?: {
+      readonly identity?: string;
       readonly process?: ReturnType<typeof spawnable>;
       readonly filename?: string;
       readonly sqlSupplier?: Uint8Array | FlexibleTextSupplierSync;
@@ -549,7 +552,7 @@ export class SqliteCell extends SpawnableProcessCell {
     },
   ) {
     super(options?.process ?? SqliteCell.sqliteSP, {
-      identity: SqliteCell.COMMAND,
+      identity: options?.identity ?? SqliteCell.COMMAND,
       stdinLogger: options?.sqlLogger,
       processLogger: options?.sqlite3Logger,
     });

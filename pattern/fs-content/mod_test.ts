@@ -1,4 +1,5 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
+import { path } from "../../deps.ts";
 import * as cmdNB from "../../lib/notebook/command.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as mod from "./mod.ts";
@@ -17,7 +18,7 @@ Deno.test("migration and typical mutations", async () => {
     -- store all SQL that is potentially reusable in the database
     ${(await sno.storeNotebookCellsDML())}
 
-    ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
+    ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContent"))}
 
     -- TODO: now "run" whatever SQL we want
     `;
@@ -33,6 +34,16 @@ Deno.test("migration and typical mutations", async () => {
     .SQL(sql)
     .pipe(sqlite3())
     .execute();
+  if (sr.code != 0) {
+    const sc = cmdNB.spawnableContent(sr);
+    Deno.writeTextFileSync(
+      path.fromFileUrl(
+        import.meta.resolve("./DELETE_ME_DEBUG_mod_test-error.ts.sql"),
+      ),
+      sql.SQL(sno.nbh.emitCtx),
+    );
+    console.log(sc.errText());
+  }
   ta.assertEquals(sr.code, 0);
 });
 

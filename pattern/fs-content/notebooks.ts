@@ -473,7 +473,7 @@ export class MutationSqlNotebook<
       })}`;
   }
 
-  insertFsWalkSessionCWD() {
+  insertFsWalkSession() {
     const { nbh, nbh: { models, sqlEngineNewUlid } } = this;
     const {
       universal: { sqliteParameters: sqp },
@@ -481,10 +481,11 @@ export class MutationSqlNotebook<
     } = models;
 
     const { useBind: useDeviceBind } = models.device.columnNames(nbh.emitCtx);
-    const { defineBind } = fscws.columnNames(nbh.emitCtx);
+    const { defineBind: b, symbol: c } = fscws.columnNames(nbh.emitCtx);
 
     // deno-fmt-ignore
     return nbh.SQL`
+      -- create the walk session with specific arguments for insertFsContentPartial cell
       -- for all regular expressions we use ags017/regex Rust extension so
       -- test with https://regex101.com/ ("Rust" flavor)
       ${fscws.insertDML({
@@ -497,13 +498,24 @@ export class MutationSqlNotebook<
         ignore_paths_regex: '/(\\.git|node_modules)/',
       })}
 
-      -- store all relevant walk session attributes as SQL Parameters for easy access in subsequent SQL
-      ${sqp.insertDML({ key: defineBind.fs_content_walk_session_id, value: { SQL: () => `SELECT fs_content_walk_session_id FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
-      ${sqp.insertDML({ key: defineBind.max_fileio_read_bytes, value: { SQL: () => `SELECT max_fileio_read_bytes FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
-      ${sqp.insertDML({ key: defineBind.blobs_regex, value: { SQL: () => `SELECT blobs_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
-      ${sqp.insertDML({ key: defineBind.digests_regex, value: { SQL: () => `SELECT digests_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
-      ${sqp.insertDML({ key: defineBind.ignore_paths_regex, value: { SQL: () => `SELECT ignore_paths_regex FROM fs_content_walk_session ORDER BY created_at DESC LIMIT 1` } })}
-      `;
+      -- store all relevant walk session attributes that were inserted above as
+      -- SQLite Shell Parameters for faster access in subsequent SQL
+      -- as :xyz bind parameters
+      WITH latest_fscws AS (
+          SELECT ${c.fs_content_walk_session_id}, ${c.max_fileio_read_bytes}, ${c.ignore_paths_regex}, ${c.blobs_regex}, ${c.digests_regex}
+            FROM ${fscws.tableName}
+        ORDER BY created_at DESC
+          LIMIT 1
+      )
+      INSERT INTO ${sqp.tableName} (key, value)
+      SELECT key, value
+      FROM (
+          SELECT '${b.fs_content_walk_session_id}' AS key, ${c.fs_content_walk_session_id} AS value FROM latest_fscws UNION ALL
+          SELECT '${b.max_fileio_read_bytes}', ${c.max_fileio_read_bytes} FROM latest_fscws UNION ALL
+          SELECT '${b.ignore_paths_regex}', ${c.ignore_paths_regex} FROM latest_fscws UNION ALL
+          SELECT '${b.blobs_regex}', ${c.blobs_regex} FROM latest_fscws UNION ALL
+          SELECT '${b.digests_regex}', ${c.digests_regex} FROM latest_fscws
+      )`;
   }
 
   insertFsContentPartial() {
@@ -598,7 +610,9 @@ export class MutationSqlNotebook<
       UPDATE ${fscws.tableName} SET ${fscws_c.walk_finished_at} = CURRENT_TIMESTAMP WHERE ${fscws_c.fs_content_walk_session_id} = ${fscws_useb.fs_content_walk_session_id};`;
   }
 
-  async insertFsContentCWD(): Promise<SQLa.SqlTextSupplier<EmitContext>> {
+  async insertFsContent(
+    rootPath = ".",
+  ): Promise<SQLa.SqlTextSupplier<EmitContext>> {
     const { nbh, nbh: { models, sqlEngineNewUlid } } = this;
     const activeDeviceDML = await this.insertActiveDeviceDML();
     const { fsContentWalkSession: fscws, fsContentWalkPath: fscwp } = models;
@@ -611,13 +625,18 @@ export class MutationSqlNotebook<
 
       .parameter init
       ${activeDeviceDML}
-      ${this.insertFsWalkSessionCWD()}
+      ${this.insertFsWalkSession()}
 
+      -- TODO: because this is a notebook cell, the rootPath (first) parameter is
+      -- really the notebook context in case the kernel is running it but it's
+      -- a string if it's directly called; that seems confusing.
       ${fscwp.insertDML({
         fs_content_walk_path_id: sqlEngineNewUlid,
         walk_session_id: fscws_useb.fs_content_walk_session_id,
-        root_path: '.' })}
+        root_path: typeof rootPath === "string" ? rootPath : '.' })}
 
+      -- this cell is called "partial" because it needs the walk session and path
+      -- available in :bind_param style variables available in sqlite_parameters
       ${this.insertFsContentPartial()}
       ${nbh.optimalCloseDB}`;
   }

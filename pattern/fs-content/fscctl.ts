@@ -75,6 +75,11 @@ async function CLI() {
     .version("0.1.0")
     .description("Content Aide")
     .option(
+      "--root-path <file:string>",
+      "Walk the file starting at this path",
+      { default: Deno.cwd() },
+    )
+    .option(
       "--sql-dest <file:string>",
       "Store the generated SQL in the provided filename",
     )
@@ -84,66 +89,78 @@ async function CLI() {
       { default: `device-content.sqlite.db` },
     )
     .option("--verbose", "Show what is being done")
-    .action(async ({ sqliteDb }) => {
+    .action(async ({ sqliteDb, rootPath }) => {
       // TODO: figure out how to check whether migrations are done already
       // and pass in the migrations table to the first SQL chains so that
       // they do not perform tasks that have already been performed.
 
       // deno-fmt-ignore
       const initSQL = sno.nbh.SQL`
-        -- construct all information model objects (initialize the database)
-        ${(await sno.constructionNBF.SQL({ separator: sno.separator }))}
+        -- because no specific SQL cell is named, send all the all information
+        -- model objects (initialize the database) in the 'construction' NB
+        ${await sno.constructionNBF.SQL({ separator: sno.separator })}
 
         -- store all SQL that is potentially reusable in the database
-        ${(await sno.storeNotebookCellsDML())}
+        ${await sno.storeNotebookCellsDML()}
 
         -- insert the SQLPage content and current working directory fs content into the database
-        ${(await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML", "insertFsContentCWD"))}
+        ${await sno.mutationNBF.SQL({ separator: sno.separator }, "mimeTypesSeedDML", "SQLPageSeedDML")}
+
+        -- insert the fs content for the given path into the database
+        ${await sno.mutationNB.insertFsContent(rootPath)}
         `;
 
-      const sqlite3 = () => cmdNB.sqlite3({ filename: sqliteDb });
+      const sqlite3 = (identity: string) =>
+        cmdNB.sqlite3({ filename: sqliteDb, identity });
 
-      // - Pass 1 sends all the SQL DDL and creates tables and scans all the
-      //   files and use SQLite extensions to do what's possible in the DB
-      //   (using fileio_ls, fileio_read, etc.).
-      // - Pass 2 finds all frontmatter candidates, returning SQL result as
-      //   rows array and generates `UPDATE` SQL DML to update them.
-      // - Pass 3 executes the DML from Pass 2 which mutates the database.
+      // - Pass 1 sends all the SQL DDL and creates tables plus scans all the
+      //   files and uses SQLite extensions to insert what's possible from the
+      //   DB itself (using fileio_ls, fileio_read, etc.). SQLite does not have
+      //   frontmatter extensions so Pass2 handles what cannot be done in DB.
+      // - Pass 2 finds all frontmatter candidates from Pass1, returning SQL
+      //   result as JSON rows array to STDOUT. Pass 2 has no side effects.
+      // - Pass 3 generates `UPDATE` SQL DML for all frontmatter candidates and
+      //   then executes the DML from Pass 2 which mutates the database.
       // If you want to capture any SQL or spawn logs, use Command loggers.
+      // TODO: there is a lot direct SQL injection so let's figure out if bind
+      //       variables and prepared statements through SQLite shell are safer
+      //       or faster?
       // deno-fmt-ignore
       await sno.nbh.renderSqlCmd()
         .SQL(initSQL)
-        .pipe(/* pass 1 */ sqlite3())
-          .pipe(/* pass 2 */ sqlite3())
-          .SQL(`SELECT fs_content_id, content
-                  FROM fs_content
-                WHERE (file_extn = '.md' OR file_extn = '.mdx')
-                  AND content IS NOT NULL
-                  AND content_fm_body_attrs IS NULL
-                  AND frontmatter IS NULL;`)
-          .outputJSON() // passes "--json" to * pass 2 */ SQLite
-          .pipe(/* pass 3 */ sqlite3(), {
-            // safeStdIn will be called with STDOUT from previous SQL statement;
-            // we will take result of `SELECT fs_content_id, content...` and
-            // convert it JSON then loop through each row to prepare SQL
-            // DML (`UPDATE`) to set the frontmatter. The function prepares the
-            // SQL and hands it to another SQLite shell for execution.
-            // deno-lint-ignore require-await
-            safeStdIn: async (sc, writer) => {
-              const { quotedLiteral } = sno.nbh.emitCtx.sqlTextEmitOptions;
-              const te = new TextEncoder();
-              sc.json<{ fs_content_id: string; content: string }[]>().forEach((fmc) => {
-                if (fm.test(fmc.content)) {
-                  const parsedFM = fm.extract(fmc.content);
-                  writer.write(te.encode(
-                    `UPDATE fs_content SET
-                        frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
-                        content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
-                     WHERE fs_content_id = '${fmc.fs_content_id}';\n`));
-                }
-              });
-            },
-          }).execute();
+        .pipe(sqlite3("pass 1"))
+          .pipe(sqlite3("pass 2"))
+            .SQL(`SELECT fs_content_id, content
+                    FROM fs_content
+                  WHERE (file_extn = '.md' OR file_extn = '.mdx')
+                    AND content IS NOT NULL
+                    AND content_fm_body_attrs IS NULL
+                    AND frontmatter IS NULL;`)
+            .outputJSON() // adds "--json" arg to SQLite pass 2
+            .pipe(sqlite3("pass 3"), {
+              // safeStdIn will be called with STDOUT from previous SQL statement;
+              // we will take result of `SELECT fs_content_id, content...` and
+              // convert it JSON then loop through each row to prepare SQL
+              // DML (`UPDATE`) to set the frontmatter. The function prepares the
+              // SQL and hands it to another SQLite shell for execution.
+              // deno-lint-ignore require-await
+              safeStdIn: async (sc, writer) => {
+                const { quotedLiteral } = sno.nbh.emitCtx.sqlTextEmitOptions;
+                const te = new TextEncoder();
+                sc.array<{ fs_content_id: string; content: string }>().forEach((fmc) => {
+                  if (fm.test(fmc.content)) {
+                    const parsedFM = fm.extract(fmc.content);
+                    // each writer.write() call adds content into the SQLite stdin
+                    // stream that will be sent to Deno.Command
+                    writer.write(te.encode(
+                      `UPDATE fs_content SET
+                          frontmatter = ${quotedLiteral(JSON.stringify(parsedFM.attrs))[1]},
+                          content_fm_body_attrs = ${quotedLiteral(JSON.stringify(parsedFM))[1]}
+                      WHERE fs_content_id = '${fmc.fs_content_id}';\n`));
+                  }
+                });
+              },
+            }).execute();
     })
     .command("help", new cliffy.HelpCommand().global())
     .command("completions", new cliffy.CompletionsCommand())

@@ -100,12 +100,13 @@ Other SQLite extensions to consider as we expand functionality:
 
 ## Testing
 
-Scan the current directory for all files and store them into
-`device-content.sqlite.db` (this is idempotent, by default it ignores `.git` and
-`node_modules` directories):
+Scan a directory for all files and store them into `device-content.sqlite.db`
+(this is idempotent, by default it ignores `.git` and `node_modules`
+directories):
 
 ```bash
-$ ./fssctl.ts                         # `fsctl` means `fs-content controller`
+$ ./fssctl.ts                         # scans Deno.cwd() (`fsctl` means `fs-content controller`)
+$ ./fssctl.ts --root-path /x/y/z      # scans /x/y/z instead of Deno.cwd()
 ```
 
 See the contents with [SQLpage](https://github.com/lovasoa/SQLpage):
@@ -144,7 +145,8 @@ $ sqlite3 device-content.sqlite.db "select interpretable_code from stored_notebo
 
 ## Tasks
 
-- [ ] Add args/option for running ./cactl.ts with a starting root path(s)
+- [ ] Perform careful SQL optimization and add indexes, etc. after explain plan
+      reviews
 - [ ] Add Deno-based Unit Tests with TAP output or this ancient
       [SQLite TAP extension](https://github.com/yanick/SQLiteTap)
 - [ ] Add SQL in notebook to easily remove and vacuum all sessions, walk paths,
