@@ -1,5 +1,12 @@
 #!/usr/bin/env -S deno run --allow-all
 
+/**
+ * This TypeScript test file implements a SQL migration feature for PostgreSQL databases using Deno.
+ * It provides methods for defining and executing migrations, as well as testing migration scripts.
+ *
+ * @module SQL_Migration_Feature
+ */
+
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as sqliteCLI from "../../lib/sqlite/cli.ts";
@@ -11,24 +18,57 @@ import * as udm from "../udm/mod.ts";
 
 const { gm, gts } = udm;
 
+/**
+ * A function that returns the relative file path of a given file name.
+ *
+ * @param {string} name - The name of the file.
+ * @returns {string} The relative file path.
+ */
+
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return $.path.relative(Deno.cwd(), absPath);
 };
+
+/**
+ * A function that returns the content of a file given its name.
+ *
+ * @param {string} name - The name of the file.
+ * @returns {string} The content of the file.
+ */
 
 const relativeFileContent = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
 };
 
+/**
+ * Represents the context for emitting SQL statements.
+ *
+ * @typedef {Object} EmitContext
+ * @property {Object} ctx - The SQL emit context.
+ */
+
 type EmitContext = typeof ctx;
 const ctx = SQLa.typicalSqlEmitContext({
   sqlDialect: SQLa.postgreSqlDialect(),
 });
 
+/**
+ * Defines the SQL schema for an "info_schema_lifecycle" table.
+ *
+ * @type {Object}
+ */
+
 const infoSchemaLifecycle = SQLa.sqlSchemaDefn("info_schema_lifecycle", {
   isIdempotent: true,
 });
+
+/**
+ * Initializes the PostgreSQL migration object.
+ *
+ * @type {Object}
+ */
 const PgMigrateObj = mod.PgMigrate.init(
   () => ctx,
   infoSchemaLifecycle.sqlNamespace,
@@ -49,6 +89,12 @@ const migSearchPath = pgSQLa.pgSearchPath<
 >(
   migrateCreateSchema,
 );
+
+/**
+ * Defines the SQL schema for a sample table "sample_table1".
+ *
+ * @type {Object}
+ */
 const migrateCreateTable = gm.autoIncPkTable(
   "sample_table1",
   {
@@ -59,6 +105,12 @@ const migrateCreateTable = gm.autoIncPkTable(
     ...gm.housekeeping.columns,
   },
 );
+
+/**
+ * Creates a migration procedure for PostgreSQL.
+ *
+ * @type {Object}
+ */
 
 const createMigrationProcedure = PgMigrateObj
   .migrationScaffold(
@@ -105,6 +157,12 @@ const createMigrationProcedure = PgMigrateObj
           RETURN status; -- Return the status
         `,
   );
+
+/**
+ * Generates SQL Data Definition Language (DDL) for the migrations.
+ *
+ * @returns {string} The SQL DDL for migrations.
+ */
 
 function sqlDDL() {
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
