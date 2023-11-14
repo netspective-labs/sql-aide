@@ -131,8 +131,14 @@ const syntheticSchema = () => {
           ),
         ];
       },
-      qualitySystem: {
-        description: "synthetic_table_with_constraints table description",
+      populateQS: (tableQS, columnsQS) => {
+        tableQS.description =
+          "synthetic_table_with_constraints table description in prepareQS";
+        columnsQS.column_unique.description =
+          "column_unique description in prepareQS";
+        columnsQS.text_primary_key.description =
+          "text_primary_key description in prepareQS";
+        return tableQS;
       },
     },
   );
@@ -655,7 +661,9 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints and documentation", async (tc) 
       CREATE INDEX "idx_synthetic_table_with_constraints__column_unique__created_at" ON "synthetic_table_with_constraints"("column_unique", "created_at");
       CREATE UNIQUE INDEX custom_index_name ON "synthetic_table_with_constraints"("text_primary_key", "created_at");
 
-      COMMENT ON table "synthetic_table_with_constraints" IS 'synthetic_table_with_constraints table description';`),
+      COMMENT ON table "synthetic_table_with_constraints" IS 'synthetic_table_with_constraints table description in prepareQS';
+      COMMENT ON column "synthetic_table_with_constraints"."text_primary_key" IS 'text_primary_key description in prepareQS';
+      COMMENT ON column "synthetic_table_with_constraints"."column_unique" IS 'column_unique description in prepareQS';`),
     );
   });
 });

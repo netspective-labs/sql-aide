@@ -13,6 +13,23 @@ import * as g from "../../graph.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easy on linter
 
+export type TableColumnDefns<
+  TableName extends string,
+  ColumnsShape extends z.ZodRawShape,
+  Context extends tmpl.SqlEmitContext,
+  DomainQS extends d.SqlDomainQS,
+> = {
+  [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
+    z.ZodType<infer T, infer D, infer I> ? c.TableColumnDefn<
+      TableName,
+      Extract<Property, string>,
+      z.ZodType<T, D, I>,
+      Context,
+      DomainQS
+    >
+    : never;
+};
+
 export type TableDefinition<
   TableName extends string,
   Context extends tmpl.SqlEmitContext,
@@ -61,6 +78,23 @@ export interface TableDefnOptions<
     columnsShape: ColumnsShape,
     tableName: TableName,
   ) => idx.TableColumnsIndex<ColumnsShape, Context>[];
+  readonly prepareTableQS?: <TableName extends string>(
+    defaultDescr: string | undefined,
+    columns: TableColumnDefns<TableName, ColumnsShape, Context, DomainQS>,
+    tableName: TableName,
+  ) => DomainsQS;
+  readonly initPopulatableColumnQS?: <TableName extends string>(
+    columnName: keyof ColumnsShape,
+    tableName: TableName,
+  ) => safety.DeepWriteable<DomainQS>;
+  readonly populateQS?: <
+    TableName extends string,
+  >(
+    tableQS: safety.DeepWriteable<DomainsQS>,
+    columnsQS: { [key in keyof ColumnsShape]: safety.DeepWriteable<DomainQS> },
+    columns: TableColumnDefns<TableName, ColumnsShape, Context, DomainQS>,
+    tableName: TableName,
+  ) => void;
   readonly descr?: string; // convenience form of qualitySystem: { description }
 }
 
@@ -115,17 +149,12 @@ export function tableDefinition<
 
   const { keys: tableShapeKeys } = zoSchema._getCached();
 
-  type ColumnDefns = {
-    [Property in keyof ColumnsShape]: ColumnsShape[Property] extends
-      z.ZodType<infer T, infer D, infer I> ? c.TableColumnDefn<
-        TableName,
-        Extract<Property, string>,
-        z.ZodType<T, D, I>,
-        Context,
-        DomainQS
-      >
-      : never;
-  };
+  type ColumnDefns = TableColumnDefns<
+    TableName,
+    ColumnsShape,
+    Context,
+    DomainQS
+  >;
 
   type PrimaryKeys = {
     [
@@ -215,12 +244,6 @@ export function tableDefinition<
   const indexes: idx.TableColumnsIndex<ColumnsShape, Context>[] = [];
   const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
   const symbols: SqlSymbolsSchema = {} as Any;
-  let columnsQS:
-    | (
-      & c.TableColumnDefn<TableName, Any, Any, Context, DomainQS>
-      & qs.QualitySystemSupplier<Any>
-    )[]
-    | undefined = [];
 
   const primaryKey: PrimaryKeys = {} as Any;
   const unique: UniqueColumnDefns = {} as Any;
@@ -234,11 +257,7 @@ export function tableDefinition<
     }
     (symbolSuppliers[column.identity] as Any) = { sqlSymbol: column.sqlSymbol };
     (symbols[column.identity] as Any) = column.sqlSymbol;
-    if (qs.isQualitySystemSupplier(column)) {
-      columnsQS.push(column);
-    }
   }
-  if (columnsQS.length == 0) columnsQS = undefined;
 
   // see if any FK references were registered but need to be created
   const columns: ColumnDefns = {} as Any;
@@ -294,10 +313,68 @@ export function tableDefinition<
     return result;
   };
 
-  const tblQualitySystem = tdOptions?.qualitySystem ??
+  let tblQualitySystem = tdOptions?.qualitySystem ??
     (tdOptions?.descr
       ? { description: tdOptions.descr } as DomainsQS
       : undefined);
+
+  if (tdOptions?.populateQS) {
+    if (tblQualitySystem === undefined) {
+      tblQualitySystem = tdOptions?.prepareTableQS?.(
+        tdOptions?.descr,
+        columns,
+        tableName,
+      ) ?? { description: tdOptions.descr } as DomainsQS;
+    }
+
+    // this section allows convenient preparation of governance and documentation
+    // ("Quality System") by calling a function that will unnest .qualitySystem
+    // into a function and allow type-safe access to each column's Quality System.
+
+    type DomainQsProxy = {
+      [Key in keyof ColumnsShape]: safety.DeepWriteable<DomainQS>;
+    };
+
+    tdOptions.populateQS(
+      tblQualitySystem!,
+      // this proxy mutates column.qualitySystem appropriately
+      new Proxy<DomainQsProxy>({} as DomainQsProxy, {
+        get(_target, property) {
+          const columnName = property as keyof ColumnDefns;
+          if (columns[columnName].qualitySystem == undefined) {
+            const initColumnQS =
+              tdOptions.initPopulatableColumnQS?.(columnName, tableName) ??
+                { description: "" } as safety.DeepWriteable<
+                  DomainQS
+                >;
+            (columns[columnName] as safety.Writeable<
+              qs.QualitySystemSupplier<DomainQS>
+            >).qualitySystem = initColumnQS as DomainQS;
+          }
+          return columns[columnName].qualitySystem as safety.DeepWriteable<
+            DomainQS
+          >;
+        },
+      }),
+      columns,
+      tableName,
+    );
+  }
+
+  let columnsQS:
+    | (
+      & c.TableColumnDefn<TableName, Any, Any, Context, DomainQS>
+      & qs.QualitySystemSupplier<Any>
+    )[]
+    | undefined = [];
+
+  for (const column of domains) {
+    if (qs.isQualitySystemSupplier(column)) {
+      columnsQS.push(column);
+    }
+  }
+  if (columnsQS.length == 0) columnsQS = undefined;
+
   const sqlObjectsComments = tblQualitySystem || columnsQS
     ? (() => {
       const soc = [];
