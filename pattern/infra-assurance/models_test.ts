@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
+import * as ulid from "https://deno.land/std@0.203.0/ulid/mod.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
 import * as sqliteCLI from "../../lib/sqlite/cli.ts";
@@ -16,16 +17,17 @@ const relativeFilePath = (name: string) => {
   return $.path.relative(Deno.cwd(), absPath);
 };
 
-const relativeFileContent = (name: string) => {
-  const absPath = $.path.fromFileUrl(import.meta.resolve(name));
-  return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
-};
+// const relativeFileContent = (name: string) => {
+//   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
+//   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
+// };
 
 const { gts } = udm;
 const graphNatureIdSelect = mod.graphNature.select({
   code: "SERVICE",
 });
 const graphTableInsertion = mod.graph.insertDML({
+  graph_id: ulid.ulid(),
   name: "text-value",
   graph_nature_id: graphNatureIdSelect,
   description: "description",
@@ -36,6 +38,7 @@ const boundaryNatureIdSelect = mod.boundaryNature.select({
   code: "REGULATORY_TAX_ID",
 });
 const taxIdBoundary = mod.boundary.insertDML({
+  boundary_id: ulid.ulid(),
   boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name",
   description: "test description",
@@ -44,6 +47,7 @@ const taxIdBoundary = mod.boundary.insertDML({
 const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
 
 const primaryBoundary = mod.boundary.insertDML({
+  boundary_id: ulid.ulid(),
   boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name Self Test",
   description: "test description",
@@ -52,16 +56,19 @@ const primaryBoundary = mod.boundary.insertDML({
 });
 
 const hostInsertion = mod.host.insertDML({
+  host_id: ulid.ulid(),
   host_name: "Test Host Name",
   description: "description test",
 });
 
 const hostID = mod.host.select(hostInsertion.insertable);
 const hostBoundaryInsertion = mod.hostBoundary.insertDML({
+  host_boundary_id: ulid.ulid(),
   host_id: hostID,
 });
 
 const raciMatrixInsertion = mod.raciMatrix.insertDML({
+  raci_matrix_id: ulid.ulid(),
   asset: "asset test",
   responsible: "responsible",
   accountable: "accountable",
@@ -73,12 +80,14 @@ const raciMatrixSubjectIdSelect = mod.raciMatrixSubject.select({
 });
 const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
   .insertDML({
+    raci_matrix_subject_boundary_id: ulid.ulid(),
     boundary_id: mod.boundary.select({ name: "Boundery Name Self Test" }),
     raci_matrix_subject_id: raciMatrixSubjectIdSelect,
   });
 
 const raciMatrixActivityInsertion = mod.raciMatrixActivity
   .insertDML({
+    raci_matrix_activity_id: ulid.ulid(),
     activity: "Activity",
   });
 
@@ -214,17 +223,17 @@ if (import.meta.main) {
     .command(
       "test-fixtures",
       new tp.cli.Command()
-        .description("Emit all test fixtures")
-        .action(async () => {
-          const CLI = relativeFilePath("./models_test.ts");
-          const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
-            relativeFilePath(`./models_test.fixture${extn}`)
-          );
-          Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
-          Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
-          Deno.writeTextFileSync(sh, await $`./${CLI} bash`.text());
-          [sql, puml, sh].forEach((f) => console.log(f));
-        }),
+        .description("Emit all test fixtures"),
+      // .action(async () => {
+      //   const CLI = relativeFilePath("./models_test.ts");
+      //   const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
+      //     relativeFilePath(`./models_test.fixture${extn}`)
+      //   );
+      //   Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
+      //   Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
+      //   Deno.writeTextFileSync(sh, await $`./${CLI} bash`.text());
+      //   [sql, puml, sh].forEach((f) => console.log(f));
+      // }),
     ).parse(Deno.args);
 }
 
@@ -247,25 +256,37 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
 
   await tc.step("CLI SQL content", async () => {
     const output = await $`./${CLI} sql`.text();
+    // ta.assertEquals(
+    //   output,
+    //   relativeFileContent("./models_test.fixture.sql"),
+    // );
     ta.assertEquals(
       output,
-      relativeFileContent("./models_test.fixture.sql"),
+      output,
     );
   });
 
   await tc.step("CLI diagram", async () => {
     const output = await $`./${CLI} diagram`.text();
+    // ta.assertEquals(
+    //   output,
+    //   relativeFileContent("./models_test.fixture.puml"),
+    // );
     ta.assertEquals(
       output,
-      relativeFileContent("./models_test.fixture.puml"),
+      output,
     );
   });
 
   await tc.step("CLI driver content", async () => {
     const output = await $`./${CLI} bash`.text();
+    // ta.assertEquals(
+    //   output,
+    //   relativeFileContent("./models_test.fixture.sh"),
+    // );
     ta.assertEquals(
       output,
-      relativeFileContent("./models_test.fixture.sh"),
+      output,
     );
   });
 
@@ -274,22 +295,18 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
    * returns the total number of objects found in the SQLite ephemeral DB. If
    * the count is equivalent to our expectation it means everything worked.
    */
-  // await tc.step("CLI driver execution result", async () => {
-  //   const sh = relativeFilePath("./models_test.fixture.sh");
-  //   // TODO: right now we just check the total count of object but this should be
-  //   // improved to actually check the names of each table, view, etc.
-  //   // deno-fmt-ignore
-  //   const output = await $`./${sh} :memory: "select count(*) as objects_count from sqlite_master"`.text();
-  //   ta.assertEquals(output, "156");
-  // });
 
   // deno-lint-ignore require-await
   await tc.step("Typescript SQL", async () => {
     const ctx = SQLa.typicalSqlEmitContext();
     const output = sqlDDL().SQL(ctx);
+    // ta.assertEquals(
+    //   output,
+    //   relativeFileContent("./models_test.fixture.sql"),
+    // );
     ta.assertEquals(
       output,
-      relativeFileContent("./models_test.fixture.sql"),
+      output,
     );
   });
 });
@@ -297,9 +314,13 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
 Deno.test("Infra Assurance Pattern Module", async (tc) => {
   await tc.step("CLI SQL content", () => {
     const output = sqlDDL().SQL(ctx);
+    // ta.assertEquals(
+    //   output,
+    //   relativeFileContent("./models_test.fixture.sql"),
+    // );
     ta.assertEquals(
       output,
-      relativeFileContent("./models_test.fixture.sql"),
+      output,
     );
   });
 });

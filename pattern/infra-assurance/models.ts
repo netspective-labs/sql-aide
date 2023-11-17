@@ -427,16 +427,16 @@ export const allReferenceTables: (
   priority,
 ];
 
-export const graph = gm.autoIncPkTable("graph", {
-  graph_id: udm.autoIncPK(),
+export const graph = gm.textPkTable("graph", {
+  graph_id: udm.ulidPrimaryKey(),
   graph_nature_id: graphNature.references.graph_nature_id(),
   name: udm.text(),
   description: udm.textNullable(),
   ...gm.housekeeping.columns,
 });
 
-export const boundary_id = udm.autoIncPK();
-export const boundary = gm.autoIncPkTable("boundary", {
+export const boundary_id = udm.ulidPrimaryKey();
+export const boundary = gm.textPkTable("boundary", {
   boundary_id,
   parent_boundary_id: udm.selfRef(boundary_id).optional(),
   graph_id: graph.references.graph_id(),
@@ -446,21 +446,21 @@ export const boundary = gm.autoIncPkTable("boundary", {
   ...gm.housekeeping.columns,
 });
 
-export const host = gm.autoIncPkTable("host", {
-  host_id: udm.autoIncPK(),
+export const host = gm.textPkTable("host", {
+  host_id: udm.ulidPrimaryKey(),
   host_name: tcf.unique(udm.text()),
   description: udm.textNullable(),
   ...gm.housekeeping.columns,
 });
 
-export const hostBoundary = gm.autoIncPkTable("host_boundary", {
-  host_boundary_id: udm.autoIncPK(),
+export const hostBoundary = gm.textPkTable("host_boundary", {
+  host_boundary_id: udm.ulidPrimaryKey(),
   host_id: host.references.host_id(),
   ...gm.housekeeping.columns,
 });
 
-export const raciMatrix = gm.autoIncPkTable("raci_matrix", {
-  raci_matrix_id: udm.autoIncPK(),
+export const raciMatrix = gm.textPkTable("raci_matrix", {
+  raci_matrix_id: udm.ulidPrimaryKey(),
   asset: udm.text(),
   responsible: udm.text(),
   accountable: udm.text(),
@@ -469,10 +469,10 @@ export const raciMatrix = gm.autoIncPkTable("raci_matrix", {
   ...gm.housekeeping.columns,
 });
 
-export const raciMatrixSubjectBoundary = gm.autoIncPkTable(
+export const raciMatrixSubjectBoundary = gm.textPkTable(
   "raci_matrix_subject_boundary",
   {
-    raci_matrix_subject_boundary_id: udm.autoIncPK(),
+    raci_matrix_subject_boundary_id: udm.ulidPrimaryKey(),
     boundary_id: boundary.references.boundary_id(),
     raci_matrix_subject_id: raciMatrixSubject.references
       .raci_matrix_subject_id(),
@@ -480,8 +480,8 @@ export const raciMatrixSubjectBoundary = gm.autoIncPkTable(
   },
 );
 
-export const raciMatrixActivity = gm.autoIncPkTable("raci_matrix_activity", {
-  raci_matrix_activity_id: udm.autoIncPK(),
+export const raciMatrixActivity = gm.textPkTable("raci_matrix_activity", {
+  raci_matrix_activity_id: udm.ulidPrimaryKey(),
   activity: udm.text(),
   ...gm.housekeeping.columns,
 });
@@ -498,8 +498,8 @@ export const raciMatrixActivity = gm.autoIncPkTable("raci_matrix_activity", {
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
-export const asset = gm.autoIncPkTable("asset", {
-  asset_id: udm.autoIncPK(),
+export const asset = gm.textPkTable("asset", {
+  asset_id: udm.ulidPrimaryKey(),
   organization_id: udm.organization.references.organization_id(),
   asset_retired_date: udm.dateNullable(),
   asset_status_id: assetStatus.references.asset_status_id(),
@@ -535,8 +535,8 @@ export const asset = gm.autoIncPkTable("asset", {
  * https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/running_software.html
  */
 
-export const assetService = gm.autoIncPkTable("asset_service", {
-  asset_service_id: udm.autoIncPK(),
+export const assetService = gm.textPkTable("asset_service", {
+  asset_service_id: udm.ulidPrimaryKey(),
   asset_id: asset.references
     .asset_id(),
   name: udm.text(),
@@ -556,8 +556,8 @@ export const assetService = gm.autoIncPkTable("asset_service", {
   ...gm.housekeeping.columns,
 });
 
-export const vulnerabilitySource = gm.autoIncPkTable("vulnerability_source", {
-  vulnerability_source_id: udm.autoIncPK(),
+export const vulnerabilitySource = gm.textPkTable("vulnerability_source", {
+  vulnerability_source_id: udm.ulidPrimaryKey(),
   short_code: udm.text(), // For example cve code like CVE-2019-0708 (corresponds to a flaw in Microsoft’s Remote Desktop Protocol (RDP))
   source_url: udm.text(),
   description: udm.text(),
@@ -567,8 +567,8 @@ export const vulnerabilitySource = gm.autoIncPkTable("vulnerability_source", {
 // TODO:
 // - [ ] Need add field tag if needed in future
 
-export const vulnerability = gm.autoIncPkTable("vulnerability", {
-  vulnerability_id: udm.autoIncPK(),
+export const vulnerability = gm.textPkTable("vulnerability", {
+  vulnerability_id: udm.ulidPrimaryKey(),
   short_name: udm.text(),
   source_id: vulnerabilitySource.references.vulnerability_source_id(),
   affected_software: udm.text(),
@@ -581,8 +581,8 @@ export const vulnerability = gm.autoIncPkTable("vulnerability", {
   ...gm.housekeeping.columns,
 });
 
-export const threatSource = gm.autoIncPkTable("threat_source", {
-  threat_source_id: udm.autoIncPK(),
+export const threatSource = gm.textPkTable("threat_source", {
+  threat_source_id: udm.ulidPrimaryKey(),
   title: udm.text(),
   identifier: udm.text(),
   threat_source_type_id: threatSourceType.references.threat_source_type_id(),
@@ -594,8 +594,8 @@ export const threatSource = gm.autoIncPkTable("threat_source", {
   ...gm.housekeeping.columns,
 });
 
-export const threatEvent = gm.autoIncPkTable("threat_event", {
-  threat_event_id: udm.autoIncPK(),
+export const threatEvent = gm.textPkTable("threat_event", {
+  threat_event_id: udm.ulidPrimaryKey(),
   title: udm.text(),
   threat_source_id: threatSource.references.threat_source_id(),
   asset_id: asset.references.asset_id(),
@@ -607,8 +607,8 @@ export const threatEvent = gm.autoIncPkTable("threat_event", {
   ...gm.housekeeping.columns,
 });
 
-export const assetRisk = gm.autoIncPkTable("asset_risk", {
-  asset_risk_id: udm.autoIncPK(),
+export const assetRisk = gm.textPkTable("asset_risk", {
+  asset_risk_id: udm.ulidPrimaryKey(),
   asset_risk_type_id: assetRiskType.references.asset_risk_type_id(),
   asset_id: asset.references.asset_id(),
   threat_event_id: threatEvent.references.threat_event_id(),
@@ -618,10 +618,10 @@ export const assetRisk = gm.autoIncPkTable("asset_risk", {
   ...gm.housekeeping.columns,
 });
 
-export const securityImpactAnalysis = gm.autoIncPkTable(
+export const securityImpactAnalysis = gm.textPkTable(
   "security_impact_analysis",
   {
-    security_impact_analysis_id: udm.autoIncPK(),
+    security_impact_analysis_id: udm.ulidPrimaryKey(),
     vulnerability_id: vulnerability.references.vulnerability_id(),
     asset_risk_id: assetRisk.references.asset_risk_id(),
     risk_level_id: probability.references.code(),
@@ -635,24 +635,24 @@ export const securityImpactAnalysis = gm.autoIncPkTable(
   },
 );
 
-export const impactOfRisk = gm.autoIncPkTable("impact_of_risk", {
-  impact_of_risk_id: udm.autoIncPK(),
+export const impactOfRisk = gm.textPkTable("impact_of_risk", {
+  impact_of_risk_id: udm.ulidPrimaryKey(),
   security_impact_analysis_id: securityImpactAnalysis.references
     .security_impact_analysis_id(),
   impact: udm.text(),
   ...gm.housekeeping.columns,
 });
 
-export const proposedControls = gm.autoIncPkTable("proposed_controls", {
-  proposed_controls_id: udm.autoIncPK(),
+export const proposedControls = gm.textPkTable("proposed_controls", {
+  proposed_controls_id: udm.ulidPrimaryKey(),
   security_impact_analysis_id: securityImpactAnalysis.references
     .security_impact_analysis_id(),
   controls: udm.text(),
   ...gm.housekeeping.columns,
 });
 
-export const billing = gm.autoIncPkTable("billing", {
-  billing_id: udm.autoIncPK(),
+export const billing = gm.textPkTable("billing", {
+  billing_id: udm.ulidPrimaryKey(),
   purpose: udm.text(),
   bill_rate: udm.text(),
   period: udm.text(),
@@ -662,8 +662,8 @@ export const billing = gm.autoIncPkTable("billing", {
   ...gm.housekeeping.columns,
 });
 
-export const scheduledTask = gm.autoIncPkTable("scheduled_task", {
-  scheduled_task_id: udm.autoIncPK(),
+export const scheduledTask = gm.textPkTable("scheduled_task", {
+  scheduled_task_id: udm.ulidPrimaryKey(),
   description: udm.text(),
   task_date: udm.dateTime(),
   reminder_date: udm.dateTime(),
@@ -676,8 +676,8 @@ export const scheduledTask = gm.autoIncPkTable("scheduled_task", {
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
-export const timesheet = gm.autoIncPkTable("timesheet", {
-  timesheet_id: udm.autoIncPK(),
+export const timesheet = gm.textPkTable("timesheet", {
+  timesheet_id: udm.ulidPrimaryKey(),
   date_of_work: udm.dateTime(),
   is_billable_id: statusValues.references.status_value_id(),
   number_of_hours: udm.integer(),
@@ -686,8 +686,8 @@ export const timesheet = gm.autoIncPkTable("timesheet", {
   ...gm.housekeeping.columns,
 });
 
-export const certificate = gm.autoIncPkTable("certificate", {
-  certificate_id: udm.autoIncPK(),
+export const certificate = gm.textPkTable("certificate", {
+  certificate_id: udm.ulidPrimaryKey(),
   certificate_name: udm.text(),
   short_name: udm.text(),
   certificate_category: udm.text(),
@@ -701,8 +701,8 @@ export const certificate = gm.autoIncPkTable("certificate", {
   ...gm.housekeeping.columns,
 });
 
-export const device = gm.autoIncPkTable("device", {
-  device_id: udm.autoIncPK(),
+export const device = gm.textPkTable("device", {
+  device_id: udm.ulidPrimaryKey(),
   device_name: udm.text(),
   short_name: udm.text(),
   barcode: udm.text(),
@@ -716,10 +716,10 @@ export const device = gm.autoIncPkTable("device", {
   ...gm.housekeeping.columns,
 });
 
-export const securityIncidentResponseTeam = gm.autoIncPkTable(
+export const securityIncidentResponseTeam = gm.textPkTable(
   "security_incident_response_team",
   {
-    security_incident_response_team_id: udm.autoIncPK(),
+    security_incident_response_team_id: udm.ulidPrimaryKey(),
     training_subject_id: trainingSubject.references.training_subject_id()
       .optional(),
     person_id: udm.person.references.person_id(),
@@ -730,10 +730,10 @@ export const securityIncidentResponseTeam = gm.autoIncPkTable(
   },
 );
 
-export const awarenessTraining = gm.autoIncPkTable(
+export const awarenessTraining = gm.textPkTable(
   "awareness_training",
   {
-    awareness_training_id: udm.autoIncPK(),
+    awareness_training_id: udm.ulidPrimaryKey(),
     training_subject_id: trainingSubject.references.training_subject_id(),
     person_id: udm.person.references.person_id(),
     organization_id: udm.organization.references.organization_id(),
@@ -747,10 +747,10 @@ export const awarenessTraining = gm.autoIncPkTable(
  * Reference URL: https://schema.org/Rating
  */
 
-export const rating = gm.autoIncPkTable(
+export const rating = gm.textPkTable(
   "rating",
   {
-    rating_id: udm.autoIncPK(),
+    rating_id: udm.ulidPrimaryKey(),
     author_id: udm.person.references.person_id(),
     rating_given_to_id: udm.organization.references.organization_id(),
     rating_value_id: ratingValue.references.rating_value_id(),
@@ -762,20 +762,20 @@ export const rating = gm.autoIncPkTable(
   },
 );
 
-export const notes = gm.autoIncPkTable(
+export const notes = gm.textPkTable(
   "note",
   {
-    note_id: udm.autoIncPK(),
+    note_id: udm.ulidPrimaryKey(),
     party_id: udm.party.references.party_id(),
     note: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
 
-export const auditAssertion = gm.autoIncPkTable(
+export const auditAssertion = gm.textPkTable(
   "audit_assertion",
   {
-    audit_assertion_id: udm.autoIncPK(),
+    audit_assertion_id: udm.ulidPrimaryKey(),
     auditor_type_id: auditorType.references.code(),
     audit_purpose_id: auditPurpose.references.audit_purpose_id(),
     auditor_org_id: udm.organization.references.organization_id(),
@@ -795,10 +795,10 @@ export const auditAssertion = gm.autoIncPkTable(
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
-export const contract = gm.autoIncPkTable(
+export const contract = gm.textPkTable(
   "contract",
   {
-    contract_id: udm.autoIncPK(),
+    contract_id: udm.ulidPrimaryKey(),
     contract_from_id: udm.party.references.party_id(),
     contract_to_id: udm.party.references.party_id(),
     contract_status_id: contractStatus.references.contract_status_id()
@@ -817,10 +817,10 @@ export const contract = gm.autoIncPkTable(
   },
 );
 
-export const riskRegister = gm.autoIncPkTable(
+export const riskRegister = gm.textPkTable(
   "risk_register",
   {
-    risk_register_id: udm.autoIncPK(),
+    risk_register_id: udm.ulidPrimaryKey(),
     description: udm.text(),
     risk_subject_id: riskSubject.references.risk_subject_id(),
     risk_type_id: riskType.references.risk_type_id(),
@@ -844,10 +844,10 @@ export const riskRegister = gm.autoIncPkTable(
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
-export const incident = gm.autoIncPkTable(
+export const incident = gm.textPkTable(
   "incident",
   {
-    incident_id: udm.autoIncPK(),
+    incident_id: udm.ulidPrimaryKey(),
     title: udm.text(),
     incident_date: udm.date(),
     time_and_time_zone: udm.dateTime(),
@@ -884,10 +884,10 @@ export const incident = gm.autoIncPkTable(
   },
 );
 
-export const incidentRootCause = gm.autoIncPkTable(
+export const incidentRootCause = gm.textPkTable(
   "incident_root_cause",
   {
-    incident_root_cause_id: udm.autoIncPK(),
+    incident_root_cause_id: udm.ulidPrimaryKey(),
     incident_id: incident.references.incident_id().optional(),
     source: udm.text(),
     description: udm.text(),
@@ -902,10 +902,10 @@ export const incidentRootCause = gm.autoIncPkTable(
   },
 );
 
-export const raciMatrixAssignment = gm.autoIncPkTable(
+export const raciMatrixAssignment = gm.textPkTable(
   "raci_matrix_assignment",
   {
-    raci_matrix_assignment_id: udm.autoIncPK(),
+    raci_matrix_assignment_id: udm.ulidPrimaryKey(),
     person_id: udm.person.references.person_id(),
     subject_id: raciMatrixSubject.references.raci_matrix_subject_id(),
     activity_id: raciMatrixActivity.references.raci_matrix_activity_id(),
@@ -915,10 +915,10 @@ export const raciMatrixAssignment = gm.autoIncPkTable(
   },
 );
 
-export const personSkill = gm.autoIncPkTable(
+export const personSkill = gm.textPkTable(
   "person_skill",
   {
-    person_skill_id: udm.autoIncPK(),
+    person_skill_id: udm.ulidPrimaryKey(),
     person_id: udm.person.references.person_id(),
     skill_nature_id: skillNature.references.skill_nature_id(),
     skill_id: skill.references.skill_id(),
@@ -927,20 +927,20 @@ export const personSkill = gm.autoIncPkTable(
   },
 );
 
-export const keyPerformance = gm.autoIncPkTable(
+export const keyPerformance = gm.textPkTable(
   "key_performance",
   {
-    key_performance_id: udm.autoIncPK(),
+    key_performance_id: udm.ulidPrimaryKey(),
     title: udm.text(),
     description: udm.text(),
     ...gm.housekeeping.columns,
   },
 );
 
-export const keyPerformanceIndicator = gm.autoIncPkTable(
+export const keyPerformanceIndicator = gm.textPkTable(
   "key_performance_indicator",
   {
-    key_performance_indicator_id: udm.autoIncPK(),
+    key_performance_indicator_id: udm.ulidPrimaryKey(),
     key_performance_id: keyPerformance.references.key_performance_id(),
     asset_id: asset.references.asset_id(),
     calendar_period_id: calendarPeriod.references.calendar_period_id(),
@@ -967,10 +967,10 @@ export const keyPerformanceIndicator = gm.autoIncPkTable(
   },
 );
 
-export const keyRisk = gm.autoIncPkTable(
+export const keyRisk = gm.textPkTable(
   "key_risk",
   {
-    key_risk_id: udm.autoIncPK(),
+    key_risk_id: udm.ulidPrimaryKey(),
     title: udm.text(),
     description: udm.text(),
     base_value: udm.textNullable(),
@@ -978,10 +978,10 @@ export const keyRisk = gm.autoIncPkTable(
   },
 );
 
-export const keyRiskIndicator = gm.autoIncPkTable(
+export const keyRiskIndicator = gm.textPkTable(
   "key_risk_indicator",
   {
-    key_risk_indicator_id: udm.autoIncPK(),
+    key_risk_indicator_id: udm.ulidPrimaryKey(),
     key_risk_id: keyRisk.references.key_risk_id(),
     entry_date: udm.date(),
     entry_value: udm.textNullable(),
@@ -989,10 +989,10 @@ export const keyRiskIndicator = gm.autoIncPkTable(
   },
 );
 
-export const assertion = gm.autoIncPkTable(
+export const assertion = gm.textPkTable(
   "assertion",
   {
-    assertion_id: udm.autoIncPK(),
+    assertion_id: udm.ulidPrimaryKey(),
     foreign_integration: udm.text(),
     assertion: udm.text(),
     assertion_explain: udm.text(),
@@ -1002,10 +1002,10 @@ export const assertion = gm.autoIncPkTable(
   },
 );
 
-export const attestation = gm.autoIncPkTable(
+export const attestation = gm.textPkTable(
   "attestation",
   {
-    attestation_id: udm.autoIncPK(),
+    attestation_id: udm.ulidPrimaryKey(),
     assertion_id: assertion.references.assertion_id(),
     person_id: udm.person.references.person_id(),
     attestation: udm.text(),
@@ -1017,10 +1017,10 @@ export const attestation = gm.autoIncPkTable(
   },
 );
 
-export const attestationEvidence = gm.autoIncPkTable(
+export const attestationEvidence = gm.textPkTable(
   "attestation_evidence",
   {
-    attestation_evidence_id: udm.autoIncPK(),
+    attestation_evidence_id: udm.ulidPrimaryKey(),
     attestation_id: attestation.references.attestation_id(),
     evidence_nature: udm.text(),
     evidence_summary_markdown: udm.text(),

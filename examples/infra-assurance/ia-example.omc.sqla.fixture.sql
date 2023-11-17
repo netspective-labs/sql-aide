@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS "organization_role_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "graph" (
-    "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "graph_id" TEXT PRIMARY KEY NOT NULL,
     "graph_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -400,9 +400,9 @@ CREATE TABLE IF NOT EXISTS "graph" (
     FOREIGN KEY("graph_nature_id") REFERENCES "graph_nature"("graph_nature_id")
 );
 CREATE TABLE IF NOT EXISTS "boundary" (
-    "boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "parent_boundary_id" INTEGER,
-    "graph_id" INTEGER NOT NULL,
+    "boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "parent_boundary_id" TEXT,
+    "graph_id" TEXT NOT NULL,
     "boundary_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS "boundary" (
     FOREIGN KEY("boundary_nature_id") REFERENCES "boundary_nature"("boundary_nature_id")
 );
 CREATE TABLE IF NOT EXISTS "host" (
-    "host_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "host_id" TEXT PRIMARY KEY NOT NULL,
     "host_name" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -431,8 +431,8 @@ CREATE TABLE IF NOT EXISTS "host" (
     UNIQUE("host_name")
 );
 CREATE TABLE IF NOT EXISTS "host_boundary" (
-    "host_boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "host_id" INTEGER NOT NULL,
+    "host_boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "host_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS "assignment" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix" (
-    "raci_matrix_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_id" TEXT PRIMARY KEY NOT NULL,
     "asset" TEXT NOT NULL,
     "responsible" TEXT NOT NULL,
     "accountable" TEXT NOT NULL,
@@ -510,8 +510,8 @@ CREATE TABLE IF NOT EXISTS "raci_matrix" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
-    "raci_matrix_subject_boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "boundary_id" INTEGER NOT NULL,
+    "raci_matrix_subject_boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "boundary_id" TEXT NOT NULL,
     "raci_matrix_subject_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     FOREIGN KEY("raci_matrix_subject_id") REFERENCES "raci_matrix_subject"("raci_matrix_subject_id")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
-    "raci_matrix_activity_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_activity_id" TEXT PRIMARY KEY NOT NULL,
     "activity" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -535,7 +535,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "asset" (
-    "asset_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_id" TEXT PRIMARY KEY NOT NULL,
     "organization_id" INTEGER NOT NULL,
     "asset_retired_date" DATE,
     "asset_status_id" INTEGER NOT NULL,
@@ -571,8 +571,8 @@ CREATE TABLE IF NOT EXISTS "asset" (
     FOREIGN KEY("assignment_id") REFERENCES "assignment"("assignment_id")
 );
 CREATE TABLE IF NOT EXISTS "asset_service" (
-    "asset_service_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "asset_id" INTEGER NOT NULL,
+    "asset_service_id" TEXT PRIMARY KEY NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "asset_service_status_id" INTEGER NOT NULL,
@@ -597,7 +597,7 @@ CREATE TABLE IF NOT EXISTS "asset_service" (
     FOREIGN KEY("asset_service_status_id") REFERENCES "asset_service_status"("asset_service_status_id")
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_source" (
-    "vulnerability_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "vulnerability_source_id" TEXT PRIMARY KEY NOT NULL,
     "short_code" TEXT NOT NULL,
     "source_url" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -610,9 +610,9 @@ CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "vulnerability" (
-    "vulnerability_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "vulnerability_id" TEXT PRIMARY KEY NOT NULL,
     "short_name" TEXT NOT NULL,
-    "source_id" INTEGER NOT NULL,
+    "source_id" TEXT NOT NULL,
     "affected_software" TEXT NOT NULL,
     "reference" TEXT NOT NULL,
     "status_id" TEXT NOT NULL,
@@ -632,7 +632,7 @@ CREATE TABLE IF NOT EXISTS "vulnerability" (
     FOREIGN KEY("severity_id") REFERENCES "severity"("code")
 );
 CREATE TABLE IF NOT EXISTS "threat_source" (
-    "threat_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_source_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
     "threat_source_type_id" INTEGER NOT NULL,
@@ -651,10 +651,10 @@ CREATE TABLE IF NOT EXISTS "threat_source" (
     FOREIGN KEY("threat_source_type_id") REFERENCES "threat_source_type"("threat_source_type_id")
 );
 CREATE TABLE IF NOT EXISTS "threat_event" (
-    "threat_event_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_event_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
-    "threat_source_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "threat_source_id" TEXT NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
     "threat_event_type_id" INTEGER NOT NULL,
     "event_classification" TEXT NOT NULL,
@@ -672,10 +672,10 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     FOREIGN KEY("threat_event_type_id") REFERENCES "threat_event_type"("threat_event_type_id")
 );
 CREATE TABLE IF NOT EXISTS "asset_risk" (
-    "asset_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_risk_id" TEXT PRIMARY KEY NOT NULL,
     "asset_risk_type_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
-    "threat_event_id" INTEGER NOT NULL,
+    "asset_id" TEXT NOT NULL,
+    "threat_event_id" TEXT NOT NULL,
     "relevance_id" TEXT,
     "likelihood_id" TEXT,
     "impact" TEXT NOT NULL,
@@ -693,9 +693,9 @@ CREATE TABLE IF NOT EXISTS "asset_risk" (
     FOREIGN KEY("likelihood_id") REFERENCES "probability"("code")
 );
 CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
-    "security_impact_analysis_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "vulnerability_id" INTEGER NOT NULL,
-    "asset_risk_id" INTEGER NOT NULL,
+    "security_impact_analysis_id" TEXT PRIMARY KEY NOT NULL,
+    "vulnerability_id" TEXT NOT NULL,
+    "asset_risk_id" TEXT NOT NULL,
     "risk_level_id" TEXT NOT NULL,
     "impact_level_id" TEXT NOT NULL,
     "existing_controls" TEXT NOT NULL,
@@ -719,8 +719,8 @@ CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
     FOREIGN KEY("responsible_by_id") REFERENCES "person"("person_id")
 );
 CREATE TABLE IF NOT EXISTS "impact_of_risk" (
-    "impact_of_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "security_impact_analysis_id" INTEGER NOT NULL,
+    "impact_of_risk_id" TEXT PRIMARY KEY NOT NULL,
+    "security_impact_analysis_id" TEXT NOT NULL,
     "impact" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -732,8 +732,8 @@ CREATE TABLE IF NOT EXISTS "impact_of_risk" (
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "proposed_controls" (
-    "proposed_controls_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "security_impact_analysis_id" INTEGER NOT NULL,
+    "proposed_controls_id" TEXT PRIMARY KEY NOT NULL,
+    "security_impact_analysis_id" TEXT NOT NULL,
     "controls" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -745,7 +745,7 @@ CREATE TABLE IF NOT EXISTS "proposed_controls" (
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "billing" (
-    "billing_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "billing_id" TEXT PRIMARY KEY NOT NULL,
     "purpose" TEXT NOT NULL,
     "bill_rate" TEXT NOT NULL,
     "period" TEXT NOT NULL,
@@ -761,7 +761,7 @@ CREATE TABLE IF NOT EXISTS "billing" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "scheduled_task" (
-    "scheduled_task_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "scheduled_task_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
     "task_date" TIMESTAMP NOT NULL,
     "reminder_date" TIMESTAMP NOT NULL,
@@ -776,7 +776,7 @@ CREATE TABLE IF NOT EXISTS "scheduled_task" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "timesheet" (
-    "timesheet_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "timesheet_id" TEXT PRIMARY KEY NOT NULL,
     "date_of_work" TIMESTAMP NOT NULL,
     "is_billable_id" INTEGER NOT NULL,
     "number_of_hours" INTEGER NOT NULL,
@@ -793,7 +793,7 @@ CREATE TABLE IF NOT EXISTS "timesheet" (
     FOREIGN KEY("time_entry_category_id") REFERENCES "time_entry_category"("time_entry_category_id")
 );
 CREATE TABLE IF NOT EXISTS "certificate" (
-    "certificate_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "certificate_id" TEXT PRIMARY KEY NOT NULL,
     "certificate_name" TEXT NOT NULL,
     "short_name" TEXT NOT NULL,
     "certificate_category" TEXT NOT NULL,
@@ -813,7 +813,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "device" (
-    "device_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "device_id" TEXT PRIMARY KEY NOT NULL,
     "device_name" TEXT NOT NULL,
     "short_name" TEXT NOT NULL,
     "barcode" TEXT NOT NULL,
@@ -833,7 +833,7 @@ CREATE TABLE IF NOT EXISTS "device" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
-    "security_incident_response_team_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "security_incident_response_team_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
@@ -852,7 +852,7 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     FOREIGN KEY("training_status_id") REFERENCES "status_value"("status_value_id")
 );
 CREATE TABLE IF NOT EXISTS "awareness_training" (
-    "awareness_training_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "awareness_training_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER NOT NULL,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
@@ -871,7 +871,7 @@ CREATE TABLE IF NOT EXISTS "awareness_training" (
     FOREIGN KEY("training_status_id") REFERENCES "status_value"("status_value_id")
 );
 CREATE TABLE IF NOT EXISTS "rating" (
-    "rating_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "rating_id" TEXT PRIMARY KEY NOT NULL,
     "author_id" INTEGER NOT NULL,
     "rating_given_to_id" INTEGER NOT NULL,
     "rating_value_id" INTEGER NOT NULL,
@@ -893,7 +893,7 @@ CREATE TABLE IF NOT EXISTS "rating" (
     FOREIGN KEY("worst_rating_id") REFERENCES "rating_value"("rating_value_id")
 );
 CREATE TABLE IF NOT EXISTS "note" (
-    "note_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "note_id" TEXT PRIMARY KEY NOT NULL,
     "party_id" INTEGER NOT NULL,
     "note" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -958,7 +958,7 @@ CREATE TABLE IF NOT EXISTS "tracking_period" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "audit_assertion" (
-    "audit_assertion_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "audit_assertion_id" TEXT PRIMARY KEY NOT NULL,
     "auditor_type_id" TEXT NOT NULL,
     "audit_purpose_id" INTEGER NOT NULL,
     "auditor_org_id" INTEGER NOT NULL,
@@ -983,7 +983,7 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
     FOREIGN KEY("auditor_status_type_id") REFERENCES "audit_status"("audit_status_id")
 );
 CREATE TABLE IF NOT EXISTS "contract" (
-    "contract_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "contract_id" TEXT PRIMARY KEY NOT NULL,
     "contract_from_id" INTEGER NOT NULL,
     "contract_to_id" INTEGER NOT NULL,
     "contract_status_id" INTEGER,
@@ -1012,7 +1012,7 @@ CREATE TABLE IF NOT EXISTS "contract" (
     FOREIGN KEY("contract_type_id") REFERENCES "contract_type"("contract_type_id")
 );
 CREATE TABLE IF NOT EXISTS "risk_register" (
-    "risk_register_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "risk_register_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
     "risk_subject_id" INTEGER NOT NULL,
     "risk_type_id" INTEGER NOT NULL,
@@ -1043,11 +1043,11 @@ CREATE TABLE IF NOT EXISTS "risk_register" (
     FOREIGN KEY("control_monitor_risk_owner_id") REFERENCES "person"("person_id")
 );
 CREATE TABLE IF NOT EXISTS "incident" (
-    "incident_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "incident_date" DATE NOT NULL,
     "time_and_time_zone" TIMESTAMP NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "category_id" INTEGER NOT NULL,
     "sub_category_id" INTEGER NOT NULL,
     "severity_id" TEXT NOT NULL,
@@ -1094,8 +1094,8 @@ CREATE TABLE IF NOT EXISTS "incident" (
     FOREIGN KEY("status_id") REFERENCES "incident_status"("incident_status_id")
 );
 CREATE TABLE IF NOT EXISTS "incident_root_cause" (
-    "incident_root_cause_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "incident_id" INTEGER,
+    "incident_root_cause_id" TEXT PRIMARY KEY NOT NULL,
+    "incident_id" TEXT,
     "source" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "probability_id" TEXT,
@@ -1117,10 +1117,10 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
     FOREIGN KEY("likelihood_of_risk_id") REFERENCES "priority"("code")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
-    "raci_matrix_assignment_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_assignment_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" INTEGER NOT NULL,
     "subject_id" INTEGER NOT NULL,
-    "activity_id" INTEGER NOT NULL,
+    "activity_id" TEXT NOT NULL,
     "raci_matrix_assignment_nature_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -1135,7 +1135,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
     FOREIGN KEY("raci_matrix_assignment_nature_id") REFERENCES "raci_matrix_assignment_nature"("code")
 );
 CREATE TABLE IF NOT EXISTS "person_skill" (
-    "person_skill_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "person_skill_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" INTEGER NOT NULL,
     "skill_nature_id" INTEGER NOT NULL,
     "skill_id" INTEGER NOT NULL,
@@ -1153,7 +1153,7 @@ CREATE TABLE IF NOT EXISTS "person_skill" (
     FOREIGN KEY("proficiency_scale_id") REFERENCES "proficiency_scale"("code")
 );
 CREATE TABLE IF NOT EXISTS "key_performance" (
-    "key_performance_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "key_performance_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1165,9 +1165,9 @@ CREATE TABLE IF NOT EXISTS "key_performance" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
-    "key_performance_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "key_performance_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "key_performance_indicator_id" TEXT PRIMARY KEY NOT NULL,
+    "key_performance_id" TEXT NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "calendar_period_id" INTEGER NOT NULL,
     "kpi_comparison_operator_id" TEXT NOT NULL,
     "kpi_context" TEXT NOT NULL,
@@ -1205,7 +1205,7 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     FOREIGN KEY("trend_id") REFERENCES "trend"("code")
 );
 CREATE TABLE IF NOT EXISTS "key_risk" (
-    "key_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "key_risk_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "base_value" TEXT,
@@ -1218,8 +1218,8 @@ CREATE TABLE IF NOT EXISTS "key_risk" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
-    "key_risk_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "key_risk_id" INTEGER NOT NULL,
+    "key_risk_indicator_id" TEXT PRIMARY KEY NOT NULL,
+    "key_risk_id" TEXT NOT NULL,
     "entry_date" DATE NOT NULL,
     "entry_value" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1232,7 +1232,7 @@ CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
     FOREIGN KEY("key_risk_id") REFERENCES "key_risk"("key_risk_id")
 );
 CREATE TABLE IF NOT EXISTS "assertion" (
-    "assertion_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "assertion_id" TEXT PRIMARY KEY NOT NULL,
     "foreign_integration" TEXT NOT NULL,
     "assertion" TEXT NOT NULL,
     "assertion_explain" TEXT NOT NULL,
@@ -1247,14 +1247,14 @@ CREATE TABLE IF NOT EXISTS "assertion" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "attestation" (
-    "attestation_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "assertion_id" INTEGER NOT NULL,
+    "attestation_id" TEXT PRIMARY KEY NOT NULL,
+    "assertion_id" TEXT NOT NULL,
     "person_id" INTEGER NOT NULL,
     "attestation" TEXT NOT NULL,
     "attestation_explain" TEXT NOT NULL,
     "attested_on" DATE NOT NULL,
     "expires_on" DATE,
-    "boundary_id" INTEGER,
+    "boundary_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -1267,8 +1267,8 @@ CREATE TABLE IF NOT EXISTS "attestation" (
     FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id")
 );
 CREATE TABLE IF NOT EXISTS "attestation_evidence" (
-    "attestation_evidence_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "attestation_id" INTEGER NOT NULL,
+    "attestation_evidence_id" TEXT PRIMARY KEY NOT NULL,
+    "attestation_id" TEXT NOT NULL,
     "evidence_nature" TEXT NOT NULL,
     "evidence_summary_markdown" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -2123,26 +2123,26 @@ INSERT INTO "contact_land" ("contact_type_id", "party_id", "address_line1", "add
 ;
 INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), 'ORGANIZATION_TO_PERSON', (SELECT "party_role_id" FROM "party_role" WHERE "code" = 'VENDOR'), NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'LEAD_SOFTWARE_ENGINEER'), NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'REACTJS'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JAVASCRIPT'), 'ADVANCED', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'HUGO'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'DENO'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'ANGULAR'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'TYPESCRIPT'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'POSTGRESQL'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'MYSQL'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'PHP'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'PYTHON'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'DOT_NET'), 'NA', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'ORACLE'), 'NA', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JAVA'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JQUERY'), 'ADVANCED', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "person_skill" ("person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'OSQUERY'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "awareness_training" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "training_subject_id" FROM "training_subject" WHERE "code" = 'HIPAA'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "status_value_id" FROM "status_value" WHERE "code" = 'YES'), '2022-02-21', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "security_incident_response_team" ("training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES (NULL, (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "rating" ("author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FOUR'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FIVE'), 'Good Service', 'Satisfied', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "contract" ("contract_from_id", "contract_to_id", "contract_status_id", "document_reference", "payment_type_id", "periodicity_id", "start_date", "end_date", "contract_type_id", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), (SELECT "contract_status_id" FROM "contract_status" WHERE "code" = 'FINISHED'), 'google.com', (SELECT "payment_type_id" FROM "payment_type" WHERE "code" = 'RENTS'), (SELECT "periodicity_id" FROM "periodicity" WHERE "code" = 'WEEKLY'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', (SELECT "contract_type_id" FROM "contract_type" WHERE "code" = 'GENERAL_CONTRACT_FOR_SERVICES'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "risk_register" ("description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Risk description', (SELECT "risk_subject_id" FROM "risk_subject" WHERE "code" = 'TECHNICAL_RISK'), (SELECT "risk_type_id" FROM "risk_type" WHERE "code" = 'QUALITY'), 'Impact to the organization', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-13', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "asset" ("organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "criticality", "asymmetric_keys_encryption_enabled", "cryptographic_key_encryption_enabled", "symmetric_keys_encryption_enabled", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, (SELECT "asset_status_id" FROM "asset_status" WHERE "code" = 'IN_USE'), '', 'Asset Name', 'Service used for asset etc', (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE'), '', (SELECT "assignment_id" FROM "assignment" WHERE "code" = 'IN_USE'), '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "incident" ("title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Server Down - Due to CPU utilization reached 100%', '2021-04-20', '2021-04-20T00:00:00.000Z', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE')), (SELECT "incident_category_id" FROM "incident_category" WHERE "code" = 'PERFORMANCE'), (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE'), 'MAJOR', 'HIGH', (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT'), 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', (SELECT "incident_status_id" FROM "incident_status" WHERE "code" = 'CLOSED'), NULL, NULL, '', '', '2021-04-20', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO "incident_root_cause" ("incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE') AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT') AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH97ADM3BSFH21QSMPEG', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'REACTJS'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98YVWQ5X086GNH834Q', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JAVASCRIPT'), 'ADVANCED', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98F0EKVWYQC6AKH2MG', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'HUGO'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98YXKSNPEMN7NSMMP9', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'DENO'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98JKMJG68WZ7CG37G1', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'ANGULAR'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH988TXV89N6DC4Q8XAJ', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'TYPESCRIPT'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH9879QT3GH750J49VTT', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'POSTGRESQL'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98GC5GGTCA1CGTJ40Z', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'MYSQL'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98QVSNMZ8E40FBPZ5R', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'PHP'), 'INTERMEDIATE', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98M1GPF7XRS7Z82PAX', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'PYTHON'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH987WEG0GXGEYQP2HSN', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'DOT_NET'), 'NA', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98Z876W6F725YSYVRK', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'ORACLE'), 'NA', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98VH5DVREJ6FE19QAT', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JAVA'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH984YRE9GGK309WN3JH', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'JQUERY'), 'ADVANCED', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_skill" ("person_skill_id", "person_id", "skill_nature_id", "skill_id", "proficiency_scale_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98XAA43QSJJJHG2VD7', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "skill_nature_id" FROM "skill_nature" WHERE "code" = 'SOFTWARE'), (SELECT "skill_id" FROM "skill" WHERE "code" = 'OSQUERY'), 'FUNDAMENTAL_AWARENESS', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "awareness_training" ("awareness_training_id", "training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98P32PXKRJVS0X7AYA', (SELECT "training_subject_id" FROM "training_subject" WHERE "code" = 'HIPAA'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "status_value_id" FROM "status_value" WHERE "code" = 'YES'), '2022-02-21', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "security_incident_response_team" ("security_incident_response_team_id", "training_subject_id", "person_id", "organization_id", "training_status_id", "attended_date", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98JAK1SPG6Y6W33V5S', NULL, (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "rating" ("rating_id", "author_id", "rating_given_to_id", "rating_value_id", "best_rating_id", "rating_explanation", "review_aspect", "worst_rating_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH98QYHQQEN0QQ4SH9D3', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FOUR'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'FIVE'), 'Good Service', 'Satisfied', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "contract" ("contract_id", "contract_from_id", "contract_to_id", "contract_status_id", "document_reference", "payment_type_id", "periodicity_id", "start_date", "end_date", "contract_type_id", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH9827CMNWKN88GEM4GF', (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'ORGANIZATION' AND "party_name" = 'Orgnization Name'), (SELECT "contract_status_id" FROM "contract_status" WHERE "code" = 'FINISHED'), 'google.com', (SELECT "payment_type_id" FROM "payment_type" WHERE "code" = 'RENTS'), (SELECT "periodicity_id" FROM "periodicity" WHERE "code" = 'WEEKLY'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', (SELECT "contract_type_id" FROM "contract_type" WHERE "code" = 'GENERAL_CONTRACT_FOR_SERVICES'), '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "risk_register" ("risk_register_id", "description", "risk_subject_id", "risk_type_id", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH99KZVKRSH31GWDRNKQ', 'Risk description', (SELECT "risk_subject_id" FROM "risk_subject" WHERE "code" = 'TECHNICAL_RISK'), (SELECT "risk_type_id" FROM "risk_type" WHERE "code" = 'QUALITY'), 'Impact to the organization', (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), (SELECT "rating_value_id" FROM "rating_value" WHERE "code" = 'THREE'), 'Try forgot password', 1, NULL, 'Mitigation further actions', 'Control monitor mitigation actions tracking strategy', '2022-06-13', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "asset" ("asset_id", "organization_id", "asset_retired_date", "asset_status_id", "asset_tag", "name", "description", "asset_type_id", "asset_workload_category", "assignment_id", "barcode_or_rfid_tag", "installed_date", "planned_retirement_date", "purchase_delivery_date", "purchase_order_date", "purchase_request_date", "serial_number", "tco_amount", "tco_currency", "criticality", "asymmetric_keys_encryption_enabled", "cryptographic_key_encryption_enabled", "symmetric_keys_encryption_enabled", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH995PZP9HXFM0Y4A8X5', (SELECT "organization_id" FROM "organization" WHERE "name" = 'Orgnization Name' AND "license" = 'XXXX-XXXXX-XXXX'), NULL, (SELECT "asset_status_id" FROM "asset_status" WHERE "code" = 'IN_USE'), '', 'Asset Name', 'Service used for asset etc', (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE'), '', (SELECT "assignment_id" FROM "assignment" WHERE "code" = 'IN_USE'), '', '2021-04-20', NULL, '2021-04-20', '2021-04-20', '2021-04-20', '', '100', 'dollar', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "incident" ("incident_id", "title", "incident_date", "time_and_time_zone", "asset_id", "category_id", "sub_category_id", "severity_id", "priority_id", "internal_or_external_id", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by_id", "reported_to_id", "brief_description", "detailed_description", "assigned_to_id", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status_id", "closed_date", "reopened_time", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH99KZVQSWZCJNJBKBHW', 'Server Down - Due to CPU utilization reached 100%', '2021-04-20', '2021-04-20T00:00:00.000Z', (SELECT "asset_id" FROM "asset" WHERE "name" = 'Asset Name' AND "description" = 'Service used for asset etc' AND "asset_type_id" = (SELECT "asset_type_id" FROM "asset_type" WHERE "code" = 'VIRTUAL_MACHINE')), (SELECT "incident_category_id" FROM "incident_category" WHERE "code" = 'PERFORMANCE'), (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE'), 'MAJOR', 'HIGH', (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT'), 'USA', 'Application down', '', 'All', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), 'Server will down due to CPU utilization', 'We got an alert message of server due to CPU utilization reaching 100% on 02-07-2022 07:30 GTM', (SELECT "person_id" FROM "person" WHERE "party_id" = (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'First Name Last Name') AND "person_type_id" = (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'INDIVIDUAL') AND "person_first_name" = 'First Name' AND "person_last_name" = 'Last Name'), '2021-04-20', 'Server was facing issue using due to insufficient harware specfication which cause high CPU utilization, resulting in Crashing of the application', 'Migrated few services to another server in that network range and Restarted server', 'Migrated few services to another server in that network range', 'Application was completely down', 'We need to evlaute the hardware specification and remaining CPU/Memory resources before deploying new applications', (SELECT "incident_status_id" FROM "incident_status" WHERE "code" = 'CLOSED'), NULL, NULL, '', '', '2021-04-20', '2021-04-20T00:00:00.000Z', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "incident_root_cause" ("incident_root_cause_id", "incident_id", "source", "description", "probability_id", "testing_analysis", "solution", "likelihood_of_risk_id", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEKFH99RTQVR6DYQQ1WH3CF', (SELECT "incident_id" FROM "incident" WHERE "title" = 'Server Down - Due to CPU utilization reached 100%' AND "sub_category_id" = (SELECT "incident_sub_category_id" FROM "incident_sub_category" WHERE "code" = 'HARDWARE_FAILURE') AND "severity_id" = 'MAJOR' AND "priority_id" = 'HIGH' AND "internal_or_external_id" = (SELECT "incident_type_id" FROM "incident_type" WHERE "code" = 'COMPLAINT') AND "location" = 'USA'), 'Server', 'Sample description', 'HIGH', 'Sample testing analysis', 'Server restarted', 'HIGH', 'No modifications', 'Sample test case', 'Sample test result', NULL, NULL, NULL, NULL, NULL, NULL);

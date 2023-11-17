@@ -50,6 +50,7 @@ export const {
   jsonbNullable,
 } = gm.domains;
 export const { autoIncPrimaryKey: autoIncPK } = gm.keys;
+export const { ulidPrimaryKey: ulidPrimaryKey } = gm.keys;
 
 export const execCtx = gm.textEnumTable(
   "execution_context",

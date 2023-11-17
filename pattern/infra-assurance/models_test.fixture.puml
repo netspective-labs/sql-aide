@@ -336,7 +336,7 @@
   }
 
   entity "graph" as graph {
-      **graph_id**: INTEGER
+    * **graph_id**: TEXT
     --
     * graph_nature_id: INTEGER
     * name: TEXT
@@ -351,10 +351,10 @@
   }
 
   entity "boundary" as boundary {
-      **boundary_id**: INTEGER
+    * **boundary_id**: TEXT
     --
-      parent_boundary_id: INTEGER
-    * graph_id: INTEGER
+      parent_boundary_id: TEXT
+    * graph_id: TEXT
     * boundary_nature_id: INTEGER
     * name: TEXT
       description: TEXT
@@ -368,7 +368,7 @@
   }
 
   entity "host" as host {
-      **host_id**: INTEGER
+    * **host_id**: TEXT
     --
     * host_name: TEXT
       description: TEXT
@@ -382,9 +382,9 @@
   }
 
   entity "host_boundary" as host_boundary {
-      **host_boundary_id**: INTEGER
+    * **host_boundary_id**: TEXT
     --
-    * host_id: INTEGER
+    * host_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -451,7 +451,7 @@
   }
 
   entity "raci_matrix" as raci_matrix {
-      **raci_matrix_id**: INTEGER
+    * **raci_matrix_id**: TEXT
     --
     * asset: TEXT
     * responsible: TEXT
@@ -468,9 +468,9 @@
   }
 
   entity "raci_matrix_subject_boundary" as raci_matrix_subject_boundary {
-      **raci_matrix_subject_boundary_id**: INTEGER
+    * **raci_matrix_subject_boundary_id**: TEXT
     --
-    * boundary_id: INTEGER
+    * boundary_id: TEXT
     * raci_matrix_subject_id: INTEGER
       created_at: TIMESTAMP
       created_by: TEXT
@@ -482,7 +482,7 @@
   }
 
   entity "raci_matrix_activity" as raci_matrix_activity {
-      **raci_matrix_activity_id**: INTEGER
+    * **raci_matrix_activity_id**: TEXT
     --
     * activity: TEXT
       created_at: TIMESTAMP
@@ -495,7 +495,7 @@
   }
 
   entity "asset" as asset {
-      **asset_id**: INTEGER
+    * **asset_id**: TEXT
     --
     * organization_id: INTEGER
       asset_retired_date: DATE
@@ -529,9 +529,9 @@
   }
 
   entity "asset_service" as asset_service {
-      **asset_service_id**: INTEGER
+    * **asset_service_id**: TEXT
     --
-    * asset_id: INTEGER
+    * asset_id: TEXT
     * name: TEXT
     * description: TEXT
     * asset_service_status_id: INTEGER
@@ -555,7 +555,7 @@
   }
 
   entity "vulnerability_source" as vulnerability_source {
-      **vulnerability_source_id**: INTEGER
+    * **vulnerability_source_id**: TEXT
     --
     * short_code: TEXT
     * source_url: TEXT
@@ -570,10 +570,10 @@
   }
 
   entity "vulnerability" as vulnerability {
-      **vulnerability_id**: INTEGER
+    * **vulnerability_id**: TEXT
     --
     * short_name: TEXT
-    * source_id: INTEGER
+    * source_id: TEXT
     * affected_software: TEXT
     * reference: TEXT
     * status_id: TEXT
@@ -591,7 +591,7 @@
   }
 
   entity "threat_source" as threat_source {
-      **threat_source_id**: INTEGER
+    * **threat_source_id**: TEXT
     --
     * title: TEXT
     * identifier: TEXT
@@ -611,11 +611,11 @@
   }
 
   entity "threat_event" as threat_event {
-      **threat_event_id**: INTEGER
+    * **threat_event_id**: TEXT
     --
     * title: TEXT
-    * threat_source_id: INTEGER
-    * asset_id: INTEGER
+    * threat_source_id: TEXT
+    * asset_id: TEXT
     * identifier: TEXT
     * threat_event_type_id: INTEGER
     * event_classification: TEXT
@@ -631,11 +631,11 @@
   }
 
   entity "asset_risk" as asset_risk {
-      **asset_risk_id**: INTEGER
+    * **asset_risk_id**: TEXT
     --
     * asset_risk_type_id: INTEGER
-    * asset_id: INTEGER
-    * threat_event_id: INTEGER
+    * asset_id: TEXT
+    * threat_event_id: TEXT
       relevance_id: TEXT
       likelihood_id: TEXT
     * impact: TEXT
@@ -649,10 +649,10 @@
   }
 
   entity "security_impact_analysis" as security_impact_analysis {
-      **security_impact_analysis_id**: INTEGER
+    * **security_impact_analysis_id**: TEXT
     --
-    * vulnerability_id: INTEGER
-    * asset_risk_id: INTEGER
+    * vulnerability_id: TEXT
+    * asset_risk_id: TEXT
     * risk_level_id: TEXT
     * impact_level_id: TEXT
     * existing_controls: TEXT
@@ -670,9 +670,9 @@
   }
 
   entity "impact_of_risk" as impact_of_risk {
-      **impact_of_risk_id**: INTEGER
+    * **impact_of_risk_id**: TEXT
     --
-    * security_impact_analysis_id: INTEGER
+    * security_impact_analysis_id: TEXT
     * impact: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
@@ -684,9 +684,9 @@
   }
 
   entity "proposed_controls" as proposed_controls {
-      **proposed_controls_id**: INTEGER
+    * **proposed_controls_id**: TEXT
     --
-    * security_impact_analysis_id: INTEGER
+    * security_impact_analysis_id: TEXT
     * controls: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
@@ -698,7 +698,7 @@
   }
 
   entity "billing" as billing {
-      **billing_id**: INTEGER
+    * **billing_id**: TEXT
     --
     * purpose: TEXT
     * bill_rate: TEXT
@@ -716,7 +716,7 @@
   }
 
   entity "scheduled_task" as scheduled_task {
-      **scheduled_task_id**: INTEGER
+    * **scheduled_task_id**: TEXT
     --
     * description: TEXT
     * task_date: TIMESTAMP
@@ -733,7 +733,7 @@
   }
 
   entity "timesheet" as timesheet {
-      **timesheet_id**: INTEGER
+    * **timesheet_id**: TEXT
     --
     * date_of_work: TIMESTAMP
     * is_billable_id: INTEGER
@@ -750,7 +750,7 @@
   }
 
   entity "certificate" as certificate {
-      **certificate_id**: INTEGER
+    * **certificate_id**: TEXT
     --
     * certificate_name: TEXT
     * short_name: TEXT
@@ -772,7 +772,7 @@
   }
 
   entity "device" as device {
-      **device_id**: INTEGER
+    * **device_id**: TEXT
     --
     * device_name: TEXT
     * short_name: TEXT
@@ -794,7 +794,7 @@
   }
 
   entity "security_incident_response_team" as security_incident_response_team {
-      **security_incident_response_team_id**: INTEGER
+    * **security_incident_response_team_id**: TEXT
     --
       training_subject_id: INTEGER
     * person_id: INTEGER
@@ -811,7 +811,7 @@
   }
 
   entity "awareness_training" as awareness_training {
-      **awareness_training_id**: INTEGER
+    * **awareness_training_id**: TEXT
     --
     * training_subject_id: INTEGER
     * person_id: INTEGER
@@ -828,7 +828,7 @@
   }
 
   entity "rating" as rating {
-      **rating_id**: INTEGER
+    * **rating_id**: TEXT
     --
     * author_id: INTEGER
     * rating_given_to_id: INTEGER
@@ -847,7 +847,7 @@
   }
 
   entity "note" as note {
-      **note_id**: INTEGER
+    * **note_id**: TEXT
     --
     * party_id: INTEGER
     * note: TEXT
@@ -917,7 +917,7 @@
   }
 
   entity "audit_assertion" as audit_assertion {
-      **audit_assertion_id**: INTEGER
+    * **audit_assertion_id**: TEXT
     --
     * auditor_type_id: TEXT
     * audit_purpose_id: INTEGER
@@ -939,7 +939,7 @@
   }
 
   entity "contract" as contract {
-      **contract_id**: INTEGER
+    * **contract_id**: TEXT
     --
     * contract_from_id: INTEGER
     * contract_to_id: INTEGER
@@ -964,7 +964,7 @@
   }
 
   entity "risk_register" as risk_register {
-      **risk_register_id**: INTEGER
+    * **risk_register_id**: TEXT
     --
     * description: TEXT
     * risk_subject_id: INTEGER
@@ -990,12 +990,12 @@
   }
 
   entity "incident" as incident {
-      **incident_id**: INTEGER
+    * **incident_id**: TEXT
     --
     * title: TEXT
     * incident_date: DATE
     * time_and_time_zone: TIMESTAMP
-    * asset_id: INTEGER
+    * asset_id: TEXT
     * category_id: INTEGER
     * sub_category_id: INTEGER
     * severity_id: TEXT
@@ -1033,9 +1033,9 @@
   }
 
   entity "incident_root_cause" as incident_root_cause {
-      **incident_root_cause_id**: INTEGER
+    * **incident_root_cause_id**: TEXT
     --
-      incident_id: INTEGER
+      incident_id: TEXT
     * source: TEXT
     * description: TEXT
       probability_id: TEXT
@@ -1055,11 +1055,11 @@
   }
 
   entity "raci_matrix_assignment" as raci_matrix_assignment {
-      **raci_matrix_assignment_id**: INTEGER
+    * **raci_matrix_assignment_id**: TEXT
     --
     * person_id: INTEGER
     * subject_id: INTEGER
-    * activity_id: INTEGER
+    * activity_id: TEXT
     * raci_matrix_assignment_nature_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
@@ -1071,7 +1071,7 @@
   }
 
   entity "person_skill" as person_skill {
-      **person_skill_id**: INTEGER
+    * **person_skill_id**: TEXT
     --
     * person_id: INTEGER
     * skill_nature_id: INTEGER
@@ -1087,7 +1087,7 @@
   }
 
   entity "key_performance" as key_performance {
-      **key_performance_id**: INTEGER
+    * **key_performance_id**: TEXT
     --
     * title: TEXT
     * description: TEXT
@@ -1101,10 +1101,10 @@
   }
 
   entity "key_performance_indicator" as key_performance_indicator {
-      **key_performance_indicator_id**: INTEGER
+    * **key_performance_indicator_id**: TEXT
     --
-    * key_performance_id: INTEGER
-    * asset_id: INTEGER
+    * key_performance_id: TEXT
+    * asset_id: TEXT
     * calendar_period_id: INTEGER
     * kpi_comparison_operator_id: TEXT
     * kpi_context: TEXT
@@ -1135,7 +1135,7 @@
   }
 
   entity "key_risk" as key_risk {
-      **key_risk_id**: INTEGER
+    * **key_risk_id**: TEXT
     --
     * title: TEXT
     * description: TEXT
@@ -1150,9 +1150,9 @@
   }
 
   entity "key_risk_indicator" as key_risk_indicator {
-      **key_risk_indicator_id**: INTEGER
+    * **key_risk_indicator_id**: TEXT
     --
-    * key_risk_id: INTEGER
+    * key_risk_id: TEXT
     * entry_date: DATE
       entry_value: TEXT
       created_at: TIMESTAMP
@@ -1165,7 +1165,7 @@
   }
 
   entity "assertion" as assertion {
-      **assertion_id**: INTEGER
+    * **assertion_id**: TEXT
     --
     * foreign_integration: TEXT
     * assertion: TEXT
@@ -1182,15 +1182,15 @@
   }
 
   entity "attestation" as attestation {
-      **attestation_id**: INTEGER
+    * **attestation_id**: TEXT
     --
-    * assertion_id: INTEGER
+    * assertion_id: TEXT
     * person_id: INTEGER
     * attestation: TEXT
     * attestation_explain: TEXT
     * attested_on: DATE
       expires_on: DATE
-      boundary_id: INTEGER
+      boundary_id: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
@@ -1201,9 +1201,9 @@
   }
 
   entity "attestation_evidence" as attestation_evidence {
-      **attestation_evidence_id**: INTEGER
+    * **attestation_evidence_id**: TEXT
     --
-    * attestation_id: INTEGER
+    * attestation_id: TEXT
     * evidence_nature: TEXT
     * evidence_summary_markdown: TEXT
     * url: TEXT
