@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS "organization_role_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "graph" (
-    "graph_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "graph_id" TEXT PRIMARY KEY NOT NULL,
     "graph_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -400,9 +400,9 @@ CREATE TABLE IF NOT EXISTS "graph" (
     FOREIGN KEY("graph_nature_id") REFERENCES "graph_nature"("graph_nature_id")
 );
 CREATE TABLE IF NOT EXISTS "boundary" (
-    "boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "parent_boundary_id" INTEGER,
-    "graph_id" INTEGER NOT NULL,
+    "boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "parent_boundary_id" TEXT,
+    "graph_id" TEXT NOT NULL,
     "boundary_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS "boundary" (
     FOREIGN KEY("boundary_nature_id") REFERENCES "boundary_nature"("boundary_nature_id")
 );
 CREATE TABLE IF NOT EXISTS "host" (
-    "host_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "host_id" TEXT PRIMARY KEY NOT NULL,
     "host_name" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -431,8 +431,8 @@ CREATE TABLE IF NOT EXISTS "host" (
     UNIQUE("host_name")
 );
 CREATE TABLE IF NOT EXISTS "host_boundary" (
-    "host_boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "host_id" INTEGER NOT NULL,
+    "host_boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "host_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS "assignment" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix" (
-    "raci_matrix_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_id" TEXT PRIMARY KEY NOT NULL,
     "asset" TEXT NOT NULL,
     "responsible" TEXT NOT NULL,
     "accountable" TEXT NOT NULL,
@@ -510,8 +510,8 @@ CREATE TABLE IF NOT EXISTS "raci_matrix" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
-    "raci_matrix_subject_boundary_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "boundary_id" INTEGER NOT NULL,
+    "raci_matrix_subject_boundary_id" TEXT PRIMARY KEY NOT NULL,
+    "boundary_id" TEXT NOT NULL,
     "raci_matrix_subject_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     FOREIGN KEY("raci_matrix_subject_id") REFERENCES "raci_matrix_subject"("raci_matrix_subject_id")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
-    "raci_matrix_activity_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_activity_id" TEXT PRIMARY KEY NOT NULL,
     "activity" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -535,7 +535,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "asset" (
-    "asset_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_id" TEXT PRIMARY KEY NOT NULL,
     "organization_id" INTEGER NOT NULL,
     "asset_retired_date" DATE,
     "asset_status_id" INTEGER NOT NULL,
@@ -571,8 +571,8 @@ CREATE TABLE IF NOT EXISTS "asset" (
     FOREIGN KEY("assignment_id") REFERENCES "assignment"("assignment_id")
 );
 CREATE TABLE IF NOT EXISTS "asset_service" (
-    "asset_service_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "asset_id" INTEGER NOT NULL,
+    "asset_service_id" TEXT PRIMARY KEY NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "asset_service_status_id" INTEGER NOT NULL,
@@ -597,7 +597,7 @@ CREATE TABLE IF NOT EXISTS "asset_service" (
     FOREIGN KEY("asset_service_status_id") REFERENCES "asset_service_status"("asset_service_status_id")
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_source" (
-    "vulnerability_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "vulnerability_source_id" TEXT PRIMARY KEY NOT NULL,
     "short_code" TEXT NOT NULL,
     "source_url" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -610,9 +610,9 @@ CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "vulnerability" (
-    "vulnerability_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "vulnerability_id" TEXT PRIMARY KEY NOT NULL,
     "short_name" TEXT NOT NULL,
-    "source_id" INTEGER NOT NULL,
+    "source_id" TEXT NOT NULL,
     "affected_software" TEXT NOT NULL,
     "reference" TEXT NOT NULL,
     "status_id" TEXT NOT NULL,
@@ -632,7 +632,7 @@ CREATE TABLE IF NOT EXISTS "vulnerability" (
     FOREIGN KEY("severity_id") REFERENCES "severity"("code")
 );
 CREATE TABLE IF NOT EXISTS "threat_source" (
-    "threat_source_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_source_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
     "threat_source_type_id" INTEGER NOT NULL,
@@ -651,10 +651,10 @@ CREATE TABLE IF NOT EXISTS "threat_source" (
     FOREIGN KEY("threat_source_type_id") REFERENCES "threat_source_type"("threat_source_type_id")
 );
 CREATE TABLE IF NOT EXISTS "threat_event" (
-    "threat_event_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_event_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
-    "threat_source_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "threat_source_id" TEXT NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
     "threat_event_type_id" INTEGER NOT NULL,
     "event_classification" TEXT NOT NULL,
@@ -672,10 +672,10 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     FOREIGN KEY("threat_event_type_id") REFERENCES "threat_event_type"("threat_event_type_id")
 );
 CREATE TABLE IF NOT EXISTS "asset_risk" (
-    "asset_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_risk_id" TEXT PRIMARY KEY NOT NULL,
     "asset_risk_type_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
-    "threat_event_id" INTEGER NOT NULL,
+    "asset_id" TEXT NOT NULL,
+    "threat_event_id" TEXT NOT NULL,
     "relevance_id" TEXT,
     "likelihood_id" TEXT,
     "impact" TEXT NOT NULL,
@@ -693,9 +693,9 @@ CREATE TABLE IF NOT EXISTS "asset_risk" (
     FOREIGN KEY("likelihood_id") REFERENCES "probability"("code")
 );
 CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
-    "security_impact_analysis_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "vulnerability_id" INTEGER NOT NULL,
-    "asset_risk_id" INTEGER NOT NULL,
+    "security_impact_analysis_id" TEXT PRIMARY KEY NOT NULL,
+    "vulnerability_id" TEXT NOT NULL,
+    "asset_risk_id" TEXT NOT NULL,
     "risk_level_id" TEXT NOT NULL,
     "impact_level_id" TEXT NOT NULL,
     "existing_controls" TEXT NOT NULL,
@@ -719,8 +719,8 @@ CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
     FOREIGN KEY("responsible_by_id") REFERENCES "person"("person_id")
 );
 CREATE TABLE IF NOT EXISTS "impact_of_risk" (
-    "impact_of_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "security_impact_analysis_id" INTEGER NOT NULL,
+    "impact_of_risk_id" TEXT PRIMARY KEY NOT NULL,
+    "security_impact_analysis_id" TEXT NOT NULL,
     "impact" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -732,8 +732,8 @@ CREATE TABLE IF NOT EXISTS "impact_of_risk" (
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "proposed_controls" (
-    "proposed_controls_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "security_impact_analysis_id" INTEGER NOT NULL,
+    "proposed_controls_id" TEXT PRIMARY KEY NOT NULL,
+    "security_impact_analysis_id" TEXT NOT NULL,
     "controls" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -745,7 +745,7 @@ CREATE TABLE IF NOT EXISTS "proposed_controls" (
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
 );
 CREATE TABLE IF NOT EXISTS "billing" (
-    "billing_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "billing_id" TEXT PRIMARY KEY NOT NULL,
     "purpose" TEXT NOT NULL,
     "bill_rate" TEXT NOT NULL,
     "period" TEXT NOT NULL,
@@ -761,7 +761,7 @@ CREATE TABLE IF NOT EXISTS "billing" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "scheduled_task" (
-    "scheduled_task_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "scheduled_task_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
     "task_date" TIMESTAMP NOT NULL,
     "reminder_date" TIMESTAMP NOT NULL,
@@ -776,7 +776,7 @@ CREATE TABLE IF NOT EXISTS "scheduled_task" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "timesheet" (
-    "timesheet_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "timesheet_id" TEXT PRIMARY KEY NOT NULL,
     "date_of_work" TIMESTAMP NOT NULL,
     "is_billable_id" INTEGER NOT NULL,
     "number_of_hours" INTEGER NOT NULL,
@@ -793,7 +793,7 @@ CREATE TABLE IF NOT EXISTS "timesheet" (
     FOREIGN KEY("time_entry_category_id") REFERENCES "time_entry_category"("time_entry_category_id")
 );
 CREATE TABLE IF NOT EXISTS "certificate" (
-    "certificate_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "certificate_id" TEXT PRIMARY KEY NOT NULL,
     "certificate_name" TEXT NOT NULL,
     "short_name" TEXT NOT NULL,
     "certificate_category" TEXT NOT NULL,
@@ -813,7 +813,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "device" (
-    "device_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "device_id" TEXT PRIMARY KEY NOT NULL,
     "device_name" TEXT NOT NULL,
     "short_name" TEXT NOT NULL,
     "barcode" TEXT NOT NULL,
@@ -833,7 +833,7 @@ CREATE TABLE IF NOT EXISTS "device" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
-    "security_incident_response_team_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "security_incident_response_team_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
@@ -852,7 +852,7 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     FOREIGN KEY("training_status_id") REFERENCES "status_value"("status_value_id")
 );
 CREATE TABLE IF NOT EXISTS "awareness_training" (
-    "awareness_training_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "awareness_training_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER NOT NULL,
     "person_id" INTEGER NOT NULL,
     "organization_id" INTEGER NOT NULL,
@@ -871,7 +871,7 @@ CREATE TABLE IF NOT EXISTS "awareness_training" (
     FOREIGN KEY("training_status_id") REFERENCES "status_value"("status_value_id")
 );
 CREATE TABLE IF NOT EXISTS "rating" (
-    "rating_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "rating_id" TEXT PRIMARY KEY NOT NULL,
     "author_id" INTEGER NOT NULL,
     "rating_given_to_id" INTEGER NOT NULL,
     "rating_value_id" INTEGER NOT NULL,
@@ -893,7 +893,7 @@ CREATE TABLE IF NOT EXISTS "rating" (
     FOREIGN KEY("worst_rating_id") REFERENCES "rating_value"("rating_value_id")
 );
 CREATE TABLE IF NOT EXISTS "note" (
-    "note_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "note_id" TEXT PRIMARY KEY NOT NULL,
     "party_id" INTEGER NOT NULL,
     "note" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -958,7 +958,7 @@ CREATE TABLE IF NOT EXISTS "tracking_period" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "audit_assertion" (
-    "audit_assertion_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "audit_assertion_id" TEXT PRIMARY KEY NOT NULL,
     "auditor_type_id" TEXT NOT NULL,
     "audit_purpose_id" INTEGER NOT NULL,
     "auditor_org_id" INTEGER NOT NULL,
@@ -983,7 +983,7 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
     FOREIGN KEY("auditor_status_type_id") REFERENCES "audit_status"("audit_status_id")
 );
 CREATE TABLE IF NOT EXISTS "contract" (
-    "contract_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "contract_id" TEXT PRIMARY KEY NOT NULL,
     "contract_from_id" INTEGER NOT NULL,
     "contract_to_id" INTEGER NOT NULL,
     "contract_status_id" INTEGER,
@@ -1012,7 +1012,7 @@ CREATE TABLE IF NOT EXISTS "contract" (
     FOREIGN KEY("contract_type_id") REFERENCES "contract_type"("contract_type_id")
 );
 CREATE TABLE IF NOT EXISTS "risk_register" (
-    "risk_register_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "risk_register_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
     "risk_subject_id" INTEGER NOT NULL,
     "risk_type_id" INTEGER NOT NULL,
@@ -1043,11 +1043,11 @@ CREATE TABLE IF NOT EXISTS "risk_register" (
     FOREIGN KEY("control_monitor_risk_owner_id") REFERENCES "person"("person_id")
 );
 CREATE TABLE IF NOT EXISTS "incident" (
-    "incident_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "incident_date" DATE NOT NULL,
     "time_and_time_zone" TIMESTAMP NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "category_id" INTEGER NOT NULL,
     "sub_category_id" INTEGER NOT NULL,
     "severity_id" TEXT NOT NULL,
@@ -1094,8 +1094,8 @@ CREATE TABLE IF NOT EXISTS "incident" (
     FOREIGN KEY("status_id") REFERENCES "incident_status"("incident_status_id")
 );
 CREATE TABLE IF NOT EXISTS "incident_root_cause" (
-    "incident_root_cause_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "incident_id" INTEGER,
+    "incident_root_cause_id" TEXT PRIMARY KEY NOT NULL,
+    "incident_id" TEXT,
     "source" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "probability_id" TEXT,
@@ -1117,10 +1117,10 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
     FOREIGN KEY("likelihood_of_risk_id") REFERENCES "priority"("code")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
-    "raci_matrix_assignment_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_assignment_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" INTEGER NOT NULL,
     "subject_id" INTEGER NOT NULL,
-    "activity_id" INTEGER NOT NULL,
+    "activity_id" TEXT NOT NULL,
     "raci_matrix_assignment_nature_id" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -1135,7 +1135,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
     FOREIGN KEY("raci_matrix_assignment_nature_id") REFERENCES "raci_matrix_assignment_nature"("code")
 );
 CREATE TABLE IF NOT EXISTS "person_skill" (
-    "person_skill_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "person_skill_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" INTEGER NOT NULL,
     "skill_nature_id" INTEGER NOT NULL,
     "skill_id" INTEGER NOT NULL,
@@ -1153,7 +1153,7 @@ CREATE TABLE IF NOT EXISTS "person_skill" (
     FOREIGN KEY("proficiency_scale_id") REFERENCES "proficiency_scale"("code")
 );
 CREATE TABLE IF NOT EXISTS "key_performance" (
-    "key_performance_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "key_performance_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1165,9 +1165,9 @@ CREATE TABLE IF NOT EXISTS "key_performance" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
-    "key_performance_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "key_performance_id" INTEGER NOT NULL,
-    "asset_id" INTEGER NOT NULL,
+    "key_performance_indicator_id" TEXT PRIMARY KEY NOT NULL,
+    "key_performance_id" TEXT NOT NULL,
+    "asset_id" TEXT NOT NULL,
     "calendar_period_id" INTEGER NOT NULL,
     "kpi_comparison_operator_id" TEXT NOT NULL,
     "kpi_context" TEXT NOT NULL,
@@ -1205,7 +1205,7 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     FOREIGN KEY("trend_id") REFERENCES "trend"("code")
 );
 CREATE TABLE IF NOT EXISTS "key_risk" (
-    "key_risk_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "key_risk_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "base_value" TEXT,
@@ -1218,8 +1218,8 @@ CREATE TABLE IF NOT EXISTS "key_risk" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
-    "key_risk_indicator_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "key_risk_id" INTEGER NOT NULL,
+    "key_risk_indicator_id" TEXT PRIMARY KEY NOT NULL,
+    "key_risk_id" TEXT NOT NULL,
     "entry_date" DATE NOT NULL,
     "entry_value" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1232,7 +1232,7 @@ CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
     FOREIGN KEY("key_risk_id") REFERENCES "key_risk"("key_risk_id")
 );
 CREATE TABLE IF NOT EXISTS "assertion" (
-    "assertion_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "assertion_id" TEXT PRIMARY KEY NOT NULL,
     "foreign_integration" TEXT NOT NULL,
     "assertion" TEXT NOT NULL,
     "assertion_explain" TEXT NOT NULL,
@@ -1247,14 +1247,14 @@ CREATE TABLE IF NOT EXISTS "assertion" (
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "attestation" (
-    "attestation_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "assertion_id" INTEGER NOT NULL,
+    "attestation_id" TEXT PRIMARY KEY NOT NULL,
+    "assertion_id" TEXT NOT NULL,
     "person_id" INTEGER NOT NULL,
     "attestation" TEXT NOT NULL,
     "attestation_explain" TEXT NOT NULL,
     "attested_on" DATE NOT NULL,
     "expires_on" DATE,
-    "boundary_id" INTEGER,
+    "boundary_id" TEXT,
     "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMP,
@@ -1267,8 +1267,8 @@ CREATE TABLE IF NOT EXISTS "attestation" (
     FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id")
 );
 CREATE TABLE IF NOT EXISTS "attestation_evidence" (
-    "attestation_evidence_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "attestation_id" INTEGER NOT NULL,
+    "attestation_evidence_id" TEXT PRIMARY KEY NOT NULL,
+    "attestation_id" TEXT NOT NULL,
     "evidence_nature" TEXT NOT NULL,
     "evidence_summary_markdown" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -2110,21 +2110,21 @@ INSERT INTO "incident_status" ("code", "value", "created_by", "updated_at", "upd
 ;
 
 -- synthetic / test data
-INSERT INTO "graph" ("graph_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE'), 'text-value', 'description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "graph" ("graph_id", "graph_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0SNVV71CF65F4R2F4D', (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE'), 'text-value', 'description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES (NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0ST9H6YR8EMV02STE8', NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID') AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name Self Test', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0SZY8STKENAR1MAMEB', (SELECT "boundary_id" FROM "boundary" WHERE "boundary_id" = '01HFEHZQ0ST9H6YR8EMV02STE8' AND "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID') AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name Self Test', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "host" ("host_name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Test Host Name', 'description test', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "host" ("host_id", "host_name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T4666GKETTT0MB0MP', 'Test Host Name', 'description test', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "host_boundary" ("host_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "host_id" FROM "host" WHERE "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "host_boundary" ("host_boundary_id", "host_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T2020TEQG1GFH8PXJ', (SELECT "host_id" FROM "host" WHERE "host_id" = '01HFEHZQ0T4666GKETTT0MB0MP' AND "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix" ("asset", "responsible", "accountable", "consulted", "informed", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix" ("raci_matrix_id", "asset", "responsible", "accountable", "consulted", "informed", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T1T5DK8PCZVNFRZXR', 'asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_subject_boundary" ("boundary_id", "raci_matrix_subject_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), (SELECT "raci_matrix_subject_id" FROM "raci_matrix_subject" WHERE "code" = 'CURATION_WORKS'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix_subject_boundary" ("raci_matrix_subject_boundary_id", "boundary_id", "raci_matrix_subject_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0THZC03CDKVBEF3J20', (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), (SELECT "raci_matrix_subject_id" FROM "raci_matrix_subject" WHERE "code" = 'CURATION_WORKS'), NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_activity" ("activity", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('Activity', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix_activity" ("raci_matrix_activity_id", "activity", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0TBA8YJNP4SZXWAS1T', 'Activity', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "party" ("party_type_id", "party_name", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('PERSON', 'person', NULL, NULL, NULL, NULL, NULL, NULL);
 

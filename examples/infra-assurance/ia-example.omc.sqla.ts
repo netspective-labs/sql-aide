@@ -2,6 +2,7 @@
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
 import * as z from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import * as ulid from "https://deno.land/std@0.203.0/ulid/mod.ts";
 import * as sqliteCLI from "../../lib/sqlite/cli.ts";
 import * as iam from "../../pattern/infra-assurance/models.ts";
 import * as udm from "../../pattern/udm/mod.ts";
@@ -413,90 +414,105 @@ const organizationToPerson = personToOrganizationRelation.insertDML({
 
 const personDetailsSkill = {
   reactJS: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "REACTJS" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   javaScript: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "JAVASCRIPT" }),
     proficiency_scale_id: "ADVANCED",
   }),
   hugo: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "HUGO" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   deno: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "DENO" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   angular: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "ANGULAR" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   typeScript: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "TYPESCRIPT" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   postgreSQL: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "POSTGRESQL" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   mySQL: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "MYSQL" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   php: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "PHP" }),
     proficiency_scale_id: "INTERMEDIATE",
   }),
   python: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "PYTHON" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   dotNet: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "DOT_NET" }),
     proficiency_scale_id: "NA",
   }),
   oracle: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "ORACLE" }),
     proficiency_scale_id: "NA",
   }),
   java: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "JAVA" }),
     proficiency_scale_id: "FUNDAMENTAL_AWARENESS",
   }),
   jQuery: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "JQUERY" }),
     proficiency_scale_id: "ADVANCED",
   }),
   osQuery: iam.personSkill.insertDML({
+    person_skill_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     skill_nature_id: iam.skillNature.select({ code: "SOFTWARE" }),
     skill_id: iam.skill.select({ code: "OSQUERY" }),
@@ -530,6 +546,7 @@ const organizationToPersonAllRelations = {
 const awarenessTraining = {
   personDetails: iam.awarenessTraining
     .insertDML({
+      awareness_training_id: ulid.ulid(),
       training_subject_id: iam.trainingSubject.select({ code: "HIPAA" }),
       person_id: personDetails.personIdSS,
       organization_id: organizationDetails.organizationIdSS,
@@ -544,11 +561,13 @@ const awarenessTraining = {
 
 const personSecurityIncidentResponse = iam.securityIncidentResponseTeam
   .insertDML({
+    security_incident_response_team_id: ulid.ulid(),
     person_id: personDetails.personIdSS,
     organization_id: organizationDetails.organizationIdSS,
   });
 
 const personRatingToOrganization = iam.rating.insertDML({
+  rating_id: ulid.ulid(),
   author_id: personDetails.personIdSS,
   rating_given_to_id: organizationDetails.organizationIdSS,
   rating_value_id: iam.ratingValue.select({ code: "FOUR" }),
@@ -559,6 +578,7 @@ const personRatingToOrganization = iam.rating.insertDML({
 });
 
 const personToOrganizationGeneralContract = iam.contract.insertDML({
+  contract_id: ulid.ulid(),
   contract_from_id: personDetails.partyIdSS,
   contract_to_id: organizationDetails.partyIdSS,
   contract_status_id: iam.contractStatus.select({ code: "FINISHED" }),
@@ -577,6 +597,7 @@ const personToOrganizationGeneralContract = iam.contract.insertDML({
 });
 
 const personRiskRegister = iam.riskRegister.insertDML({
+  risk_register_id: ulid.ulid(),
   description: "Risk description",
   risk_subject_id: iam.riskSubject.select({ code: "TECHNICAL_RISK" }),
   risk_type_id: iam.riskType.select({ code: "QUALITY" }),
@@ -594,6 +615,7 @@ const personRiskRegister = iam.riskRegister.insertDML({
 });
 
 const assetDetail = iam.asset.insertDML({
+  asset_id: ulid.ulid(),
   organization_id: organizationDetails.organizationIdSS,
   asset_retired_date: undefined,
   asset_status_id: iam.assetStatus.select({ code: "IN_USE" }),
@@ -623,6 +645,7 @@ const assetDetailAssetId = iam.asset.select(
 );
 
 const serverDownIncident = iam.incident.insertDML({
+  incident_id: ulid.ulid(),
   title: "Server Down - Due to CPU utilization reached 100%",
   incident_date: new Date("2021-04-20T00:00:00.000Z"),
   time_and_time_zone: new Date("2021-04-20T00:00:00.000Z"),
@@ -664,6 +687,7 @@ const serverDownIncident = iam.incident.insertDML({
 });
 
 const serverDownIncidentRootCause = iam.incidentRootCause.insertDML({
+  incident_root_cause_id: ulid.ulid(),
   incident_id: iam.incident.select({
     title: "Server Down - Due to CPU utilization reached 100%",
     sub_category_id: iam.incidentSubCategory.select({
