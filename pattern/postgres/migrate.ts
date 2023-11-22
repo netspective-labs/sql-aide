@@ -4,24 +4,39 @@ import * as udm from "../udm/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+enum TransitionStatus {
+  NONE = "None",
+  SQLLOADED = "SQL Loaded",
+  MIGRATED = "Migrated",
+  ROLLBACK = "Rollback",
+}
+
 interface MigrationVersion {
   readonly version: string;
+  readonly versionNumber: number;
   readonly dateTime: Date;
-  readonly description?: string;
 }
 
 export class PgMigrate<
   SchemaName extends string,
   Context extends SQLa.SqlEmitContext,
 > {
+  readonly infoSchemaLifecycle;
   protected constructor(
     readonly ctxSupplier: () => Context,
     readonly schemaName: SchemaName,
-  ) {}
+    readonly prependMigrationSPText = "migration_",
+    readonly appendMigrationUndoSPText = "_undo",
+    readonly appendMigrationStatusFnText = "_status",
+  ) {
+    this.infoSchemaLifecycle = SQLa.sqlSchemaDefn(this.schemaName, {
+      isIdempotent: true,
+    });
+  }
 
-  readonly infoSchemaLifecycle = SQLa.sqlSchemaDefn("info_schema_lifecycle", {
-    isIdempotent: true,
-  });
+  get sqlEngineNow(): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
+    return { SQL: () => `CURRENT_TIMESTAMP` };
+  }
 
   formatDateToCustomString(date: Date): string {
     const year = date.getFullYear();
@@ -56,15 +71,14 @@ export class PgMigrate<
     spOptions?: pgSQLa.StoredProcedureDefnOptions<string, Context>,
   ) {
     const formattedDate = this.formatDateToCustomString(version.dateTime);
-    const migrateVersion = "V" + version.version + formattedDate +
-      (version.description ? version.description : "");
+    const migrateVersion = "V" + version.version + formattedDate;
     const migrateTemplateBody = migrateTemplate(argsDefn);
     const { isIdempotent = true, headerBodySeparator: _hbSep = "$$" } =
       spOptions ?? {};
     const ctx = this.ctxSupplier();
     const migrateTemplateBodySqlText = migrateTemplateBody.SQL(ctx);
     const migrateSP = pgSQLa.storedProcedure(
-      "migrate_" + migrateVersion,
+      this.prependMigrationSPText + migrateVersion,
       {},
       (name, args, _) =>
         pgSQLa.typedPlPgSqlBody(name, args, ctx, {
@@ -78,14 +92,17 @@ export class PgMigrate<
         headerBodySeparator: "$migrateVersion" + migrateVersion + "SP$",
       },
     )`
-    IF ${this.infoSchemaLifecycle.sqlNamespace}.migration_${migrateVersion}_status() = 0 THEN
-      ${migrateTemplateBodySqlText}
-    END IF;
+    BEGIN
+      IF ${this.infoSchemaLifecycle.sqlNamespace}."migration_${migrateVersion}_status"() = 0 THEN
+        ${migrateTemplateBodySqlText}
+      END IF;
+    END
     `;
     const rollbackTemplateBody = rollbackTemplate(argsDefn);
     const rollbackTemplateBodySqlText = rollbackTemplateBody.SQL(ctx);
     const rollbackSP = pgSQLa.storedProcedure(
-      "migration_" + migrateVersion + "_undo",
+      this.prependMigrationSPText + migrateVersion +
+        this.appendMigrationUndoSPText,
       {},
       (name, args, _) =>
         pgSQLa.typedPlPgSqlBody(name, args, ctx, {
@@ -102,9 +119,10 @@ export class PgMigrate<
     const statusTemplateBody = statusTemplate(argsDefn);
     const statusTemplateBodySqlText = statusTemplateBody.SQL(ctx);
     const statusFn = pgSQLa.storedFunction(
-      "migration_" + migrateVersion + "_status",
+      this.prependMigrationSPText + migrateVersion +
+        this.appendMigrationStatusFnText,
       {},
-      "text",
+      "integer",
       (name, args) =>
         pgSQLa.typedPlPgSqlBody(name, args, ctx, {
           autoBeginEnd: false,
@@ -133,19 +151,22 @@ export class PgMigrate<
     // const { governedModel: { domains: d } } = ec;
     const ctx = this.ctxSupplier();
     const islmGovernance = SQLa.tableDefinition("islm_governance", {
-      version: udm.text(),
-      description: udm.text(),
-      applied_at: udm.dateTime(),
-      execution_time: udm.integer(),
-      success: udm.boolean(),
-      rollback_status: udm.boolean(),
+      state_sort_index: udm.float(),
+      sp_migration: udm.text(),
+      sp_migration_undo: udm.text(),
+      fn_migration_status: udm.text(),
+      from_state: udm.text(),
+      to_state: udm.text(),
+      transition_result: udm.jsonTextNullable(),
+      transition_reason: udm.textNullable(),
+      transitioned_at: udm.dateTime(),
     }, {
       sqlNS: this.infoSchemaLifecycle,
       isIdempotent: false,
       constraints: (props, tableName) => {
         const c = SQLa.tableConstraints(tableName, props);
         return [
-          c.unique("version"),
+          c.unique("sp_migration", "from_state", "to_state"),
         ];
       },
     });
@@ -154,16 +175,56 @@ export class PgMigrate<
       islmGovernance.zoSchema.shape,
     );
     const formattedDate = this.formatDateToCustomString(version.dateTime);
-    const migrateVersion = "V" + version.version + formattedDate +
-      (version.description ? version.description : "");
+    const migrateVersion = "V" + version.version + formattedDate;
+    const migrateVersionNumber = version.versionNumber;
     const islmGovernanceInsertion = islmGovnRF.insertDML([
       {
-        version: migrateVersion,
-        description: "Initial migration",
-        applied_at: new Date("2023-10-16T00:00:00.000Z"),
-        execution_time: 10,
-        success: true,
-        rollback_status: false,
+        state_sort_index: migrateVersionNumber,
+        sp_migration: this.prependMigrationSPText + migrateVersion,
+        sp_migration_undo: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationUndoSPText,
+        fn_migration_status: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationStatusFnText,
+        from_state: TransitionStatus.NONE,
+        to_state: TransitionStatus.SQLLOADED,
+        transition_reason: "SQL load for migration",
+        transitioned_at: this.sqlEngineNow,
+      },
+    ], {
+      onConflict: {
+        SQL: () => `ON CONFLICT DO NOTHING`,
+      },
+    });
+    const islmGovernanceRollbackInsertion = islmGovnRF.insertDML([
+      {
+        state_sort_index: migrateVersionNumber,
+        sp_migration: this.prependMigrationSPText + migrateVersion,
+        sp_migration_undo: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationUndoSPText,
+        fn_migration_status: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationStatusFnText,
+        from_state: TransitionStatus.MIGRATED,
+        to_state: TransitionStatus.ROLLBACK,
+        transition_reason: "Rollback for migration",
+        transitioned_at: this.sqlEngineNow,
+      },
+    ], {
+      onConflict: {
+        SQL: () => `ON CONFLICT DO NOTHING`,
+      },
+    });
+    const islmGovernanceMigrateInsertion = islmGovnRF.insertDML([
+      {
+        state_sort_index: migrateVersionNumber,
+        sp_migration: this.prependMigrationSPText + migrateVersion,
+        sp_migration_undo: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationUndoSPText,
+        fn_migration_status: this.prependMigrationSPText + migrateVersion +
+          this.appendMigrationStatusFnText,
+        from_state: TransitionStatus.SQLLOADED,
+        to_state: TransitionStatus.MIGRATED,
+        transition_reason: "Migration",
+        transitioned_at: this.sqlEngineNow,
       },
     ], {
       onConflict: {
@@ -187,13 +248,26 @@ export class PgMigrate<
       },
     )`
     ${islmGovernance}
+    EXCEPTION
+    -- Catch the exception if the table already exists
+    WHEN duplicate_table THEN
+      -- Do nothing, just ignore the exception
+      NULL;
     `;
+
+    const searchPath = pgSQLa.pgSearchPath<
+      typeof this.infoSchemaLifecycle.sqlNamespace,
+      SQLa.SqlEmitContext
+    >(
+      this.infoSchemaLifecycle,
+    );
+
     const spIslmMigrateCtl = pgSQLa
       .storedRoutineBuilder(
         "islm_migrate_ctl",
         {
           "task": udm.text(),
-          "target_version": udm.textNullable(),
+          "target_version_number": udm.floatNullable(),
         },
       );
 
@@ -208,19 +282,22 @@ export class PgMigrate<
     )`
     DECLARE
       r RECORD;
+      t text;
     BEGIN
       CASE task
       WHEN 'migrate' THEN
         FOR r IN (
-          SELECT version FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE success IS NULL AND ($1 IS NULL OR version <= $1)
+          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.NONE}' AND to_state = '${TransitionStatus.SQLLOADED}' AND (target_version_number NOT IN (SELECT version_number FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}')) AND
+          (target_version_number IS NULL OR version_number<=target_version_number)
           ORDER BY version
         ) LOOP
           -- Check if migration has been executed
           -- Construct procedure and status function names
             DECLARE
-              procedure_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}.migrate_%s()', r.version);
-              status_function_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}.migrate_%s_status()', r.version);
+              procedure_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.sp_migration);
+              status_function_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.fn_migration_status);
               status INT;
+              migrate_insertion_sql TEXT;
             BEGIN
               -- Check if migration has been executed
               --EXECUTE SELECT (status_function_name)::INT INTO status;
@@ -228,30 +305,37 @@ export class PgMigrate<
 
               IF status = 0 THEN
                 -- Call the migration procedure
-                EXECUTE procedure_name;
+                EXECUTE  'call ' || procedure_name;
 
-                -- Update the governance table
-                EXECUTE format('
-                  UPDATE ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName}
-                  SET success = TRUE,
-                    applied_at = NOW()
-                  WHERE version = $1', r.version)
-                USING r.version;
+                -- Insert into the governance table
+                migrate_insertion_sql := $dynSQL$
+                  ${searchPath}
+                  ${islmGovernanceMigrateInsertion.SQL}
+                $dynSQL$;
+                EXECUTE migrate_insertion_sql;
               END IF;
             END;
         END LOOP;
       WHEN 'rollback' THEN
       -- Implement rollback logic here...
       -- Construct procedure names
-        EXECUTE format('CALL ${this.infoSchemaLifecycle.sqlNamespace}.migrate_%s_undo()', target_version);
+        DECLARE
+          migrate_rb_insertion_sql TEXT;
+          sp_migration_undo_sql TEXT;
+        BEGIN
+          SELECT sp_migration_undo FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND (target_version_number NOT IN (SELECT version_number FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.MIGRATED}' AND to_state = '${TransitionStatus.ROLLBACK}')) ORDER BY version INTO sp_migration_undo_sql;
+          IF sp_migration_undo_sql IS NOT NULL THEN
+            EXECUTE format('CALL ${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql);
 
-        -- Update the governance table, corrected WHERE clause
-        EXECUTE format('
-            UPDATE ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName}
-            SET rollback_status = TRUE,
-                applied_at = NOW()
-            WHERE version = $1', target_version)
-        USING target_version;
+            -- Insert the governance table
+            migrate_rb_insertion_sql := $dynSQL$
+                      ${islmGovernanceRollbackInsertion.SQL}
+                    $dynSQL$;
+            EXECUTE migrate_rb_insertion_sql;
+          ELSE
+            RAISE EXCEPTION 'Cannot perform a rollback for this version';
+          END IF;
+        END;
       ELSE
         RAISE EXCEPTION 'Unknown task: %', task;
       END CASE;
