@@ -1,5 +1,12 @@
 #!/usr/bin/env -S deno run --allow-all
 
+/**
+ * This TypeScript test file implements a SQL migration feature for PostgreSQL databases using Deno.
+ * It provides methods for defining and executing migrations, as well as testing migration scripts.
+ *
+ * @module SQL_Migration_Feature
+ */
+
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as sqliteCLI from "../../lib/sqlite/cli.ts";
@@ -9,26 +16,68 @@ import * as tp from "../typical/mod.ts";
 import * as mod from "./migrate.ts";
 import * as udm from "../udm/mod.ts";
 
-const { gm, gts } = udm;
+const {
+  gm,
+  gts,
+} = udm;
+
+const migrationInput = {
+  version: "sample",
+  versionNumber: 1,
+  dateTime: new Date(2023, 10, 16, 10, 16, 45),
+};
+
+/**
+ * A function that returns the relative file path of a given file name.
+ *
+ * @param {string} name - The name of the file.
+ * @returns {string} The relative file path.
+ */
 
 const relativeFilePath = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return $.path.relative(Deno.cwd(), absPath);
 };
 
+/**
+ * A function that returns the content of a file given its name.
+ *
+ * @param {string} name - The name of the file.
+ * @returns {string} The content of the file.
+ */
+
 const relativeFileContent = (name: string) => {
   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
 };
+
+/**
+ * Represents the context for emitting SQL statements.
+ *
+ * @typedef {Object} EmitContext
+ * @property {Object} ctx - The SQL emit context.
+ */
 
 type EmitContext = typeof ctx;
 const ctx = SQLa.typicalSqlEmitContext({
   sqlDialect: SQLa.postgreSqlDialect(),
 });
 
+/**
+ * Defines the SQL schema for an "info_schema_lifecycle" table.
+ *
+ * @type {Object}
+ */
+
 const infoSchemaLifecycle = SQLa.sqlSchemaDefn("info_schema_lifecycle", {
   isIdempotent: true,
 });
+
+/**
+ * Initializes the PostgreSQL migration object.
+ *
+ * @type {Object}
+ */
 const PgMigrateObj = mod.PgMigrate.init(
   () => ctx,
   infoSchemaLifecycle.sqlNamespace,
@@ -40,6 +89,12 @@ const searchPath = pgSQLa.pgSearchPath<
   PgMigrateObj.infoSchemaLifecycle,
 );
 
+/*
+ * Defines the SQL schema for a sample schema "sample_schema".
+ * This is a sample code generated through SQLa for migration.
+ * This below code snippet can be deleted and we can generate
+ * our own migration code.
+ */
 const migrateCreateSchema = SQLa.sqlSchemaDefn("sample_schema", {
   isIdempotent: true,
 });
@@ -49,6 +104,14 @@ const migSearchPath = pgSQLa.pgSearchPath<
 >(
   migrateCreateSchema,
 );
+
+/**
+ * Defines the SQL schema for a sample table "sample_table1".
+ * This is a sample code generated through SQLa for migration.
+ * This below code snippet can be deleted and we can generate
+ * our own migration code.
+ * @type {Object}
+ */
 const migrateCreateTable = gm.autoIncPkTable(
   "sample_table1",
   {
@@ -60,12 +123,15 @@ const migrateCreateTable = gm.autoIncPkTable(
   },
 );
 
+/**
+ * Creates a migration procedure for PostgreSQL.
+ *
+ * @type {Object}
+ */
+
 const createMigrationProcedure = PgMigrateObj
   .migrationScaffold(
-    {
-      version: "sample",
-      dateTime: new Date(2023, 10, 16, 10, 16, 45),
-    },
+    migrationInput,
     {},
     (args) =>
       pgSQLa.typedPlPgSqlBody(
@@ -78,15 +144,19 @@ const createMigrationProcedure = PgMigrateObj
           -- Your code will be placed automatically into a ISLM migration stored procedure.
           -- Use SQLa or Atlas for any code that you need. For example:
 
-            ${migrateCreateSchema.SQL(ctx)}
-            ${migSearchPath}
-            ${migrateCreateTable.SQL(ctx)}
+            /*
+             ${migrateCreateSchema.SQL(ctx)};
+             ${migSearchPath};
+             ${migrateCreateTable.SQL(ctx)};
+            */
+
 
         `,
     (args) =>
       pgSQLa.typedPlPgSqlBody("", args, ctx)`
           -- Add any PostgreSQL you need either manually constructed or SQLa.
           -- Your code will be placed automatically into a ISLM rollback stored procedure.
+          -- DROP table if exists "sample_schema".sample_table1;
         `,
     (args) =>
       pgSQLa.typedPlPgSqlBody("", args, ctx)`
@@ -98,7 +168,7 @@ const createMigrationProcedure = PgMigrateObj
 
           -- IF EXISTS (
           --  SELECT FROM information_schema.columns
-          --  WHERE table_name = '${migrateCreateTable.tableName}'
+          --  WHERE table_name = 'sample_table1'
           -- ) THEN
           --  status := 1; -- Set status to 1 (already executed)
           -- END IF;
@@ -106,39 +176,31 @@ const createMigrationProcedure = PgMigrateObj
         `,
   );
 
+/**
+ * Generates SQL Data Definition Language (DDL) for the migrations.
+ *
+ * @returns {string} The SQL DDL for migrations.
+ */
+
 function sqlDDL() {
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
     -- synthetic / test data
     ${PgMigrateObj.infoSchemaLifecycle}
 
-    ${
-    PgMigrateObj.content({
-      version: "sample",
-      dateTime: new Date(2023, 10, 16, 10, 16, 45),
-    }).spIslmGovernance
-  }
-
-    ${
-    PgMigrateObj.content({
-      version: "sample",
-      dateTime: new Date(2023, 10, 16, 10, 16, 45),
-    }).spIslmMigrateSP
-  }
-
     ${searchPath}
 
-    ${
-    PgMigrateObj.content({
-      version: "sample",
-      dateTime: new Date(2023, 10, 16, 10, 16, 45),
-    }).islmGovernanceInsertion
-  }
+    ${PgMigrateObj.content(migrationInput).spIslmGovernance}
+
+    ${PgMigrateObj.content(migrationInput).spIslmMigrateSP}
 
     ${createMigrationProcedure.migrateSP}
 
     ${createMigrationProcedure.rollbackSP}
 
     ${createMigrationProcedure.statusFn}
+
+    CALL ${PgMigrateObj.content(migrationInput).spIslmGovernance.routineName}();
+    ${PgMigrateObj.content(migrationInput).islmGovernanceInsertion}
 
 
     `;
