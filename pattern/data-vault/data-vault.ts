@@ -360,6 +360,46 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     };
   };
 
+  const exceptionHubTable = (() => {
+    const tableName = "hub_exception";
+    const columns = {
+      hub_exception_id: keys.ulidPrimaryKey(),
+      exception_hub_key: domains.text(),
+      ...housekeeping.columns,
+    };
+    return table(tableName, columns);
+  })();
+
+  const hubExceptionDiagnosticSatTable = (() => {
+    const tableName = "sat_exception_diagnostic";
+    const columns = {
+      sat_exception_diagnostic_id: keys.ulidPrimaryKey(),
+      hub_exception_id: exceptionHubTable.references
+        .hub_exception_id(),
+      hub_exception_id_ref: domains.text(),
+      message: domains.text(),
+      err_returned_sqlstate: domains.text(),
+      err_pg_exception_detail: domains.text(),
+      err_pg_exception_hint: domains.text(),
+      err_pg_exception_context: domains.text(),
+      ...housekeeping.columns,
+    };
+    return table(tableName, columns);
+  })();
+
+  const hubExceptionHttpClientSatTable = (() => {
+    const tableName = "sat_exception_http_client";
+    const columns = {
+      sat_exception_http_client_id: keys.ulidPrimaryKey(),
+      hub_exception_id: exceptionHubTable.references
+        .hub_exception_id(),
+      http_req: domains.jsonTextNullable(),
+      http_resp: domains.jsonTextNullable(),
+      ...housekeeping.columns,
+    };
+    return table(tableName, columns);
+  })();
+
   return {
     names,
     domains,
@@ -369,6 +409,9 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     tableLintRules,
     hubTable,
     linkTable,
+    exceptionHubTable,
+    hubExceptionDiagnosticSatTable,
+    hubExceptionHttpClientSatTable,
   };
 }
 

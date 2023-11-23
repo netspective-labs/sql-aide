@@ -91,10 +91,17 @@ const syntheticSchema = () => {
     ...dvg.housekeeping.columns,
   });
 
+  const exceptionHubTable = dvg.exceptionHubTable;
+  const hubExceptionDiagnosticSatTable = dvg.hubExceptionDiagnosticSatTable;
+  const hubExceptionHttpClientSatTable = dvg.hubExceptionHttpClientSatTable;
+
   return {
     ctx,
     stso,
     ...dvg,
+    exceptionHubTable,
+    hubExceptionDiagnosticSatTable,
+    hubExceptionHttpClientSatTable,
     syntheticHub0,
     syntheticHub0Sat1,
     syntheticHub0Sat2,
@@ -268,6 +275,99 @@ Deno.test("Data Vault tables", async (tc) => {
         attr_int: number;
         link_hub0_hub1_id: string;
         created_at?: Date | undefined;
+      }>({} as SatRecord);
+    });
+
+    await innterTC.step("Exception Hub", () => {
+      const { exceptionHubTable: exceptionTable, ctx } = schema;
+      ta.assertEquals(exceptionTable.lintIssues, []);
+      ta.assertEquals(
+        exceptionTable.SQL(ctx),
+        uws(`
+      CREATE TABLE IF NOT EXISTS "hub_exception" (
+          "hub_exception_id" TEXT PRIMARY KEY NOT NULL,
+          "exception_hub_key" TEXT NOT NULL,
+          "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          "created_by" TEXT NOT NULL,
+          "provenance" TEXT NOT NULL
+      )`),
+      );
+      type HubRecord = z.infer<typeof exceptionTable.zoSchema>;
+      expectType<{
+        hub_exception_id: string;
+        exception_hub_key: string;
+        created_at?: Date | undefined;
+        created_by?: string | undefined;
+        provenance?: string | undefined;
+      }>({} as HubRecord);
+    });
+
+    await innterTC.step("Exception diagnostics Satellite", () => {
+      const { hubExceptionDiagnosticSatTable: exceptionDiagnosticTable, ctx } =
+        schema;
+      ta.assertEquals(exceptionDiagnosticTable.lintIssues, []);
+      ta.assertEquals(
+        exceptionDiagnosticTable.SQL(ctx),
+        uws(`
+      CREATE TABLE IF NOT EXISTS "sat_exception_diagnostic" (
+          "sat_exception_diagnostic_id" TEXT PRIMARY KEY NOT NULL,
+          "hub_exception_id" TEXT NOT NULL,
+          "hub_exception_id_ref" TEXT NOT NULL,
+          "message" TEXT NOT NULL,
+          "err_returned_sqlstate" TEXT NOT NULL,
+          "err_pg_exception_detail" TEXT NOT NULL,
+          "err_pg_exception_hint" TEXT NOT NULL,
+          "err_pg_exception_context" TEXT NOT NULL,
+          "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          "created_by" TEXT NOT NULL,
+          "provenance" TEXT NOT NULL,
+          FOREIGN KEY("hub_exception_id") REFERENCES "hub_exception"("hub_exception_id")
+      )`),
+      );
+      type SatRecord = z.infer<typeof exceptionDiagnosticTable.zoSchema>;
+      expectType<{
+        sat_exception_diagnostic_id: string;
+        hub_exception_id: string;
+        hub_exception_id_ref: string;
+        message: string;
+        err_returned_sqlstate: string;
+        err_pg_exception_detail: string;
+        err_pg_exception_hint: string;
+        err_pg_exception_context: string;
+        created_at?: Date | undefined;
+        created_by?: string | undefined;
+        provenance?: string | undefined;
+      }>({} as SatRecord);
+    });
+    await innterTC.step("Exception Http Client Satellite", () => {
+      const {
+        hubExceptionHttpClientSatTable: hubExceptionHttpClientTable,
+        ctx,
+      } = schema;
+      ta.assertEquals(hubExceptionHttpClientTable.lintIssues, []);
+      ta.assertEquals(
+        hubExceptionHttpClientTable.SQL(ctx),
+        uws(`
+      CREATE TABLE IF NOT EXISTS "sat_exception_http_client" (
+          "sat_exception_http_client_id" TEXT PRIMARY KEY NOT NULL,
+          "hub_exception_id" TEXT NOT NULL,
+          "http_req" TEXT,
+          "http_resp" TEXT,
+          "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          "created_by" TEXT NOT NULL,
+          "provenance" TEXT NOT NULL,
+          FOREIGN KEY("hub_exception_id") REFERENCES "hub_exception"("hub_exception_id")
+      )`),
+      );
+      type SatRecord = z.infer<typeof hubExceptionHttpClientTable.zoSchema>;
+      expectType<{
+        sat_exception_http_client_id: string;
+        hub_exception_id: string;
+        http_req?: string | undefined;
+        http_resp?: string | undefined;
+        created_at?: Date | undefined;
+        created_by?: string | undefined;
+        provenance?: string | undefined;
       }>({} as SatRecord);
     });
   });
