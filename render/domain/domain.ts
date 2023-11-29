@@ -354,6 +354,9 @@ export function zodStringSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `NVARCHAR(${maxLength ? maxLength : "MAX"})`;
             }
+            if (tmpl.isSqliteDialect(ctx.sqlDialect)) {
+              return `VARCHAR`;
+            }
             return `VARCHAR(${
               maxLength
                 ? maxLength

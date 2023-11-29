@@ -53,18 +53,30 @@ export function governedDomains<
     text: z.string,
     textNullable: () => z.string().optional(),
 
-    varChar: (maxLength: number) =>
-      z.string(
-        SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+    varChar: (maxLength?: number) =>
+      maxLength
+        ? z.string(
+          SQLa.zodSqlDomainRawCreateParams(
+            SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+          ),
+        ).max(maxLength)
+        : z.string(
+          SQLa.zodSqlDomainRawCreateParams(
+            SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+          ),
         ),
-      ).max(maxLength),
-    varCharNullable: (maxLength: number) =>
-      z.string(
-        SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
-        ),
-      ).max(maxLength).optional(),
+    varCharNullable: (maxLength?: number) =>
+      maxLength
+        ? z.string(
+          SQLa.zodSqlDomainRawCreateParams(
+            SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+          ),
+        ).max(maxLength).optional()
+        : z.string(
+          SQLa.zodSqlDomainRawCreateParams(
+            SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+          ),
+        ).optional(),
 
     integer: () => z.number().int(),
     integerNullable: () => z.number().int().optional(),
@@ -230,9 +242,10 @@ export function governedKeys<
   // in governedDomains as an argument because deep-generics type-safe objects
   // will be available through inference.
   const pkcf = SQLa.primaryKeyColumnFactory<Context, DomainQS>();
-  const { ulid } = governedDomains<DomainQS, DomainsQS, Context>();
+  const { ulid, varChar } = governedDomains<DomainQS, DomainsQS, Context>();
 
   const textPrimaryKey = () => pkcf.primaryKey(z.string());
+  const varcharPrimaryKey = () => pkcf.primaryKey(varChar());
   const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
   const autoIncPrimaryKey = pkcf.autoIncPrimaryKey;
 
@@ -240,6 +253,7 @@ export function governedKeys<
     textPrimaryKey,
     ulidPrimaryKey,
     autoIncPrimaryKey,
+    varcharPrimaryKey,
   };
 }
 

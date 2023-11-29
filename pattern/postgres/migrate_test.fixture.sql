@@ -35,9 +35,9 @@ BEGIN
     CASE task
     WHEN 'migrate' THEN
       FOR r IN (
-        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'None' AND to_state = 'SQL Loaded' AND (target_version_number NOT IN (SELECT version_number FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated')) AND
-        (target_version_number IS NULL OR version_number<=target_version_number)
-        ORDER BY version
+        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'None' AND to_state = 'SQL Loaded' AND (target_version_number NOT IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated')) AND
+        (target_version_number IS NULL OR state_sort_index<=target_version_number)
+        ORDER BY state_sort_index
       ) LOOP
         -- Check if migration has been executed
         -- Construct procedure and status function names
@@ -71,7 +71,7 @@ BEGIN
         migrate_rb_insertion_sql TEXT;
         sp_migration_undo_sql TEXT;
       BEGIN
-        SELECT sp_migration_undo FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND (target_version_number NOT IN (SELECT version_number FROM info_schema_lifecycle.islm_governance WHERE from_state = 'Migrated' AND to_state = 'Rollback')) ORDER BY version INTO sp_migration_undo_sql;
+        SELECT sp_migration_undo FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND (target_version_number NOT IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'Migrated' AND to_state = 'Rollback')) ORDER BY state_sort_index INTO sp_migration_undo_sql;
         IF sp_migration_undo_sql IS NOT NULL THEN
           EXECUTE format('CALL info_schema_lifecycle."%s"()', sp_migration_undo_sql);
   
