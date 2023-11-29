@@ -34,6 +34,15 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     ...housekeeping.columns,
   });
 
+  const publAnotherHost = gm.textPkTable("publ_another_host", {
+    publ_another_host_id: keys.varcharPrimaryKey(),
+    host: tcf.unique(sd.text()),
+    host_identity: sd.jsonTextNullable(),
+    host_type_code: hostType.references.code(),
+    mutation_count: sd.integer(),
+    ...housekeeping.columns,
+  });
+
   // TODO: SELECT * is bad so use SELECT ${publHost.columnsAll} or similar
   const { columns: phc } = publHost;
   const publHostView = gm.safeView(
@@ -126,6 +135,7 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     publHostView,
     hostType,
     buildEventType,
+    publAnotherHost,
   };
 }
 
@@ -173,6 +183,8 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
 
     ${ss.publServerErrorLog}
 
+    ${ss.publAnotherHost}
+
     ${ss.publHost.insertDML({ publ_host_id: "test", host: "test", host_identity: "testHI", mutation_count: 0, host_type_code: ss.hostType.seedEnum.linux })}
 
     ${ss.publHost.select({ host_identity: "testHI"})}
@@ -195,7 +207,7 @@ Deno.test("SQL Aide (SQLa) emit template", () => {
     0,
     DDL.stsOptions.sqlQualitySystemState?.lintedSqlText.lintIssues?.length,
   );
-  ta.assertEquals(gts.tablesDeclared.size, 7);
+  ta.assertEquals(gts.tablesDeclared.size, 8);
   ta.assertEquals(gts.viewsDeclared.size, 1);
   ta.assertEquals(fixturePUML, gts.pumlERD(ctx).content);
 });
@@ -332,6 +344,23 @@ const fixtureSQL = ws.unindentWhitespace(`
       "activity_log" TEXT,
       FOREIGN KEY("parent_publ_server_error_log_id") REFERENCES "publ_server_error_log"("publ_server_error_log_id"),
       FOREIGN KEY("publ_server_service_id") REFERENCES "publ_server_service"("publ_server_service_id")
+  );
+
+  CREATE TABLE IF NOT EXISTS "publ_another_host" (
+      "publ_another_host_id" VARCHAR(4096) PRIMARY KEY NOT NULL,
+      "host" TEXT /* UNIQUE COLUMN */ NOT NULL,
+      "host_identity" TEXT,
+      "host_type_code" INTEGER NOT NULL,
+      "mutation_count" INTEGER NOT NULL,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      "created_by" TEXT DEFAULT 'UNKNOWN',
+      "updated_at" TIMESTAMP,
+      "updated_by" TEXT,
+      "deleted_at" TIMESTAMP,
+      "deleted_by" TEXT,
+      "activity_log" TEXT,
+      FOREIGN KEY("host_type_code") REFERENCES "host_type"("code"),
+      UNIQUE("host")
   );
 
   INSERT INTO "publ_host" ("publ_host_id", "host", "host_identity", "host_type_code", "mutation_count", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('test', 'test', 'testHI', 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -474,10 +503,27 @@ const fixturePUML = `@startuml IE
       activity_log: TEXT
   }
 
+  entity "publ_another_host" as publ_another_host {
+    * **publ_another_host_id**: VARCHAR(4096)
+    --
+    * host: TEXT
+      host_identity: TEXT
+    * host_type_code: INTEGER
+    * mutation_count: INTEGER
+      created_at: TIMESTAMP
+      created_by: TEXT
+      updated_at: TIMESTAMP
+      updated_by: TEXT
+      deleted_at: TIMESTAMP
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   publ_host |o..o{ publ_build_event
   build_event_type |o..o{ publ_build_event
   publ_build_event |o..o{ publ_server_service
   publ_server_service |o..o{ publ_server_static_access_log
   publ_server_error_log |o..o{ publ_server_error_log
   publ_server_service |o..o{ publ_server_error_log
+  host_type |o..o{ publ_another_host
 @enduml`;
