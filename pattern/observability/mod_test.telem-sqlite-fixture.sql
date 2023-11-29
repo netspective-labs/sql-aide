@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "span" (
     "span_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "trace_id" TEXT NOT NULL,
+    "trace_id" UUID NOT NULL,
     "parent_span_id" INTEGER,
     "name" TEXT NOT NULL,
     "start_time" TIMESTAMP NOT NULL,
