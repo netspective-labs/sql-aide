@@ -35,7 +35,7 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
   });
 
   const publAnotherHost = gm.textPkTable("publ_another_host", {
-    publ_another_host_id: keys.varcharPrimaryKey(),
+    publ_another_host_id: keys.varCharPrimaryKey(),
     host: tcf.unique(sd.text()),
     host_identity: sd.jsonTextNullable(),
     host_type_code: hostType.references.code(),

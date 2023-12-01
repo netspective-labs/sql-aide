@@ -432,8 +432,8 @@ export function zodStringSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({
-          SQL: (_ctx: Context) => {
-            return `TEXT`;
+          SQL: (ctx: Context) => {
+            return tmpl.isSqliteDialect(ctx.sqlDialect) ? "UUID" : "TEXT";
           },
         }),
         sqlDefaultValue: () => ({

@@ -196,7 +196,10 @@ export function governedDomains<
         SQLa.sqlDomainZodStringDescr({ isUlid: true }),
       )).ulid().optional(),
 
-    uuid: () => z.string().uuid(),
+    uuid: () =>
+      z.string(SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodStringDescr({ isUuid: true }),
+      )).uuid(),
     uuidNullable: () =>
       z.string(SQLa.zodSqlDomainRawCreateParams(
         SQLa.sqlDomainZodStringDescr({ isUuid: true }),
@@ -242,18 +245,24 @@ export function governedKeys<
   // in governedDomains as an argument because deep-generics type-safe objects
   // will be available through inference.
   const pkcf = SQLa.primaryKeyColumnFactory<Context, DomainQS>();
-  const { ulid, varChar } = governedDomains<DomainQS, DomainsQS, Context>();
+  const { ulid, varChar, uuid } = governedDomains<
+    DomainQS,
+    DomainsQS,
+    Context
+  >();
 
   const textPrimaryKey = () => pkcf.primaryKey(z.string());
-  const varcharPrimaryKey = () => pkcf.primaryKey(varChar());
+  const varCharPrimaryKey = () => pkcf.primaryKey(varChar());
   const ulidPrimaryKey = () => pkcf.primaryKey(ulid());
+  const uuidPrimaryKey = () => pkcf.primaryKey(uuid());
   const autoIncPrimaryKey = pkcf.autoIncPrimaryKey;
 
   return {
     textPrimaryKey,
     ulidPrimaryKey,
     autoIncPrimaryKey,
-    varcharPrimaryKey,
+    varCharPrimaryKey,
+    uuidPrimaryKey,
   };
 }
 
