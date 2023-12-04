@@ -52,6 +52,12 @@ export function governedDomains<
     textArray: z.array(z.string()),
     text: z.string,
     textNullable: () => z.string().optional(),
+    textDefaultNullable: () =>
+      z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isDefaultNullableText: true }),
+        ),
+      ).optional(),
 
     varChar: (maxLength?: number) =>
       maxLength

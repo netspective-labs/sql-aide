@@ -187,12 +187,20 @@ export type SqlDomainZodStringDescr = SqlDomainZodDescrMeta & {
   readonly isUlid?: boolean;
 } & {
   readonly isBlobText?: boolean;
+} & {
+  readonly isDefaultNullableText?: boolean;
 };
 
 export function sqlDomainZodStringDescr(
   options: Pick<
     SqlDomainZodStringDescr,
-    "isJsonText" | "isVarChar" | "isSemver" | "isUuid" | "isUlid" | "isBlobText"
+    | "isJsonText"
+    | "isVarChar"
+    | "isSemver"
+    | "isUuid"
+    | "isUlid"
+    | "isBlobText"
+    | "isDefaultNullableText"
   >,
 ): SqlDomainZodStringDescr {
   return {
@@ -207,7 +215,8 @@ export function isSqlDomainZodStringDescr<
   const isSDZSD = safety.typeGuard<SDZND>("isSqlDomainZodDescrMeta");
   return isSDZSD(o) &&
     ("isJsonText" in o || "isVarChar" in o || "isSemver" in o ||
-      "isUuid" in o || "isUlid" in o || "isBlobText" in o);
+      "isUuid" in o || "isUlid" in o || "isBlobText" in o ||
+      "isDefaultNullableText" in o);
 }
 
 export function zodStringSqlDomainFactory<
@@ -466,6 +475,41 @@ export function zodStringSqlDomainFactory<
         sqlDefaultValue: () => ({
           SQL: (_ctx: Context) => {
             return defaultValue != undefined ? defaultValue : "";
+          },
+        }),
+        parents: init?.parents,
+      };
+    },
+    textDefaultNullable: <
+      ZodType extends z.ZodType<string, z.ZodStringDef>,
+      Identity extends string,
+    >(
+      zodType: ZodType,
+      init?: {
+        readonly identity?: Identity;
+        readonly isOptional?: boolean;
+        readonly parents?: z.ZodTypeAny[];
+      },
+    ) => {
+      const defaultValue = init?.parents?.[0]?._def.defaultValue?.();
+      return {
+        ...ztaSDF.defaults<Identity>(zodType, init),
+        sqlDataType: () => ({
+          SQL: (ctx: Context) => {
+            if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
+              return `NVARCHAR(MAX)`;
+            }
+            return `TEXT`;
+          },
+        }),
+        sqlDefaultValue: () => ({
+          SQL: (_ctx: Context) => {
+            const defaultValueTransformed = defaultValue != undefined
+              ? _ctx.sqlTextEmitOptions.quotedLiteral(defaultValue)
+              : `NULL`;
+            return defaultValueTransformed != `NULL`
+              ? defaultValueTransformed[1]
+              : `NULL`;
           },
         }),
         parents: init?.parents,
@@ -1477,7 +1521,9 @@ export function zodTypeSqlDomainFactory<
                       ? stringSDF.ulid(zodType, init)
                       : (zodDefHook.descrMeta.isBlobText
                         ? stringSDF.blobString(zodType, init)
-                        : stringSDF.string(zodType, init))))));
+                        : (zodDefHook.descrMeta.isDefaultNullableText
+                          ? stringSDF.textDefaultNullable(zodType, init)
+                          : stringSDF.string(zodType, init)))))));
           } else {
             throw new Error(
               `Unable to map Zod type ${zodDef.typeName} to SQL domain, description meta is not for ZodString ${
