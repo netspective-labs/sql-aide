@@ -5,11 +5,21 @@ import * as emit from "../emit/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+export interface PolygenTypeSupplier {
+  readonly type: emit.PolygenSrcCodeText;
+  readonly remarks?: string;
+}
+
+export interface PolygenEngineTypeStrategy {
+  readonly type: (abstractType: string) => PolygenTypeSupplier;
+}
+
 export interface PolygenEngine<
   Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
 > {
+  readonly typeStrategy: () => PolygenEngineTypeStrategy;
   readonly entityAttrSrcCode: (
     ea: g.GraphEntityAttrReference<
       Any,

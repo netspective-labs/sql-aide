@@ -3,72 +3,89 @@ import * as g from "../../graph.ts";
 import * as emit from "../../emit/mod.ts";
 import * as tbl from "../../ddl/table/mod.ts";
 import * as imGen from "../info-model.ts";
-import { PolygenEngine } from "../engine.ts";
+import * as e from "../engine.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+
+export function rustSerDeTypes(pt: string, options?: {
+  readonly notFound: () => e.PolygenTypeSupplier;
+}): e.PolygenTypeSupplier {
+  let result: e.PolygenTypeSupplier;
+  switch (pt) {
+    case "integer":
+      result = { type: "i64", remarks: `'${pt}' maps directly to Rust type` };
+      break;
+    case "float":
+      result = { type: "f64", remarks: `'${pt}' maps directly to Rust type` };
+      break;
+    case "text":
+    case "string":
+      result = {
+        type: "String",
+        remarks: `'${pt}' maps directly to Rust type`,
+      };
+      break;
+    case "blob":
+      result = {
+        type: "Vec<u8>",
+        remarks: `'${pt}' maps directly to Rust type`,
+      };
+      break;
+    case "boolean":
+      result = {
+        type: "bool",
+        remarks: `'${pt}' maps directly to Rust type`,
+      };
+      break;
+    case "date":
+      result = {
+        type: "chrono::NaiveDate",
+        remarks: `Using chrono crate for '${pt}'`,
+      };
+      break;
+    case "datetime":
+    case "timestamp":
+      result = {
+        type: "chrono::NaiveDateTime",
+        remarks: `Using chrono crate for '${pt}'`,
+      };
+      break;
+    default:
+      result = options?.notFound?.() ?? ({
+        type: "String",
+        remarks: `uknown type '${pt}', mapping to String by default`,
+      });
+  }
+  return result;
+}
 
 export class RustSerDePolygenEngine<
   Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
-> implements PolygenEngine<Context, DomainQS, DomainsQS> {
+> implements e.PolygenEngine<Context, DomainQS, DomainsQS> {
+  readonly #typeStrategy: e.PolygenEngineTypeStrategy;
   readonly sqlNames: emit.SqlObjectNames;
 
   constructor(
     readonly sqlCtx: Context,
-    readonly polygenSchemaOptions: imGen.PolygenInfoModelOptions<
-      Context,
-      DomainQS,
-      DomainsQS
-    >,
+    readonly polygenSchemaOptions:
+      & imGen.PolygenInfoModelOptions<
+        Context,
+        DomainQS,
+        DomainsQS
+      >
+      & { readonly typeStrategy?: () => e.PolygenEngineTypeStrategy },
   ) {
     this.sqlNames = sqlCtx.sqlNamingStrategy(sqlCtx);
+    this.#typeStrategy = {
+      type: (pt) => rustSerDeTypes(pt),
+    };
   }
 
-  polygenixRustType(
-    ea: g.GraphEntityAttrReference<
-      Any,
-      Any,
-      Context,
-      DomainQS,
-      DomainsQS
-    >,
-    pt: string,
-  ): [type: string, remarks: string | undefined] {
-    let result: [type: string, remarks: string];
-    switch (pt) {
-      case "integer":
-        result = ["i64", `'${pt}' maps directly to Rust type`];
-        break;
-      case "float":
-        result = ["f64", `'${pt}' maps directly to Rust type`];
-        break;
-      case "text":
-      case "string":
-        result = ["String", `'${pt}' maps directly to Rust type`];
-        break;
-      case "blob":
-        result = ["Vec<u8>", `'${pt}' maps directly to Rust type`];
-        break;
-      case "boolean":
-        result = ["bool", `'${pt}' maps directly to Rust type`];
-        break;
-      case "date":
-        result = ["chrono::NaiveDate", `Using chrono crate for '${pt}'`];
-        break;
-      case "datetime":
-        result = ["chrono::NaiveDateTime", `Using chrono crate for '${pt}'`]; // Using chrono crate for datetime
-        break;
-      default:
-        result = [
-          "String",
-          `uknown type '${pt}', mapping to String by default`,
-        ];
-    }
-    return this.polygenSchemaOptions.includeEntityAttrGenRemarks(ea)
-      ? result
-      : [result[0], undefined];
+  typeStrategy(): e.PolygenEngineTypeStrategy {
+    return this.#typeStrategy;
   }
 
   async entityAttrSrcCode(
@@ -95,15 +112,15 @@ export class RustSerDePolygenEngine<
       columnName: ea.attr.identity,
     });
     const pgdt = ea.attr.polygenixDataType("info-model");
-    const [pgdtSC, pgdtRemarks] = this.polygenixRustType(
-      ea,
+    const types = this.typeStrategy();
+    const { type, remarks: pgdtRemarks } = types.type(
       await emit.sourceCodeText(this.sqlCtx, pgdt),
     );
     const remarks = tbl.isTablePrimaryKeyColumnDefn(ea.attr)
       ? (pgdtRemarks ? `PRIMARY KEY (${pgdtRemarks})` : pgdtRemarks)
       : pgdtRemarks;
     // deno-fmt-ignore
-    return `    ${name}: ${ea.attr.isNullable() ? `Some(${pgdtSC})` : pgdtSC},${remarks ? ` // ${remarks}` : ''}`;
+    return `    ${name}: ${ea.attr.isNullable() ? `Some(${type})` : type},${remarks ? ` // ${remarks}` : ''}`;
   }
 
   async entitySrcCode(
