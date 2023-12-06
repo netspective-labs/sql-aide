@@ -120,7 +120,7 @@ export class RustSerDePolygenEngine<
       ? (pgdtRemarks ? `PRIMARY KEY (${pgdtRemarks})` : pgdtRemarks)
       : pgdtRemarks;
     // deno-fmt-ignore
-    return `    ${name}: ${ea.attr.isNullable() ? `Some(${type})` : type},${remarks ? ` // ${remarks}` : ''}`;
+    return `    ${name}: ${ea.attr.isNullable() ? `Option<${type}>` : type},${remarks ? ` // ${remarks}` : ''}`;
   }
 
   async entitySrcCode(
