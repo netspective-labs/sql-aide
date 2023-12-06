@@ -186,5 +186,5 @@ Deno.test("Rust information model structures", async () => {
     path.fromFileUrl(import.meta.resolve("./mod_test-fixture-serde.rs")),
   );
   const esc = await imNB.entitiesSrcCode();
-  ta.assert(await SQLa.sourceCodeText(ctx, esc), fixture);
+  ta.assertEquals(await SQLa.sourceCodeText(ctx, esc), fixture);
 });

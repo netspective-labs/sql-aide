@@ -66,6 +66,7 @@ export class RustSerDePolygenEngine<
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
 > implements e.PolygenEngine<Context, DomainQS, DomainsQS> {
   readonly #typeStrategy: e.PolygenEngineTypeStrategy;
+  readonly #namingStrategy: e.PolygenEngineNamingStrategy;
   readonly sqlNames: emit.SqlObjectNames;
 
   constructor(
@@ -76,12 +77,25 @@ export class RustSerDePolygenEngine<
         DomainQS,
         DomainsQS
       >
-      & { readonly typeStrategy?: () => e.PolygenEngineTypeStrategy },
+      & { readonly typeStrategy?: e.PolygenEngineTypeStrategy }
+      & { readonly namingStrategy?: e.PolygenEngineNamingStrategy },
   ) {
     this.sqlNames = sqlCtx.sqlNamingStrategy(sqlCtx);
-    this.#typeStrategy = {
+    this.#typeStrategy = polygenSchemaOptions?.typeStrategy ?? ({
       type: (pt) => rustSerDeTypes(pt),
-    };
+    });
+
+    // Rust likes tables/views/etc. structs to be in CamelCase and field names
+    // in snake_case; since SQL columns, etc. are already in snake_case we just
+    // return them as is by default.
+    this.#namingStrategy = polygenSchemaOptions?.namingStrategy ?? ({
+      entityName: e.snakeToPascalCase,
+      entityAttrName: (sqlIdentifier) => sqlIdentifier,
+    });
+  }
+
+  namingStrategy(): e.PolygenEngineNamingStrategy {
+    return this.#namingStrategy;
   }
 
   typeStrategy(): e.PolygenEngineTypeStrategy {
@@ -107,10 +121,11 @@ export class RustSerDePolygenEngine<
       >
     >,
   ) {
-    const name = this.sqlNames.tableColumnName({
+    const ns = this.namingStrategy();
+    const name = ns.entityAttrName(this.sqlNames.tableColumnName({
       tableName: ea.entity.identity("presentation"),
       columnName: ea.attr.identity,
-    });
+    }));
     const pgdt = ea.attr.polygenixDataType("info-model");
     const types = this.typeStrategy();
     const { type, remarks: pgdtRemarks } = types.type(
@@ -166,7 +181,10 @@ export class RustSerDePolygenEngine<
       }
     }
 
-    const structName = this.sqlNames.tableName(entity.identity("presentation"));
+    const ns = this.namingStrategy();
+    const structName = ns.entityName(
+      this.sqlNames.tableName(entity.identity("presentation")),
+    );
     return [
       `#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]`,
       `pub struct ${structName} {`,
