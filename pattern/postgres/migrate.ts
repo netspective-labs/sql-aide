@@ -287,7 +287,7 @@ export class PgMigrate<
       CASE task
       WHEN 'migrate' THEN
         FOR r IN (
-          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.NONE}' AND to_state = '${TransitionStatus.SQLLOADED}' AND (target_version_number NOT IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}')) AND
+          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.NONE}' AND to_state = '${TransitionStatus.SQLLOADED}' AND (state_sort_index NOT IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}')) AND
           (target_version_number IS NULL OR state_sort_index<=target_version_number)
           ORDER BY state_sort_index
         ) LOOP
@@ -323,7 +323,7 @@ export class PgMigrate<
           migrate_rb_insertion_sql TEXT;
           sp_migration_undo_sql TEXT;
         BEGIN
-          SELECT sp_migration_undo FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND (target_version_number NOT IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.MIGRATED}' AND to_state = '${TransitionStatus.ROLLBACK}')) ORDER BY state_sort_index INTO sp_migration_undo_sql;
+          SELECT sp_migration_undo FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
           IF sp_migration_undo_sql IS NOT NULL THEN
             EXECUTE format('CALL ${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql);
 

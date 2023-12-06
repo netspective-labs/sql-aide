@@ -60,20 +60,40 @@ export class GovernedDomains<
     return z.string().optional();
   }
 
-  varChar(maxLength: number) {
+  textDefaultNullable() {
     return z.string(
       SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        SQLa.sqlDomainZodStringDescr({ isDefaultNullableText: true }),
       ),
-    ).max(maxLength);
+    ).optional();
   }
 
-  varCharNullable(maxLength: number) {
-    return z.string(
-      SQLa.zodSqlDomainRawCreateParams(
-        SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
-      ),
-    ).max(maxLength).optional();
+  varChar(maxLength?: number) {
+    return maxLength
+      ? z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      ).max(maxLength)
+      : z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      );
+  }
+
+  varCharNullable(maxLength?: number) {
+    return maxLength
+      ? z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      ).max(maxLength).optional()
+      : z.string(
+        SQLa.zodSqlDomainRawCreateParams(
+          SQLa.sqlDomainZodStringDescr({ isVarChar: true }),
+        ),
+      ).optional();
   }
 
   integer() {
@@ -231,7 +251,9 @@ export class GovernedDomains<
   }
 
   uuid() {
-    return z.string().uuid();
+    return z.string(SQLa.zodSqlDomainRawCreateParams(
+      SQLa.sqlDomainZodStringDescr({ isUuid: true }),
+    )).uuid();
   }
 
   uuidNullable() {
@@ -434,6 +456,14 @@ export class GovernedKeys<
 
   autoIncPrimaryKey() {
     return this.pkcf.autoIncPrimaryKey();
+  }
+
+  varCharPrimaryKey() {
+    return this.pkcf.primaryKey(this.domains.varChar());
+  }
+
+  uuidPrimaryKey() {
+    return this.pkcf.primaryKey(this.domains.uuid());
   }
 }
 

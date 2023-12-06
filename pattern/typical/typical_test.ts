@@ -40,6 +40,7 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
     host_identity: sd.jsonTextNullable(),
     host_type_code: hostType.references.code(),
     mutation_count: sd.integer(),
+    host_description: sd.textDefaultNullable(),
     ...housekeeping.columns,
   });
 
@@ -352,6 +353,7 @@ const fixtureSQL = ws.unindentWhitespace(`
       "host_identity" TEXT,
       "host_type_code" INTEGER NOT NULL,
       "mutation_count" INTEGER NOT NULL,
+      "host_description" TEXT DEFAULT NULL,
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       "created_by" TEXT DEFAULT 'UNKNOWN',
       "updated_at" TIMESTAMP,
@@ -510,6 +512,7 @@ const fixturePUML = `@startuml IE
       host_identity: TEXT
     * host_type_code: INTEGER
     * mutation_count: INTEGER
+      host_description: TEXT
       created_at: TIMESTAMP
       created_by: TEXT
       updated_at: TIMESTAMP
