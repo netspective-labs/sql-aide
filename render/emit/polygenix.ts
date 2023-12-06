@@ -17,6 +17,11 @@ export type PolygenSrcCode<Context extends sql.SqlEmitContext> =
   | ((ctx: Context) => PolygenSrcCodeText | Promise<PolygenSrcCodeText>)
   | sql.SqlTextSupplier<Context>;
 
+export type PolygenSrcCodeSync<Context extends sql.SqlEmitContext> =
+  | PolygenSrcCodeText
+  | ((ctx: Context) => PolygenSrcCodeText)
+  | sql.SqlTextSupplier<Context>;
+
 export async function sourceCodeText<Context extends sql.SqlEmitContext>(
   ctx: Context,
   psc: PolygenSrcCodeSupplier<Context> | PolygenSrcCode<Context>,
@@ -30,6 +35,22 @@ export async function sourceCodeText<Context extends sql.SqlEmitContext>(
     return psc;
   } else if (typeof psc === "function") {
     return await sourceCodeText(ctx, await psc(ctx));
+  } else {
+    if (psc.length == 0) return "";
+    return psc.join("\n");
+  }
+}
+
+export function sourceCodeTextSync<Context extends sql.SqlEmitContext>(
+  ctx: Context,
+  psc: PolygenSrcCodeSync<Context>,
+): string {
+  if (sql.isSqlTextSupplier<Context>(psc)) return psc.SQL(ctx);
+
+  if (typeof psc === "string") {
+    return psc;
+  } else if (typeof psc === "function") {
+    return sourceCodeTextSync(ctx, psc(ctx));
   } else {
     if (psc.length == 0) return "";
     return psc.join("\n");

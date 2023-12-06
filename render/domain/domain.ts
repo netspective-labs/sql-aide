@@ -43,9 +43,7 @@ export type SqlDomain<
         | "PostgreSQL domain",
     ) => tmpl.SqlTextSupplier<Context>;
     readonly polygenixDataType: (
-      purpose:
-        | "polygenix"
-        | "rust-2021",
+      purpose: "info-model",
     ) => tmpl.PolygenSrcCode<Context>;
     readonly sqlDefaultValue?: (
       purpose: "create table column" | "stored routine arg",
@@ -525,6 +523,7 @@ export function zodStringSqlDomainFactory<
               : `NULL`;
           },
         }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },

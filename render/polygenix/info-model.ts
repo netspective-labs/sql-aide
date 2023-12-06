@@ -20,6 +20,15 @@ export interface PolygenInfoModelOptions<
       DomainsQS
     >,
   ) => boolean;
+  readonly includeEntityAttrGenRemarks: (
+    ea: g.GraphEntityAttrReference<
+      Any,
+      Any,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
+  ) => boolean;
   readonly includeEntity: (
     e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
   ) => boolean;
@@ -50,6 +59,7 @@ export function typicalPolygenInfoModelOptions<
   return {
     includeEntity: () => true,
     includeEntityAttr: () => true,
+    includeEntityAttrGenRemarks: () => true,
     includeRelationship: () => true,
     includeChildren: () => true,
     ...inherit,
@@ -90,7 +100,16 @@ export class PolygenInfoModelNotebook<
   }
 
   async entitiesSrcCode() {
-    const graph = g.entitiesGraph(this.sqlCtx, this.entityDefns);
+    const graph = g.entitiesGraph<
+      Entity,
+      Context,
+      DomainQS,
+      DomainsQS,
+      g.EntitiesGraphQS<DomainQS, DomainsQS>
+    >(
+      this.sqlCtx,
+      this.entityDefns,
+    );
 
     const entitiesSrcCode: string[] = [];
     for (const entity of graph.entities) {
@@ -98,7 +117,7 @@ export class PolygenInfoModelNotebook<
         continue;
       }
 
-      const sc = this.engine.entitySrcCode(entity);
+      const sc = await this.engine.entitySrcCode(entity, graph);
       entitiesSrcCode.push(await emit.sourceCodeText(this.sqlCtx, sc));
     }
 

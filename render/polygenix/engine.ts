@@ -18,8 +18,27 @@ export interface PolygenEngine<
       DomainQS,
       DomainsQS
     >,
-  ) => emit.PolygenSrcCode<Context>;
+    entity: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+    graph: ReturnType<
+      typeof g.entitiesGraph<
+        Any,
+        Context,
+        DomainQS,
+        DomainsQS,
+        g.EntitiesGraphQS<DomainQS, DomainsQS>
+      >
+    >,
+  ) => emit.PolygenSrcCodeSync<Context> | Promise<emit.PolygenSrcCode<Context>>;
   readonly entitySrcCode: (
-    e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
-  ) => emit.PolygenSrcCode<Context>;
+    entity: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+    graph: ReturnType<
+      typeof g.entitiesGraph<
+        Any,
+        Context,
+        DomainQS,
+        DomainsQS,
+        g.EntitiesGraphQS<DomainQS, DomainsQS>
+      >
+    >,
+  ) => emit.PolygenSrcCodeSync<Context> | Promise<emit.PolygenSrcCode<Context>>;
 }

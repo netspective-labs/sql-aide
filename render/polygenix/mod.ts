@@ -1,2 +1,2 @@
 export * from "./info-model.ts";
-export * from "./rust.ts";
+export * as rust from "./rust/mod.ts";
