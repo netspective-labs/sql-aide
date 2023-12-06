@@ -42,6 +42,11 @@ export type SqlDomain<
         | "diagram"
         | "PostgreSQL domain",
     ) => tmpl.SqlTextSupplier<Context>;
+    readonly polygenixDataType: (
+      purpose:
+        | "polygenix"
+        | "rust-2021",
+    ) => tmpl.PolygenSrcCode<Context>;
     readonly sqlDefaultValue?: (
       purpose: "create table column" | "stored routine arg",
     ) => tmpl.SqlTextSupplier<Context>;
@@ -255,6 +260,7 @@ export function zodStringSqlDomainFactory<
               : "";
           },
         }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },
@@ -303,6 +309,7 @@ export function zodStringSqlDomainFactory<
           // we're assuming there are no other sqlPartials inherited
           return undefined;
         },
+        polygenixDataType: () => `string::json`,
         parents: init?.parents,
       };
     },
@@ -324,6 +331,7 @@ export function zodStringSqlDomainFactory<
             return `BLOB`;
           },
         }),
+        polygenixDataType: () => `blob`,
         parents: init?.parents,
       };
     },
@@ -364,6 +372,7 @@ export function zodStringSqlDomainFactory<
             })`;
           },
         }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },
@@ -393,6 +402,7 @@ export function zodStringSqlDomainFactory<
             )} */`;
           },
         }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },
@@ -414,6 +424,7 @@ export function zodStringSqlDomainFactory<
             return `semver`;
           },
         }),
+        polygenixDataType: () => `string::semver`,
         parents: init?.parents,
       };
     },
@@ -441,6 +452,7 @@ export function zodStringSqlDomainFactory<
             return defaultValue != undefined ? defaultValue : "";
           },
         }),
+        polygenixDataType: () => `string::uuid`,
         parents: init?.parents,
       };
     },
@@ -468,6 +480,7 @@ export function zodStringSqlDomainFactory<
             return defaultValue != undefined ? defaultValue : "";
           },
         }),
+        polygenixDataType: () => `string::ulid`,
         parents: init?.parents,
       };
     },
@@ -533,6 +546,7 @@ export function zodArraySqlDomainFactory<
             return `TEXT[]`;
           },
         }),
+        polygenixDataType: () => `array::string`,
         parents: init?.parents,
       };
     },
@@ -555,6 +569,7 @@ export function zodArraySqlDomainFactory<
             return "REAL[]";
           },
         }),
+        polygenixDataType: () => `array::float`,
         parents: init?.parents,
       };
     },
@@ -601,6 +616,7 @@ export function zodBooleanSqlDomainFactory<
             return defaultValue != undefined ? defaultValue.toString() : "";
           },
         }),
+        polygenixDataType: () => `boolean`,
         parents: init?.parents,
       };
     },
@@ -694,6 +710,7 @@ export function zodJsonSqlDomainFactory<
             return `TEXT`;
           },
         }),
+        polygenixDataType: () => `jsonb`,
         parents: init?.parents,
       };
     },
@@ -754,6 +771,7 @@ export function zodNumberSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `BIGINT` }),
+        polygenixDataType: () => `bigint`,
       };
     },
     integer: <
@@ -776,6 +794,7 @@ export function zodNumberSqlDomainFactory<
             return defaultValue != undefined ? defaultValue.toString() : "";
           },
         }),
+        polygenixDataType: () => `integer`,
       };
     },
     integerNullable: <
@@ -791,6 +810,7 @@ export function zodNumberSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, { ...init, isOptional: true }),
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
+        polygenixDataType: () => `integer`,
       };
     },
     serial: <
@@ -815,6 +835,7 @@ export function zodNumberSqlDomainFactory<
             return "INTEGER AUTOINCREMENT";
           },
         }),
+        polygenixDataType: () => `integer::serial`,
       };
     },
     float: <
@@ -842,6 +863,7 @@ export function zodNumberSqlDomainFactory<
             return defaultValue != undefined ? defaultValue.toString() : "";
           },
         }),
+        polygenixDataType: () => `float`,
       };
     },
     floatNullable: <
@@ -862,6 +884,7 @@ export function zodNumberSqlDomainFactory<
             return "REAL";
           },
         }),
+        polygenixDataType: () => `float`,
       };
     },
     bigFloat: <
@@ -888,6 +911,7 @@ export function zodNumberSqlDomainFactory<
             return "REAL";
           },
         }),
+        polygenixDataType: () => `float::double-precision`,
       };
     },
     bigFloatNullable: <
@@ -913,6 +937,7 @@ export function zodNumberSqlDomainFactory<
             return "REAL";
           },
         }),
+        polygenixDataType: () => `float::double-precision`,
       };
     },
   };
@@ -1011,6 +1036,7 @@ export function zodDateSqlDomainFactory<
           }
           return quotedLiteral(value);
         },
+        polygenixDataType: () => `date`,
       };
     },
     dateTime: <
@@ -1045,6 +1071,7 @@ export function zodDateSqlDomainFactory<
           }
           return quotedLiteral(value);
         },
+        polygenixDataType: () => `timestamp`,
       };
     },
     createdAt: <
@@ -1068,7 +1095,6 @@ export function zodDateSqlDomainFactory<
             return `TIMESTAMP`;
           },
         }),
-
         sqlDefaultValue: () => ({
           SQL: (ctx: Context) => {
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
@@ -1077,6 +1103,7 @@ export function zodDateSqlDomainFactory<
             return `CURRENT_TIMESTAMP`;
           },
         }),
+        polygenixDataType: () => `timestamp`,
       };
     },
     updatedAt: <
@@ -1100,6 +1127,7 @@ export function zodDateSqlDomainFactory<
             return `TIMESTAMP`;
           },
         }),
+        polygenixDataType: () => `timestamp`,
       };
     },
     deletedAt: <
@@ -1123,6 +1151,7 @@ export function zodDateSqlDomainFactory<
             return `TIMESTAMP`;
           },
         }),
+        polygenixDataType: () => `timestamp`,
       };
     },
   };
@@ -1155,6 +1184,7 @@ export function zodEnumSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `INTEGER` }),
+        polygenixDataType: () => `integer`,
         parents: init?.parents,
       };
     },
@@ -1172,6 +1202,7 @@ export function zodEnumSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(zodType, init),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },
@@ -1190,6 +1221,7 @@ export function zodEnumSqlDomainFactory<
       return {
         ...ztaSDF.defaults<Identity>(z.enum(values), init),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },
@@ -1216,6 +1248,7 @@ export function zodEnumSqlDomainFactory<
             return `VARCHAR(${maxLength})`;
           },
         }),
+        polygenixDataType: () => `string`,
         parents: init?.parents,
       };
     },

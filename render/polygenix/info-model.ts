@@ -7,8 +7,7 @@ import { PolygenEngine } from "./engine.ts";
 type Any = any;
 
 export interface PolygenInfoModelOptions<
-  PolygenContext extends emit.PolygenEmitContext,
-  SqlContext extends emit.SqlEmitContext,
+  Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
 > {
@@ -16,22 +15,22 @@ export interface PolygenInfoModelOptions<
     ea: g.GraphEntityAttrReference<
       Any,
       Any,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
   ) => boolean;
   readonly includeEntity: (
-    e: g.GraphEntityDefinition<Any, SqlContext, Any, DomainQS, DomainsQS>,
+    e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
   ) => boolean;
   readonly includeRelationship: (
-    edge: g.GraphEdge<SqlContext, Any, Any>,
+    edge: g.GraphEdge<Context, Any, Any>,
   ) => boolean;
   readonly includeChildren: (
     ir: g.EntityGraphInboundRelationship<
       Any,
       Any,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
@@ -39,15 +38,14 @@ export interface PolygenInfoModelOptions<
 }
 
 export function typicalPolygenInfoModelOptions<
-  PolygenContext extends emit.PolygenEmitContext,
-  SqlContext extends emit.SqlEmitContext,
+  Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
 >(
   inherit?: Partial<
-    PolygenInfoModelOptions<PolygenContext, SqlContext, DomainQS, DomainsQS>
+    PolygenInfoModelOptions<Context, DomainQS, DomainsQS>
   >,
-): PolygenInfoModelOptions<PolygenContext, SqlContext, DomainQS, DomainsQS> {
+): PolygenInfoModelOptions<Context, DomainQS, DomainsQS> {
   // we let type inference occur so generics can follow through
   return {
     includeEntity: () => true,
@@ -63,30 +61,27 @@ export function typicalPolygenInfoModelOptions<
  * like tables, views to be represented as structs, types, etc.
  */
 export class PolygenInfoModelNotebook<
-  PolygenContext extends emit.PolygenEmitContext,
   Entity extends g.GraphEntityDefinition<
     Any,
-    SqlContext,
+    Context,
     Any,
     DomainQS,
     DomainsQS
   >,
-  SqlContext extends emit.SqlEmitContext,
+  Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
-> extends emit.PolygenNotebook<PolygenContext> {
+> extends emit.PolygenNotebook<Context> {
   constructor(
     readonly engine: PolygenEngine<
-      PolygenContext,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
-    readonly sqlCtx: SqlContext,
-    readonly entityDefns: (ctx: SqlContext) => Generator<Entity>,
+    readonly sqlCtx: Context,
+    readonly entityDefns: (ctx: Context) => Generator<Entity>,
     readonly polygenSchemaOptions: PolygenInfoModelOptions<
-      PolygenContext,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
@@ -95,7 +90,6 @@ export class PolygenInfoModelNotebook<
   }
 
   async entitiesSrcCode() {
-    const peCtx = this.engine.polygenEmitCtx();
     const graph = g.entitiesGraph(this.sqlCtx, this.entityDefns);
 
     const entitiesSrcCode: string[] = [];
@@ -105,10 +99,10 @@ export class PolygenInfoModelNotebook<
       }
 
       const sc = this.engine.entitySrcCode(entity);
-      entitiesSrcCode.push(await emit.sourceCodeText(peCtx, sc));
+      entitiesSrcCode.push(await emit.sourceCodeText(this.sqlCtx, sc));
     }
 
-    const pscSupplier: emit.PolygenSrcCodeSupplier<PolygenContext> = {
+    const pscSupplier: emit.PolygenSrcCodeSupplier<Context> = {
       sourceCode: () => {
         return entitiesSrcCode.join("\n");
       },

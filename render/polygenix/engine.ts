@@ -6,22 +6,20 @@ import * as emit from "../emit/mod.ts";
 type Any = any;
 
 export interface PolygenEngine<
-  PolygenContext extends emit.PolygenEmitContext,
-  SqlContext extends emit.SqlEmitContext,
+  Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
 > {
-  readonly polygenEmitCtx: () => PolygenContext;
   readonly entityAttrSrcCode: (
     ea: g.GraphEntityAttrReference<
       Any,
       Any,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
-  ) => emit.PolygenSrcCode<PolygenContext>;
+  ) => emit.PolygenSrcCode<Context>;
   readonly entitySrcCode: (
-    e: g.GraphEntityDefinition<Any, SqlContext, Any, DomainQS, DomainsQS>,
-  ) => emit.PolygenSrcCode<PolygenContext>;
+    e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+  ) => emit.PolygenSrcCode<Context>;
 }

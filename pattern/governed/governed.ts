@@ -269,6 +269,7 @@ export function housekeepingMinimal<
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
         sqlDefaultValue: () => ({ SQL: () => `'UNKNOWN'` }),
+        polygenixDataType: () => `string`,
       };
     },
   );
@@ -323,6 +324,7 @@ export function housekeepingAuditable<
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
         sqlDefaultValue: () => ({ SQL: () => `'UNKNOWN'` }),
+        polygenixDataType: () => `string`,
       };
     },
   );
@@ -335,6 +337,7 @@ export function housekeepingAuditable<
           { isOptional: true, ...init },
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
       };
     },
   );
@@ -347,6 +350,7 @@ export function housekeepingAuditable<
           { isOptional: true, ...init },
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
       };
     },
   );

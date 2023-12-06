@@ -77,6 +77,12 @@ export function pgDomainsFactory<
           }).domainName(identity);
         },
       }),
+      polygenixDataType: () => ((ctx) => {
+        return ctx.sqlNamingStrategy(ctx, {
+          quoteIdentifiers: true,
+          qnss: schema,
+        }).domainName(identity);
+      }),
     };
     return result;
   };

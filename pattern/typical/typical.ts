@@ -318,6 +318,7 @@ export function governedModel<
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
         sqlDefaultValue: () => ({ SQL: () => `'UNKNOWN'` }),
+        polygenixDataType: () => `string`,
       };
     },
   );
@@ -330,6 +331,7 @@ export function governedModel<
           { isOptional: true, ...init },
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
       };
     },
   );
@@ -342,6 +344,7 @@ export function governedModel<
           { isOptional: true, ...init },
         ),
         sqlDataType: () => ({ SQL: () => `TEXT` }),
+        polygenixDataType: () => `string`,
       };
     },
   );

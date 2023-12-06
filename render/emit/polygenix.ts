@@ -1,4 +1,5 @@
 import * as safety from "../../lib/universal/safety.ts";
+import * as sql from "./sql.ts";
 
 export interface PolygenSrcCodeEmitOptions {
   readonly tableStructName: (tableName: string) => string;
@@ -7,25 +8,23 @@ export interface PolygenSrcCodeEmitOptions {
   ) => string;
 }
 
-export interface PolygenEmitContext {
-  readonly pscEmitOptions: PolygenSrcCodeEmitOptions;
-}
-
 export type PolygenSrcCodeText =
   | string
   | string[];
 
-export type PolygenSrcCode<Context extends PolygenEmitContext> =
+export type PolygenSrcCode<Context extends sql.SqlEmitContext> =
   | PolygenSrcCodeText
-  | ((ctx: Context) => PolygenSrcCodeText | Promise<PolygenSrcCodeText>);
+  | ((ctx: Context) => PolygenSrcCodeText | Promise<PolygenSrcCodeText>)
+  | sql.SqlTextSupplier<Context>;
 
-export async function sourceCodeText<Context extends PolygenEmitContext>(
+export async function sourceCodeText<Context extends sql.SqlEmitContext>(
   ctx: Context,
   psc: PolygenSrcCodeSupplier<Context> | PolygenSrcCode<Context>,
 ): Promise<string> {
   if (isPolygenSrcCodeSupplier<Context>(psc)) {
     return sourceCodeText(ctx, psc.sourceCode);
   }
+  if (sql.isSqlTextSupplier<Context>(psc)) return psc.SQL(ctx);
 
   if (typeof psc === "string") {
     return psc;
@@ -37,11 +36,11 @@ export async function sourceCodeText<Context extends PolygenEmitContext>(
   }
 }
 
-export interface PolygenSrcCodeSupplier<Context extends PolygenEmitContext> {
+export interface PolygenSrcCodeSupplier<Context extends sql.SqlEmitContext> {
   readonly sourceCode: PolygenSrcCode<Context>;
 }
 
-export function isPolygenSrcCodeSupplier<Context extends PolygenEmitContext>(
+export function isPolygenSrcCodeSupplier<Context extends sql.SqlEmitContext>(
   o: unknown,
 ): o is PolygenSrcCodeSupplier<Context> {
   const isPSCS = safety.typeGuard<PolygenSrcCodeSupplier<Context>>(
@@ -68,7 +67,7 @@ export const removeLineFromPolygenEmitStream:
   };
 
 export interface PolygenSrcCodeBehaviorSupplier<
-  Context extends PolygenEmitContext,
+  Context extends sql.SqlEmitContext,
 > {
   readonly executePolygenSrcCodeBehavior: (
     context: Context,
@@ -79,7 +78,7 @@ export interface PolygenSrcCodeBehaviorSupplier<
 }
 
 export function isPolygenSrcCodeBehaviorSupplier<
-  Context extends PolygenEmitContext,
+  Context extends sql.SqlEmitContext,
 >(
   o: unknown,
 ): o is PolygenSrcCodeBehaviorSupplier<Context> {

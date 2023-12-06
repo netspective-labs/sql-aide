@@ -1,4 +1,5 @@
 import * as chainNB from "../../lib/notebook/chain-of-responsibility.ts";
+import * as sql from "./sql.ts";
 import * as pgen from "./polygenix.ts";
 
 /**
@@ -9,7 +10,7 @@ export abstract class PolygenNotebook<PolygenEmitContext> {
 
 export function polygenlNotebookAnnotations<
   Notebook extends PolygenNotebook<Context>,
-  Context extends pgen.PolygenEmitContext,
+  Context extends sql.SqlEmitContext,
 >() {
   return new chainNB.NotebookDescriptor<
     Notebook,
@@ -19,7 +20,7 @@ export function polygenlNotebookAnnotations<
 
 export function polygenNotebookFactory<
   Notebook extends PolygenNotebook<Context>,
-  Context extends pgen.PolygenEmitContext,
+  Context extends sql.SqlEmitContext,
 >(
   prototype: Notebook,
   instance: () => Notebook,

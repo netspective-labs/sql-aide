@@ -53,6 +53,7 @@ export class PgDcpContext {
           ),
           sqlDataType: () => ({ SQL: () => `BOOL` }),
           sqlDefaultValue: () => ({ SQL: () => `TRUE CHECK (singleton_id)` }),
+          polygenixDataType: () => `boolean`,
         };
       },
     );

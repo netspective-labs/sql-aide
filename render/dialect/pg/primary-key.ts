@@ -23,6 +23,7 @@ export function primaryKeyColumnFactory<
     > = {
       ...sdf.numberSDF.defaults<ColumnName>(zodType, { isOptional: true }),
       sqlDataType: () => ({ SQL: () => `SERIAL` }),
+      polygenixDataType: () => `integer::serial`,
     };
     const pkSD:
       & tbl.TablePrimaryKeyColumnDefn<typeof zodType, Context, DomainQS>

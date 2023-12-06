@@ -1,4 +1,3 @@
-import * as pgenEmit from "../emit/polygenix.ts";
 import * as d from "../domain/mod.ts";
 import * as g from "../graph.ts";
 import * as emit from "../emit/mod.ts";
@@ -10,33 +9,21 @@ import { PolygenEngine } from "./engine.ts";
 type Any = any;
 
 export class RustPolygenEngine<
-  PolygenContext extends pgenEmit.PolygenEmitContext,
-  SqlContext extends emit.SqlEmitContext,
+  Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
-> implements PolygenEngine<PolygenContext, SqlContext, DomainQS, DomainsQS> {
+> implements PolygenEngine<Context, DomainQS, DomainsQS> {
   readonly sqlNames: emit.SqlObjectNames;
-  #emitCtx = {
-    pscEmitOptions: {
-      tableStructFieldName: (table) => table.columnName,
-      tableStructName: (table) => table,
-    },
-  } as PolygenContext;
 
   constructor(
-    readonly sqlCtx: SqlContext,
+    readonly sqlCtx: Context,
     readonly polygenSchemaOptions: imGen.PolygenInfoModelOptions<
-      PolygenContext,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
   ) {
     this.sqlNames = sqlCtx.sqlNamingStrategy(sqlCtx);
-  }
-
-  polygenEmitCtx() {
-    return this.#emitCtx;
   }
 
   sqliteTypeToRustType(sqliteType: string): string {
@@ -64,7 +51,7 @@ export class RustPolygenEngine<
     ea: g.GraphEntityAttrReference<
       Any,
       Any,
-      SqlContext,
+      Context,
       DomainQS,
       DomainsQS
     >,
@@ -84,7 +71,7 @@ export class RustPolygenEngine<
   }
 
   entitySrcCode(
-    e: g.GraphEntityDefinition<Any, SqlContext, Any, DomainQS, DomainsQS>,
+    e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
   ) {
     const columns: string[] = [];
     // we want to put all the primary keys at the top of the entity
