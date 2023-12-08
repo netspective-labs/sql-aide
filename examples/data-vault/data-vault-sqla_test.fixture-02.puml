@@ -22,7 +22,7 @@
     * **hub_er_entity_id**: TEXT
     --
     * ssn_business_key: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }
@@ -31,7 +31,7 @@
     * **hub_er_job_id**: TEXT
     --
     * job_business_job_name: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }
@@ -43,7 +43,7 @@
     * algorithm_id: INTEGER
     * run_date_time: DATE
     * status: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }
@@ -53,7 +53,7 @@
     --
     * hub_entity_id: TEXT
     * algorithm_ref: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }
@@ -66,7 +66,7 @@
     * similarity_score: INTEGER
     * normalized_distance: INTEGER
     * notes: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }
@@ -78,7 +78,7 @@
     * code: TEXT
     * similarity_score: INTEGER
     * index: INTEGER
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
     * created_by: TEXT
     * provenance: TEXT
   }

@@ -16,11 +16,11 @@
     * lineage_source_type_id: TEXT
     * source_name: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: JSONB
   }
@@ -31,11 +31,11 @@
     * lineage_dest_type_id: TEXT
     * dest_name: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: JSONB
   }
@@ -46,11 +46,11 @@
     * lineage_transform_type_id: TEXT
     * transform_name: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: JSONB
   }
@@ -62,11 +62,11 @@
     * lineage_transform_id: INTEGER
     * graph_node_name: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: JSONB
   }
@@ -78,11 +78,11 @@
     * transformation_id: INTEGER
     * lineage_type: TEXT
     * lineage_quality_rating: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: JSONB
   }

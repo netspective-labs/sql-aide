@@ -149,8 +149,8 @@ export function metricsPlPgSqlRoutines(ess: SQLa.EmbeddedSqlSupplier) {
   )`
   DECLARE
     partition_name TEXT;
-    partition_start TIMESTAMP;
-    partition_end TIMESTAMP;
+    partition_start TIMESTAMPTZ;
+    partition_end TIMESTAMPTZ;
     metric_id_selected INT;
     metric_label_id_selected INT;
   BEGIN

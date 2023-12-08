@@ -10,20 +10,20 @@
 );
     CREATE TABLE IF NOT EXISTS "hub_content" (
     "hub_content_id" TEXT PRIMARY KEY NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL
 );
     CREATE TABLE IF NOT EXISTS "hub_classification" (
     "hub_classification_id" TEXT PRIMARY KEY NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL
 );
     CREATE TABLE IF NOT EXISTS "hub_job" (
     "hub_job_id" TEXT PRIMARY KEY NOT NULL,
     "hub_job_name" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL
 );
@@ -31,7 +31,7 @@
     "hub_content_id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "content_type" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "sat_content_content_attribute_id" TEXT PRIMARY KEY NOT NULL,
@@ -40,7 +40,7 @@
     CREATE TABLE IF NOT EXISTS "sat_classification_classification_attribute" (
     "hub_classification_id" TEXT NOT NULL,
     "classification" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "sat_classification_classification_attribute_id" TEXT PRIMARY KEY NOT NULL,
@@ -49,7 +49,7 @@
     CREATE TABLE IF NOT EXISTS "sat_job_job_detail" (
     "run_date_time" DATE NOT NULL,
     "status" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "hub_job_id" TEXT NOT NULL,
@@ -59,7 +59,7 @@
     CREATE TABLE IF NOT EXISTS "link_classified_content" (
     "hub_content_id" TEXT NOT NULL,
     "hub_classification_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "link_classified_content_id" TEXT PRIMARY KEY NOT NULL,
@@ -72,7 +72,7 @@
     "hub_job_id" TEXT NOT NULL,
     "algorithm" TEXT NOT NULL,
     "link_classified_content_job_id" TEXT PRIMARY KEY NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     FOREIGN KEY("hub_content_id") REFERENCES "hub_content"("hub_content_id"),
@@ -83,7 +83,7 @@
     CREATE TABLE IF NOT EXISTS "sat_classified_content_classified_content_algorithm" (
     "algorithm" TEXT NOT NULL,
     "scores" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "link_classified_content_id" TEXT NOT NULL,
@@ -93,7 +93,7 @@
 );
     CREATE TABLE IF NOT EXISTS "sat_classified_content_classified_general_topics" (
     "algorithm" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     "provenance" TEXT NOT NULL,
     "link_classified_content_id" TEXT NOT NULL,

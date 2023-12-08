@@ -14,7 +14,7 @@ BEGIN
       "to_state" TEXT NOT NULL,
       "transition_result" JSONB,
       "transition_reason" TEXT,
-      "transitioned_at" TIMESTAMP NOT NULL,
+      "transitioned_at" TIMESTAMPTZ NOT NULL,
       UNIQUE("sp_migration", "from_state", "to_state")
   );
   EXCEPTION
@@ -108,11 +108,11 @@ BEGIN
     "name" TEXT,
     "age" INTEGER NOT NULL,
     "email" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" JSONB
 );
