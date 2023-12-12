@@ -41,7 +41,7 @@ deno run ./examples/getting-started/05-unwrapping-zod-types.sqla.ts
 
 Produces:
 
-```string
+```
 Original type is optional: true
 Cloned and unwrapped type is optional: false
 ```

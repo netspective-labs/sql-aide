@@ -67,7 +67,7 @@ deno run ./examples/getting-started/07-zod-schema-proxy.sqla.ts
 
 Produces:
 
-```object
+```
 Parsed synthetic: { text: 'Sample text', url: 'https://github.com/shah', number: 52 }
 isText method output: true
 isNumberInRange method output: true

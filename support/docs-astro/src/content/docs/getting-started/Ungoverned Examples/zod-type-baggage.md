@@ -61,6 +61,6 @@ deno run ./examples/getting-started/06-zod-type-baggage.sqla.ts
 
 Produces:
 
-```object
+```
 { property1: "baggageText", property2: 1285 }
 ```
