@@ -76,6 +76,9 @@ const syntheticSchema = () => {
       auto_inc_primary_key: pkcFactory.autoIncPrimaryKey(),
       ...commonColumns,
     },
+    {
+      privilegesSQL: { SQL: () => `STRICT` },
+    },
   );
   const tableWithTextPK = mod.tableDefinition("synthetic_table_with_text_pk", {
     text_primary_key: pkcFactory.primaryKey(z.string()),
@@ -355,7 +358,7 @@ Deno.test("SQL Aide (SQLa) Table structure and DDL", async (tc) => {
             "text_nullable" TEXT,
             "int" INTEGER NOT NULL,
             "int_nullable" INTEGER
-        );`),
+        ) STRICT;`),
       );
     });
   });

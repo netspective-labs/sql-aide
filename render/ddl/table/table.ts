@@ -96,6 +96,7 @@ export interface TableDefnOptions<
     tableName: TableName,
   ) => void;
   readonly descr?: string; // convenience form of qualitySystem: { description }
+  readonly privilegesSQL?: tmpl.SqlTextSupplier<Context>;
 }
 
 export function tableComment<
@@ -456,11 +457,12 @@ export function tableDefinition<
           .join(`,\n${indent}`);
 
         const { isTemp, isIdempotent } = tdOptions ?? {};
+        const privilegesSQL = tdOptions?.privilegesSQL?.SQL(ctx);
         // deno-fmt-ignore
         const result = `${steOptions.indentation("create table")}CREATE ${isTemp ? 'TEMP ' : ''}TABLE ${isIdempotent && !tmpl.isMsSqlServerDialect(ctx.sqlDialect) ? "IF NOT EXISTS " : ""}${ns.tableName(tableName)} (\n` +
         columnDefnsSS.map(cdss => cdss.SQL(ctx)).join(",\n") +
         (decoratorsSQL.length > 0 ? `,\n${indent}${decoratorsSQL}` : "") +
-        `\n)${tableDecoratorsSQL}`;
+        `\n)${tableDecoratorsSQL}${privilegesSQL?` ${privilegesSQL}`:""}`;
         return result;
       },
       graphEntityDefn,
