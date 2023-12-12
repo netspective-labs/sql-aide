@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "metric" (
     "description" TEXT,
     "type" TEXT NOT NULL,
     "unit" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL
 );
 
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS "metric_label" (
     "metric_id" INTEGER NOT NULL,
     "label_key" TEXT NOT NULL,
     "label_value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     FOREIGN KEY("metric_id") REFERENCES "metric"("metric_id")
 );
@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS "metric_label" (
 CREATE TABLE "metric_value" (
     "metric_value_id" SERIAL,
     "metric_label_id" INTEGER NOT NULL,
-    "timestamp" TIMESTAMP NOT NULL,
+    "timestamp" TIMESTAMPTZ NOT NULL,
     "value" FLOAT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id"),
     CONSTRAINT metric_value_pkey PRIMARY KEY (metric_value_id, timestamp)
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS "metric_histogram_bucket" (
     "metric_label_id" INTEGER NOT NULL,
     "upper_bound" FLOAT NOT NULL,
     "bucket_value" FLOAT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
 );
@@ -44,17 +44,17 @@ CREATE TABLE IF NOT EXISTS "metric_summary_quantile" (
     "metric_label_id" INTEGER NOT NULL,
     "quantile" FLOAT NOT NULL,
     "quantile_value" FLOAT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT NOT NULL,
     FOREIGN KEY("metric_label_id") REFERENCES "metric_label"("metric_label_id")
 );
 
-CREATE OR REPLACE PROCEDURE "insert_metric_value"("metric_name_param" TEXT, "value_param" DOUBLE PRECISION, "label_key_param" TEXT, "label_value_param" TEXT, "timestamp_param" TIMESTAMP, "created_by_param" TEXT) AS $$
+CREATE OR REPLACE PROCEDURE "insert_metric_value"("metric_name_param" TEXT, "value_param" DOUBLE PRECISION, "label_key_param" TEXT, "label_value_param" TEXT, "timestamp_param" TIMESTAMPTZ, "created_by_param" TEXT) AS $$
 BEGIN
   DECLARE
     partition_name TEXT;
-    partition_start TIMESTAMP;
-    partition_end TIMESTAMP;
+    partition_start TIMESTAMPTZ;
+    partition_end TIMESTAMPTZ;
     metric_id_selected INT;
     metric_label_id_selected INT;
   BEGIN

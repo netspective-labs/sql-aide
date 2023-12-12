@@ -1101,7 +1101,7 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMP`;
+            return `TIMESTAMPTZ`;
           },
         }),
         sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
@@ -1114,7 +1114,7 @@ export function zodDateSqlDomainFactory<
           }
           return quotedLiteral(value);
         },
-        polygenixDataType: () => `timestamp`,
+        polygenixDataType: () => `TIMESTAMPTZ`,
       };
     },
     createdAt: <
@@ -1135,7 +1135,7 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMP`;
+            return `TIMESTAMPTZ`;
           },
         }),
         sqlDefaultValue: () => ({
@@ -1146,7 +1146,7 @@ export function zodDateSqlDomainFactory<
             return `CURRENT_TIMESTAMP`;
           },
         }),
-        polygenixDataType: () => `timestamp`,
+        polygenixDataType: () => `TIMESTAMPTZ`,
       };
     },
     updatedAt: <
@@ -1167,10 +1167,10 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMP`;
+            return `TIMESTAMPTZ`;
           },
         }),
-        polygenixDataType: () => `timestamp`,
+        polygenixDataType: () => `TIMESTAMPTZ`,
       };
     },
     deletedAt: <
@@ -1191,10 +1191,10 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMP`;
+            return `TIMESTAMPTZ`;
           },
         }),
-        polygenixDataType: () => `timestamp`,
+        polygenixDataType: () => `TIMESTAMPTZ`,
       };
     },
   };
