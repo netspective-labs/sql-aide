@@ -220,6 +220,8 @@ const pumlErdFixture = `@startuml IE
       text_nullable: TEXT
     * int: INTEGER
       int_nullable: INTEGER
+    --
+    syntheticTableWithForeignKeyss: SyntheticTableWithForeignKeys[]
   }
 
   entity "synthetic_table_with_text_pk" as synthetic_table_with_text_pk {

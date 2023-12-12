@@ -160,17 +160,7 @@ Deno.test("Rust information model structures", async () => {
     Any,
     Any
   >();
-  const engine = new mod.RustSerDePolygenEngine<SyntheticContext, Any, Any>(
-    ctx,
-    pso,
-  );
-  const imNB = new polygen.PolygenInfoModelNotebook<
-    Any,
-    SyntheticContext,
-    Any,
-    Any
-  >(
-    engine,
+  const imNB = new mod.RustSerDeModels<SyntheticContext, Any, Any>(
     ctx,
     function* () {
       for (const [_, value] of Object.entries(syntheticSchema())) {
@@ -182,9 +172,12 @@ Deno.test("Rust information model structures", async () => {
     pso,
   );
 
-  const fixture = Deno.readTextFileSync(
-    path.fromFileUrl(import.meta.resolve("./mod_test-fixture-serde.rs")),
+  const fixtureSrcPath = path.fromFileUrl(
+    import.meta.resolve("./mod_test-fixture-serde.rs"),
   );
-  const esc = await imNB.entitiesSrcCode();
-  ta.assertEquals(await SQLa.sourceCodeText(ctx, esc), fixture);
+  const esc = await imNB.polygenContent();
+  ta.assertEquals(
+    await SQLa.polygenCellContent(ctx, esc),
+    Deno.readTextFileSync(fixtureSrcPath),
+  );
 });

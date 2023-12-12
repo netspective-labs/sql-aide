@@ -8,6 +8,8 @@ export type JsTokenSupplier<Context extends tmpl.SqlEmitContext> = (
     | "js-class-member-decl"
     | "js-var-ref"
     | "ts-type-decl"
+    | "rust-struct-member-decl"
+    | "rust-type-decl"
     | "sql-token"
     | "sql-token-quoted",
 ) => string;
@@ -33,7 +35,11 @@ export function jsSnakeCaseToken<Context extends tmpl.SqlEmitContext>(
         return snakeToCamelCase(src);
 
       case "ts-type-decl":
+      case "rust-type-decl":
         return snakeToPascalCase(src);
+
+      case "rust-struct-member-decl":
+        return src;
 
       case "sql-token":
         return src;

@@ -1,82 +1,79 @@
 import * as safety from "../../lib/universal/safety.ts";
 import * as sql from "./sql.ts";
 
-export interface PolygenSrcCodeEmitOptions {
-  readonly tableStructName: (tableName: string) => string;
-  readonly tableStructFieldName: (
-    tc: { tableName: string; columnName: string },
-  ) => string;
-}
-
-export type PolygenSrcCodeText =
+export type PolygenCellText =
   | string
   | string[];
 
-export type PolygenSrcCode<Context extends sql.SqlEmitContext> =
-  | PolygenSrcCodeText
-  | ((ctx: Context) => PolygenSrcCodeText | Promise<PolygenSrcCodeText>)
+export type PolygenCellContent<Context extends sql.SqlEmitContext> =
+  | PolygenCellText
+  | ((ctx: Context) => PolygenCellText | Promise<PolygenCellText>)
   | sql.SqlTextSupplier<Context>;
 
-export type PolygenSrcCodeSync<Context extends sql.SqlEmitContext> =
-  | PolygenSrcCodeText
-  | ((ctx: Context) => PolygenSrcCodeText)
+export type PolygenCellContentSync<Context extends sql.SqlEmitContext> =
+  | PolygenCellText
+  | ((ctx: Context) => PolygenCellText)
   | sql.SqlTextSupplier<Context>;
 
-export async function sourceCodeText<Context extends sql.SqlEmitContext>(
+export async function polygenCellContent<Context extends sql.SqlEmitContext>(
   ctx: Context,
-  psc: PolygenSrcCodeSupplier<Context> | PolygenSrcCode<Context>,
+  psc: PolygenCellContentSupplier<Context> | PolygenCellContent<Context>,
 ): Promise<string> {
-  if (isPolygenSrcCodeSupplier<Context>(psc)) {
-    return sourceCodeText(ctx, psc.sourceCode);
+  if (isPolygenCellContentSupplier<Context>(psc)) {
+    return polygenCellContent(ctx, psc.polygenContent);
   }
   if (sql.isSqlTextSupplier<Context>(psc)) return psc.SQL(ctx);
 
   if (typeof psc === "string") {
     return psc;
   } else if (typeof psc === "function") {
-    return await sourceCodeText(ctx, await psc(ctx));
+    return await polygenCellContent(ctx, await psc(ctx));
   } else {
     if (psc.length == 0) return "";
     return psc.join("\n");
   }
 }
 
-export function sourceCodeTextSync<Context extends sql.SqlEmitContext>(
+export function polygenCellContentSync<Context extends sql.SqlEmitContext>(
   ctx: Context,
-  psc: PolygenSrcCodeSync<Context>,
+  psc: PolygenCellContentSync<Context>,
 ): string {
   if (sql.isSqlTextSupplier<Context>(psc)) return psc.SQL(ctx);
 
   if (typeof psc === "string") {
     return psc;
   } else if (typeof psc === "function") {
-    return sourceCodeTextSync(ctx, psc(ctx));
+    return polygenCellContentSync(ctx, psc(ctx));
   } else {
     if (psc.length == 0) return "";
     return psc.join("\n");
   }
 }
 
-export interface PolygenSrcCodeSupplier<Context extends sql.SqlEmitContext> {
-  readonly sourceCode: PolygenSrcCode<Context>;
+export interface PolygenCellContentSupplier<
+  Context extends sql.SqlEmitContext,
+> {
+  readonly polygenContent: PolygenCellContent<Context>;
 }
 
-export function isPolygenSrcCodeSupplier<Context extends sql.SqlEmitContext>(
+export function isPolygenCellContentSupplier<
+  Context extends sql.SqlEmitContext,
+>(
   o: unknown,
-): o is PolygenSrcCodeSupplier<Context> {
-  const isPSCS = safety.typeGuard<PolygenSrcCodeSupplier<Context>>(
-    "sourceCode",
+): o is PolygenCellContentSupplier<Context> {
+  const isPCCS = safety.typeGuard<PolygenCellContentSupplier<Context>>(
+    "polygenContent",
   );
-  return isPSCS(o);
+  return isPCCS(o);
 }
 
-export interface PolygenSrcCodeBehaviorEmitTransformer {
+export interface PolygenCellContentEmitTransformer {
   before: (interpolationSoFar: string, exprIdx: number) => string;
   after: (nextLiteral: string, exprIdx: number) => string;
 }
 
 export const removeLineFromPolygenEmitStream:
-  PolygenSrcCodeBehaviorEmitTransformer = {
+  PolygenCellContentEmitTransformer = {
     before: (isf) => {
       // remove the last line in the interpolation stream
       return isf.replace(/\n.*?$/, "");
@@ -87,24 +84,24 @@ export const removeLineFromPolygenEmitStream:
     },
   };
 
-export interface PolygenSrcCodeBehaviorSupplier<
+export interface PolygenCellContentBehaviorSupplier<
   Context extends sql.SqlEmitContext,
 > {
   readonly executePolygenSrcCodeBehavior: (
     context: Context,
   ) =>
-    | PolygenSrcCodeBehaviorEmitTransformer
-    | PolygenSrcCodeSupplier<Context>
-    | PolygenSrcCodeSupplier<Context>[];
+    | PolygenCellContentEmitTransformer
+    | PolygenCellContentSupplier<Context>
+    | PolygenCellContentSupplier<Context>[];
 }
 
-export function isPolygenSrcCodeBehaviorSupplier<
+export function isPolygenCellContentBehaviorSupplier<
   Context extends sql.SqlEmitContext,
 >(
   o: unknown,
-): o is PolygenSrcCodeBehaviorSupplier<Context> {
+): o is PolygenCellContentBehaviorSupplier<Context> {
   const isPSCBS = safety.typeGuard<
-    PolygenSrcCodeBehaviorSupplier<Context>
+    PolygenCellContentBehaviorSupplier<Context>
   >("executePolygenSrcCodeBehavior");
   return isPSCBS(o);
 }

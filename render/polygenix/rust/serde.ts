@@ -2,11 +2,8 @@ import * as d from "../../domain/mod.ts";
 import * as g from "../../graph.ts";
 import * as emit from "../../emit/mod.ts";
 import * as tbl from "../../ddl/table/mod.ts";
-import * as imGen from "../info-model.ts";
-import * as e from "../engine.ts";
-
-// deno-lint-ignore no-explicit-any
-type Any = any;
+import * as im from "../info-model.ts";
+import * as e from "../governance.ts";
 
 export function rustSerDeTypes(pt: string, options?: {
   readonly notFound: () => e.PolygenTypeSupplier;
@@ -60,65 +57,79 @@ export function rustSerDeTypes(pt: string, options?: {
   return result;
 }
 
-export class RustSerDePolygenEngine<
+export class RustSerDeModels<
   Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainQS>,
-> implements e.PolygenEngine<Context, DomainQS, DomainsQS> {
-  readonly #typeStrategy: e.PolygenEngineTypeStrategy;
-  readonly #namingStrategy: e.PolygenEngineNamingStrategy;
+> implements emit.PolygenCellContentSupplier<Context> {
+  readonly #typeStrategy: e.PolygenTypeStrategy;
+  readonly #namingStrategy: e.PolygenNamingStrategy;
   readonly sqlNames: emit.SqlObjectNames;
+  readonly graph: ReturnType<
+    typeof g.entitiesGraph<
+      g.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>,
+      Context,
+      DomainQS,
+      DomainsQS,
+      g.EntitiesGraphQS<DomainQS, DomainsQS>
+    >
+  >;
 
   constructor(
     readonly sqlCtx: Context,
-    readonly polygenSchemaOptions:
-      & imGen.PolygenInfoModelOptions<
+    readonly entityDefns: (
+      ctx: Context,
+    ) => Generator<
+      g.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>
+    >,
+    readonly polygenOptions:
+      & im.PolygenInfoModelOptions<
         Context,
         DomainQS,
         DomainsQS
       >
-      & { readonly typeStrategy?: e.PolygenEngineTypeStrategy }
-      & { readonly namingStrategy?: e.PolygenEngineNamingStrategy },
+      & { readonly typeStrategy?: e.PolygenTypeStrategy }
+      & { readonly namingStrategy?: e.PolygenNamingStrategy },
   ) {
     this.sqlNames = sqlCtx.sqlNamingStrategy(sqlCtx);
-    this.#typeStrategy = polygenSchemaOptions?.typeStrategy ?? ({
+    this.graph = g.entitiesGraph<
+      g.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>,
+      Context,
+      DomainQS,
+      DomainsQS,
+      g.EntitiesGraphQS<DomainQS, DomainsQS>
+    >(
+      this.sqlCtx,
+      this.entityDefns,
+    );
+    this.#typeStrategy = polygenOptions?.typeStrategy ?? ({
       type: (pt) => rustSerDeTypes(pt),
     });
 
     // Rust likes tables/views/etc. structs to be in CamelCase and field names
     // in snake_case; since SQL columns, etc. are already in snake_case we just
     // return them as is by default.
-    this.#namingStrategy = polygenSchemaOptions?.namingStrategy ?? ({
+    this.#namingStrategy = polygenOptions?.namingStrategy ?? ({
       entityName: e.snakeToPascalCase,
       entityAttrName: (sqlIdentifier) => sqlIdentifier,
     });
   }
 
-  namingStrategy(): e.PolygenEngineNamingStrategy {
+  namingStrategy(): e.PolygenNamingStrategy {
     return this.#namingStrategy;
   }
 
-  typeStrategy(): e.PolygenEngineTypeStrategy {
+  typeStrategy(): e.PolygenTypeStrategy {
     return this.#typeStrategy;
   }
 
-  async entityAttrSrcCode(
+  async entityAttrContent(
     ea: g.GraphEntityAttrReference<
-      Any,
-      Any,
+      string,
+      string,
       Context,
       DomainQS,
       DomainsQS
-    >,
-    _e: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
-    _graph: ReturnType<
-      typeof g.entitiesGraph<
-        Any,
-        Context,
-        DomainQS,
-        DomainsQS,
-        g.EntitiesGraphQS<DomainQS, DomainsQS>
-      >
     >,
   ) {
     const ns = this.namingStrategy();
@@ -129,7 +140,7 @@ export class RustSerDePolygenEngine<
     const pgdt = ea.attr.polygenixDataType("info-model");
     const types = this.typeStrategy();
     const { type, remarks: pgdtRemarks } = types.type(
-      await emit.sourceCodeText(this.sqlCtx, pgdt),
+      await emit.polygenCellContent(this.sqlCtx, pgdt),
     );
     const remarks = tbl.isTablePrimaryKeyColumnDefn(ea.attr)
       ? (pgdtRemarks ? `PRIMARY KEY (${pgdtRemarks})` : pgdtRemarks)
@@ -138,45 +149,52 @@ export class RustSerDePolygenEngine<
     return `    ${name}: ${ea.attr.isNullable() ? `Option<${type}>` : type},${remarks ? ` // ${remarks}` : ''}`;
   }
 
-  async entitySrcCode(
-    entity: g.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
-    graph: ReturnType<
-      typeof g.entitiesGraph<
-        Any,
-        Context,
-        DomainQS,
-        DomainsQS,
-        g.EntitiesGraphQS<DomainQS, DomainsQS>
-      >
+  async entityContent(
+    entity: g.GraphEntityDefinition<
+      string,
+      Context,
+      string,
+      DomainQS,
+      DomainsQS
     >,
   ) {
     const columns: string[] = [];
     // we want to put all the primary keys at the top of the entity
     for (const column of entity.attributes) {
       const ea = { entity: entity, attr: column };
-      if (!this.polygenSchemaOptions.includeEntityAttr(ea)) continue;
+      if (!this.polygenOptions.includeEntityAttr(ea)) continue;
       if (tbl.isTablePrimaryKeyColumnDefn(column)) {
-        columns.push(await this.entityAttrSrcCode(ea, entity, graph));
+        columns.push(await this.entityAttrContent(ea));
       }
     }
 
     for (const column of entity.attributes) {
       if (!tbl.isTablePrimaryKeyColumnDefn(column)) {
         const ea = { entity: entity, attr: column };
-        if (!this.polygenSchemaOptions.includeEntityAttr(ea)) continue;
-        columns.push(await this.entityAttrSrcCode(ea, entity, graph));
+        if (!this.polygenOptions.includeEntityAttr(ea)) continue;
+        columns.push(await this.entityAttrContent(ea));
       }
     }
 
-    const entityRels = graph.entityRels.get(
+    const entityRels = this.graph.entityRels.get(
       entity.identity("dictionary-storage"),
     );
     const children: string[] = [];
     if (entityRels && entityRels.inboundRels.length > 0) {
       for (const ir of entityRels.inboundRels) {
         if (typeof ir.nature === "object" && ir.nature.isBelongsTo) {
-          if (!this.polygenSchemaOptions.includeChildren(ir)) continue;
-          children.push(`// TODO: children -> ${ir.nature.collectionName}`);
+          if (!this.polygenOptions.includeChildren(ir)) continue;
+          const collectionName = ir.nature.collectionName ??
+            emit.jsSnakeCaseToken(ir.from.entity.identity("presentation"));
+          children.push(
+            `    ${
+              collectionName(this.sqlCtx, "plural", "rust-struct-member-decl")
+            }: Vec<${
+              collectionName(this.sqlCtx, "singular", "rust-type-decl")
+            }>, // \`${
+              ir.from.entity.identity("presentation")
+            }\` belongsTo collection`,
+          );
         }
       }
     }
@@ -186,6 +204,7 @@ export class RustSerDePolygenEngine<
       this.sqlNames.tableName(entity.identity("presentation")),
     );
     return [
+      `// \`${entity.identity("presentation")}\` table`,
       `#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]`,
       `pub struct ${structName} {`,
       ...columns,
@@ -193,5 +212,38 @@ export class RustSerDePolygenEngine<
       `}`,
       "",
     ];
+  }
+
+  async polygenContent() {
+    const entitiesSrcCode: string[] = [];
+
+    entitiesSrcCode.push("/*");
+    for (const entity of this.graph.entities) {
+      if (!this.polygenOptions.includeEntity(entity)) {
+        continue;
+      }
+
+      entitiesSrcCode.push(
+        `const ${
+          e.snakeToConstantCase(entity.identity("presentation"))
+        }: &str = "${entity.identity("presentation")}";`,
+      );
+    }
+    entitiesSrcCode.push("*/");
+    entitiesSrcCode.push("");
+
+    for (const entity of this.graph.entities) {
+      if (!this.polygenOptions.includeEntity(entity)) {
+        continue;
+      }
+
+      const sc = await this.entityContent(entity);
+      entitiesSrcCode.push(await emit.polygenCellContent(this.sqlCtx, sc));
+    }
+
+    const pscSupplier: emit.PolygenCellContent<Context> = entitiesSrcCode.join(
+      "\n",
+    );
+    return pscSupplier;
   }
 }

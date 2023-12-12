@@ -1,11 +1,8 @@
+import { zod } from "./deps.ts";
 import * as safety from "../lib/universal/safety.ts";
 import * as qs from "../lib/quality-system/mod.ts";
 import * as d from "./domain/mod.ts";
 import * as emit from "./emit/mod.ts";
-
-// deno-lint-ignore no-explicit-any
-type Any = any;
-
 export type EntitiesGraphQS<
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
@@ -24,13 +21,19 @@ export interface EntityGraphOutboundReference<
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 > {
   readonly from: GraphEntityAttrReference<
-    Any,
-    Any,
+    string,
+    string,
     Context,
     DomainQS,
     DomainsQS
   >;
-  readonly to: GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>;
+  readonly to: GraphEntityAttrReference<
+    string,
+    string,
+    Context,
+    DomainQS,
+    DomainsQS
+  >;
   readonly nature: EntityGraphRefNature<Context>;
 }
 
@@ -43,7 +46,7 @@ export type EntityGraphOutboundReferencesSupplier<
   readonly entity: GraphEntityDefinition<
     EntityName,
     Context,
-    Any,
+    string,
     DomainQS,
     DomainsQS
   >;
@@ -51,7 +54,7 @@ export type EntityGraphOutboundReferencesSupplier<
     name: EntityName,
   ) =>
     | undefined
-    | GraphEntityDefinition<EntityName, Context, Any, DomainQS, DomainsQS>;
+    | GraphEntityDefinition<EntityName, Context, string, DomainQS, DomainsQS>;
   readonly reportIssue: (issue: emit.SqlLintIssueSupplier) => void;
 }) => Generator<EntityGraphOutboundReference<Context, DomainQS, DomainsQS>>;
 
@@ -69,10 +72,15 @@ export interface GraphEntityDefinition<
       | "outbound-ref-dict-lookup"
       | "lint-message",
   ) => EntityName;
-  readonly attributes: d.SqlDomain<Any, Context, AttrName, DomainQS>[];
+  readonly attributes: d.SqlDomain<
+    zod.ZodTypeAny,
+    Context,
+    AttrName,
+    DomainQS
+  >[];
   readonly outboundReferences?: EntityGraphOutboundReferencesSupplier<
     Context,
-    Any,
+    EntityName,
     DomainQS,
     DomainsQS
   >;
@@ -87,7 +95,7 @@ export interface GraphEntityDefinitionSupplier<
   readonly graphEntityDefn: () => GraphEntityDefinition<
     EntityName,
     Context,
-    Any,
+    string,
     DomainQS,
     DomainsQS
   >;
@@ -124,11 +132,11 @@ export interface GraphEntityAttrReference<
   readonly entity: GraphEntityDefinition<
     EntityName,
     Context,
-    Any,
+    string,
     DomainQS,
     DomainsQS
   >;
-  readonly attr: d.SqlDomain<Any, Context, AttrName, DomainQS>;
+  readonly attr: d.SqlDomain<zod.ZodTypeAny, Context, AttrName, DomainQS>;
 }
 
 export interface GraphEdge<
@@ -137,15 +145,15 @@ export interface GraphEdge<
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 > {
   readonly source: GraphEntityAttrReference<
-    Any,
-    Any,
+    string,
+    string,
     Context,
     DomainQS,
     DomainsQS
   >;
   readonly ref: GraphEntityAttrReference<
-    Any,
-    Any,
+    string,
+    string,
     Context,
     DomainQS,
     DomainsQS
@@ -161,12 +169,18 @@ export interface EntityGraphInboundRelationship<
 > {
   readonly from: GraphEntityAttrReference<
     FromName,
-    Any,
+    string,
     Context,
     DomainQS,
     DomainsQS
   >;
-  readonly to: GraphEntityDefinition<ToName, Context, Any, DomainQS, DomainsQS>;
+  readonly to: GraphEntityDefinition<
+    ToName,
+    Context,
+    string,
+    DomainQS,
+    DomainsQS
+  >;
   readonly nature: EntityGraphRefNature<Context>;
 }
 
@@ -189,7 +203,13 @@ export interface EntityGraphInboundRelationshipBackRef<
 }
 
 export function entitiesGraph<
-  Entity extends GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+  Entity extends GraphEntityDefinition<
+    string,
+    Context,
+    string,
+    DomainQS,
+    DomainsQS
+  >,
   Context extends emit.SqlEmitContext,
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
@@ -205,11 +225,11 @@ export function entitiesGraph<
   const entityRels = new Map<string, {
     readonly entity: Entity;
     readonly inboundRels: EntityGraphInboundRelationship<
-      Any,
-      Any,
+      string,
+      string,
       Context,
-      Any,
-      Any
+      DomainQS,
+      DomainsQS
     >[];
   }>();
   const edges: GraphEdge<Context, DomainQS, DomainsQS>[] = [];

@@ -1,8 +1,5 @@
 import * as SQLa from "../mod.ts";
 
-// deno-lint-ignore no-explicit-any
-type Any = any;
-
 export interface PlantUmlIeOptions<
   Context extends SQLa.SqlEmitContext,
   DomainQS extends SQLa.SqlDomainQS,
@@ -10,30 +7,42 @@ export interface PlantUmlIeOptions<
 > {
   readonly diagramName: string;
   readonly includeEntityAttr: (
-    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
+    ea: SQLa.GraphEntityAttrReference<
+      string,
+      string,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) => boolean;
   readonly elaborateEntityAttr?: (
-    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
+    ea: SQLa.GraphEntityAttrReference<
+      string,
+      string,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
     entity: (
       name: string,
     ) =>
-      | SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>
+      | SQLa.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>
       | undefined,
     ns: SQLa.SqlObjectNames,
   ) => string;
   readonly includeEntity: (
-    e: SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+    e: SQLa.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>,
   ) => boolean;
   readonly includeRelationship: (
-    edge: SQLa.GraphEdge<Context, Any, Any>,
+    edge: SQLa.GraphEdge<Context, DomainQS, DomainsQS>,
   ) => boolean;
   readonly relationshipIndicator: (
-    edge: SQLa.GraphEdge<Context, Any, Any>,
+    edge: SQLa.GraphEdge<Context, DomainQS, DomainsQS>,
   ) => string | false;
   readonly includeChildren: (
     ir: SQLa.EntityGraphInboundRelationship<
-      Any,
-      Any,
+      string,
+      string,
       Context,
       DomainQS,
       DomainsQS
@@ -65,9 +74,9 @@ export function typicalPlantUmlIeOptions<
 
 export function plantUmlIE<
   Entity extends SQLa.GraphEntityDefinition<
-    Any,
+    string,
     Context,
-    Any,
+    string,
     DomainQS,
     DomainsQS
   >,
@@ -79,11 +88,23 @@ export function plantUmlIE<
   entityDefns: (ctx: Context) => Generator<Entity>,
   puieOptions: PlantUmlIeOptions<Context, DomainQS, DomainsQS>,
 ) {
-  const graph = SQLa.entitiesGraph(ctx, entityDefns);
+  const graph = SQLa.entitiesGraph<
+    SQLa.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>,
+    Context,
+    DomainQS,
+    DomainsQS,
+    SQLa.EntitiesGraphQS<DomainQS, DomainsQS>
+  >(ctx, entityDefns);
   const ns = ctx.sqlNamingStrategy(ctx);
 
   const attrPuml = (
-    ea: SQLa.GraphEntityAttrReference<Any, Any, Context, DomainQS, DomainsQS>,
+    ea: SQLa.GraphEntityAttrReference<
+      string,
+      string,
+      Context,
+      DomainQS,
+      DomainsQS
+    >,
   ) => {
     const tcName = ns.tableColumnName({
       tableName: ea.entity.identity("presentation"),
@@ -103,7 +124,7 @@ export function plantUmlIE<
   };
 
   const entityPuml = (
-    e: SQLa.GraphEntityDefinition<Any, Context, Any, DomainQS, DomainsQS>,
+    e: SQLa.GraphEntityDefinition<string, Context, string, DomainQS, DomainsQS>,
   ) => {
     const columns: string[] = [];
     // we want to put all the primary keys at the top of the entity

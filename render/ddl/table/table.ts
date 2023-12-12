@@ -303,7 +303,7 @@ export function tableDefinition<
     const result: g.GraphEntityDefinition<
       TableName,
       Context,
-      Any,
+      string,
       DomainQS,
       DomainsQS
     > = {

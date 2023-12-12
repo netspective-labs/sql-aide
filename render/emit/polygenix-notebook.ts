@@ -36,16 +36,16 @@ export function polygenNotebookFactory<
     nbd,
     kernel,
     instance,
-    sourceCode: async (
+    polygenContent: async (
       options: {
         separator?: (
           cell: Parameters<EventEmitter["afterCell"]>[0],
           state: Parameters<EventEmitter["afterCell"]>[1],
-        ) => pgen.PolygenSrcCodeBehaviorSupplier<Context>;
+        ) => pgen.PolygenCellContentBehaviorSupplier<Context>;
         onNotSrcCodeSupplier?: (
           cell: Parameters<EventEmitter["afterCell"]>[0],
           state: Parameters<EventEmitter["afterCell"]>[1],
-        ) => pgen.PolygenSrcCodeBehaviorSupplier<Context>;
+        ) => pgen.PolygenCellContentBehaviorSupplier<Context>;
       },
       ...srcCodeIdentities: CellID[]
     ) => {
@@ -62,31 +62,31 @@ export function polygenNotebookFactory<
         },
       });
 
-      const sourceCode: (
-        | pgen.PolygenSrcCodeSupplier<Context>
-        | pgen.PolygenSrcCodeBehaviorSupplier<Context>
+      const content: (
+        | pgen.PolygenCellContentSupplier<Context>
+        | pgen.PolygenCellContentBehaviorSupplier<Context>
       )[] = [];
       initRunState.runState.eventEmitter.afterCell = (cell, state) => {
         if (state.status == "successful") {
           if (
-            pgen.isPolygenSrcCodeSupplier<Context>(state.execResult) ||
-            pgen.isPolygenSrcCodeBehaviorSupplier<Context>(state.execResult)
+            pgen.isPolygenCellContentSupplier<Context>(state.execResult) ||
+            pgen.isPolygenCellContentBehaviorSupplier<Context>(state.execResult)
           ) {
             if (options.separator) {
-              sourceCode.push(options.separator(cell, state));
+              content.push(options.separator(cell, state));
             }
-            const sts = state.execResult as pgen.PolygenSrcCodeSupplier<
+            const sts = state.execResult as pgen.PolygenCellContentSupplier<
               Context
             >;
-            sourceCode.push(sts);
+            content.push(sts);
           } else {
             const notSTS = options.onNotSrcCodeSupplier?.(cell, state);
-            if (notSTS) sourceCode.push(notSTS);
+            if (notSTS) content.push(notSTS);
           }
         }
       };
       await kernel.run(instance(), initRunState);
-      return sourceCode;
+      return content;
     },
   };
 }

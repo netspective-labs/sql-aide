@@ -1,7 +1,6 @@
 import * as d from "../domain/mod.ts";
 import * as g from "../graph.ts";
 import * as emit from "../emit/mod.ts";
-import { PolygenEngine } from "./engine.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -64,68 +63,4 @@ export function typicalPolygenInfoModelOptions<
     includeChildren: () => true,
     ...inherit,
   };
-}
-
-/**
- * Encapsulates polyglot source code generation code for information models
- * like tables, views to be represented as structs, types, etc.
- */
-export class PolygenInfoModelNotebook<
-  Entity extends g.GraphEntityDefinition<
-    Any,
-    Context,
-    Any,
-    DomainQS,
-    DomainsQS
-  >,
-  Context extends emit.SqlEmitContext,
-  DomainQS extends d.SqlDomainQS,
-  DomainsQS extends d.SqlDomainsQS<DomainQS>,
-> extends emit.PolygenNotebook<Context> {
-  constructor(
-    readonly engine: PolygenEngine<
-      Context,
-      DomainQS,
-      DomainsQS
-    >,
-    readonly sqlCtx: Context,
-    readonly entityDefns: (ctx: Context) => Generator<Entity>,
-    readonly polygenSchemaOptions: PolygenInfoModelOptions<
-      Context,
-      DomainQS,
-      DomainsQS
-    >,
-  ) {
-    super();
-  }
-
-  async entitiesSrcCode() {
-    const graph = g.entitiesGraph<
-      Entity,
-      Context,
-      DomainQS,
-      DomainsQS,
-      g.EntitiesGraphQS<DomainQS, DomainsQS>
-    >(
-      this.sqlCtx,
-      this.entityDefns,
-    );
-
-    const entitiesSrcCode: string[] = [];
-    for (const entity of graph.entities) {
-      if (!this.polygenSchemaOptions.includeEntity(entity)) {
-        continue;
-      }
-
-      const sc = await this.engine.entitySrcCode(entity, graph);
-      entitiesSrcCode.push(await emit.sourceCodeText(this.sqlCtx, sc));
-    }
-
-    const pscSupplier: emit.PolygenSrcCodeSupplier<Context> = {
-      sourceCode: () => {
-        return entitiesSrcCode.join("\n");
-      },
-    };
-    return pscSupplier;
-  }
 }

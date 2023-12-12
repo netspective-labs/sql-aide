@@ -12,7 +12,7 @@
   "deno.codeLens.implementations": false,
   "editor.formatOnSave": false,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
   "[javascript]": {
     "editor.formatOnSave": true,

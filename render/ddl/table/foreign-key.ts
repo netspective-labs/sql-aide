@@ -286,30 +286,31 @@ export function foreignKeysFactory<
     for (const key of tableShapeKeys) {
       const zodTypeSD = zbSchema[key];
       if (isForeignKeyDestination(zodTypeSD.sqlDomain)) {
-        const fks = zodTypeSD.sqlDomain.foreignKeySource;
-        const target = entityByName(fks.tableName);
+        const fkNature = zodTypeSD.sqlDomain.foreignKeyRelNature;
+        const fkSrc = zodTypeSD.sqlDomain.foreignKeySource;
+        const target = entityByName(fkSrc.tableName);
         if (target) {
           const attr = target.attributes.find((sd) =>
-            sd.identity == fks.columnName
+            sd.identity == fkSrc.columnName
           );
           if (attr) {
             yield {
               from: { entity, attr: zodTypeSD.sqlDomain },
               to: { entity: target, attr },
-              nature: isBelongsToForeignKeyNature(fks)
-                ? { isBelongsTo: true, collectionName: fks.collectionName }
+              nature: isBelongsToForeignKeyNature(fkNature)
+                ? { isBelongsTo: true, collectionName: fkNature.collectionName }
                 : "reference",
             };
           } else {
             reportIssue({
               // deno-fmt-ignore
-              lintIssue: `table column '${fks.columnName}' referenced in foreignKey ${JSON.stringify(fks)} not found in graph`,
+              lintIssue: `table column '${fkSrc.columnName}' referenced in foreignKey ${JSON.stringify(fkSrc)} not found in graph`,
             });
           }
         } else {
           reportIssue({
             // deno-fmt-ignore
-            lintIssue: `table '${fks.tableName}' referenced in foreignKey ${JSON.stringify(fks)} not found in graph`,
+            lintIssue: `table '${fkSrc.tableName}' referenced in foreignKey ${JSON.stringify(fkSrc)} not found in graph`,
           });
         }
       }

@@ -44,7 +44,7 @@ export type SqlDomain<
     ) => tmpl.SqlTextSupplier<Context>;
     readonly polygenixDataType: (
       purpose: "info-model",
-    ) => tmpl.PolygenSrcCode<Context>;
+    ) => tmpl.PolygenCellContent<Context>;
     readonly sqlDefaultValue?: (
       purpose: "create table column" | "stored routine arg",
     ) => tmpl.SqlTextSupplier<Context>;
