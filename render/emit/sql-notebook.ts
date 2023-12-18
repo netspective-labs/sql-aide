@@ -94,8 +94,10 @@ export function sqlNotebookFactory<
     nbd,
     kernel,
     instance,
+    // loop through all notebook cells and return an array of SQL text suppliers
+    // and SQL text behaviors
     SQL: async (
-      options: {
+      options?: {
         separator?: (
           cell: Parameters<EventEmitter["afterCell"]>[0],
           state: Parameters<EventEmitter["afterCell"]>[1],
@@ -129,11 +131,11 @@ export function sqlNotebookFactory<
             s.isSqlTextSupplier<Context>(state.execResult) ||
             s.isSqlTextBehaviorSupplier<Context>(state.execResult)
           ) {
-            if (options.separator) SQL.push(options.separator(cell, state));
+            if (options?.separator) SQL.push(options.separator(cell, state));
             const sts = state.execResult as s.SqlTextSupplier<Context>;
             SQL.push(sts);
           } else {
-            const notSTS = options.onNotSqlTextSupplier?.(cell, state);
+            const notSTS = options?.onNotSqlTextSupplier?.(cell, state);
             if (notSTS) SQL.push(notSTS);
           }
         }

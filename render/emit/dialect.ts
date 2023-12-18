@@ -35,6 +35,22 @@ export const sqliteDialect = (): SqliteDialect => {
   };
 };
 
+export interface DuckDbDialect extends AnsiSqlDialect {
+  readonly isDuckDbDialect: true;
+}
+
+export const isDuckDbDialect = safety.typeGuard<DuckDbDialect>(
+  "isDuckDbDialect",
+);
+
+export const duckDbDialect = (): DuckDbDialect => {
+  return {
+    identity: () => "DuckDB",
+    isAnsiDialect: true,
+    isDuckDbDialect: true,
+  };
+};
+
 export interface PostgreSqlDialect extends AnsiSqlDialect {
   readonly isPostgreSqlDialect: true;
 }
@@ -72,6 +88,7 @@ export function dialectState(dialect: SqlDialect) {
     identity: dialect.identity("state"),
     isAnsiSqlDialect: isAnsiSqlDialect(dialect),
     isSqliteDialect: isSqliteDialect(dialect),
+    isDuckDbDialect: isDuckDbDialect(dialect),
     isPostgreSqlDialect: isPostgreSqlDialect(dialect),
     isMsSqlServerDialect: isMsSqlServerDialect(dialect),
   };

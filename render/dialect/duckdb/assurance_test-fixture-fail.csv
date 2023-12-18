@@ -1,0 +1,13 @@
+column1,column2,column3,column4,column5,column6,column7,column8,column9
+Valid,example@example.com,123,10,50,Unique1,Mandatory,ABC-1234,Yes
+"Invalid (Email, Integer): Invalid email in column2 and non-integer in column4",invalid-email,123,abc,200,Unique2,Mandatory,ABC-1234,No
+"Invalid (Range, Mandatory): Value out of range in column5 and missing mandatory value in column7",user@example.com,123,20,5,Unique3,,ABC-1235,Yes
+"Invalid (Pattern): Pattern mismatch in column8",example@example.com,123,30,150,Unique4,Mandatory,ABC-ABCD,Yes
+"Invalid (List): Value not in allowed list in column9",user@example.com,123,40,60,Unique5,Mandatory,XYZ-1234,No
+"Duplicate (Unique): Duplicate value in column6",example@example.com,123,50,70,Unique1,Mandatory,ABC-1234,Maybe
+"Invalid (Negative Integer): Negative integer in column4",invalid-email,123,-10,80,Unique6,Mandatory,ABC-1234,Yes
+Valid,user@example.com,123,60,90,Unique7,,ABC-1234,No
+Valid,example@example.com,123,70,100,Unique8,Mandatory,ABC-1234,Yes
+"Invalid (Range): Value out of range in column5",user@example.com,123,80,110,Unique9,Mandatory,XYZ-1234,Maybe
+Valid,example@example.com,123,90,120,Unique10,Mandatory,ABC-1234,Yes
+"Invalid (List): Value not in allowed list in column9",invalid-email,123,100,130,Unique11,Mandatory,ABC-1234,No

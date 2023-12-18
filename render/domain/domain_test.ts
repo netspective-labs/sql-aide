@@ -319,7 +319,7 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       const sd = ztsdFactory.stringSDF.stringDialect(z.string());
       ta.assertEquals(
         sd.sqlDataType().SQL(ctx),
-        `TEXT /* {"identity":"ANSI","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":false,"isMsSqlServerDialect":false} */`,
+        `TEXT /* {"identity":"ANSI","isAnsiSqlDialect":true,"isSqliteDialect":false,"isDuckDbDialect":false,"isPostgreSqlDialect":false,"isMsSqlServerDialect":false} */`,
       );
     });
 
@@ -340,7 +340,7 @@ Deno.test("SQLa domain from Zod Types", async (tc) => {
       const sd = ztsdFactory.stringSDF.stringDialect(z.string());
       ta.assertEquals(
         sd.sqlDataType().SQL(pgCtx),
-        `TEXT /* {"identity":"PostgreSQL","isAnsiSqlDialect":true,"isSqliteDialect":false,"isPostgreSqlDialect":true,"isMsSqlServerDialect":false} */`,
+        `TEXT /* {"identity":"PostgreSQL","isAnsiSqlDialect":true,"isSqliteDialect":false,"isDuckDbDialect":false,"isPostgreSqlDialect":true,"isMsSqlServerDialect":false} */`,
       );
     });
   });

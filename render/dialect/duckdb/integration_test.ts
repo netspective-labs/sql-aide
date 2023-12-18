@@ -3,18 +3,51 @@ import { path } from "../../deps.ts";
 import * as pgpass from "../../../lib/postgres/pgpass/pgpass-parse.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as tmpl from "../../emit/mod.ts";
-import * as mod from "./mod.ts";
-import { SQLa } from "../../../pattern/governed/mod.ts";
+import * as mod from "./integration.ts";
 
-// deno-lint-ignore no-explicit-any
-type Any = any;
+Deno.test("DuckDB CSV Supplier", () => {
+  type EmitContext = tmpl.SqlEmitContext & {
+    readonly integrations: typeof integrations;
+  };
+  type SqlTextSupplier = tmpl.SqlTextSupplier<EmitContext>;
+
+  const ib = mod.integrationsBuilder<EmitContext>();
+  const integrations = ib.csvTables({
+    "SYNTHETIC": ib.factory.csvTable({
+      csvSrcFsPath: () => "synthetic.csv",
+      tableName: "synthetic_csv_table",
+      isTempTable: true,
+      extraColumnsSql: [
+        "row_number() OVER () as src_file_row_number",
+        "(SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id",
+      ],
+    }),
+  });
+
+  const ctx: EmitContext = {
+    ...tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.duckDbDialect() }),
+    integrations,
+  };
+  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<typeof ctx>();
+
+  const ddlDefn = tmpl.SQL<typeof ctx>(ddlOptions)`
+      ${integrations}`;
+
+  ta.assertEquals(
+    ddlDefn.SQL(ctx),
+    ws.unindentWhitespace(`
+        CREATE TEMPORARY TABLE synthetic_csv_table AS
+          SELECT *, row_number() OVER () as src_file_row_number, (SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id
+            FROM read_csv_auto('synthetic.csv', header=true);`),
+  );
+});
 
 Deno.test("DuckDB SQLite SQL Supplier", () => {
-  type EmitContext = SQLa.SqlEmitContext & {
+  type EmitContext = tmpl.SqlEmitContext & {
     readonly integrations: typeof integrations;
     readonly resolve: (fsPath: string) => string;
   };
-  type SqlTextSupplier = SQLa.SqlTextSupplier<EmitContext>;
+  type SqlTextSupplier = tmpl.SqlTextSupplier<EmitContext>;
 
   const integrations = mod.sqliteIntegrations({
     "synthetic_sqlite_instance": mod.sqliteIntegration({
@@ -69,7 +102,7 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
   };
 
   const ctx: EmitContext = {
-    ...tmpl.typicalSqlEmitContext(),
+    ...tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.duckDbDialect() }),
     integrations,
     resolve: (fsPath) => fsPath,
   };
@@ -113,10 +146,10 @@ Deno.test("DuckDB SQLite SQL Supplier", () => {
 });
 
 Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
-  type EmitContext = SQLa.SqlEmitContext & {
+  type EmitContext = tmpl.SqlEmitContext & {
     readonly integrations: typeof integrations;
   };
-  type SqlTextSupplier = SQLa.SqlTextSupplier<EmitContext>;
+  type SqlTextSupplier = tmpl.SqlTextSupplier<EmitContext>;
 
   /**
    * Read some synthetic PostgreSQL backend connection parameters from a synthetic
@@ -148,7 +181,7 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
   };
 
   const ctx: EmitContext = {
-    ...tmpl.typicalSqlEmitContext(),
+    ...tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.duckDbDialect() }),
     integrations,
   };
   const ddlOptions = tmpl.typicalSqlTextSupplierOptions<EmitContext>();
@@ -168,10 +201,10 @@ Deno.test("DuckDB PostgreSQL SQL Supplier", async () => {
 });
 
 Deno.test("DuckDB Excel Supplier", () => {
-  type EmitContext = SQLa.SqlEmitContext & {
+  type EmitContext = tmpl.SqlEmitContext & {
     readonly integrations: typeof integrations;
   };
-  type SqlTextSupplier = SQLa.SqlTextSupplier<EmitContext>;
+  type SqlTextSupplier = tmpl.SqlTextSupplier<EmitContext>;
 
   const ib = mod.integrationsBuilder<EmitContext>();
   const integrations = ib.excel({
@@ -189,7 +222,7 @@ Deno.test("DuckDB Excel Supplier", () => {
   };
 
   const ctx: EmitContext = {
-    ...tmpl.typicalSqlEmitContext(),
+    ...tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.duckDbDialect() }),
     integrations,
   };
   const ddlOptions = tmpl.typicalSqlTextSupplierOptions<typeof ctx>();
