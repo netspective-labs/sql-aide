@@ -103,6 +103,16 @@ Deno.test("DuckDB Table Content Assurance", () => {
 
     ${ar.intValueInAllTableRows(tableName, 'column4')}
 
+    ${ar.intRangeInAllTableRows(tableName, 'column5', 10, 100)}
+
+    ${ar.uniqueValueInAllTableRows(tableName, 'column6')}
+
+    ${ar.mandatoryValueInAllTableRows(tableName, 'column7')}
+
+    ${ar.patternValueInAllTableRows(tableName, 'column8', '^ABC-[0-9]{4}$', 'ABC-1234')}
+
+    ${ar.onlyAllowedValuesInAllTableRows(tableName, 'column9', "'Yes', 'No', 'Maybe'", 'Yes, No, or Maybe')}
+
     ${ar.dotComEmailValueInAllTableRows(tableName, 'column2')}`;
 
   ta.assertEquals(

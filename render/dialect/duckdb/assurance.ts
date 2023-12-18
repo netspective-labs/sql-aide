@@ -92,6 +92,141 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
         )}`;
   }
 
+  intRangeInAllTableRows(
+    tableName: string,
+    columnName: string,
+    minSql: number | string,
+    maxSql: number | string,
+  ): tmpl.SqlTextSupplier<Context> {
+    const cteName = "int_range_assurance";
+    // deno-fmt-ignore
+    return this.govn.SQL`
+      WITH ${cteName} AS (
+          SELECT '${columnName}' AS issue_column,
+                 ${columnName} AS invalid_value,
+                 src_file_row_number AS issue_row
+            FROM ${tableName}
+           WHERE ${columnName} IS NOT NULL
+             AND ${columnName}::INT <= ${maxSql} OR ${columnName}::INT >= ${minSql}
+      )
+      ${this.insertRowValueIssue(cteName,
+        'Range Violation',
+        'issue_row',
+        'issue_column',
+        'invalid_value',
+        `'Value ' || invalid_value || ' in ' || issue_column || ' out of range (${minSql}-${maxSql})'`,
+        `'Ensure values in ${columnName} are between ${minSql} and ${maxSql}'`
+        )}`;
+  }
+
+  uniqueValueInAllTableRows(
+    tableName: string,
+    columnName: string,
+  ): tmpl.SqlTextSupplier<Context> {
+    const cteName = "unique_value";
+    // deno-fmt-ignore
+    return this.govn.SQL`
+      WITH ${cteName} AS (
+          SELECT '${columnName}' AS issue_column,
+                 ${columnName} AS invalid_value,
+                 src_file_row_number AS issue_row
+            FROM ${tableName}
+           WHERE ${columnName} IS NOT NULL
+             AND ${columnName} IN (
+                SELECT ${columnName}
+                  FROM ${tableName}
+              GROUP BY ${columnName}
+                HAVING COUNT(*) > 1)
+      )
+      ${this.insertRowValueIssue(cteName,
+        'Unique Value Violation',
+        'issue_row',
+        'issue_column',
+        'invalid_value',
+        `'Duplicate value "' || invalid_value || '" found in ' || issue_column`,
+        `'Ensure each value in column6 is unique'`
+        )}`;
+  }
+
+  mandatoryValueInAllTableRows(
+    tableName: string,
+    columnName: string,
+  ): tmpl.SqlTextSupplier<Context> {
+    const cteName = "mandatory_value";
+    // deno-fmt-ignore
+    return this.govn.SQL`
+      WITH ${cteName} AS (
+          SELECT '${columnName}' AS issue_column,
+                 ${columnName} AS invalid_value,
+                 src_file_row_number AS issue_row
+            FROM ${tableName}
+           WHERE ${columnName} IS NULL
+              OR TRIM(${columnName}) = ''
+      )
+      ${this.insertRowValueIssue(cteName,
+        'Missing Mandatory Value',
+        'issue_row',
+        'issue_column',
+        'invalid_value',
+        `'Mandatory field ' || issue_column || ' is empty'`,
+        `'Provide a value for ' || issue_column`
+        )}`;
+  }
+
+  patternValueInAllTableRows(
+    tableName: string,
+    columnName: string,
+    pattern: string,
+    patternHuman = pattern,
+    patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
+  ): tmpl.SqlTextSupplier<Context> {
+    const cteName = "pattern";
+    // deno-fmt-ignore
+    return this.govn.SQL`
+      WITH ${cteName} AS (
+          SELECT '${columnName}' AS issue_column,
+                 ${columnName} AS invalid_value,
+                 src_file_row_number AS issue_row
+            FROM ${tableName}
+           WHERE ${patternSql}
+      )
+      ${this.insertRowValueIssue(cteName,
+        'Pattern Mismatch',
+        'issue_row',
+        'issue_column',
+        'invalid_value',
+        `'Value ' || invalid_value || ' in ' || issue_column || ' does not match the pattern ${patternHuman}'`,
+        `'Follow the pattern ${patternHuman} in ' || issue_column`
+        )}`;
+  }
+
+  onlyAllowedValuesInAllTableRows(
+    tableName: string,
+    columnName: string,
+    valuesSql: string,
+    valuesHuman = valuesSql,
+    patternSql = `${columnName} NOT IN (${valuesSql})`,
+  ): tmpl.SqlTextSupplier<Context> {
+    const cteName = "allowed_values";
+    // deno-fmt-ignore
+    return this.govn.SQL`
+      WITH ${cteName} AS (
+          SELECT '${columnName}' AS issue_column,
+                 ${columnName} AS invalid_value,
+                 src_file_row_number AS issue_row
+            FROM ${tableName}
+           WHERE ${patternSql}
+      )
+      ${this.insertRowValueIssue(cteName,
+        'Invalid Value',
+        'issue_row',
+        'issue_column',
+        'invalid_value',
+        `'Value ' || invalid_value || ' in ' || issue_column || ' not in allowed list (${valuesHuman})'`,
+        `'Use only allowed values ${valuesHuman} in ' || issue_column`
+        )}`;
+  }
+
   dotComEmailValueInAllTableRows(
     tableName: string,
     columnName: string,
