@@ -63,6 +63,9 @@ Deno.test("DuckDB Table Content Assurance", () => {
 
   // deno-fmt-ignore
   const ddlDefn = tmpl.SQL<typeof ctx>(ddlOptions)`
+    -- you can test this in DuckDB using:
+    -- $ cat assurance_test-fixture.duckdb.sql | duckdb ":memory:"
+
     CREATE TABLE ingest_session (
         ingest_session_id VARCHAR NOT NULL,
         ingest_src VARCHAR NOT NULL,
@@ -92,6 +95,8 @@ Deno.test("DuckDB Table Content Assurance", () => {
       ],
     })}
 
+    SELECT * FROM ${tableName};
+
     ${ar.requiredColumnNamesInTable(tableName,
       ['column1', 'column2', 'column3',
       'column4', 'column5', 'column6',
@@ -113,7 +118,9 @@ Deno.test("DuckDB Table Content Assurance", () => {
 
     ${ar.onlyAllowedValuesInAllTableRows(tableName, 'column9', "'Yes', 'No', 'Maybe'", 'Yes, No, or Maybe')}
 
-    ${ar.dotComEmailValueInAllTableRows(tableName, 'column2')}`;
+    ${ar.dotComEmailValueInAllTableRows(tableName, 'column2')}
+
+    SELECT * FROM ingest_issue;`;
 
   ta.assertEquals(
     ddlDefn.SQL(ctx),

@@ -54,7 +54,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
     return this.govn.SQL`
       WITH ${cteName} AS (
           SELECT column_name
-            FROM (VALUES ${requiredColNames.map(cn => `('${cn}')`).join(', ')}) AS required(column_name)
+            FROM (VALUES ${requiredColNames.map(cn => `('${cn.toLocaleUpperCase()}')`).join(', ')}) AS required(column_name)
            WHERE required.column_name NOT IN (
                SELECT upper(trim(column_name))
                  FROM information_schema.columns
@@ -62,8 +62,8 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
       )
       ${this.insertIssue(cteName,
         'Missing Column',
-        `'Required column ' || column_name || ' is missing in the CSV file.'`,
-        `'Ensure the CSV contains the column "' || column_name || '"'`
+        `'Required column ' || column_name || ' is missing in ${tableName}.'`,
+        `'Ensure ${tableName} contains the column "' || column_name || '"'`
         )}`;
   }
 
@@ -107,7 +107,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
                  src_file_row_number AS issue_row
             FROM ${tableName}
            WHERE ${columnName} IS NOT NULL
-             AND ${columnName}::INT <= ${maxSql} OR ${columnName}::INT >= ${minSql}
+             AND ${columnName}::INT > ${maxSql} OR ${columnName}::INT < ${minSql}
       )
       ${this.insertRowValueIssue(cteName,
         'Range Violation',

@@ -1,3 +1,6 @@
+-- you can test this in DuckDB using:
+-- $ cat assurance_test-fixture.duckdb.sql | duckdb ":memory:"
+
 CREATE TABLE ingest_session (
     ingest_session_id VARCHAR NOT NULL,
     ingest_src VARCHAR NOT NULL,
@@ -21,9 +24,11 @@ CREATE TEMPORARY TABLE synthetic_csv_fail AS
   SELECT *, row_number() OVER () as src_file_row_number, (SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id
     FROM read_csv_auto('assurance_test-fixture-fail.csv', header=true);
 
+SELECT * FROM synthetic_csv_fail;
+
 WITH required_column_names_in_src AS (
     SELECT column_name
-      FROM (VALUES ('column1'), ('column2'), ('column3'), ('column4'), ('column5'), ('column6'), ('column7'), ('column8'), ('column9')) AS required(column_name)
+      FROM (VALUES ('COLUMN1'), ('COLUMN2'), ('COLUMN3'), ('COLUMN4'), ('COLUMN5'), ('COLUMN6'), ('COLUMN7'), ('COLUMN8'), ('COLUMN9')) AS required(column_name)
      WHERE required.column_name NOT IN (
          SELECT upper(trim(column_name))
            FROM information_schema.columns
@@ -32,8 +37,8 @@ WITH required_column_names_in_src AS (
 INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
     SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
            'Missing Column',
-           'Required column ' || column_name || ' is missing in the CSV file.',
-           'Ensure the CSV contains the column "' || column_name || '"'
+           'Required column ' || column_name || ' is missing in synthetic_csv_fail.',
+           'Ensure synthetic_csv_fail contains the column "' || column_name || '"'
       FROM required_column_names_in_src;
 
 -- NOTE: If the above does not pass, meaning not all columns with the proper
@@ -64,7 +69,7 @@ WITH int_range_assurance AS (
            src_file_row_number AS issue_row
       FROM synthetic_csv_fail
      WHERE column5 IS NOT NULL
-       AND column5::INT <= 100 OR column5::INT >= 10
+       AND column5::INT > 100 OR column5::INT < 10
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
@@ -167,3 +172,5 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
            'Invalid email format "' || invalid_value || '" in ' || issue_column,
            'Correct the email format'
       FROM proper_dot_com_email_address_in_all_rows;
+
+SELECT * FROM ingest_issue;
