@@ -83,7 +83,10 @@ export class DuckDbShell {
 
   async emitDiagnostics(options: {
     readonly diagsJson?: string;
-    readonly diagsMd?: string;
+    readonly diagsMd?: {
+      readonly destFsPath: string;
+      readonly frontmatter?: Record<string, unknown>;
+    } | undefined;
   }) {
     const { diagsJson, diagsMd } = options;
 
@@ -97,7 +100,7 @@ export class DuckDbShell {
     if (diagsMd) {
       const md: string[] = [
         "---",
-        yaml.stringify(this.args),
+        yaml.stringify(diagsMd.frontmatter ?? this.args),
         "---",
         "# Ingest Diagnostics",
       ];
@@ -105,7 +108,7 @@ export class DuckDbShell {
         md.push(`\n## ${d.identity}`);
         md.push(`${d.markdown}`);
       }
-      await Deno.writeTextFile(diagsMd, md.join("\n"));
+      await Deno.writeTextFile(diagsMd.destFsPath, md.join("\n"));
     }
   }
 }

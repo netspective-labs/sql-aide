@@ -697,7 +697,12 @@ export class IngestEngine {
       );
     }
 
-    this.duckdb.emitDiagnostics(this.args);
+    this.duckdb.emitDiagnostics({
+      diagsJson: this.args.diagsJson,
+      diagsMd: this.args.diagsMd
+        ? { destFsPath: this.args.diagsMd, frontmatter: this.args }
+        : undefined,
+    });
   }
 
   static async run(
