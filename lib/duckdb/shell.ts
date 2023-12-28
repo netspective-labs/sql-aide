@@ -1,6 +1,6 @@
 import * as yaml from "https://deno.land/std@0.209.0/yaml/stringify.ts";
 import * as dax from "https://deno.land/x/dax@0.36.0/mod.ts";
-import * as ws from "../../../lib/universal/whitespace.ts";
+import * as ws from "../universal/whitespace.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;

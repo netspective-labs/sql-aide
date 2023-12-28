@@ -1,10 +1,10 @@
 import * as ws from "../../../lib/universal/whitespace.ts";
-import * as tmpl from "../../emit/mod.ts";
+import * as SQLa from "../../../render/mod.ts";
 
-export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
+export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
   constructor(
     readonly govn: {
-      readonly SQL: ReturnType<typeof tmpl.SQL<Context>>;
+      readonly SQL: ReturnType<typeof SQLa.SQL<Context>>;
     },
   ) {
   }
@@ -48,7 +48,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
   requiredColumnNamesInTable(
     tableName: string,
     requiredColNames: string[],
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "required_column_names_in_src";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -70,7 +70,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
   intValueInAllTableRows(
     tableName: string,
     columnName: string,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "numeric_value_in_all_rows";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -97,7 +97,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
     columnName: string,
     minSql: number | string,
     maxSql: number | string,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "int_range_assurance";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -122,7 +122,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
   uniqueValueInAllTableRows(
     tableName: string,
     columnName: string,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "unique_value";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -151,7 +151,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
   mandatoryValueInAllTableRows(
     tableName: string,
     columnName: string,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "mandatory_value";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -179,7 +179,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
     pattern: string,
     patternHuman = pattern,
     patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "pattern";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -206,7 +206,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
     valuesSql: string,
     valuesHuman = valuesSql,
     patternSql = `${columnName} NOT IN (${valuesSql})`,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "allowed_values";
     // deno-fmt-ignore
     return this.govn.SQL`
@@ -230,7 +230,7 @@ export class AssuranceRules<Context extends tmpl.SqlEmitContext> {
   dotComEmailValueInAllTableRows(
     tableName: string,
     columnName: string,
-  ): tmpl.SqlTextSupplier<Context> {
+  ): SQLa.SqlTextSupplier<Context> {
     const cteName = "proper_dot_com_email_address_in_all_rows";
     // deno-fmt-ignore
     return this.govn.SQL`

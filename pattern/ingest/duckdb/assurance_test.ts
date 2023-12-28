@@ -1,15 +1,15 @@
-import { testingAsserts as ta } from "../../deps-test.ts";
-import { path } from "../../deps.ts";
+import { testingAsserts as ta } from "../../../deps-test.ts";
+import { path } from "../../../deps.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
-import * as tmpl from "../../emit/mod.ts";
-import * as intr from "./integration.ts";
+import * as SQLa from "../../../render/mod.ts";
+import * as ddb from "../../../render/dialect/duckdb/mod.ts";
 import * as mod from "./assurance.ts";
 
 export class SyntheticAssuranceRules
-  extends mod.AssuranceRules<tmpl.SqlEmitContext> {
+  extends mod.AssuranceRules<SQLa.SqlEmitContext> {
   constructor(
     readonly govn: {
-      readonly SQL: ReturnType<typeof tmpl.SQL<tmpl.SqlEmitContext>>;
+      readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>;
     },
   ) {
     super(govn);
@@ -53,16 +53,16 @@ export class SyntheticAssuranceRules
 }
 
 Deno.test("DuckDB Table Content Assurance", () => {
-  const ctx = tmpl.typicalSqlEmitContext({ sqlDialect: tmpl.duckDbDialect() });
-  const ddlOptions = tmpl.typicalSqlTextSupplierOptions<typeof ctx>();
+  const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.duckDbDialect() });
+  const ddlOptions = SQLa.typicalSqlTextSupplierOptions<typeof ctx>();
   const ar = new SyntheticAssuranceRules({
-    SQL: tmpl.SQL<typeof ctx>(ddlOptions),
+    SQL: SQLa.SQL<typeof ctx>(ddlOptions),
   });
   const tableName = "synthetic_csv_fail";
   const csvSrcFsPath = "assurance_test-fixture-fail.csv";
 
   // deno-fmt-ignore
-  const ddlDefn = tmpl.SQL<typeof ctx>(ddlOptions)`
+  const ddlDefn = SQLa.SQL<typeof ctx>(ddlOptions)`
     -- you can test this in DuckDB using:
     -- $ cat assurance_test-fixture.duckdb.sql | duckdb ":memory:"
 
@@ -85,7 +85,7 @@ Deno.test("DuckDB Table Content Assurance", () => {
     INSERT INTO ingest_session (ingest_session_id, ingest_src, ingest_table_name)
                         VALUES (uuid(), '${csvSrcFsPath}', '${tableName}');
 
-    ${intr.csvTableIntegration({
+    ${ddb.csvTableIntegration({
       csvSrcFsPath: () => csvSrcFsPath,
       tableName,
       isTempTable: true,
