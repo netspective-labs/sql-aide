@@ -692,7 +692,8 @@ export class IngestEngine {
         INSTALL spatial; -- Only needed once per DuckDB connection
         LOAD spatial; -- Only needed once per DuckDB connection
         -- TODO: join with ingest_session table to give all the results in one sheet
-        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`)
+        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`),
+        'emitDiagnostics'
       );
     }
 
