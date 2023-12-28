@@ -1,6 +1,5 @@
 import * as yaml from "https://deno.land/std@0.209.0/yaml/stringify.ts";
 import * as dax from "https://deno.land/x/dax@0.36.0/mod.ts";
-import * as ws from "../universal/whitespace.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -82,28 +81,11 @@ export class DuckDbShell {
     return status;
   }
 
-  async emitDiagnostics(args: {
+  async emitDiagnostics(options: {
     readonly diagsJson?: string;
-    readonly diagsXlsx?: string;
     readonly diagsMd?: string;
   }) {
-    const { diagsXlsx, diagsJson, diagsMd } = args;
-    if (diagsXlsx) {
-      // if Excel workbook already exists, GDAL xlsx driver will error
-      try {
-        Deno.removeSync(diagsXlsx);
-      } catch (_err) {
-        // ignore errors if file does not exist
-      }
-
-      // deno-fmt-ignore
-      await this.execute(ws.unindentWhitespace(`
-        INSTALL spatial; -- Only needed once per DuckDB connection
-        LOAD spatial; -- Only needed once per DuckDB connection
-        -- TODO: join with ingest_session table to give all the results in one sheet
-        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`)
-      );
-    }
+    const { diagsJson, diagsMd } = options;
 
     if (diagsJson) {
       await Deno.writeTextFile(

@@ -486,7 +486,7 @@ export class IngestEngine {
     const initDDL = govn.SQL`
       ${is.tables}
       ${is.tableIndexes}
-     
+
       ${sessionDML}`.SQL(this.govn.emitCtx);
 
     const status = await this.duckdb.execute(initDDL, isc.current.nbCellID);
@@ -584,7 +584,7 @@ export class IngestEngine {
                   session_id: sessionID,
                   ingest_src: entry.path})
               }
-                
+
                 ${govn.ingestSessionIssueCRF.insertDML({
                   ingest_session_issue_id: await govn.emitCtx.newUUID(
                     govn.deterministicPKs,
@@ -678,7 +678,7 @@ export class IngestEngine {
 
   @ieDescr.finalize()
   async emitDiagnostics() {
-    const { args: { diagsXlsx, diagsJson, diagsMd } } = this;
+    const { args: { diagsXlsx } } = this;
     if (diagsXlsx) {
       // if Excel workbook already exists, GDAL xlsx driver will error
       try {
@@ -692,30 +692,11 @@ export class IngestEngine {
         INSTALL spatial; -- Only needed once per DuckDB connection
         LOAD spatial; -- Only needed once per DuckDB connection
         -- TODO: join with ingest_session table to give all the results in one sheet
-        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`)        
+        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`)
       );
     }
 
-    if (diagsJson) {
-      await Deno.writeTextFile(
-        diagsJson,
-        JSON.stringify(this.duckdb.diagnostics, null, "  "),
-      );
-    }
-
-    if (diagsMd) {
-      const md: string[] = [
-        "---",
-        yaml.stringify(this.args),
-        "---",
-        "# Ingest Diagnostics",
-      ];
-      for (const d of this.duckdb.diagnostics) {
-        md.push(`\n## ${d.identity}`);
-        md.push(`${d.markdown}`);
-      }
-      await Deno.writeTextFile(diagsMd, md.join("\n"));
-    }
+    this.duckdb.emitDiagnostics(this.args);
   }
 
   static async run(
