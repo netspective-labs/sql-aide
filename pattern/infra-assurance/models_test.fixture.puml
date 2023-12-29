@@ -10,201 +10,246 @@
     FontSize 12
   }
 
-  entity "party_role" as party_role {
-      **party_role_id**: INTEGER
+  entity "party_type" as party_type {
+    * **party_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "party_relation_type" as party_relation_type {
+    * **party_relation_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "party_role" as party_role {
+    * **party_role_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "party_identifier_type" as party_identifier_type {
-      **party_identifier_type_id**: INTEGER
+    * **party_identifier_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "person_type" as person_type {
-      **person_type_id**: INTEGER
+    * **person_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "contact_type" as contact_type {
-      **contact_type_id**: INTEGER
+    * **contact_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "organization_role_type" as organization_role_type {
-      **organization_role_type_id**: INTEGER
+    * **organization_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "party" as party {
-      **party_id**: INTEGER
+    * **party_id**: TEXT
     --
     * party_type_id: TEXT
     * party_name: TEXT
-      created_at: TIMESTAMP
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "party_identifier" as party_identifier {
-      **party_identifier_id**: INTEGER
+    * **party_identifier_id**: TEXT
     --
-    * identifier_number: TEXT
-    * party_identifier_type_id: INTEGER
-    * party_id: INTEGER
-      created_at: TIMESTAMP
+    * identifier_name: TEXT
+    * identifier_value: TEXT
+    * party_identifier_type_id: TEXT
+    * party_id: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "person" as person {
-      **person_id**: INTEGER
+    * **person_id**: TEXT
     --
-    * party_id: INTEGER
-    * person_type_id: INTEGER
+    * party_id: TEXT
+    * person_type_id: TEXT
     * person_first_name: TEXT
+      person_middle_name: TEXT
     * person_last_name: TEXT
+      previous_name: TEXT
       honorific_prefix: TEXT
       honorific_suffix: TEXT
-      created_at: TIMESTAMP
+    * gender_id: TEXT
+    * sex_id: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "party_relation" as party_relation {
-      **party_relation_id**: INTEGER
+    * **party_relation_id**: TEXT
     --
-    * party_id: INTEGER
-    * related_party_id: INTEGER
+    * party_id: TEXT
+    * related_party_id: TEXT
     * relation_type_id: TEXT
-      party_role_id: INTEGER
-      created_at: TIMESTAMP
+      party_role_id: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "organization" as organization {
-      **organization_id**: INTEGER
+    * **organization_id**: TEXT
     --
-    * party_id: INTEGER
+    * party_id: TEXT
     * name: TEXT
+      alias: TEXT
+      description: TEXT
     * license: TEXT
+      federal_tax_id_num: TEXT
     * registration_date: DATE
-      created_at: TIMESTAMP
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "organization_role" as organization_role {
-      **organization_role_id**: INTEGER
+    * **organization_role_id**: TEXT
     --
-    * person_id: INTEGER
-    * organization_id: INTEGER
-    * organization_role_type_id: INTEGER
-      created_at: TIMESTAMP
+    * person_id: TEXT
+    * organization_id: TEXT
+    * organization_role_type_id: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "contact_electronic" as contact_electronic {
-      **contact_electronic_id**: INTEGER
+    * **contact_electronic_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * electronics_details: TEXT
-      created_at: TIMESTAMP
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "contact_land" as contact_land {
-      **contact_land_id**: INTEGER
+    * **contact_land_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * address_line1: TEXT
     * address_line2: TEXT
     * address_zip: TEXT
     * address_city: TEXT
     * address_state: TEXT
+      address_territory: TEXT
     * address_country: TEXT
-      created_at: TIMESTAMP
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -214,11 +259,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -228,11 +273,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -242,11 +287,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -256,11 +301,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -270,11 +315,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -284,11 +329,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -298,11 +343,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -312,25 +357,25 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
   entity "organization_role_type" as organization_role_type {
-      **organization_role_type_id**: INTEGER
+    * **organization_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -341,11 +386,11 @@
     * graph_nature_id: INTEGER
     * name: TEXT
       description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -358,11 +403,11 @@
     * boundary_nature_id: INTEGER
     * name: TEXT
       description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -372,11 +417,11 @@
     --
     * host_name: TEXT
       description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -385,11 +430,11 @@
     * **host_boundary_id**: TEXT
     --
     * host_id: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -399,11 +444,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -413,11 +458,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -427,11 +472,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -441,11 +486,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -458,11 +503,11 @@
     * accountable: TEXT
     * consulted: TEXT
     * informed: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -472,11 +517,11 @@
     --
     * boundary_id: TEXT
     * raci_matrix_subject_id: INTEGER
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -485,11 +530,11 @@
     * **raci_matrix_activity_id**: TEXT
     --
     * activity: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -497,7 +542,7 @@
   entity "asset" as asset {
     * **asset_id**: TEXT
     --
-    * organization_id: INTEGER
+    * organization_id: TEXT
       asset_retired_date: DATE
     * asset_status_id: INTEGER
     * asset_tag: TEXT
@@ -519,11 +564,11 @@
       asymmetric_keys_encryption_enabled: TEXT
       cryptographic_key_encryption_enabled: TEXT
       symmetric_keys_encryption_enabled: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -545,11 +590,11 @@
     * vendor_link: TEXT
       installation_date: DATE
     * criticality: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -560,11 +605,11 @@
     * short_code: TEXT
     * source_url: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -581,11 +626,11 @@
     * severity_id: TEXT
     * solutions: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -601,11 +646,11 @@
     * intent: TEXT
     * targeting: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -621,11 +666,11 @@
     * event_classification: TEXT
     * source_of_information: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -639,11 +684,11 @@
       relevance_id: TEXT
       likelihood_id: TEXT
     * impact: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -658,13 +703,13 @@
     * existing_controls: TEXT
     * priority_id: TEXT
     * reported_date: DATE
-    * reported_by_id: INTEGER
-    * responsible_by_id: INTEGER
-      created_at: TIMESTAMP
+    * reported_by_id: TEXT
+    * responsible_by_id: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -674,11 +719,11 @@
     --
     * security_impact_analysis_id: TEXT
     * impact: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -688,11 +733,11 @@
     --
     * security_impact_analysis_id: TEXT
     * controls: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -703,14 +748,14 @@
     * purpose: TEXT
     * bill_rate: TEXT
     * period: TEXT
-    * effective_from_date: TIMESTAMP
+    * effective_from_date: TIMESTAMPTZ
     * effective_to_date: TEXT
     * prorate: INTEGER
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -719,15 +764,15 @@
     * **scheduled_task_id**: TEXT
     --
     * description: TEXT
-    * task_date: TIMESTAMP
-    * reminder_date: TIMESTAMP
+    * task_date: TIMESTAMPTZ
+    * reminder_date: TIMESTAMPTZ
     * assigned_to: TEXT
     * reminder_to: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -735,16 +780,16 @@
   entity "timesheet" as timesheet {
     * **timesheet_id**: TEXT
     --
-    * date_of_work: TIMESTAMP
+    * date_of_work: TIMESTAMPTZ
     * is_billable_id: INTEGER
     * number_of_hours: INTEGER
     * time_entry_category_id: INTEGER
     * timesheet_summary: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -758,15 +803,15 @@
     * certificate_type: TEXT
     * certificate_authority: TEXT
     * validity: TEXT
-      expiration_date: TIMESTAMP
+      expiration_date: TIMESTAMPTZ
     * domain_name: TEXT
     * key_size: INTEGER
     * path: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -784,11 +829,11 @@
     * location: TEXT
     * purpose: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -797,15 +842,15 @@
     * **security_incident_response_team_id**: TEXT
     --
       training_subject_id: INTEGER
-    * person_id: INTEGER
-    * organization_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
       training_status_id: INTEGER
       attended_date: DATE
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -814,15 +859,15 @@
     * **awareness_training_id**: TEXT
     --
     * training_subject_id: INTEGER
-    * person_id: INTEGER
-    * organization_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
     * training_status_id: INTEGER
     * attended_date: DATE
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -830,18 +875,18 @@
   entity "rating" as rating {
     * **rating_id**: TEXT
     --
-    * author_id: INTEGER
-    * rating_given_to_id: INTEGER
+    * author_id: TEXT
+    * rating_given_to_id: TEXT
     * rating_value_id: INTEGER
       best_rating_id: INTEGER
     * rating_explanation: TEXT
     * review_aspect: TEXT
       worst_rating_id: INTEGER
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -849,13 +894,13 @@
   entity "note" as note {
     * **note_id**: TEXT
     --
-    * party_id: INTEGER
+    * party_id: TEXT
     * note: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -865,11 +910,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -879,11 +924,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -893,11 +938,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -907,11 +952,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -921,19 +966,19 @@
     --
     * auditor_type_id: TEXT
     * audit_purpose_id: INTEGER
-    * auditor_org_id: INTEGER
-    * auditor_person_id: INTEGER
+    * auditor_org_id: TEXT
+    * auditor_person_id: TEXT
     * auditor_status_type_id: INTEGER
     * scf_identifier: TEXT
     * auditor_notes: TEXT
     * auditor_artifacts: TEXT
     * assertion_name: TEXT
     * assertion_description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -941,24 +986,24 @@
   entity "contract" as contract {
     * **contract_id**: TEXT
     --
-    * contract_from_id: INTEGER
-    * contract_to_id: INTEGER
+    * contract_from_id: TEXT
+    * contract_to_id: TEXT
       contract_status_id: INTEGER
     * document_reference: TEXT
       payment_type_id: INTEGER
       periodicity_id: INTEGER
-    * start_date: TIMESTAMP
-      end_date: TIMESTAMP
+    * start_date: TIMESTAMPTZ
+      end_date: TIMESTAMPTZ
       contract_type_id: INTEGER
-      date_of_last_review: TIMESTAMP
-      date_of_next_review: TIMESTAMP
-      date_of_contract_review: TIMESTAMP
-      date_of_contract_approval: TIMESTAMP
-      created_at: TIMESTAMP
+      date_of_last_review: TIMESTAMPTZ
+      date_of_next_review: TIMESTAMPTZ
+      date_of_contract_review: TIMESTAMPTZ
+      date_of_contract_approval: TIMESTAMPTZ
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -979,12 +1024,12 @@
     * mitigation_further_actions: TEXT
     * control_monitor_mitigation_actions_tracking_strategy: TEXT
       control_monitor_action_due_date: DATE
-    * control_monitor_risk_owner_id: INTEGER
-      created_at: TIMESTAMP
+    * control_monitor_risk_owner_id: TEXT
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -994,7 +1039,7 @@
     --
     * title: TEXT
     * incident_date: DATE
-    * time_and_time_zone: TIMESTAMP
+    * time_and_time_zone: TIMESTAMPTZ
     * asset_id: TEXT
     * category_id: INTEGER
     * sub_category_id: INTEGER
@@ -1005,11 +1050,11 @@
     * it_service_impacted: TEXT
     * impacted_modules: TEXT
     * impacted_dept: TEXT
-    * reported_by_id: INTEGER
-    * reported_to_id: INTEGER
+    * reported_by_id: TEXT
+    * reported_to_id: TEXT
     * brief_description: TEXT
     * detailed_description: TEXT
-    * assigned_to_id: INTEGER
+    * assigned_to_id: TEXT
       assigned_date: DATE
     * investigation_details: TEXT
     * containment_details: TEXT
@@ -1018,16 +1063,16 @@
     * lessons_learned: TEXT
       status_id: INTEGER
       closed_date: DATE
-      reopened_time: TIMESTAMP
+      reopened_time: TIMESTAMPTZ
     * feedback_from_business: TEXT
     * reported_to_regulatory: TEXT
       report_date: DATE
-      report_time: TIMESTAMP
-      created_at: TIMESTAMP
+      report_time: TIMESTAMPTZ
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1045,11 +1090,11 @@
     * modification_of_the_reported_issue: TEXT
     * testing_for_modified_issue: TEXT
     * test_results: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1057,15 +1102,15 @@
   entity "raci_matrix_assignment" as raci_matrix_assignment {
     * **raci_matrix_assignment_id**: TEXT
     --
-    * person_id: INTEGER
+    * person_id: TEXT
     * subject_id: INTEGER
     * activity_id: TEXT
     * raci_matrix_assignment_nature_id: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1073,15 +1118,15 @@
   entity "person_skill" as person_skill {
     * **person_skill_id**: TEXT
     --
-    * person_id: INTEGER
+    * person_id: TEXT
     * skill_nature_id: INTEGER
     * skill_id: INTEGER
     * proficiency_scale_id: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1091,11 +1136,11 @@
     --
     * title: TEXT
     * description: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1125,11 +1170,11 @@
     * score: TEXT
     * tracking_period_id: INTEGER
     * trend_id: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1140,11 +1185,11 @@
     * title: TEXT
     * description: TEXT
       base_value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1155,11 +1200,11 @@
     * key_risk_id: TEXT
     * entry_date: DATE
       entry_value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1172,11 +1217,11 @@
     * assertion_explain: TEXT
       assertion_expires_on: DATE
     * assertion_expires_poam: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1185,17 +1230,17 @@
     * **attestation_id**: TEXT
     --
     * assertion_id: TEXT
-    * person_id: INTEGER
+    * person_id: TEXT
     * attestation: TEXT
     * attestation_explain: TEXT
     * attested_on: DATE
       expires_on: DATE
       boundary_id: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1209,11 +1254,11 @@
     * url: TEXT
     * content: TEXT
     * attachment: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1223,11 +1268,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1237,11 +1282,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1251,11 +1296,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1265,11 +1310,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1279,11 +1324,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1293,11 +1338,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1307,11 +1352,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1321,11 +1366,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1335,11 +1380,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1349,11 +1394,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1363,11 +1408,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1377,11 +1422,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1391,11 +1436,11 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
@@ -1405,21 +1450,23 @@
     --
     * code: TEXT
     * value: TEXT
-      created_at: TIMESTAMP
+      created_at: TIMESTAMPTZ
       created_by: TEXT
-      updated_at: TIMESTAMP
+      updated_at: TIMESTAMPTZ
       updated_by: TEXT
-      deleted_at: TIMESTAMP
+      deleted_at: TIMESTAMPTZ
       deleted_by: TEXT
       activity_log: TEXT
   }
 
+  party_type |o..o{ party
   party_identifier_type |o..o{ party_identifier
   party |o..o{ party_identifier
   party |o..o{ person
   person_type |o..o{ person
   party |o..o{ party_relation
   party |o..o{ party_relation
+  party_relation_type |o..o{ party_relation
   party_role |o..o{ party_relation
   party |o..o{ organization
   person |o..o{ organization_role

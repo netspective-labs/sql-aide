@@ -14,6 +14,13 @@ const relativeFilePath = (name: string) => {
   return $.path.relative(Deno.cwd(), absPath);
 };
 
+let syntheticUlidValue = 0;
+
+function syntheticUlid() {
+  syntheticUlidValue++;
+  return syntheticUlidValue.toString();
+}
+
 const { SQLa, ws } = typical;
 
 export const ddlOptions = SQLa.typicalSqlTextSupplierOptions();
@@ -200,26 +207,62 @@ type PartyRelation = PartyRole & OrganizationRole & {
 
 const person = {
   insertDML: (person: Person) => {
+    const partyTypeDML = udm.partyType.insertDML({
+      party_type_id: syntheticUlid(),
+      code: "PERSON",
+      value: "person",
+    });
+    const genderTypeDML = udm.genderType
+      .insertDML([{
+        gender_type_id: syntheticUlid(),
+        code: "MALE",
+        value: "Male",
+      }, {
+        gender_type_id: syntheticUlid(),
+        code: "FEMALE",
+        value: "Female",
+      }]);
+    const genderTypeID = udm.genderType.select({
+      code: "MALE",
+    });
+    const sexTypeDML = udm.sexType
+      .insertDML([{
+        sex_type_id: syntheticUlid(),
+        code: "MALE",
+        value: "Male",
+      }, {
+        sex_type_id: syntheticUlid(),
+        code: "FEMALE",
+        value: "Female",
+      }]);
+    const sexTypeID = udm.sexType.select({
+      code: "MALE",
+    });
     const partyDML = udm.party.insertDML({
       party_name: (`${person.person_first_name} ${person.person_last_name}`)
         .trim(),
-      party_type_id: "PERSON",
+      party_type_id: udm.partyType.select(partyTypeDML.insertable),
+      party_id: syntheticUlid(),
     });
     const partyIdSS = udm.party.select(partyDML.insertable);
     const personTypeId = person.person_type_id
       ? person.person_type_id
       : "INDIVIDUAL";
     const personDML = udm.person.insertDML({
+      person_id: syntheticUlid(),
       party_id: udm.party.select(partyDML.insertable),
       person_first_name: person.person_first_name,
       person_last_name: person.person_last_name,
       person_type_id: udm.personType.select({
         code: personTypeId,
       }),
+      gender_id: genderTypeID,
+      sex_id: sexTypeID,
     });
     const personIdSS = udm.person.select(personDML.insertable);
     const contactElectronicDML = {
       email: udm.contactElectronic.insertDML({
+        contact_electronic_id: syntheticUlid(),
         party_id: udm.party.select(partyDML.insertable),
         contact_type_id: udm.contactType.select({
           code: "OFFICIAL_EMAIL",
@@ -227,6 +270,7 @@ const person = {
         electronics_details: person.email_address,
       }),
       phoneNumber: udm.contactElectronic.insertDML({
+        contact_electronic_id: syntheticUlid(),
         party_id: udm.party.select(partyDML.insertable),
         contact_type_id: udm.contactType.select({
           code: "MOBILE_PHONE_NUMBER",
@@ -240,6 +284,7 @@ const person = {
           `,
     };
     const contactLandDML = udm.contactLand.insertDML({
+      contact_land_id: syntheticUlid(),
       party_id: udm.party.select(partyDML.insertable),
       contact_type_id: udm.contactType.select({
         code: "OFFICIAL_ADDRESS",
@@ -253,6 +298,8 @@ const person = {
     });
     return {
       partyDML,
+      genderTypeDML,
+      sexTypeDML,
       partyIdSS,
       personDML,
       personIdSS,
@@ -294,11 +341,13 @@ const organizationAllPersons = {
 const organization = {
   insertDML: (organization: Organization) => {
     const partyDML = udm.party.insertDML({
+      party_id: syntheticUlid(),
       party_name: organization.name,
       party_type_id: "ORGANIZATION",
     });
     const partyIdSS = udm.party.select(partyDML.insertable);
     const organizationDML = udm.organization.insertDML({
+      organization_id: syntheticUlid(),
       party_id: udm.party.select(partyDML.insertable),
       name: organization.name,
       license: organization.license ? organization.license : "",
@@ -312,6 +361,7 @@ const organization = {
     );
     const contactElectronicDML = {
       email: udm.contactElectronic.insertDML({
+        contact_electronic_id: syntheticUlid(),
         party_id: udm.party.select(partyDML.insertable),
         contact_type_id: udm.contactType.select({
           code: "OFFICIAL_EMAIL",
@@ -319,6 +369,7 @@ const organization = {
         electronics_details: organization.email_address,
       }),
       phoneNumber: udm.contactElectronic.insertDML({
+        contact_electronic_id: syntheticUlid(),
         party_id: udm.party.select(partyDML.insertable),
         contact_type_id: udm.contactType.select({
           code: "LAND_PHONE_NUMBER",
@@ -332,6 +383,7 @@ const organization = {
         `,
     };
     const contactLandDML = udm.contactLand.insertDML({
+      contact_land_id: syntheticUlid(),
       party_id: udm.party.select(partyDML.insertable),
       contact_type_id: udm.contactType.select({
         code: "OFFICIAL_ADDRESS",
@@ -378,6 +430,7 @@ const personToOrganizationRelation = {
       ? partyRelation.party_role_id
       : "VENDOR";
     const partyRelationDML = udm.partyRelation.insertDML({
+      party_relation_id: syntheticUlid(),
       party_id: partyRelation.party_id,
       related_party_id: partyRelation.related_party_id,
       relation_type_id: "ORGANIZATION_TO_PERSON",
@@ -386,6 +439,7 @@ const personToOrganizationRelation = {
       }),
     });
     const oraganizationRoleDML = udm.organizationRole.insertDML({
+      organization_role_id: syntheticUlid(),
       person_id: partyRelation.person_id,
       organization_id: partyRelation.organization_id,
       organization_role_type_id: partyRelation.organization_role_type_id,
@@ -405,6 +459,7 @@ const organizationRoleTypeCode = udm.organizationRoleType.select({
 });
 
 const organizationToPerson = personToOrganizationRelation.insertDML({
+  organization_role_id: syntheticUlid(),
   party_id: personDetails.partyIdSS,
   related_party_id: organizationDetails.partyIdSS,
   organization_role_type_id: organizationRoleTypeCode,

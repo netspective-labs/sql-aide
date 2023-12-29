@@ -11,7 +11,7 @@
   }
 
   entity "party_role" as party_role {
-      **party_role_id**: INTEGER
+    * **party_role_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -25,7 +25,7 @@
   }
 
   entity "party_identifier_type" as party_identifier_type {
-      **party_identifier_type_id**: INTEGER
+    * **party_identifier_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -39,7 +39,7 @@
   }
 
   entity "person_type" as person_type {
-      **person_type_id**: INTEGER
+    * **person_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -53,7 +53,7 @@
   }
 
   entity "contact_type" as contact_type {
-      **contact_type_id**: INTEGER
+    * **contact_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -67,7 +67,7 @@
   }
 
   entity "organization_role_type" as organization_role_type {
-      **organization_role_type_id**: INTEGER
+    * **organization_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -81,10 +81,11 @@
   }
 
   entity "party" as party {
-      **party_id**: INTEGER
+    * **party_id**: TEXT
     --
     * party_type_id: TEXT
     * party_name: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -95,11 +96,13 @@
   }
 
   entity "party_identifier" as party_identifier {
-      **party_identifier_id**: INTEGER
+    * **party_identifier_id**: TEXT
     --
-    * identifier_number: TEXT
-    * party_identifier_type_id: INTEGER
-    * party_id: INTEGER
+    * identifier_name: TEXT
+    * identifier_value: TEXT
+    * party_identifier_type_id: TEXT
+    * party_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -110,14 +113,19 @@
   }
 
   entity "person" as person {
-      **person_id**: INTEGER
+    * **person_id**: TEXT
     --
-    * party_id: INTEGER
-    * person_type_id: INTEGER
+    * party_id: TEXT
+    * person_type_id: TEXT
     * person_first_name: TEXT
+      person_middle_name: TEXT
     * person_last_name: TEXT
+      previous_name: TEXT
       honorific_prefix: TEXT
       honorific_suffix: TEXT
+    * gender_id: TEXT
+    * sex_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -128,12 +136,13 @@
   }
 
   entity "party_relation" as party_relation {
-      **party_relation_id**: INTEGER
+    * **party_relation_id**: TEXT
     --
-    * party_id: INTEGER
-    * related_party_id: INTEGER
+    * party_id: TEXT
+    * related_party_id: TEXT
     * relation_type_id: TEXT
-      party_role_id: INTEGER
+      party_role_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -144,12 +153,16 @@
   }
 
   entity "organization" as organization {
-      **organization_id**: INTEGER
+    * **organization_id**: TEXT
     --
-    * party_id: INTEGER
+    * party_id: TEXT
     * name: TEXT
+      alias: TEXT
+      description: TEXT
     * license: TEXT
+      federal_tax_id_num: TEXT
     * registration_date: DATE
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -160,11 +173,12 @@
   }
 
   entity "organization_role" as organization_role {
-      **organization_role_id**: INTEGER
+    * **organization_role_id**: TEXT
     --
-    * person_id: INTEGER
-    * organization_id: INTEGER
-    * organization_role_type_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
+    * organization_role_type_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -175,11 +189,12 @@
   }
 
   entity "contact_electronic" as contact_electronic {
-      **contact_electronic_id**: INTEGER
+    * **contact_electronic_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * electronics_details: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -190,16 +205,18 @@
   }
 
   entity "contact_land" as contact_land {
-      **contact_land_id**: INTEGER
+    * **contact_land_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * address_line1: TEXT
     * address_line2: TEXT
     * address_zip: TEXT
     * address_city: TEXT
     * address_state: TEXT
+      address_territory: TEXT
     * address_country: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -322,7 +339,7 @@
   }
 
   entity "organization_role_type" as organization_role_type {
-      **organization_role_type_id**: INTEGER
+    * **organization_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -497,7 +514,7 @@
   entity "asset" as asset {
     * **asset_id**: TEXT
     --
-    * organization_id: INTEGER
+    * organization_id: TEXT
       asset_retired_date: DATE
     * asset_status_id: INTEGER
     * asset_tag: TEXT
@@ -658,8 +675,8 @@
     * existing_controls: TEXT
     * priority_id: TEXT
     * reported_date: DATE
-    * reported_by_id: INTEGER
-    * responsible_by_id: INTEGER
+    * reported_by_id: TEXT
+    * responsible_by_id: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -797,8 +814,8 @@
     * **security_incident_response_team_id**: TEXT
     --
       training_subject_id: INTEGER
-    * person_id: INTEGER
-    * organization_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
       training_status_id: INTEGER
       attended_date: DATE
       created_at: TIMESTAMPTZ
@@ -814,8 +831,8 @@
     * **awareness_training_id**: TEXT
     --
     * training_subject_id: INTEGER
-    * person_id: INTEGER
-    * organization_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
     * training_status_id: INTEGER
     * attended_date: DATE
       created_at: TIMESTAMPTZ
@@ -830,8 +847,8 @@
   entity "rating" as rating {
     * **rating_id**: TEXT
     --
-    * author_id: INTEGER
-    * rating_given_to_id: INTEGER
+    * author_id: TEXT
+    * rating_given_to_id: TEXT
     * rating_value_id: INTEGER
       best_rating_id: INTEGER
     * rating_explanation: TEXT
@@ -849,7 +866,7 @@
   entity "note" as note {
     * **note_id**: TEXT
     --
-    * party_id: INTEGER
+    * party_id: TEXT
     * note: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
@@ -921,8 +938,8 @@
     --
     * auditor_type_id: TEXT
     * audit_purpose_id: INTEGER
-    * auditor_org_id: INTEGER
-    * auditor_person_id: INTEGER
+    * auditor_org_id: TEXT
+    * auditor_person_id: TEXT
     * auditor_status_type_id: INTEGER
     * scf_identifier: TEXT
     * auditor_notes: TEXT
@@ -941,8 +958,8 @@
   entity "contract" as contract {
     * **contract_id**: TEXT
     --
-    * contract_from_id: INTEGER
-    * contract_to_id: INTEGER
+    * contract_from_id: TEXT
+    * contract_to_id: TEXT
       contract_status_id: INTEGER
     * document_reference: TEXT
       payment_type_id: INTEGER
@@ -979,7 +996,7 @@
     * mitigation_further_actions: TEXT
     * control_monitor_mitigation_actions_tracking_strategy: TEXT
       control_monitor_action_due_date: DATE
-    * control_monitor_risk_owner_id: INTEGER
+    * control_monitor_risk_owner_id: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -1005,11 +1022,11 @@
     * it_service_impacted: TEXT
     * impacted_modules: TEXT
     * impacted_dept: TEXT
-    * reported_by_id: INTEGER
-    * reported_to_id: INTEGER
+    * reported_by_id: TEXT
+    * reported_to_id: TEXT
     * brief_description: TEXT
     * detailed_description: TEXT
-    * assigned_to_id: INTEGER
+    * assigned_to_id: TEXT
       assigned_date: DATE
     * investigation_details: TEXT
     * containment_details: TEXT
@@ -1057,7 +1074,7 @@
   entity "raci_matrix_assignment" as raci_matrix_assignment {
     * **raci_matrix_assignment_id**: TEXT
     --
-    * person_id: INTEGER
+    * person_id: TEXT
     * subject_id: INTEGER
     * activity_id: TEXT
     * raci_matrix_assignment_nature_id: TEXT
@@ -1073,7 +1090,7 @@
   entity "person_skill" as person_skill {
     * **person_skill_id**: TEXT
     --
-    * person_id: INTEGER
+    * person_id: TEXT
     * skill_nature_id: INTEGER
     * skill_id: INTEGER
     * proficiency_scale_id: TEXT
@@ -1185,7 +1202,7 @@
     * **attestation_id**: TEXT
     --
     * assertion_id: TEXT
-    * person_id: INTEGER
+    * person_id: TEXT
     * attestation: TEXT
     * attestation_explain: TEXT
     * attested_on: DATE

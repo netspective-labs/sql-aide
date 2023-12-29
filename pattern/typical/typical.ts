@@ -2,6 +2,7 @@ import { zod as z } from "../../deps.ts";
 import * as za from "../../lib/universal/zod-aide.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as et from "./enum-table.ts";
+import * as st from "./state-table.ts";
 import * as diaPUML from "../../render/diagram/plantuml-ie-notation.ts";
 
 // for convenience so that deno-lint is not required for use of `any`
@@ -724,6 +725,11 @@ export function governedModel<
     sqlNS: ddlOptions?.sqlNS,
   });
 
+  const stf = st.stateTablesFactory<Context, DomainQS, DomainsQS>({
+    isIdempotent: true,
+    sqlNS: ddlOptions?.sqlNS,
+  });
+
   return {
     names,
     domains,
@@ -739,6 +745,8 @@ export function governedModel<
     ordinalEnumTable: etf.ordinalTable,
     textEnumTable: etf.textTable,
     varCharEnumTable: etf.varCharTable,
+    stateTable: stf.createStateTable,
+    stateTableCommonCol: stf.commonStateTableColumns,
   };
 }
 
