@@ -1,11 +1,13 @@
-import { fs, path, uuid, yaml } from "./deps.ts";
-import * as ddbs from "../../../lib/duckdb/mod.ts";
+import { uuid } from "./deps.ts";
 import * as chainNB from "../../../lib/notebook/chain-of-responsibility.ts";
 import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as tp from "../../../pattern/typical/mod.ts";
 import * as a from "./assurance.ts";
+
+// deno-lint-ignore no-explicit-any
+export type Any = any;
 
 export type DomainQS = tp.TypicalDomainQS;
 export type DomainsQS = tp.TypicalDomainsQS;
@@ -25,10 +27,6 @@ export class IngestEmitContext implements SQLa.SqlEmitContext {
   readonly sqlNamingStrategy = SQLa.typicalSqlNamingStrategy();
   readonly sqlTextEmitOptions = SQLa.typicalSqlTextEmitOptions();
   readonly sqlDialect = SQLa.duckDbDialect();
-
-  resolve(fsPath: string) {
-    return fsPath;
-  }
 
   /**
    * UUID generator when the value is needed by the Javascript runtime
@@ -109,7 +107,6 @@ export class IngestGovernance {
           An ingestion session is an ingestion event in which we can record the ingestion supply chain.`,
     },
   });
-  #sessionDML?: Awaited<ReturnType<IngestGovernance["ingestSessionSqlDML"]>>;
 
   readonly ingestSessionEntry = SQLa.tableDefinition("ingest_session_entry", {
     ingest_session_entry_id: this.primaryKey(),
@@ -229,13 +226,13 @@ export class IngestGovernance {
   );
 
   readonly informationSchema = {
-    tables: [
+    adminTables: [
       this.ingestSession,
       this.ingestSessionEntry,
       this.ingestSessionState,
       this.ingestSessionIssue,
     ],
-    tableIndexes: [
+    adminTableIndexes: [
       ...this.ingestSession.indexes,
       ...this.ingestSessionEntry.indexes,
       ...this.ingestSessionState.indexes,
@@ -327,6 +324,8 @@ export class IngestGovernance {
       .replace(/__+/g, "_"); // Replace multiple underscores with a single one
   }
 
+  #sessionDML?: Awaited<ReturnType<IngestGovernance["ingestSessionSqlDML"]>>;
+
   async ingestSessionSqlDML(): Promise<
     & { readonly sessionID: string }
     & SQLa.SqlTextSupplier<IngestEmitContext>
@@ -339,21 +338,6 @@ export class IngestGovernance {
       };
     }
     return this.#sessionDML;
-  }
-
-  async writeDiagnosticsSqlMD(
-    frontmatter: Record<string, unknown>,
-    sql: string,
-    dir?: string,
-  ) {
-    const diagsTmpFile = await Deno.makeTempFile({
-      dir: dir ?? Deno.cwd(),
-      prefix: "ingest-diags-initDDL-",
-      suffix: ".sql.md",
-    });
-    // deno-fmt-ignore
-    await Deno.writeTextFile(diagsTmpFile, ws.unindentWhitespace(`---\n${yaml.stringify(frontmatter)}---\n\`\`\`sql\n${sql}\n\`\`\``));
-    return diagsTmpFile;
   }
 }
 
@@ -407,391 +391,158 @@ export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
                  ${remediationSql ?? "NULL"}
             FROM ${from}`);
   }
+
+  selectEntryIssues() {
+    return {
+      SQL: () =>
+        `SELECT * FROM ingest_session_issue WHERE session_id = '${this.sessionID}' and session_entry_id = '${this.sessionEntryID}';`,
+    };
+  }
 }
 
-export interface IngestAssuranceSqlSupplier {
-  /**
-   * Prepare SQL which when executed will prepare DuckDB table(s) to ingest a
-   * source. Also supplies SQL that will ensure that the structure of the table,
-   * such as required columns, matches our expections. This SQL should be kept
-   * minimal and only focus on assurance of structure not content.
-   * @returns SQLa.SqlTextSupplier<EmitContext> instance with sessionID
-   */
-  ensureStructure(): Promise<SQLa.SqlTextSupplier<IngestEmitContext>>;
+export type IngestSqlRegistrationExecution =
+  | "before-init"
+  | "after-init"
+  | "before-finalize"
+  | "after-finalize";
 
-  /**
-   * Prepare the SQL that will ensure content of table(s) matches our
-   * expectations. We separate the content SQL from the structural SQL since
-   * content SQL assumes specific column names which will be syntax errors if
-   * the structure doesn't match our expectations.
-   * @returns SQLa.SqlTextSupplier<EmitContext> instance with sessionID
-   */
-  ensureContent(): Promise<SQLa.SqlTextSupplier<IngestEmitContext>>;
+export interface IngestSqlRegister {
+  readonly catalog: Record<
+    IngestSqlRegistrationExecution,
+    Iterable<SQLa.SqlTextSupplier<IngestEmitContext>>
+  >;
+  readonly register: (
+    sts: SQLa.SqlTextSupplier<IngestEmitContext>,
+    execute: IngestSqlRegistrationExecution,
+  ) => void;
 }
 
-export type IngestStep = chainNB.NotebookCell<
-  IngestEngine,
-  chainNB.NotebookCellID<IngestEngine>
->;
-export type IngestStepContext = chainNB.NotebookCellContext<
-  IngestEngine,
-  IngestStep
->;
-export const ieDescr = new chainNB.NotebookDescriptor<
-  IngestEngine,
-  IngestStep
->();
+export function ingestSqlRegister(): IngestSqlRegister {
+  const catalog: Record<
+    IngestSqlRegistrationExecution,
+    SQLa.SqlTextSupplier<IngestEmitContext>[]
+  > = {
+    "before-init": [],
+    "after-init": [],
+    "before-finalize": [],
+    "after-finalize": [],
+  };
 
-/**
- * Use IngestEngine to prepare SQL for ingestion steps and execute them
- * using DuckDB CLI engine. Each method that does not have a @ieDescr.disregard()
- * attribute is considered a "step" and each step is executed in the order it is
- * declared. As each step is executed, its error or results are passed to the
- * next method.
- *
- * This class is introspected and run using SQLa's Notebook infrastructure.
- * See: https://github.com/netspective-labs/sql-aide/tree/main/lib/notebook
- */
-export class IngestEngine {
-  readonly duckdb: ddbs.DuckDbShell;
-  readonly emitWithResourcesSQL: SQLa.SqlTextSupplier<IngestEmitContext>[] = [];
-  constructor(
-    readonly govn: IngestGovernance,
-    readonly args: {
-      readonly duckdbCmd: string;
-      readonly icDb: string;
-      readonly icDeterministicPk: boolean;
-      readonly rootPath: string;
-      readonly src: string[];
-      readonly diagsJson?: string;
-      readonly diagsXlsx?: string;
-      readonly diagsMd?: string;
-      readonly resourceDb?: string;
+  return {
+    catalog,
+    register: (sts, execute) => {
+      catalog[execute].push(sts);
     },
-    readonly assuranceSuppliers: (
-      fsPath: string,
-      iar: (tableName: string) => Promise<IngestAssuranceRules>,
-    ) => Promise<Iterable<IngestAssuranceSqlSupplier> | undefined>,
-  ) {
-    this.duckdb = new ddbs.DuckDbShell({
-      duckdbCmd: args.duckdbCmd,
-      dbDestFsPath: args.icDb,
-    });
-  }
+  };
+}
 
-  async init(isc: IngestStepContext) {
-    const { govn, govn: { informationSchema: is } } = this;
-    const sessionDML = await govn.ingestSessionSqlDML();
+export interface IngestArgs<Governance extends IngestGovernance, Notebook> {
+  readonly sqlRegister: IngestSqlRegister;
+  readonly emitDagPuml?:
+    | ((puml: string, previewUrl: string) => Promise<void>)
+    | undefined;
+}
 
-    const initDDL = govn.SQL`
-      ${is.tables}
-      ${is.tableIndexes}
-
-      ${sessionDML}`.SQL(this.govn.emitCtx);
-
-    const status = await this.duckdb.execute(initDDL, isc.current.nbCellID);
-    if (status.code != 0) {
-      const diagsTmpFile = await this.govn.writeDiagnosticsSqlMD({
-        duckdb: {
-          code: status.code,
-          stdout: status.stdout,
-          stderr: status.stderr,
-        },
-      }, initDDL);
-      return { status, initDDL, diagsTmpFile };
-    }
-    return { status, initDDL };
-  }
-
-  async ensureStructure(
-    isc: IngestStepContext,
-    initResult:
-      | Error
-      | Awaited<ReturnType<typeof IngestEngine.prototype.init>>,
-  ) {
-    if (initResult instanceof Error) {
-      console.error(
-        `${isc.previous?.current.nbCellID} was not successful`,
-        initResult,
-      );
-      return initResult;
-    }
-    if (initResult.status.code != 0) {
-      console.error(
-        `${isc.previous?.current.nbCellID} did not return zero, see ${initResult.diagsTmpFile}`,
-      );
-      return [];
-    }
-
-    const { govn, govn: { emitCtx: ctx } } = this;
-    const sessionDML = await govn.ingestSessionSqlDML();
-    const { sessionID } = sessionDML;
-    const result: {
-      iaSqlSupplier: IngestAssuranceSqlSupplier;
-    }[] = [];
-
-    // Convert each glob pattern to a RegExp
-    const patterns = this.args.src.map((pattern) =>
-      path.globToRegExp(pattern, { extended: true, globstar: true })
-    );
-
-    let index = -1;
-    for (const entry of fs.walkSync(this.args.rootPath)) {
-      if (entry.isFile) {
-        const relativePath = path.relative(this.args.rootPath, entry.path);
-        // Check if the relative path matches any of the patterns
-        if (patterns.some((pattern) => pattern.test(relativePath))) {
-          try {
-            const assrSuppliers = await this.assuranceSuppliers(
-              entry.path,
-              async (_tableName) => {
-                const sessionEntryID = await govn.emitCtx.newUUID(
-                  govn.deterministicPKs,
-                );
-                return new IngestAssuranceRules(
-                  sessionID,
-                  sessionEntryID,
-                  govn,
-                );
-              },
-            );
-            if (assrSuppliers) {
-              for (const iaSqlSupplier of assrSuppliers) {
-                const checkStruct = await iaSqlSupplier.ensureStructure();
-
-                // run the SQL and then emit the errors to STDOUT in JSON
-                const status = await this.duckdb.jsonResult(
-                  checkStruct.SQL(ctx),
-                  `${isc.current.nbCellID}-${++index}`,
-                );
-
-                // if there were no errors, then add it to our list of content tables
-                // whose content will be tested; if the structural validation fails
-                // then no content checks will be performed.
-                if (!status.stdout) {
-                  result.push({ iaSqlSupplier });
-                }
-              }
-            } else {
-              const sessionEntryID = await govn.emitCtx.newUUID(
-                govn.deterministicPKs,
-              );
-
-              // deno-fmt-ignore
-              const sql = govn.SQL`
-                ${govn.ingestSessionEntryCRF.insertDML({
-                  ingest_session_entry_id: sessionEntryID,
-                  session_id: sessionID,
-                  ingest_src: entry.path})
-              }
-
-                ${govn.ingestSessionIssueCRF.insertDML({
-                  ingest_session_issue_id: await govn.emitCtx.newUUID(
-                    govn.deterministicPKs,
-                  ),
-                  session_id: sessionID,
-                  session_entry_id: sessionEntryID,
-                  issue_type: "Nature",
-                  issue_message: `Unable to determine nature of source`,
-                  invalid_value: entry.path})}`;
-              await this.duckdb.execute(
-                sql.SQL(govn.emitCtx),
-                `${isc.current.nbCellID} unknown source type`,
-              );
-            }
-          } catch (err) {
-            console.dir(err);
-          }
-        }
-      }
-    }
-
-    return result;
-  }
-
-  async ensureContent(
-    isc: IngestStepContext,
-    structResult:
-      | Error
-      | Awaited<ReturnType<typeof IngestEngine.prototype.ensureStructure>>,
-  ) {
-    if (structResult instanceof Error) {
-      console.error(
-        `${isc.previous?.current.nbCellID} was not successful`,
-        structResult,
-      );
-      return structResult;
-    }
-    if (structResult.length == 0) {
-      console.error(
-        `${isc.previous?.current.nbCellID} did not return any structurally valid tables`,
-      );
-      return structResult;
-    }
-
-    const { govn: { emitCtx: ctx } } = this;
-    await this.duckdb.execute(
-      (await Promise.all(
-        structResult.map(async (sr) =>
-          (await sr.iaSqlSupplier.ensureContent()).SQL(ctx)
-        ),
-      )).join("\n"),
-      isc.current.nbCellID,
-    );
-    return structResult;
-  }
-
-  async emitResources(
-    isc: IngestStepContext,
-    contentResult:
-      | Error
-      | Awaited<ReturnType<typeof IngestEngine.prototype.ensureContent>>,
-  ) {
-    const { args: { resourceDb } } = this;
-    if (resourceDb && Array.isArray(contentResult)) {
-      try {
-        Deno.removeSync(resourceDb);
-      } catch (_err) {
-        // ignore errors if file does not exist
-      }
-
-      const adminTables = [
-        this.govn.ingestSession,
-        this.govn.ingestSessionEntry,
-        this.govn.ingestSessionState,
-        this.govn.ingestSessionIssue,
-      ];
-
-      // deno-fmt-ignore
-      await this.duckdb.execute(ws.unindentWhitespace(`
-        ${this.emitWithResourcesSQL.map(dml => dml.SQL(this.govn.emitCtx)).join(";\n        ")};
-
-        ATTACH '${resourceDb}' AS resource_db (TYPE SQLITE);
-
-        ${adminTables.map(t => `CREATE TABLE resource_db.${t.tableName} AS SELECT * FROM ${t.tableName}`).join(";\n        ")};
-
-        -- {contentResult.map(cr => \`CREATE TABLE resource_db.\${cr.iaSqlSupplier.tableName} AS SELECT * FROM \${cr.tableName}\`).join(";")};
-
-        DETACH DATABASE resource_db;`), isc.current.nbCellID);
-    }
-  }
-
-  @ieDescr.finalize()
-  async emitDiagnostics() {
-    const { args: { diagsXlsx } } = this;
-    if (diagsXlsx) {
-      // if Excel workbook already exists, GDAL xlsx driver will error
-      try {
-        Deno.removeSync(diagsXlsx);
-      } catch (_err) {
-        // ignore errors if file does not exist
-      }
-
-      // deno-fmt-ignore
-      await this.duckdb.execute(ws.unindentWhitespace(`
-        INSTALL spatial; -- Only needed once per DuckDB connection
-        LOAD spatial; -- Only needed once per DuckDB connection
-        -- TODO: join with ingest_session table to give all the results in one sheet
-        COPY (SELECT * FROM ingest_session_issue) TO '${diagsXlsx}' WITH (FORMAT GDAL, DRIVER 'xlsx');`),
-        'emitDiagnostics'
-      );
-    }
-
-    this.duckdb.emitDiagnostics({
-      diagsJson: this.args.diagsJson,
-      diagsMd: this.args.diagsMd
-        ? { destFsPath: this.args.diagsMd, frontmatter: this.args }
-        : undefined,
-    });
-  }
-
-  static async run(
+export interface IngestInit<
+  Governance extends IngestGovernance,
+  Notebook,
+  Args extends IngestArgs<Governance, Notebook>,
+> {
+  readonly govn: Governance;
+  readonly newInstance: (
     govn: IngestGovernance,
-    args: ConstructorParameters<typeof IngestEngine>[1] & {
-      diagsDagPuml?: string;
-    },
-    assuranceSuppliers: ConstructorParameters<typeof IngestEngine>[2],
+    args: Args,
+  ) => Notebook | Promise<Notebook>;
+}
+
+export async function ingest<
+  Governance extends IngestGovernance,
+  Notebook,
+  Args extends IngestArgs<Governance, Notebook>,
+>(
+  prototype: Notebook,
+  descriptor: chainNB.NotebookDescriptor<
+    Notebook,
+    chainNB.NotebookCell<Notebook, chainNB.NotebookCellID<Notebook>>
+  >,
+  init: IngestInit<Governance, Notebook, Args>,
+  args: Args,
+) {
+  const kernel = chainNB.ObservableKernel.create<Notebook>(
+    prototype,
+    descriptor,
+  );
+  if (
+    args.emitDagPuml || !kernel.isValid() || kernel.lintResults.length > 0
   ) {
-    const kernel = chainNB.ObservableKernel.create(
-      IngestEngine.prototype,
-      ieDescr,
+    // In case the ingestion engine created circular or other invalid states
+    // show the state diagram as a PlantUML URL to visualize the error(s).
+    const pe = await import("npm:plantuml-encoder");
+    const diagram = kernel.introspectedNB.dagOps.diagram(
+      kernel.introspectedNB.graph,
     );
-    if (
-      args.diagsDagPuml || !kernel.isValid() || kernel.lintResults.length > 0
-    ) {
-      // In case the ingestion engine created circular or other invalid states
-      // show the state diagram as a PlantUML URL to visualize the error(s).
-      const pe = await import("npm:plantuml-encoder");
-      const diagram = kernel.introspectedNB.dagOps.diagram(
-        kernel.introspectedNB.graph,
-      );
+    const previewURL = `http://www.plantuml.com/plantuml/svg/${
+      pe.encode(diagram)
+    }`;
 
-      if (args.diagsDagPuml) {
-        await Deno.writeTextFile(args.diagsDagPuml, diagram);
-      }
+    await args.emitDagPuml?.(diagram, previewURL);
 
-      if (!kernel.isValid() || kernel.lintResults.length > 0) {
-        console.error("Invalid Kernel, inspect the DAG:");
-        console.log(
-          `http://www.plantuml.com/plantuml/svg/${pe.encode(diagram)}`,
-        );
-        return;
-      }
+    if (!kernel.isValid() || kernel.lintResults.length > 0) {
+      console.error("Invalid Kernel, inspect the DAG:");
+      console.log(previewURL);
+      return;
     }
-
-    try {
-      // TODO: make this removal optional?
-      Deno.removeSync(args.icDb);
-    } catch (_err) {
-      // ignore errors if file does not exist
-    }
-    const workflow = new IngestEngine(govn, args, assuranceSuppliers);
-    const initRunState = await kernel.initRunState();
-    const { runState: { eventEmitter: rsEE } } = initRunState;
-    const sessionID = (await govn.ingestSessionSqlDML()).sessionID;
-
-    const registerStateChange = async (
-      fromState: string,
-      toState: string,
-      elaboration?: string,
-    ) => {
-      workflow.emitWithResourcesSQL.push(
-        govn.ingestSessionStateCRF.insertDML({
-          ingest_session_state_id: await govn.emitCtx.newUUID(
-            govn.deterministicPKs,
-          ),
-          session_id: sessionID,
-          from_state: fromState,
-          to_state: toState,
-          transitioned_at: govn.emitCtx.newCurrentTimestamp,
-          elaboration,
-        }),
-      );
-    };
-
-    rsEE.initNotebook = (_ctx) => {
-      registerStateChange("NONE", "INIT");
-    };
-    rsEE.beforeCell = (cell, ctx) => {
-      registerStateChange(
-        ctx.previous ? `EXIT(${ctx.previous.current.nbCellID})` : "INIT",
-        `ENTER(${cell})`,
-      );
-    };
-    rsEE.afterInterrupt = (cell, _ctx) => {
-      registerStateChange(`ENTER(${cell})`, `INTERRUPTED(${cell})`);
-    };
-    rsEE.afterError = (cell, _error, _ctx) => {
-      registerStateChange(`ENTER(${cell})`, `ERROR(${cell})`);
-    };
-    rsEE.afterCell = (cell, _result, _ctx) => {
-      registerStateChange(`ENTER(${cell})`, `EXIT(${cell})`);
-    };
-    rsEE.finalizeNotebook = (_ctx) => {
-      // TODO: add final state change?
-    };
-
-    // now that everything is setup, execute
-    await kernel.run(workflow, initRunState);
   }
+
+  const { govn } = init;
+  const workflow = await init.newInstance(govn, args);
+  const initRunState = await kernel.initRunState();
+  const { runState: { eventEmitter: rsEE } } = initRunState;
+  const sessionID = (await govn.ingestSessionSqlDML()).sessionID;
+  const { sqlRegister } = args;
+
+  const registerStateChange = async (
+    fromState: string,
+    toState: string,
+    elaboration?: string,
+  ) => {
+    sqlRegister.register(
+      govn.ingestSessionStateCRF.insertDML({
+        ingest_session_state_id: await govn.emitCtx.newUUID(
+          govn.deterministicPKs,
+        ),
+        session_id: sessionID,
+        from_state: fromState,
+        to_state: toState,
+        transitioned_at: govn.emitCtx.newCurrentTimestamp,
+        elaboration,
+      }),
+      "before-finalize",
+    );
+  };
+
+  rsEE.initNotebook = (_ctx) => {
+    // TODO: any reason to record this state change?
+  };
+  rsEE.beforeCell = (cell, ctx) => {
+    registerStateChange(
+      ctx.previous ? `EXIT(${String(ctx.previous.current.nbCellID)})` : "NONE",
+      `ENTER(${cell})`,
+    );
+  };
+  rsEE.afterInterrupt = (cell, _ctx) => {
+    registerStateChange(`ENTER(${cell})`, `INTERRUPTED(${cell})`);
+  };
+  rsEE.afterError = (cell, _error, _ctx) => {
+    registerStateChange(`ENTER(${cell})`, `ERROR(${cell})`);
+  };
+  rsEE.afterCell = (cell, _result, _ctx) => {
+    registerStateChange(`ENTER(${cell})`, `EXIT(${cell})`);
+  };
+  rsEE.finalizeNotebook = (_ctx) => {
+    // TODO: add final state change?
+  };
+
+  // now that everything is setup, execute
+  await kernel.run(workflow, initRunState);
 }

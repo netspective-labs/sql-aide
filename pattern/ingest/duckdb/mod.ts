@@ -1,2 +1,2 @@
 export * from "./assurance.ts";
-export * from "./typical.ts";
+export * from "./notebook.ts";
