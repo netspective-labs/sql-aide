@@ -44,6 +44,21 @@ export class DuckDbShell {
     return markdown;
   }
 
+  async writeDiagnosticsSqlMD(
+    sql: string,
+    status: dax.CommandResult,
+    dir?: string,
+  ) {
+    const diagsTmpFile = await Deno.makeTempFile({
+      dir: dir ?? Deno.cwd(),
+      prefix: "ingest-diags-initDDL-",
+      suffix: ".sql.md",
+    });
+    // deno-fmt-ignore
+    await Deno.writeTextFile(diagsTmpFile, `---\n${yaml.stringify({ code: status.code })}---\n${this.sqlMarkdownPartial(sql, status).join("\n")}`);
+    return diagsTmpFile;
+  }
+
   async execute(sql: string, identity?: string) {
     const { args: { duckdbCmd, dbDestFsPath } } = this;
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath}`
@@ -60,10 +75,7 @@ export class DuckDbShell {
     return status;
   }
 
-  async jsonResult(
-    sql: string,
-    identity: string,
-  ) {
+  async jsonResult(sql: string, identity?: string) {
     const { args: { duckdbCmd, dbDestFsPath } } = this;
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath} --json`
       .stdout("piped")
@@ -82,33 +94,27 @@ export class DuckDbShell {
   }
 
   async emitDiagnostics(options: {
-    readonly diagsJson?: string;
+    readonly emitJson?: ((json: string) => Promise<void>) | undefined;
     readonly diagsMd?: {
-      readonly destFsPath: string;
+      readonly emit: (md: string) => Promise<void>;
       readonly frontmatter?: Record<string, unknown>;
     } | undefined;
   }) {
-    const { diagsJson, diagsMd } = options;
+    const { emitJson, diagsMd } = options;
 
-    if (diagsJson) {
-      await Deno.writeTextFile(
-        diagsJson,
-        JSON.stringify(this.diagnostics, null, "  "),
-      );
-    }
+    await emitJson?.(JSON.stringify(this.diagnostics, null, "  "));
 
     if (diagsMd) {
       const md: string[] = [
         "---",
-        yaml.stringify(diagsMd.frontmatter ?? this.args),
-        "---",
+        yaml.stringify(diagsMd.frontmatter ?? this.args) + "---",
         "# Ingest Diagnostics",
       ];
       for (const d of this.diagnostics) {
         md.push(`\n## ${d.identity}`);
         md.push(`${d.markdown}`);
       }
-      await Deno.writeTextFile(diagsMd.destFsPath, md.join("\n"));
+      await diagsMd.emit(md.join("\n"));
     }
   }
 }
