@@ -4,7 +4,6 @@ import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as tp from "../../../pattern/typical/mod.ts";
-import * as ddbd from "../../../render/dialect/duckdb/mod.ts";
 import * as a from "./assurance.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -30,7 +29,6 @@ export interface IngestSourceStructAssuranceContext {
       ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
     >
     | ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>;
-  readonly integration: ReturnType<typeof ddbd.integration<IngestEmitContext>>;
   readonly selectEntryIssues: () => SQLa.SqlTextSupplier<IngestEmitContext>;
 }
 
