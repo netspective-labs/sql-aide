@@ -74,6 +74,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   type CellID = mod.NotebookCellID<ComplexNotebook>;
 
   class ComplexNotebook {
+    #syntheticPrivate = "synthetic";
     readonly executed: {
       cell:
         | "constructor"
@@ -86,6 +87,16 @@ Deno.test("complex class-based notebook cells executed in topological order", as
       | undefined;
     constructor() {
       this.executed.push({ cell: "constructor" });
+    }
+
+    // getters aren't impacted by the notebook system
+    get synthetic() {
+      return this.#syntheticPrivate;
+    }
+
+    // setters aren't impacted by the notebook system
+    set synthetic(value: string) {
+      this.#syntheticPrivate = value;
     }
 
     @cnd.init()
@@ -169,6 +180,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   ]);
 
   const workflow = new ComplexNotebook();
+  workflow.synthetic = "synthetic-test";
   const initRunState = await kernel.initRunState();
   initRunState.runState.eventEmitter.initNotebook = (_ctx) => {
     eventMetrics.beforeNotebook++;
@@ -190,6 +202,7 @@ Deno.test("complex class-based notebook cells executed in topological order", as
   };
 
   await kernel.run(workflow, initRunState);
+  ta.assertEquals(workflow.synthetic, "synthetic-test");
   ta.assertEquals(eventMetrics, {
     beforeNotebook: 1,
     beforeCell: ["cell3", "cell1", "cell2", "cell4", "cell5"],
