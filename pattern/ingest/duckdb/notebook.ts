@@ -4,6 +4,7 @@ import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as tp from "../../../pattern/typical/mod.ts";
+import * as ddbd from "../../../render/dialect/duckdb/mod.ts";
 import * as a from "./assurance.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -18,8 +19,84 @@ export const DETERMINISTIC_UUID_NAMESPACE =
   "b6c7390a-69ea-4814-ae3e-c0c6ed3a913f";
 export let deterministicUuidCounter = 0;
 
+export interface IngestSourceStructAssuranceContext {
+  readonly sessionEntryDML: () =>
+    | Promise<
+      ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>
+    >
+    | ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>;
+  readonly structuralIssueDML: (message: string, nature?: string) =>
+    | Promise<
+      ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
+    >
+    | ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>;
+  readonly integration: ReturnType<typeof ddbd.integration<IngestEmitContext>>;
+  readonly selectEntryIssues: () => SQLa.SqlTextSupplier<IngestEmitContext>;
+}
+
 export interface IngestableResource {
   readonly uri: string;
+  readonly nature: string;
+  readonly workflow: (sessionID: string, sessionEntryID: string) => {
+    readonly ingestSQL: (
+      issac: IngestSourceStructAssuranceContext,
+    ) =>
+      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
+      | SQLa.SqlTextSupplier<IngestEmitContext>;
+    readonly assuranceSQL: () =>
+      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
+      | SQLa.SqlTextSupplier<IngestEmitContext>;
+  };
+}
+
+export interface InvalidIngestSource extends IngestableResource {
+  readonly nature: "ERROR";
+  readonly error: Error;
+  readonly tableName: string;
+}
+
+export interface CsvFileIngestSource<TableName extends string>
+  extends IngestableResource {
+  readonly nature: "CSV";
+  readonly tableName: TableName;
+}
+
+export interface ExcelSheetIngestSource<
+  SheetName extends string,
+  TableName extends string,
+> extends IngestableResource {
+  readonly nature: "Excel Workbook Sheet";
+  readonly sheetName: SheetName;
+  readonly tableName: TableName;
+}
+
+export class ErrorIngestSource implements InvalidIngestSource {
+  readonly nature = "ERROR";
+  readonly tableName = "ERROR";
+  constructor(
+    readonly uri: string,
+    readonly error: Error,
+    readonly issueType: string,
+    readonly govn: IngestGovernance,
+  ) {
+  }
+
+  workflow(): ReturnType<InvalidIngestSource["workflow"]> {
+    return {
+      ingestSQL: async (issac) =>
+        // deno-fmt-ignore
+        this.govn.SQL`
+           -- required by IngestEngine, setup the ingestion entry for logging
+           ${await issac.sessionEntryDML()}
+           ${await issac.structuralIssueDML(this.error.message, this.issueType)};
+           -- required by IngestEngine, emit the errors for the given session (file) so it can be picked up
+           ${issac.selectEntryIssues()}`,
+      assuranceSQL: () =>
+        this.govn.SQL`
+          -- error: ${this.error.message}
+        `,
+    };
+  }
 }
 
 export class IngestEmitContext implements SQLa.SqlEmitContext {
@@ -341,18 +418,21 @@ export class IngestGovernance {
   }
 }
 
-export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
+export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
+  readonly rules: ReturnType<typeof a.typicalAssuranceRules<IngestEmitContext>>;
+
   constructor(
     readonly sessionID: string,
     readonly sessionEntryID: string,
-    readonly govn: {
-      readonly SQL: ReturnType<typeof SQLa.SQL<IngestEmitContext>>;
-    },
+    readonly govn: IngestGovernance,
   ) {
-    super(govn);
+    this.rules = a.typicalAssuranceRules<IngestEmitContext>(
+      this,
+      this.govn.SQL,
+    );
   }
 
-  insertIssue(
+  insertIssueCtePartial(
     from: string,
     typeText: string,
     messageSql: string,
@@ -369,7 +449,7 @@ export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
             FROM ${from}`);
   }
 
-  insertRowValueIssue(
+  insertRowValueIssueCtePartial(
     from: string,
     typeText: string,
     rowNumSql: string,
@@ -391,12 +471,29 @@ export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
                  ${remediationSql ?? "NULL"}
             FROM ${from}`);
   }
+}
 
-  selectEntryIssues() {
-    return {
-      SQL: () =>
-        `SELECT * FROM ingest_session_issue WHERE session_id = '${this.sessionID}' and session_entry_id = '${this.sessionEntryID}';`,
-    };
+export class IngestTableAssuranceRules<TableName extends string>
+  extends IngestAssuranceRules {
+  readonly tableRules: ReturnType<
+    typeof a.typicalTableAssuranceRules<TableName, IngestEmitContext>
+  >;
+
+  constructor(
+    readonly tableName: TableName,
+    readonly sessionID: string,
+    readonly sessionEntryID: string,
+    readonly govn: IngestGovernance,
+  ) {
+    super(sessionID, sessionEntryID, govn);
+    this.tableRules = a.typicalTableAssuranceRules<
+      TableName,
+      IngestEmitContext
+    >(
+      tableName,
+      this,
+      this.govn.SQL,
+    );
   }
 }
 
@@ -533,8 +630,22 @@ export async function ingest<
   rsEE.afterInterrupt = (cell, _ctx) => {
     registerStateChange(`ENTER(${cell})`, `INTERRUPTED(${cell})`);
   };
-  rsEE.afterError = (cell, _error, _ctx) => {
-    registerStateChange(`ENTER(${cell})`, `ERROR(${cell})`);
+  rsEE.afterError = (cell, error, _ctx) => {
+    registerStateChange(
+      `ENTER(${cell})`,
+      `ERROR(${cell})`,
+      JSON.stringify(
+        {
+          name: error.name,
+          error: error.toString(),
+          cause: error.cause,
+          stack: error.stack,
+        },
+        null,
+        "  ",
+      ),
+    );
+    console.error({ cell, error });
   };
   rsEE.afterCell = (cell, _result, _ctx) => {
     registerStateChange(`ENTER(${cell})`, `EXIT(${cell})`);
