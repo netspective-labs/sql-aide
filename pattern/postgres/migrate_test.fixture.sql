@@ -43,6 +43,7 @@ BEGIN
         -- Construct procedure and status function names
           DECLARE
             procedure_name TEXT := format('info_schema_lifecycle."%s"()', r.sp_migration);
+            procedure_undo_name TEXT := format('info_schema_lifecycle."%s"()', r.sp_migration_undo);
             status_function_name TEXT := format('info_schema_lifecycle."%s"()', r.fn_migration_status);
             status INT;
             migrate_insertion_sql TEXT;
@@ -58,9 +59,9 @@ BEGIN
               -- Insert into the governance table
               migrate_insertion_sql := $dynSQL$
                 SET search_path TO "info_schema_lifecycle";
-                INSERT INTO "islm_governance" ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES (1, 'migration_Vsample20231016_101645', 'migration_Vsample20231016_101645_undo', 'migration_Vsample20231016_101645_status', 'SQL Loaded', 'Migrated', NULL, 'Migration', (CURRENT_TIMESTAMP)) ON CONFLICT DO NOTHING
+                INSERT INTO info_schema_lifecycle.islm_governance ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES ($1, $2, $3, $4, 'SQL Loaded', 'Migrated', NULL, 'Migration', CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING
               $dynSQL$;
-              EXECUTE migrate_insertion_sql;
+              EXECUTE migrate_insertion_sql USING target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
             END IF;
           END;
       END LOOP;
@@ -69,17 +70,24 @@ BEGIN
     -- Construct procedure names
       DECLARE
         migrate_rb_insertion_sql TEXT;
-        sp_migration_undo_sql TEXT;
+        procedure_name text;
+        procedure_undo_name text;
+        status_function_name text;
+        sp_migration_undo_sql RECORD;
       BEGIN
-        SELECT sp_migration_undo FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
+        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
         IF sp_migration_undo_sql IS NOT NULL THEN
-          EXECUTE format('CALL info_schema_lifecycle."%s"()', sp_migration_undo_sql);
+          procedure_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration);
+          procedure_undo_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration_undo);
+          status_function_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.fn_migration_status);
+          EXECUTE  'call ' || procedure_undo_name;
   
           -- Insert the governance table
           migrate_rb_insertion_sql := $dynSQL$
-                    INSERT INTO "islm_governance" ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES (1, 'migration_Vsample20231016_101645', 'migration_Vsample20231016_101645_undo', 'migration_Vsample20231016_101645_status', 'Migrated', 'Rollback', NULL, 'Rollback for migration', (CURRENT_TIMESTAMP)) ON CONFLICT DO NOTHING
+                    INSERT INTO info_schema_lifecycle.islm_governance ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES ($1, $2, $3, $4, 'Migrated', 'Rollback', NULL, 'Rollback for migration', CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING
+  
                   $dynSQL$;
-          EXECUTE migrate_rb_insertion_sql;
+          EXECUTE migrate_rb_insertion_sql USING target_version_number, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
         ELSE
           RAISE EXCEPTION 'Cannot perform a rollback for this version';
         END IF;
