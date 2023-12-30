@@ -1,4 +1,4 @@
-import { uuid } from "./deps.ts";
+import { fs, uuid } from "./deps.ts";
 import * as chainNB from "../../../lib/notebook/chain-of-responsibility.ts";
 import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
@@ -19,12 +19,12 @@ export const DETERMINISTIC_UUID_NAMESPACE =
 export let deterministicUuidCounter = 0;
 
 export interface IngestSourceStructAssuranceContext {
-  readonly sessionEntryDML: () =>
+  readonly sessionEntryInsertDML: () =>
     | Promise<
       ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>
     >
     | ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>;
-  readonly structuralIssueDML: (message: string, nature?: string) =>
+  readonly issueInsertDML: (message: string, nature?: string) =>
     | Promise<
       ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
     >
@@ -68,6 +68,23 @@ export interface ExcelSheetIngestSource<
   readonly tableName: TableName;
 }
 
+export interface IngestSourcesSupplier<
+  PotentialIngestSource,
+  Args extends Any[] = [],
+> {
+  readonly sources: (...args: Args) =>
+    | Promise<Iterable<PotentialIngestSource>>
+    | Iterable<PotentialIngestSource>;
+}
+
+export interface IngestFsPatternSourcesSupplier<PotentialIngestSource>
+  extends IngestSourcesSupplier<PotentialIngestSource, [fs.WalkEntry]> {
+  readonly pattern: RegExp;
+  readonly sources: (entry: fs.WalkEntry) =>
+    | Promise<Iterable<PotentialIngestSource>>
+    | Iterable<PotentialIngestSource>;
+}
+
 export class ErrorIngestSource implements InvalidIngestSource {
   readonly nature = "ERROR";
   readonly tableName = "ERROR";
@@ -85,8 +102,8 @@ export class ErrorIngestSource implements InvalidIngestSource {
         // deno-fmt-ignore
         this.govn.SQL`
            -- required by IngestEngine, setup the ingestion entry for logging
-           ${await issac.sessionEntryDML()}
-           ${await issac.structuralIssueDML(this.error.message, this.issueType)};
+           ${await issac.sessionEntryInsertDML()}
+           ${await issac.issueInsertDML(this.error.message, this.issueType)};
            -- required by IngestEngine, emit the errors for the given session (file) so it can be picked up
            ${issac.selectEntryIssues()}`,
       assuranceSQL: () =>
