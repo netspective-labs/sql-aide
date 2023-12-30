@@ -531,6 +531,13 @@ export function ingestSqlRegister(): IngestSqlRegister {
   };
 }
 
+export class IngestResumableError extends Error {
+  constructor(readonly issue: string, cause?: Error) {
+    super(issue);
+    if (cause) this.cause = cause;
+  }
+}
+
 export interface IngestArgs<Governance extends IngestGovernance, Notebook> {
   readonly sqlRegister: IngestSqlRegister;
   readonly emitDagPuml?:
@@ -643,7 +650,11 @@ export async function ingest<
         "  ",
       ),
     );
-    console.error({ cell, error });
+    if (error instanceof IngestResumableError) return "continue";
+
+    // unless the error is resumable, show error and abort
+    console.error(`[Non-resumable issue in '${cell}']`, error);
+    return "abort";
   };
   rsEE.afterCell = (cell, _result, _ctx) => {
     registerStateChange(`ENTER(${cell})`, `EXIT(${cell})`);
