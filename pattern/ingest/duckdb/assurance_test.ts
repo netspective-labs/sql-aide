@@ -5,17 +5,12 @@ import * as SQLa from "../../../render/mod.ts";
 import * as ddb from "../../../render/dialect/duckdb/mod.ts";
 import * as mod from "./assurance.ts";
 
-export class SyntheticAssuranceRules
-  extends mod.AssuranceRules<SQLa.SqlEmitContext> {
-  constructor(
-    readonly govn: {
-      readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>;
-    },
-  ) {
-    super(govn);
+export class SyntheticAssuranceRulesGovernance
+  implements mod.AssuranceRulesGovernance {
+  constructor(readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>) {
   }
 
-  insertIssue(
+  insertIssueCtePartial(
     from: string,
     typeText: string,
     messageSql: string,
@@ -30,7 +25,7 @@ export class SyntheticAssuranceRules
             FROM ${from}`);
   }
 
-  insertRowValueIssue(
+  insertRowValueIssueCtePartial(
     from: string,
     typeText: string,
     rowNumSql: string,
@@ -55,10 +50,12 @@ export class SyntheticAssuranceRules
 Deno.test("DuckDB Table Content Assurance", () => {
   const ctx = SQLa.typicalSqlEmitContext({ sqlDialect: SQLa.duckDbDialect() });
   const ddlOptions = SQLa.typicalSqlTextSupplierOptions<typeof ctx>();
-  const ar = new SyntheticAssuranceRules({
-    SQL: SQLa.SQL<typeof ctx>(ddlOptions),
-  });
+  const arGovn = new SyntheticAssuranceRulesGovernance(
+    SQLa.SQL<typeof ctx>(ddlOptions),
+  );
   const tableName = "synthetic_csv_fail";
+  const tar = mod.typicalAssuranceRules(arGovn, arGovn.SQL);
+  const ttar = mod.typicalTableAssuranceRules(tableName, arGovn, arGovn.SQL);
   const csvSrcFsPath = "assurance_test-fixture-fail.csv";
 
   // deno-fmt-ignore
@@ -97,7 +94,7 @@ Deno.test("DuckDB Table Content Assurance", () => {
 
     SELECT * FROM ${tableName};
 
-    ${ar.requiredColumnNamesInTable(tableName,
+    ${ttar.requiredColumnNames(
       ['column1', 'column2', 'column3',
       'column4', 'column5', 'column6',
       'column7', 'column8', 'column9'])}
@@ -106,19 +103,19 @@ Deno.test("DuckDB Table Content Assurance", () => {
     --       names are present, do not run the queries below because they assume
     --       proper names and existence of columns.
 
-    ${ar.intValueInAllTableRows(tableName, 'column4')}
+    ${ttar.intValueInAllRows('column4')}
 
-    ${ar.intRangeInAllTableRows(tableName, 'column5', 10, 100)}
+    ${ttar.intRangeInAllRows('column5', 10, 100)}
 
-    ${ar.uniqueValueInAllTableRows(tableName, 'column6')}
+    ${ttar.uniqueValueInAllRows('column6')}
 
-    ${ar.mandatoryValueInAllTableRows(tableName, 'column7')}
+    ${ttar.mandatoryValueInAllRows('column7')}
 
-    ${ar.patternValueInAllTableRows(tableName, 'column8', '^ABC-[0-9]{4}$', 'ABC-1234')}
+    ${ttar.patternValueInAllRows('column8', '^ABC-[0-9]{4}$', 'ABC-1234')}
 
-    ${ar.onlyAllowedValuesInAllTableRows(tableName, 'column9', "'Yes', 'No', 'Maybe'", 'Yes, No, or Maybe')}
+    ${ttar.onlyAllowedValuesInAllRows('column9', "'Yes', 'No', 'Maybe'", 'Yes, No, or Maybe')}
 
-    ${ar.dotComEmailValueInAllTableRows(tableName, 'column2')}
+    ${tar.dotComEmailValueInAllTableRows(tableName, 'column2')}
 
     SELECT * FROM ingest_issue;`;
 

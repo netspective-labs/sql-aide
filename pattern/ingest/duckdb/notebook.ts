@@ -1,4 +1,4 @@
-import { uuid } from "./deps.ts";
+import { fs, uuid } from "./deps.ts";
 import * as chainNB from "../../../lib/notebook/chain-of-responsibility.ts";
 import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
@@ -18,8 +18,100 @@ export const DETERMINISTIC_UUID_NAMESPACE =
   "b6c7390a-69ea-4814-ae3e-c0c6ed3a913f";
 export let deterministicUuidCounter = 0;
 
+export interface IngestSourceStructAssuranceContext {
+  readonly sessionEntryInsertDML: () =>
+    | Promise<
+      ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>
+    >
+    | ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>;
+  readonly issueInsertDML: (message: string, nature?: string) =>
+    | Promise<
+      ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
+    >
+    | ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>;
+  readonly selectEntryIssues: () => SQLa.SqlTextSupplier<IngestEmitContext>;
+}
+
 export interface IngestableResource {
   readonly uri: string;
+  readonly nature: string;
+  readonly workflow: (sessionID: string, sessionEntryID: string) => {
+    readonly ingestSQL: (
+      issac: IngestSourceStructAssuranceContext,
+    ) =>
+      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
+      | SQLa.SqlTextSupplier<IngestEmitContext>;
+    readonly assuranceSQL: () =>
+      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
+      | SQLa.SqlTextSupplier<IngestEmitContext>;
+  };
+}
+
+export interface InvalidIngestSource extends IngestableResource {
+  readonly nature: "ERROR";
+  readonly error: Error;
+  readonly tableName: string;
+}
+
+export interface CsvFileIngestSource<TableName extends string>
+  extends IngestableResource {
+  readonly nature: "CSV";
+  readonly tableName: TableName;
+}
+
+export interface ExcelSheetIngestSource<
+  SheetName extends string,
+  TableName extends string,
+> extends IngestableResource {
+  readonly nature: "Excel Workbook Sheet";
+  readonly sheetName: SheetName;
+  readonly tableName: TableName;
+}
+
+export interface IngestSourcesSupplier<
+  PotentialIngestSource,
+  Args extends Any[] = [],
+> {
+  readonly sources: (...args: Args) =>
+    | Promise<Iterable<PotentialIngestSource>>
+    | Iterable<PotentialIngestSource>;
+}
+
+export interface IngestFsPatternSourcesSupplier<PotentialIngestSource>
+  extends IngestSourcesSupplier<PotentialIngestSource, [fs.WalkEntry]> {
+  readonly pattern: RegExp;
+  readonly sources: (entry: fs.WalkEntry) =>
+    | Promise<Iterable<PotentialIngestSource>>
+    | Iterable<PotentialIngestSource>;
+}
+
+export class ErrorIngestSource implements InvalidIngestSource {
+  readonly nature = "ERROR";
+  readonly tableName = "ERROR";
+  constructor(
+    readonly uri: string,
+    readonly error: Error,
+    readonly issueType: string,
+    readonly govn: IngestGovernance,
+  ) {
+  }
+
+  workflow(): ReturnType<InvalidIngestSource["workflow"]> {
+    return {
+      ingestSQL: async (issac) =>
+        // deno-fmt-ignore
+        this.govn.SQL`
+           -- required by IngestEngine, setup the ingestion entry for logging
+           ${await issac.sessionEntryInsertDML()}
+           ${await issac.issueInsertDML(this.error.message, this.issueType)};
+           -- required by IngestEngine, emit the errors for the given session (file) so it can be picked up
+           ${issac.selectEntryIssues()}`,
+      assuranceSQL: () =>
+        this.govn.SQL`
+          -- error: ${this.error.message}
+        `,
+    };
+  }
 }
 
 export class IngestEmitContext implements SQLa.SqlEmitContext {
@@ -323,36 +415,154 @@ export class IngestGovernance {
       .replace(/^_+|_+$/g, "") // Remove leading and trailing underscores
       .replace(/__+/g, "_"); // Replace multiple underscores with a single one
   }
+}
 
-  #sessionDML?: Awaited<ReturnType<IngestGovernance["ingestSessionSqlDML"]>>;
+export type IngestSqlRegistrationExecution =
+  | "before-init"
+  | "after-init"
+  | "before-finalize"
+  | "after-finalize";
+
+export class IngestSession {
+  protected sessionDmlSingleton?: Awaited<
+    ReturnType<IngestSession["ingestSessionSqlDML"]>
+  >;
+  readonly stateChangesDML: ReturnType<
+    IngestGovernance["ingestSessionStateCRF"]["insertDML"]
+  >[] = [];
+
+  constructor(
+    readonly govn: IngestGovernance,
+    readonly sqlCatalog: Record<
+      IngestSqlRegistrationExecution,
+      SQLa.SqlTextSupplier<IngestEmitContext>[]
+    > = {
+      "before-init": [],
+      "after-init": [],
+      "before-finalize": [],
+      "after-finalize": [],
+    },
+  ) {
+  }
+
+  sqlCatalogSqlText(exec: IngestSqlRegistrationExecution) {
+    switch (exec) {
+      // before-finalize should include all state changes SQL as well
+      case "before-finalize":
+        return [...this.sqlCatalog[exec], ...this.stateChangesDML].map((dml) =>
+          dml.SQL(this.govn.emitCtx)
+        );
+
+      default:
+        return this.sqlCatalog[exec].map((dml) => dml.SQL(this.govn.emitCtx));
+    }
+  }
+
+  sqlCatalogSqlSuppliers(exec: IngestSqlRegistrationExecution) {
+    return this.sqlCatalog[exec];
+  }
 
   async ingestSessionSqlDML(): Promise<
     & { readonly sessionID: string }
     & SQLa.SqlTextSupplier<IngestEmitContext>
   > {
-    if (!this.#sessionDML) {
-      const sessionID = await this.emitCtx.newUUID(this.deterministicPKs);
-      this.#sessionDML = {
+    if (!this.sessionDmlSingleton) {
+      const { emitCtx: ctx, ingestSessionCRF, deterministicPKs } = this.govn;
+      const sessionID = await ctx.newUUID(deterministicPKs);
+      this.sessionDmlSingleton = {
         sessionID,
-        ...this.ingestSessionCRF.insertDML({ ingest_session_id: sessionID }),
+        ...ingestSessionCRF.insertDML({ ingest_session_id: sessionID }),
       };
     }
-    return this.#sessionDML;
+    return this.sessionDmlSingleton;
+  }
+
+  async registerState(
+    fromState: string,
+    toState: string,
+    reason: string,
+    elaboration?: string,
+  ) {
+    const sessionDML = await this.ingestSessionSqlDML();
+    const { emitCtx: ctx, ingestSessionStateCRF, deterministicPKs } = this.govn;
+    this.stateChangesDML.push(
+      ingestSessionStateCRF.insertDML({
+        ingest_session_state_id: await ctx.newUUID(deterministicPKs),
+        session_id: sessionDML.sessionID,
+        from_state: fromState,
+        to_state: toState,
+        transition_reason: reason,
+        transitioned_at: ctx.newCurrentTimestamp,
+        elaboration,
+      }),
+    );
+  }
+
+  async registerEntryState(
+    sessionEntryID: string,
+    fromState: string,
+    toState: string,
+    reason: string,
+    elaboration?: string,
+  ) {
+    const sessionDML = await this.ingestSessionSqlDML();
+    const { emitCtx: ctx, ingestSessionStateCRF, deterministicPKs } = this.govn;
+    this.stateChangesDML.push(
+      ingestSessionStateCRF.insertDML({
+        ingest_session_state_id: await ctx.newUUID(deterministicPKs),
+        session_id: sessionDML.sessionID,
+        session_entry_id: sessionEntryID,
+        from_state: fromState,
+        to_state: toState,
+        transition_reason: reason,
+        transitioned_at: ctx.newCurrentTimestamp,
+        elaboration,
+      }),
+    );
+  }
+
+  /**
+   * Prepare a SQL view that combines all the diagnostics into a single
+   * denormalized table that can be used to generate a Excel workbook using
+   * GDAL (spacial plugin). Notably this means removing duplicate columns
+   * and not using timestamptz types (GDAL doesn't support timestamptz).
+   * @returns
+   */
+  diagnosticsView() {
+    return this.govn.viewDefn("ingest_session_diagnostic_text")`
+      SELECT
+          -- Including all other columns from 'ingest_session'
+          ises.* EXCLUDE (ingest_started_at, ingest_finished_at),
+          -- TODO: Casting known timestamp columns to text so emit to Excel works with GDAL (spatial)
+             -- strftime(timestamptz ingest_started_at, '%Y-%m-%d %H:%M:%S') AS ingest_started_at,
+             -- strftime(timestamptz ingest_finished_at, '%Y-%m-%d %H:%M:%S') AS ingest_finished_at,
+      
+          -- Including all columns from 'ingest_session_entry'
+          isee.* EXCLUDE (session_id),
+
+          -- Including all other columns from 'ingest_session_issue'
+          isi.* EXCLUDE (session_id, session_entry_id)
+      FROM ingest_session AS ises
+      JOIN ingest_session_entry AS isee ON ises.ingest_session_id = isee.session_id
+      LEFT JOIN ingest_session_issue AS isi ON isee.ingest_session_entry_id = isi.session_entry_id`;
   }
 }
 
-export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
+export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
+  readonly rules: ReturnType<typeof a.typicalAssuranceRules<IngestEmitContext>>;
+
   constructor(
     readonly sessionID: string,
     readonly sessionEntryID: string,
-    readonly govn: {
-      readonly SQL: ReturnType<typeof SQLa.SQL<IngestEmitContext>>;
-    },
+    readonly govn: IngestGovernance,
   ) {
-    super(govn);
+    this.rules = a.typicalAssuranceRules<IngestEmitContext>(
+      this,
+      this.govn.SQL,
+    );
   }
 
-  insertIssue(
+  insertIssueCtePartial(
     from: string,
     typeText: string,
     messageSql: string,
@@ -369,7 +579,7 @@ export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
             FROM ${from}`);
   }
 
-  insertRowValueIssue(
+  insertRowValueIssueCtePartial(
     from: string,
     typeText: string,
     rowNumSql: string,
@@ -391,53 +601,41 @@ export class IngestAssuranceRules extends a.AssuranceRules<IngestEmitContext> {
                  ${remediationSql ?? "NULL"}
             FROM ${from}`);
   }
+}
 
-  selectEntryIssues() {
-    return {
-      SQL: () =>
-        `SELECT * FROM ingest_session_issue WHERE session_id = '${this.sessionID}' and session_entry_id = '${this.sessionEntryID}';`,
-    };
+export class IngestTableAssuranceRules<TableName extends string>
+  extends IngestAssuranceRules {
+  readonly tableRules: ReturnType<
+    typeof a.typicalTableAssuranceRules<TableName, IngestEmitContext>
+  >;
+
+  constructor(
+    readonly tableName: TableName,
+    readonly sessionID: string,
+    readonly sessionEntryID: string,
+    readonly govn: IngestGovernance,
+  ) {
+    super(sessionID, sessionEntryID, govn);
+    this.tableRules = a.typicalTableAssuranceRules<
+      TableName,
+      IngestEmitContext
+    >(
+      tableName,
+      this,
+      this.govn.SQL,
+    );
   }
 }
 
-export type IngestSqlRegistrationExecution =
-  | "before-init"
-  | "after-init"
-  | "before-finalize"
-  | "after-finalize";
-
-export interface IngestSqlRegister {
-  readonly catalog: Record<
-    IngestSqlRegistrationExecution,
-    Iterable<SQLa.SqlTextSupplier<IngestEmitContext>>
-  >;
-  readonly register: (
-    sts: SQLa.SqlTextSupplier<IngestEmitContext>,
-    execute: IngestSqlRegistrationExecution,
-  ) => void;
-}
-
-export function ingestSqlRegister(): IngestSqlRegister {
-  const catalog: Record<
-    IngestSqlRegistrationExecution,
-    SQLa.SqlTextSupplier<IngestEmitContext>[]
-  > = {
-    "before-init": [],
-    "after-init": [],
-    "before-finalize": [],
-    "after-finalize": [],
-  };
-
-  return {
-    catalog,
-    register: (sts, execute) => {
-      catalog[execute].push(sts);
-    },
-  };
+export class IngestResumableError extends Error {
+  constructor(readonly issue: string, cause?: Error) {
+    super(issue);
+    if (cause) this.cause = cause;
+  }
 }
 
 export interface IngestArgs<Governance extends IngestGovernance, Notebook> {
-  readonly sqlRegister: IngestSqlRegister;
+  readonly session: IngestSession;
   readonly emitDagPuml?:
     | ((puml: string, previewUrl: string) => Promise<void>)
     | undefined;
@@ -498,46 +696,70 @@ export async function ingest<
   const workflow = await init.newInstance(govn, args);
   const initRunState = await kernel.initRunState();
   const { runState: { eventEmitter: rsEE } } = initRunState;
-  const sessionID = (await govn.ingestSessionSqlDML()).sessionID;
-  const { sqlRegister } = args;
+  const { session } = args;
+  const cellStates: { fromState: string; toState: string }[] = [];
 
-  const registerStateChange = async (
+  const registerCellState = async (
     fromState: string,
     toState: string,
+    reason: string,
     elaboration?: string,
   ) => {
-    sqlRegister.register(
-      govn.ingestSessionStateCRF.insertDML({
-        ingest_session_state_id: await govn.emitCtx.newUUID(
-          govn.deterministicPKs,
-        ),
-        session_id: sessionID,
-        from_state: fromState,
-        to_state: toState,
-        transitioned_at: govn.emitCtx.newCurrentTimestamp,
-        elaboration,
-      }),
-      "before-finalize",
-    );
+    // if the the new state change is already registered, skip it
+    if (cellStates.length) {
+      const active = cellStates[cellStates.length - 1];
+      if (active.fromState == fromState && active.toState == toState) return;
+    }
+    // if we get here it means we're actually changing the state
+    await session.registerState(fromState, toState, reason, elaboration);
+    cellStates.push({ fromState, toState });
   };
 
   rsEE.initNotebook = (_ctx) => {
     // TODO: any reason to record this state change?
   };
-  rsEE.beforeCell = (cell, ctx) => {
-    registerStateChange(
+  rsEE.beforeCell = async (cell, ctx) => {
+    await registerCellState(
       ctx.previous ? `EXIT(${String(ctx.previous.current.nbCellID)})` : "NONE",
       `ENTER(${cell})`,
+      "rsEE.beforeCell",
     );
   };
-  rsEE.afterInterrupt = (cell, _ctx) => {
-    registerStateChange(`ENTER(${cell})`, `INTERRUPTED(${cell})`);
+  rsEE.afterInterrupt = async (cell, _ctx) => {
+    await registerCellState(
+      `EXIT(${cell})`,
+      `INTERRUPTED(${cell})`,
+      "rsEE.afterInterrupt",
+    );
   };
-  rsEE.afterError = (cell, _error, _ctx) => {
-    registerStateChange(`ENTER(${cell})`, `ERROR(${cell})`);
+  rsEE.afterError = async (cell, error, _ctx) => {
+    await registerCellState(
+      `EXIT(${cell})`,
+      `ERROR(${cell})`,
+      "rsEE.afterError",
+      JSON.stringify(
+        {
+          name: error.name,
+          error: error.toString(),
+          cause: error.cause,
+          stack: error.stack,
+        },
+        null,
+        "  ",
+      ),
+    );
+    if (error instanceof IngestResumableError) return "continue";
+
+    // unless the error is resumable, show error and abort
+    console.error(`[Non-resumable issue in '${cell}']`, error);
+    return "abort";
   };
-  rsEE.afterCell = (cell, _result, _ctx) => {
-    registerStateChange(`ENTER(${cell})`, `EXIT(${cell})`);
+  rsEE.afterCell = async (cell, _result, ctx) => {
+    await registerCellState(
+      `EXIT(${cell})`,
+      ctx.next ? `ENTER(${String(ctx.next.nbCellID)})` : "NONE",
+      "rsEE.afterCell",
+    );
   };
   rsEE.finalizeNotebook = (_ctx) => {
     // TODO: add final state change?

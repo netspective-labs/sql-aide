@@ -1,57 +1,61 @@
-import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 
-export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
-  constructor(
-    readonly govn: {
-      readonly SQL: ReturnType<typeof SQLa.SQL<Context>>;
-    },
-  ) {
-  }
-
-  insertIssue(
+/**
+ * Governs how issues are recorded and managed. Most assurance rules are CTEs
+ * so governance usually involves assembling the common parts of the CTE to help
+ * reduce duplication of code and improve consistency of generated SQL CTEs.
+ */
+export interface AssuranceRulesGovernance {
+  /**
+   * SQL CTE partial for inserting a non-row-value issue (usually structural)
+   * issue into a an issue tracking table.
+   * @param from the top-level CTE name
+   * @param nature the nature (category, classification) of the issue
+   * @param messageSql human friendly message
+   * @param remediationSql if the issue has a remediation, the message that explains how
+   * @returns a string that can be inserted into a SQL query
+   */
+  readonly insertIssueCtePartial: (
     from: string,
-    typeText: string,
+    nature: string,
     messageSql: string,
     remediationSql?: string,
-  ) {
-    return ws.unindentWhitespace(
-      `INSERT INTO ingest_issue (issue_type, issue_message, remediation)
-          SELECT '${typeText}',
-                 ${messageSql},
-                 ${remediationSql ?? "NULL"}
-            FROM ${from}`,
-    );
-  }
+  ) => string;
 
-  insertRowValueIssue(
+  /**
+   * SQL CTE partial for inserting a row-value issue into a an issue tracking
+   * table.
+   * @param from the top-level CTE name
+   * @param nature the nature (category, classification) of the issue
+   * @param rowNumSql the row number in which the data issue was detected
+   * @param columnNameSql the name of the column in which the data issue was detected
+   * @param valueSql the value which caused the data issue
+   * @param messageSql human friendly message
+   * @param remediationSql if the issue has a remediation, the message that explains how
+   * @returns a string that can be inserted into a SQL query
+   */
+  readonly insertRowValueIssueCtePartial: (
     from: string,
-    typeText: string,
+    nature: string,
     rowNumSql: string,
     columnNameSql: string,
     valueSql: string,
     messageSql: string,
     remediationSql?: string,
-  ) {
-    return ws.unindentWhitespace(
-      `INSERT INTO ingest_issue (issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-          SELECT '${typeText}',
-                 ${rowNumSql},
-                 ${columnNameSql},
-                 ${valueSql},
-                 ${messageSql},
-                 ${remediationSql ?? "NULL"}
-            FROM ${from}`,
-    );
-  }
+  ) => string;
+}
 
-  requiredColumnNamesInTable(
+export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
+  govn: AssuranceRulesGovernance,
+  SQL: ReturnType<typeof SQLa.SQL<Context>>,
+) {
+  const requiredColumnNamesInTable = (
     tableName: string,
     requiredColNames: string[],
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "required_column_names_in_src";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT column_name
             FROM (VALUES ${requiredColNames.map(cn => `('${cn.toLocaleUpperCase()}')`).join(', ')}) AS required(column_name)
@@ -60,20 +64,20 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
                  FROM information_schema.columns
                 WHERE table_name = '${tableName}')
       )
-      ${this.insertIssue(cteName,
+      ${govn.insertIssueCtePartial(cteName,
         'Missing Column',
         `'Required column ' || column_name || ' is missing in ${tableName}.'`,
         `'Ensure ${tableName} contains the column "' || column_name || '"'`
         )}`;
-  }
+  };
 
-  intValueInAllTableRows(
+  const intValueInAllTableRows = (
     tableName: string,
     columnName: string,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "numeric_value_in_all_rows";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -82,7 +86,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
            WHERE ${columnName} IS NOT NULL
              AND ${columnName} NOT SIMILAR TO '^[+-]?[0-9]+$'
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Data Type Mismatch',
         'issue_row',
         'issue_column',
@@ -90,17 +94,17 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Non-integer value "' || invalid_value || '" found in ' || issue_column`,
         `'Convert non-integer values to INTEGER'`
         )}`;
-  }
+  };
 
-  intRangeInAllTableRows(
+  const intRangeInAllTableRows = (
     tableName: string,
     columnName: string,
     minSql: number | string,
     maxSql: number | string,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "int_range_assurance";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -109,7 +113,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
            WHERE ${columnName} IS NOT NULL
              AND ${columnName}::INT > ${maxSql} OR ${columnName}::INT < ${minSql}
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Range Violation',
         'issue_row',
         'issue_column',
@@ -117,15 +121,15 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Value ' || invalid_value || ' in ' || issue_column || ' out of range (${minSql}-${maxSql})'`,
         `'Ensure values in ${columnName} are between ${minSql} and ${maxSql}'`
         )}`;
-  }
+  };
 
-  uniqueValueInAllTableRows(
+  const uniqueValueInAllTableRows = (
     tableName: string,
     columnName: string,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "unique_value";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -138,7 +142,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
               GROUP BY ${columnName}
                 HAVING COUNT(*) > 1)
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Unique Value Violation',
         'issue_row',
         'issue_column',
@@ -146,15 +150,15 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Duplicate value "' || invalid_value || '" found in ' || issue_column`,
         `'Ensure each value in column6 is unique'`
         )}`;
-  }
+  };
 
-  mandatoryValueInAllTableRows(
+  const mandatoryValueInAllTableRows = (
     tableName: string,
     columnName: string,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "mandatory_value";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -163,7 +167,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
            WHERE ${columnName} IS NULL
               OR TRIM(${columnName}) = ''
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Missing Mandatory Value',
         'issue_row',
         'issue_column',
@@ -171,18 +175,18 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Mandatory field ' || issue_column || ' is empty'`,
         `'Provide a value for ' || issue_column`
         )}`;
-  }
+  };
 
-  patternValueInAllTableRows(
+  const patternValueInAllTableRows = (
     tableName: string,
     columnName: string,
     pattern: string,
     patternHuman = pattern,
     patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "pattern";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -190,7 +194,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
             FROM ${tableName}
            WHERE ${patternSql}
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Pattern Mismatch',
         'issue_row',
         'issue_column',
@@ -198,18 +202,18 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Value ' || invalid_value || ' in ' || issue_column || ' does not match the pattern ${patternHuman}'`,
         `'Follow the pattern ${patternHuman} in ' || issue_column`
         )}`;
-  }
+  };
 
-  onlyAllowedValuesInAllTableRows(
+  const onlyAllowedValuesInAllTableRows = (
     tableName: string,
     columnName: string,
     valuesSql: string,
     valuesHuman = valuesSql,
     patternSql = `${columnName} NOT IN (${valuesSql})`,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "allowed_values";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -217,7 +221,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
             FROM ${tableName}
            WHERE ${patternSql}
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Invalid Value',
         'issue_row',
         'issue_column',
@@ -225,15 +229,16 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Value ' || invalid_value || ' in ' || issue_column || ' not in allowed list (${valuesHuman})'`,
         `'Use only allowed values ${valuesHuman} in ' || issue_column`
         )}`;
-  }
+  };
 
-  dotComEmailValueInAllTableRows(
+  // this is not a particularly helpful rule, but it's a good example approach
+  const dotComEmailValueInAllTableRows = (
     tableName: string,
     columnName: string,
-  ): SQLa.SqlTextSupplier<Context> {
+  ) => {
     const cteName = "proper_dot_com_email_address_in_all_rows";
     // deno-fmt-ignore
-    return this.govn.SQL`
+    return SQL`
       WITH ${cteName} AS (
           SELECT '${columnName}' AS issue_column,
                  ${columnName} AS invalid_value,
@@ -242,7 +247,7 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
            WHERE ${columnName} IS NOT NULL
              AND ${columnName} NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$'
       )
-      ${this.insertRowValueIssue(cteName,
+      ${govn.insertRowValueIssueCtePartial(cteName,
         'Format Mismatch',
         'issue_row',
         'issue_column',
@@ -250,5 +255,83 @@ export class AssuranceRules<Context extends SQLa.SqlEmitContext> {
         `'Invalid email format "' || invalid_value || '" in ' || issue_column`,
         `'Correct the email format'`
         )}`;
-  }
+  };
+
+  return {
+    requiredColumnNamesInTable,
+    intValueInAllTableRows,
+    intRangeInAllTableRows,
+    uniqueValueInAllTableRows,
+    mandatoryValueInAllTableRows,
+    patternValueInAllTableRows,
+    onlyAllowedValuesInAllTableRows,
+    dotComEmailValueInAllTableRows,
+  };
+}
+
+export function typicalTableAssuranceRules<
+  TableName extends string,
+  Context extends SQLa.SqlEmitContext,
+>(
+  tableName: TableName,
+  govn: AssuranceRulesGovernance,
+  SQL: ReturnType<typeof SQLa.SQL<Context>>,
+) {
+  const ar = typicalAssuranceRules(govn, SQL);
+
+  const requiredColumnNames = (requiredColNames: string[]) =>
+    ar.requiredColumnNamesInTable(tableName, requiredColNames);
+
+  const intValueInAllRows = (columnName: string) =>
+    ar.intValueInAllTableRows(tableName, columnName);
+
+  const intRangeInAllRows = (
+    columnName: string,
+    minSql: number | string,
+    maxSql: number | string,
+  ) => ar.intRangeInAllTableRows(tableName, columnName, minSql, maxSql);
+
+  const uniqueValueInAllRows = (columnName: string) =>
+    ar.uniqueValueInAllTableRows(tableName, columnName);
+
+  const mandatoryValueInAllRows = (columnName: string) =>
+    ar.mandatoryValueInAllTableRows(tableName, columnName);
+
+  const patternValueInAllRows = (
+    columnName: string,
+    pattern: string,
+    patternHuman = pattern,
+    patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
+  ) =>
+    ar.patternValueInAllTableRows(
+      tableName,
+      columnName,
+      pattern,
+      patternHuman,
+      patternSql,
+    );
+
+  const onlyAllowedValuesInAllRows = (
+    columnName: string,
+    valuesSql: string,
+    valuesHuman = valuesSql,
+    patternSql = `${columnName} NOT IN (${valuesSql})`,
+  ) =>
+    ar.onlyAllowedValuesInAllTableRows(
+      tableName,
+      columnName,
+      valuesSql,
+      valuesHuman,
+      patternSql,
+    );
+
+  return {
+    requiredColumnNames,
+    intValueInAllRows,
+    intRangeInAllRows,
+    uniqueValueInAllRows,
+    mandatoryValueInAllRows,
+    patternValueInAllRows,
+    onlyAllowedValuesInAllRows,
+  };
 }
