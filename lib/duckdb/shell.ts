@@ -15,10 +15,10 @@ export class DuckDbShell {
   constructor(
     readonly args: {
       readonly duckdbCmd: string;
-      readonly dbDestFsPath: string;
+      readonly dbDestFsPathSupplier: (identity?: string) => string;
     } = {
       duckdbCmd: "duckdb",
-      dbDestFsPath: ":memory:",
+      dbDestFsPathSupplier: () => ":memory:",
     },
   ) {
   }
@@ -60,37 +60,43 @@ export class DuckDbShell {
   }
 
   async execute(sql: string, identity?: string) {
-    const { args: { duckdbCmd, dbDestFsPath } } = this;
+    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const dbDestFsPath = dbDestFsPathSupplier(identity);
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath}`
       .stdout("piped")
       .stderr("piped")
       .stdinText(sql)
       .noThrow();
-    this.diagnostics.push({
+    const diagnostics = {
       identity: identity ? identity : "unknown",
       sql,
       status: status.code,
       markdown: this.sqlMarkdownPartial(sql, status).join("\n"),
-    });
-    return status;
+    };
+    this.diagnostics.push(diagnostics);
+    return { status, diagnostics };
   }
 
-  async jsonResult(sql: string, identity?: string) {
-    const { args: { duckdbCmd, dbDestFsPath } } = this;
+  async jsonResult<Row>(sql: string, identity?: string) {
+    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const dbDestFsPath = dbDestFsPathSupplier(identity);
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath} --json`
       .stdout("piped")
       .stderr("piped")
       .stdinText(sql)
       .noThrow();
     const stdout = status.stdout;
-    this.diagnostics.push({
+    const diagnostics = {
       identity: identity ? identity : "unknown",
       sql,
       status: status.code,
-      result: stdout ? JSON.parse(stdout) : stdout,
+      result: (stdout && stdout.trim().length > 0)
+        ? (JSON.parse(stdout) as Row[])
+        : undefined,
       markdown: this.sqlMarkdownPartial(sql, status).join("\n"),
-    });
-    return status;
+    };
+    this.diagnostics.push(diagnostics);
+    return { status, diagnostics, json: diagnostics.result };
   }
 
   async emitDiagnostics(options: {
