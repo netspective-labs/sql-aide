@@ -29,7 +29,6 @@ export interface IngestSourceStructAssuranceContext {
       ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
     >
     | ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>;
-  readonly selectEntryIssues: () => SQLa.SqlTextSupplier<IngestEmitContext>;
 }
 
 export interface IngestableResource {
@@ -103,9 +102,7 @@ export class ErrorIngestSource implements InvalidIngestSource {
         this.govn.SQL`
            -- required by IngestEngine, setup the ingestion entry for logging
            ${await issac.sessionEntryInsertDML()}
-           ${await issac.issueInsertDML(this.error.message, this.issueType)};
-           -- required by IngestEngine, emit the errors for the given session (file) so it can be picked up
-           ${issac.selectEntryIssues()}`,
+           ${await issac.issueInsertDML(this.error.message, this.issueType)}`,
       assuranceSQL: () =>
         this.govn.SQL`
           -- error: ${this.error.message}
@@ -144,7 +141,8 @@ export class IngestEmitContext implements SQLa.SqlEmitContext {
     return {
       SQL: () => {
         const now = new Date();
-        return `make_timestamp(${now.getFullYear()}, ${now.getMonth()}, ${now.getDay()}, ${now.getHours()}, ${now.getMinutes()}, ${`${now.getSeconds()}.${now.getMilliseconds()}`})`;
+        // deno-fmt-ignore
+        return `make_timestamp(${now.getFullYear()}, ${now.getMonth()+1}, ${now.getDay()}, ${now.getHours()}, ${now.getMinutes()}, ${`${now.getSeconds()}.${now.getMilliseconds()}`})`;
       },
     };
   }
