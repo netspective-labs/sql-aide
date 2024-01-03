@@ -39,7 +39,7 @@ Deno.test("SQLPage Notebook", async () => {
   );
 
   ta.assertEquals(
-    (await nb.SQL()).map((c) => c.SQL(ctx)).join("\n"),
+    (await nb.SQL()).map((c) => c.SQL(ctx)).join(";\n\n"),
     await Deno.readTextFile(
       path.fromFileUrl(import.meta.resolve("./mod_test-fixture.sql")),
     ),

@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS "sqlpage_files" (
     "path" TEXT PRIMARY KEY NOT NULL,
     "contents" TEXT NOT NULL,
     "last_modified" DATE
-)
+);
+
 INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT
   ''list'' as component,
   ''Get started: where to go from here ?'' as title,
@@ -11,7 +12,8 @@ SELECT ''Information Schema (test)'' as title,
   ''info-schema.sql'' as link,
   ''TODO'' as description,
   ''blue'' as color,
-  ''download'' as icon;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP
+  ''download'' as icon;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;
+
 INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('info-schema.sql', '-- TODO: https://github.com/lovasoa/SQLpage/discussions/109#discussioncomment-7359513
 --       see the above for how to fix for SQLPage but figure out to use the same SQL
 --       in and out of SQLPage (maybe do what Ophir said in discussion and create
