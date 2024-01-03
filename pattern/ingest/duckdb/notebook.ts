@@ -2,6 +2,7 @@ import { fs, uuid } from "./deps.ts";
 import * as chainNB from "../../../lib/notebook/chain-of-responsibility.ts";
 import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
+import * as sysInfo from "../../../lib/universal/sys-info.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as tp from "../../../pattern/typical/mod.ts";
 import * as a from "./assurance.ts";
@@ -176,8 +177,45 @@ export class IngestGovernance {
   readonly stsOptions = SQLa.typicalSqlTextSupplierOptions<IngestEmitContext>();
   readonly primaryKey = this.gk.uuidPrimaryKey;
 
+  readonly device = SQLa.tableDefinition("device", {
+    device_id: this.primaryKey(),
+    name: this.gd.text(),
+    state: this.gd.jsonText(),
+    boundary: this.gd.text(),
+    segmentation: this.gd.jsonTextNullable(),
+    state_sysinfo: this.gd.jsonTextNullable(),
+    elaboration: this.gd.jsonTextNullable(),
+  }, {
+    isIdempotent: true,
+    constraints: (props, tableName) => {
+      const c = SQLa.tableConstraints(tableName, props);
+      return [
+        c.unique("name", "state", "boundary"),
+      ];
+    },
+    indexes: (props, tableName) => {
+      const tif = SQLa.tableIndexesFactory(tableName, props);
+      return [tif.index({ isIdempotent: true }, "name", "state")];
+    },
+    populateQS: (t, c) => {
+      t.description =
+        `Identity, network segmentation, and sysinfo for devices on which resources are found`;
+      c.name.description = "unique device identifier (defaults to hostname)";
+      c.state.description =
+        `should be "SINGLETON" if only one state is allowed, or other tags if multiple states are allowed`;
+      c.boundary.description =
+        "can be IP address, VLAN, or any other device name differentiator";
+      c.segmentation.description = "zero trust or other network segmentation";
+      c.state_sysinfo.description =
+        "any sysinfo or other state data that is specific to this device (mutable)";
+      c.elaboration.description =
+        "any elaboration needed for the device (mutable)";
+    },
+  });
+
   readonly ingestSession = SQLa.tableDefinition("ingest_session", {
     ingest_session_id: this.primaryKey(),
+    device_id: this.device.belongsTo.device_id(),
     ingest_started_at: this.gd.createdAt(),
     ingest_finished_at: this.gd.dateTimeNullable(),
     elaboration: this.gd.jsonTextNullable(),
@@ -200,7 +238,7 @@ export class IngestGovernance {
 
   readonly ingestSessionEntry = SQLa.tableDefinition("ingest_session_entry", {
     ingest_session_entry_id: this.primaryKey(),
-    session_id: this.ingestSession.references.ingest_session_id(),
+    session_id: this.ingestSession.belongsTo.ingest_session_id(),
     ingest_src: this.gd.text(),
     ingest_table_name: this.gd.text().optional(),
     elaboration: this.gd.jsonTextNullable(),
@@ -229,8 +267,8 @@ export class IngestGovernance {
 
   readonly ingestSessionState = SQLa.tableDefinition("ingest_session_state", {
     ingest_session_state_id: this.primaryKey(),
-    session_id: this.ingestSession.references.ingest_session_id(),
-    session_entry_id: this.ingestSessionEntry.references
+    session_id: this.ingestSession.belongsTo.ingest_session_id(),
+    session_entry_id: this.ingestSessionEntry.belongsTo
       .ingest_session_entry_id().optional(),
     from_state: this.gd.text(),
     to_state: this.gd.text(),
@@ -274,8 +312,8 @@ export class IngestGovernance {
     "ingest_session_issue",
     {
       ingest_session_issue_id: this.gk.uuidPrimaryKey(),
-      session_id: this.ingestSession.references.ingest_session_id(),
-      session_entry_id: this.ingestSessionEntry.references
+      session_id: this.ingestSession.belongsTo.ingest_session_id(),
+      session_entry_id: this.ingestSessionEntry.belongsTo
         .ingest_session_entry_id().optional(),
       issue_type: this.gd.text(),
       issue_message: this.gd.text(),
@@ -317,18 +355,31 @@ export class IngestGovernance {
 
   readonly informationSchema = {
     adminTables: [
+      this.device,
       this.ingestSession,
       this.ingestSessionEntry,
       this.ingestSessionState,
       this.ingestSessionIssue,
     ],
     adminTableIndexes: [
+      ...this.device.indexes,
       ...this.ingestSession.indexes,
       ...this.ingestSessionEntry.indexes,
       ...this.ingestSessionState.indexes,
       ...this.ingestSessionIssue.indexes,
     ],
   };
+
+  readonly deviceCRF = SQLa.tableColumnsRowFactory<
+    typeof this.device.tableName,
+    typeof this.device.zoSchema.shape,
+    IngestEmitContext,
+    DomainQS,
+    DomainsQS
+  >(
+    this.device.tableName,
+    this.device.zoSchema.shape,
+  );
 
   readonly ingestSessionCRF = SQLa.tableColumnsRowFactory<
     typeof this.ingestSession.tableName,
@@ -340,6 +391,7 @@ export class IngestGovernance {
     this.ingestSession.tableName,
     this.ingestSession.zoSchema.shape,
   );
+
   readonly ingestSessionEntryCRF = SQLa.tableColumnsRowFactory<
     typeof this.ingestSessionEntry.tableName,
     typeof this.ingestSessionEntry.zoSchema.shape,
@@ -350,6 +402,7 @@ export class IngestGovernance {
     this.ingestSessionEntry.tableName,
     this.ingestSessionEntry.zoSchema.shape,
   );
+
   readonly ingestSessionStateCRF = SQLa.tableColumnsRowFactory<
     typeof this.ingestSessionState.tableName,
     typeof this.ingestSessionState.zoSchema.shape,
@@ -360,6 +413,7 @@ export class IngestGovernance {
     this.ingestSessionState.tableName,
     this.ingestSessionState.zoSchema.shape,
   );
+
   readonly ingestSessionIssueCRF = SQLa.tableColumnsRowFactory<
     typeof this.ingestSessionIssue.tableName,
     typeof this.ingestSessionIssue.zoSchema.shape,
@@ -422,6 +476,9 @@ export type IngestSqlRegistrationExecution =
   | "after-finalize";
 
 export class IngestSession {
+  protected deviceDmlSingleton?: Awaited<
+    ReturnType<IngestSession["deviceSqlDML"]>
+  >;
   protected sessionDmlSingleton?: Awaited<
     ReturnType<IngestSession["ingestSessionSqlDML"]>
   >;
@@ -460,16 +517,48 @@ export class IngestSession {
     return this.sqlCatalog[exec];
   }
 
+  async deviceSqlDML(): Promise<
+    & { readonly deviceID: string }
+    & SQLa.SqlTextSupplier<IngestEmitContext>
+  > {
+    if (!this.deviceDmlSingleton) {
+      const { emitCtx: ctx, deviceCRF, deterministicPKs } = this.govn;
+      const deviceID = await ctx.newUUID(deterministicPKs);
+      this.deviceDmlSingleton = {
+        deviceID,
+        ...deviceCRF.insertDML({
+          device_id: deviceID,
+          name: Deno.hostname(),
+          state: "SINGLETON",
+          boundary: "UNKNOWN",
+          state_sysinfo: JSON.stringify({
+            "os-arch": await sysInfo.osArchitecture(),
+            "os-platform": sysInfo.osPlatformName(),
+            // TODO: add these with e2e synthetic capabilities too (use "synthetic" as device name)
+            // "device-ip-addresses": sysInfo.deviceIpAddresses(),
+            // "public-ip-addresses": await sysInfo.publicIpAddress(),
+            // "home-path": sysInfo.homePath(),
+          }),
+        }, { onConflict: ctx.onConflictDoNothing }),
+      };
+    }
+    return this.deviceDmlSingleton;
+  }
+
   async ingestSessionSqlDML(): Promise<
     & { readonly sessionID: string }
     & SQLa.SqlTextSupplier<IngestEmitContext>
   > {
     if (!this.sessionDmlSingleton) {
       const { emitCtx: ctx, ingestSessionCRF, deterministicPKs } = this.govn;
+      const device = await this.deviceSqlDML();
       const sessionID = await ctx.newUUID(deterministicPKs);
       this.sessionDmlSingleton = {
         sessionID,
-        ...ingestSessionCRF.insertDML({ ingest_session_id: sessionID }),
+        ...ingestSessionCRF.insertDML({
+          ingest_session_id: sessionID,
+          device_id: device.deviceID,
+        }),
       };
     }
     return this.sessionDmlSingleton;
@@ -534,7 +623,7 @@ export class IngestSession {
           -- TODO: Casting known timestamp columns to text so emit to Excel works with GDAL (spatial)
              -- strftime(timestamptz ingest_started_at, '%Y-%m-%d %H:%M:%S') AS ingest_started_at,
              -- strftime(timestamptz ingest_finished_at, '%Y-%m-%d %H:%M:%S') AS ingest_finished_at,
-      
+
           -- Including all columns from 'ingest_session_entry'
           isee.* EXCLUDE (session_id),
 
