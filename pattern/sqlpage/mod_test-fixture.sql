@@ -4,20 +4,17 @@ CREATE TABLE IF NOT EXISTS "sqlpage_files" (
     "last_modified" DATE
 );
 
-INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT
-  ''list'' as component,
-  ''Get started: where to go from here ?'' as title,
-  ''Here are some useful links to get you started with SQLPage.'' as description;
-SELECT ''Information Schema (test)'' as title,
-  ''info-schema.sql'' as link,
-  ''TODO'' as description,
-  ''blue'' as color,
-  ''download'' as icon;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;
+INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT ''list'' as component, ''Get started: where to go from here ?'' as title;
+SELECT ''Information Schema (test)'' as title, ''info-schema.sql'' as link;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */;
+
+INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('bad-item.sql', 'select ''alert'' as component,
+                              ''sqlPageNotebook issue'' as title,
+                              ''sqlPageNotebook cell "bad-item.sql" did not return SQL (found: string)'' as description;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */;
 
 INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('info-schema.sql', '-- TODO: https://github.com/lovasoa/SQLpage/discussions/109#discussioncomment-7359513
 --       see the above for how to fix for SQLPage but figure out to use the same SQL
 --       in and out of SQLPage (maybe do what Ophir said in discussion and create
---       custom output for SQLPage using componetns?)
+--       custom output for SQLPage using components?)
 WITH TableInfo AS (
   SELECT
     m.tbl_name AS table_name,
@@ -64,7 +61,10 @@ Indexes AS (
     il.name
 )
 SELECT
-    markdown_output AS info_schema_markdown
+    ''text'' as component,
+    ''Information Schema'' as title,
+    group_concat(markdown_output, ''
+'') AS contents_md
 FROM
   (
     SELECT ''## Tables'' AS markdown_output
@@ -84,9 +84,4 @@ FROM
     UNION ALL SELECT * FROM	Views
     UNION ALL SELECT ''''
     UNION ALL SELECT * FROM Indexes
-);
-
--- :info_schema_markdown should be defined in the above query
-SELECT ''text'' as component,
-       ''Information Schema'' as title,
-       :info_schema_markdown as contents_md', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP
+);', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */
