@@ -44,6 +44,9 @@ export interface IngestableResource {
     readonly assuranceSQL: () =>
       | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
       | SQLa.SqlTextSupplier<IngestEmitContext>;
+    readonly exportResourceSQL: (targetSchema: string) =>
+      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
+      | SQLa.SqlTextSupplier<IngestEmitContext>;
   };
 }
 
@@ -107,6 +110,10 @@ export class ErrorIngestSource implements InvalidIngestSource {
       assuranceSQL: () =>
         this.govn.SQL`
           -- error: ${this.error.message}
+        `,
+      exportResourceSQL: (targetSchema) =>
+        this.govn.SQL`
+          -- error: ${this.error.message} exportResourceSQL(${targetSchema})
         `,
     };
   }
