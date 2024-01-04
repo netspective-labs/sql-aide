@@ -4,14 +4,17 @@ CREATE TABLE IF NOT EXISTS "sqlpage_files" (
     "last_modified" DATE
 );
 
-INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT ''list'' as component, ''Get started: where to go from here ?'' as title;
-SELECT ''Information Schema (test)'' as title, ''info-schema.sql'' as link;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */;
+INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT ''shell'' as component, ''Test Center'' as title, ''book'' as icon, ''/'' as link, ''issues'' as menu_item, ''schema'' as menu_item;
+    ;
+SELECT ''list'' as component;
+SELECT ''Bad Item'' as title,''bad-item.sql'' as link;
+SELECT ''Ingestion State Schema'' as title,''schema.sql'' as link;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */;
 
 INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('bad-item.sql', 'select ''alert'' as component,
                               ''sqlPageNotebook issue'' as title,
                               ''sqlPageNotebook cell "bad-item.sql" did not return SQL (found: string)'' as description;', (CURRENT_TIMESTAMP)) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents /* TODO: does not work in DuckDB , last_modified = (CURRENT_TIMESTAMP) */;
 
-INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('info-schema.sql', '-- TODO: https://github.com/lovasoa/SQLpage/discussions/109#discussioncomment-7359513
+INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('schema.sql', '-- TODO: https://github.com/lovasoa/SQLpage/discussions/109#discussioncomment-7359513
 --       see the above for how to fix for SQLPage but figure out to use the same SQL
 --       in and out of SQLPage (maybe do what Ophir said in discussion and create
 --       custom output for SQLPage using components?)

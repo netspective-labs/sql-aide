@@ -24,25 +24,47 @@ const nbDescr = new chainNB.NotebookDescriptor<
  */
 class SQLPageTestNotebook {
   readonly tc: ReturnType<typeof mod.typicalContent<SQLa.SqlEmitContext>>;
+  readonly comps = mod.typicalComponents<string, SQLa.SqlEmitContext>();
 
   constructor(readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>) {
-    this.tc = mod.typicalContent(SQL);
+    this.tc = mod.typicalContent<SQLa.SqlEmitContext>(SQL);
+  }
+
+  @nbDescr.disregard()
+  shell() {
+    // deno-fmt-ignore
+    return this.SQL`
+      ${this.comps.shell({
+          title: "Test Center",
+          icon: "book",
+          link: "/",
+          menuItems: [{ caption: "issues" }, { caption: "schema" }]
+      })}
+    `;
   }
 
   "index.sql"() {
-    const { list, listItem: item } = mod.typicalComponents();
+    // passing in `chainNB.NotebookCellID<SQLPageNotebook>` allows us to restrict
+    // menu hrefs to this notebook's cell names (the pages in SQLPage)
+    const { list, listItem: li } = mod.typicalComponents<
+      chainNB.NotebookCellID<SQLPageTestNotebook>,
+      SQLa.SqlEmitContext
+    >();
 
     // deno-fmt-ignore
     return this.SQL`
-      ${list({ title: "Get started: where to go from here ?",
-               items: [item({ title: "Information Schema (test)", link: "info-schema.sql" })]})}`;
+      ${this.shell()}
+      ${list({ items: [
+                li({ title: "Bad Item", link: "bad-item.sql" }),
+                li({ title: "Ingestion State Schema", link: "schema.sql" }),
+               ]})}`;
   }
 
   "bad-item.sql"() {
     return "this is not a proper return type in SQLPageNotebook so it should generate an alert page in SQLPage (included just for testing)";
   }
 
-  "info-schema.sql"() {
+  "schema.sql"() {
     return this.tc.infoSchemaSQL();
   }
 
