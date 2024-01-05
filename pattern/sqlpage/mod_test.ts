@@ -14,11 +14,23 @@ const nbDescr = new chainNB.NotebookDescriptor<
 
 /**
  * Encapsulates [SQLPage](https://sql.ophir.dev/) content. SqlPageNotebook has
- * methods with the name of each [SQLPage](https://sql.ophir.dev/) content that
- * we want in the database. The MutationSqlNotebook sqlPageSeedDML method
- * "reads" the cells in the SqlPageNotebook (each method's result) and
- * generates SQL to insert the content of the page in the database in the format
- * and table expected by [SQLPage](https://sql.ophir.dev/).
+ * methods with the name of each SQLPage content that we want in the database.
+ * The SQLPageNotebook.create method "reads" the cells in SqlPageNotebook (each
+ * method's result) and generates SQL to insert the content of the page in the
+ * database in the format and table expected by SQLPage `sqlpage_files` table.
+ *
+ * See: https://github.com/lovasoa/SQLpage/tree/main#hosting-sql-files-directly-inside-the-database
+ *
+ * If you want to store customizations (e.g. handlebar templates, etc.) see:
+ * - https://sql.ophir.dev/custom_components.sql
+ * - https://github.com/lovasoa/SQLpage/discussions/174
+ *
+ * If you want to create JSON APIs:
+ * https://sql.ophir.dev/documentation.sql?component=json#component
+ *
+ * If you want to execute commands (assuming appropriate security) in SQLPage:
+ * https://sql.ophir.dev/functions.sql?function=exec#function
+ *
  * NOTE: we break our PascalCase convention for the name of the class since SQLPage
  *       is a proper noun (product name).
  */
