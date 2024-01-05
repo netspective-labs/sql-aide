@@ -4,7 +4,7 @@ import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as sysInfo from "../../../lib/universal/sys-info.ts";
 import * as SQLa from "../../../render/mod.ts";
-import * as tp from "../../../pattern/typical/mod.ts";
+import * as tp from "../../typical/mod.ts";
 import * as a from "./assurance.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -22,14 +22,14 @@ export let deterministicUuidCounter = 0;
 export interface IngestSourceStructAssuranceContext {
   readonly sessionEntryInsertDML: () =>
     | Promise<
-      ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>
+      ReturnType<OrchGovernance["orchSessionEntryCRF"]["insertDML"]>
     >
-    | ReturnType<IngestGovernance["ingestSessionEntryCRF"]["insertDML"]>;
+    | ReturnType<OrchGovernance["orchSessionEntryCRF"]["insertDML"]>;
   readonly issueInsertDML: (message: string, nature?: string) =>
     | Promise<
-      ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>
+      ReturnType<OrchGovernance["orchSessionIssueCRF"]["insertDML"]>
     >
-    | ReturnType<IngestGovernance["ingestSessionIssueCRF"]["insertDML"]>;
+    | ReturnType<OrchGovernance["orchSessionIssueCRF"]["insertDML"]>;
 }
 
 export interface IngestableResource {
@@ -39,14 +39,14 @@ export interface IngestableResource {
     readonly ingestSQL: (
       issac: IngestSourceStructAssuranceContext,
     ) =>
-      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
-      | SQLa.SqlTextSupplier<IngestEmitContext>;
+      | Promise<SQLa.SqlTextSupplier<OrchEmitContext>>
+      | SQLa.SqlTextSupplier<OrchEmitContext>;
     readonly assuranceSQL: () =>
-      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
-      | SQLa.SqlTextSupplier<IngestEmitContext>;
+      | Promise<SQLa.SqlTextSupplier<OrchEmitContext>>
+      | SQLa.SqlTextSupplier<OrchEmitContext>;
     readonly exportResourceSQL: (targetSchema: string) =>
-      | Promise<SQLa.SqlTextSupplier<IngestEmitContext>>
-      | SQLa.SqlTextSupplier<IngestEmitContext>;
+      | Promise<SQLa.SqlTextSupplier<OrchEmitContext>>
+      | SQLa.SqlTextSupplier<OrchEmitContext>;
   };
 }
 
@@ -95,7 +95,7 @@ export class ErrorIngestSource implements InvalidIngestSource {
     readonly uri: string,
     readonly error: Error,
     readonly issueType: string,
-    readonly govn: IngestGovernance,
+    readonly govn: OrchGovernance,
   ) {
   }
 
@@ -119,7 +119,7 @@ export class ErrorIngestSource implements InvalidIngestSource {
   }
 }
 
-export class IngestEmitContext implements SQLa.SqlEmitContext {
+export class OrchEmitContext implements SQLa.SqlEmitContext {
   readonly embeddedSQL = SQLa.SQL;
   readonly sqlNamingStrategy = SQLa.typicalSqlNamingStrategy();
   readonly sqlTextEmitOptions = SQLa.typicalSqlTextEmitOptions();
@@ -145,7 +145,7 @@ export class IngestEmitContext implements SQLa.SqlEmitContext {
    * Compute the current timestamp and prepare DuckDB SQL
    * @returns SQL supplier of the Javascript runtime's current time
    */
-  get newCurrentTimestamp(): SQLa.SqlTextSupplier<IngestEmitContext> {
+  get newCurrentTimestamp(): SQLa.SqlTextSupplier<OrchEmitContext> {
     return {
       SQL: () => {
         const now = new Date();
@@ -156,32 +156,32 @@ export class IngestEmitContext implements SQLa.SqlEmitContext {
   }
 
   // UUID generator when the value is needed by the SQLite engine runtime
-  get sqlEngineNewUUID(): SQLa.SqlTextSupplier<IngestEmitContext> {
+  get sqlEngineNewUUID(): SQLa.SqlTextSupplier<OrchEmitContext> {
     return { SQL: () => `uuid()` };
   }
 
-  get onConflictDoNothing(): SQLa.SqlTextSupplier<IngestEmitContext> {
+  get onConflictDoNothing(): SQLa.SqlTextSupplier<OrchEmitContext> {
     return { SQL: () => `ON CONFLICT DO NOTHING` };
   }
 
-  get sqlEngineNow(): SQLa.SqlTextSupplier<IngestEmitContext> {
+  get sqlEngineNow(): SQLa.SqlTextSupplier<OrchEmitContext> {
     return { SQL: () => `CURRENT_TIMESTAMP` };
   }
 }
 
-export class IngestGovernance {
-  readonly emitCtx = new IngestEmitContext();
-  readonly gk = tp.governedKeys<DomainQS, DomainsQS, IngestEmitContext>();
-  readonly gd = tp.governedDomains<DomainQS, DomainsQS, IngestEmitContext>();
+export class OrchGovernance {
+  readonly emitCtx = new OrchEmitContext();
+  readonly gk = tp.governedKeys<DomainQS, DomainsQS, OrchEmitContext>();
+  readonly gd = tp.governedDomains<DomainQS, DomainsQS, OrchEmitContext>();
   readonly gts = tp.governedTemplateState<
     DomainQS,
     DomainsQS,
-    IngestEmitContext
+    OrchEmitContext
   >();
-  readonly gm = tp.governedModel<DomainQS, DomainsQS, IngestEmitContext>(
+  readonly gm = tp.governedModel<DomainQS, DomainsQS, OrchEmitContext>(
     this.gts.ddlOptions,
   );
-  readonly stsOptions = SQLa.typicalSqlTextSupplierOptions<IngestEmitContext>();
+  readonly stsOptions = SQLa.typicalSqlTextSupplierOptions<OrchEmitContext>();
   readonly primaryKey = this.gk.uuidPrimaryKey;
 
   readonly device = SQLa.tableDefinition("device", {
@@ -220,32 +220,27 @@ export class IngestGovernance {
     },
   });
 
-  readonly ingestSession = SQLa.tableDefinition("ingest_session", {
-    ingest_session_id: this.primaryKey(),
+  readonly orchSession = SQLa.tableDefinition("orch_session", {
+    orch_session_id: this.primaryKey(),
     device_id: this.device.belongsTo.device_id(),
-    ingest_started_at: this.gd.createdAt(),
-    ingest_finished_at: this.gd.dateTimeNullable(),
+    orch_started_at: this.gd.createdAt(),
+    orch_finished_at: this.gd.dateTimeNullable(),
     elaboration: this.gd.jsonTextNullable(),
   }, {
     isIdempotent: true,
     populateQS: (t, c, _, tableName) => {
       t.description = markdown`
-        An ingestion session is an ingestion event in which we can record the ingestion supply chain`;
-      c.ingest_session_id.description =
+        An orchestration session groups multiple orchestration events for reporting or other purposes`;
+      c.orch_session_id.description =
         `${tableName} primary key and internal label (UUID)`;
       c.elaboration.description =
         `JSON governance data (description, documentation, usage, etc. in JSON)`;
     },
-
-    qualitySystem: {
-      description: markdown`
-          An ingestion session is an ingestion event in which we can record the ingestion supply chain.`,
-    },
   });
 
-  readonly ingestSessionEntry = SQLa.tableDefinition("ingest_session_entry", {
-    ingest_session_entry_id: this.primaryKey(),
-    session_id: this.ingestSession.belongsTo.ingest_session_id(),
+  readonly orchSessionEntry = SQLa.tableDefinition("orch_session_entry", {
+    orch_session_entry_id: this.primaryKey(),
+    session_id: this.orchSession.belongsTo.orch_session_id(),
     ingest_src: this.gd.text(),
     ingest_table_name: this.gd.text().optional(),
     elaboration: this.gd.jsonTextNullable(),
@@ -253,11 +248,11 @@ export class IngestGovernance {
     isIdempotent: true,
     populateQS: (t, c, _, tableName) => {
       t.description = markdown`
-        An ingestion session is an ingestion event in which we can record the ingestion supply chain`;
-      c.ingest_session_entry_id.description =
+        An orchestration session entry records a specific file that that is ingested or otherwise orchestrated`;
+      c.orch_session_entry_id.description =
         `${tableName} primary key and internal label (UUID)`;
       c.session_id.description =
-        `${this.ingestSession.tableName} row this entry describes`;
+        `${this.orchSession.tableName} row this entry describes`;
       c.ingest_src.description =
         `The name of the file or URI of the source of the ingestion`;
       c.ingest_table_name.description =
@@ -265,18 +260,13 @@ export class IngestGovernance {
       c.elaboration.description =
         `JSON governance data (description, documentation, usage, etc. in JSON)`;
     },
-
-    qualitySystem: {
-      description: markdown`
-          An ingestion session is an ingestion event in which we can record the ingestion supply chain.`,
-    },
   });
 
-  readonly ingestSessionState = SQLa.tableDefinition("ingest_session_state", {
-    ingest_session_state_id: this.primaryKey(),
-    session_id: this.ingestSession.belongsTo.ingest_session_id(),
-    session_entry_id: this.ingestSessionEntry.belongsTo
-      .ingest_session_entry_id().optional(),
+  readonly orchSessionState = SQLa.tableDefinition("orch_session_state", {
+    orch_session_state_id: this.primaryKey(),
+    session_id: this.orchSession.belongsTo.orch_session_id(),
+    session_entry_id: this.orchSessionEntry.belongsTo
+      .orch_session_entry_id().optional(),
     from_state: this.gd.text(),
     to_state: this.gd.text(),
     transition_result: this.gd.jsonTextNullable(),
@@ -288,19 +278,19 @@ export class IngestGovernance {
     constraints: (props, tableName) => {
       const c = SQLa.tableConstraints(tableName, props);
       return [
-        c.unique("ingest_session_state_id", "from_state", "to_state"),
+        c.unique("orch_session_state_id", "from_state", "to_state"),
       ];
     },
     populateQS: (t, c, _, tableName) => {
       t.description = markdown`
-        Records the state of an ingestion session, computations, and results for Kernels that are stateful.
-        For example, a SQL Notebook Cell that creates tables should only be run once (meaning it's statefule).
+        Records the state of an orchestration session, computations, and results for Kernels that are stateful.
+        For example, a SQL Notebook Cell that creates tables should only be run once (meaning it's stateful).
         Other Kernels might store results for functions and output defined in one cell can be used in later cells.`;
-      c.ingest_session_state_id.description = `${tableName} primary key`;
+      c.orch_session_state_id.description = `${tableName} primary key`;
       c.session_id.description =
-        `${this.ingestSession.tableName} row this state describes`;
+        `${this.orchSession.tableName} row this state describes`;
       c.session_entry_id.description =
-        `${this.ingestSessionEntry.tableName} row this state describes (optional)`;
+        `${this.orchSessionEntry.tableName} row this state describes (optional)`;
       c.from_state.description =
         `the previous state (set to "INITIAL" when it's the first transition)`;
       c.to_state.description =
@@ -315,13 +305,13 @@ export class IngestGovernance {
     },
   });
 
-  readonly ingestSessionIssue = SQLa.tableDefinition(
-    "ingest_session_issue",
+  readonly orchSessionIssue = SQLa.tableDefinition(
+    "orch_session_issue",
     {
-      ingest_session_issue_id: this.gk.uuidPrimaryKey(),
-      session_id: this.ingestSession.belongsTo.ingest_session_id(),
-      session_entry_id: this.ingestSessionEntry.belongsTo
-        .ingest_session_entry_id().optional(),
+      orch_session_issue_id: this.gk.uuidPrimaryKey(),
+      session_id: this.orchSession.belongsTo.orch_session_id(),
+      session_entry_id: this.orchSessionEntry.belongsTo
+        .orch_session_entry_id().optional(),
       issue_type: this.gd.text(),
       issue_message: this.gd.text(),
       issue_row: this.gd.integerNullable(),
@@ -334,9 +324,9 @@ export class IngestGovernance {
       isIdempotent: true,
       populateQS: (t, c, _, tableName) => {
         t.description = markdown`
-        A tabular ingestion issue is generated when an error or warning needs to
-        be created during the ingestion of a CSV or other "tabular" source.`;
-        c.ingest_session_issue_id.description =
+          An orchestration issue is generated when an error or warning needs to
+          be created during the orchestration of an entry in a session.`;
+        c.orch_session_issue_id.description =
           `${tableName} primary key and internal label (UUID)`;
         c.issue_type.description = `The category of an issue`;
         c.issue_message.description = `The human-friendly message for an issue`;
@@ -351,36 +341,30 @@ export class IngestGovernance {
         c.elaboration.description =
           `isse-specific attributes/properties in JSON ("custom data")`;
       },
-
-      qualitySystem: {
-        description: markdown`
-        A tabular ingestion issue is generated when an error or warning needs to
-        be created during the ingestion of a CSV or other "tabular" source.`,
-      },
     },
   );
 
   readonly informationSchema = {
     adminTables: [
       this.device,
-      this.ingestSession,
-      this.ingestSessionEntry,
-      this.ingestSessionState,
-      this.ingestSessionIssue,
+      this.orchSession,
+      this.orchSessionEntry,
+      this.orchSessionState,
+      this.orchSessionIssue,
     ],
     adminTableIndexes: [
       ...this.device.indexes,
-      ...this.ingestSession.indexes,
-      ...this.ingestSessionEntry.indexes,
-      ...this.ingestSessionState.indexes,
-      ...this.ingestSessionIssue.indexes,
+      ...this.orchSession.indexes,
+      ...this.orchSessionEntry.indexes,
+      ...this.orchSessionState.indexes,
+      ...this.orchSessionIssue.indexes,
     ],
   };
 
   readonly deviceCRF = SQLa.tableColumnsRowFactory<
     typeof this.device.tableName,
     typeof this.device.zoSchema.shape,
-    IngestEmitContext,
+    OrchEmitContext,
     DomainQS,
     DomainsQS
   >(
@@ -388,48 +372,48 @@ export class IngestGovernance {
     this.device.zoSchema.shape,
   );
 
-  readonly ingestSessionCRF = SQLa.tableColumnsRowFactory<
-    typeof this.ingestSession.tableName,
-    typeof this.ingestSession.zoSchema.shape,
-    IngestEmitContext,
+  readonly orchSessionCRF = SQLa.tableColumnsRowFactory<
+    typeof this.orchSession.tableName,
+    typeof this.orchSession.zoSchema.shape,
+    OrchEmitContext,
     DomainQS,
     DomainsQS
   >(
-    this.ingestSession.tableName,
-    this.ingestSession.zoSchema.shape,
+    this.orchSession.tableName,
+    this.orchSession.zoSchema.shape,
   );
 
-  readonly ingestSessionEntryCRF = SQLa.tableColumnsRowFactory<
-    typeof this.ingestSessionEntry.tableName,
-    typeof this.ingestSessionEntry.zoSchema.shape,
-    IngestEmitContext,
+  readonly orchSessionEntryCRF = SQLa.tableColumnsRowFactory<
+    typeof this.orchSessionEntry.tableName,
+    typeof this.orchSessionEntry.zoSchema.shape,
+    OrchEmitContext,
     DomainQS,
     DomainsQS
   >(
-    this.ingestSessionEntry.tableName,
-    this.ingestSessionEntry.zoSchema.shape,
+    this.orchSessionEntry.tableName,
+    this.orchSessionEntry.zoSchema.shape,
   );
 
-  readonly ingestSessionStateCRF = SQLa.tableColumnsRowFactory<
-    typeof this.ingestSessionState.tableName,
-    typeof this.ingestSessionState.zoSchema.shape,
-    IngestEmitContext,
+  readonly orchSessionStateCRF = SQLa.tableColumnsRowFactory<
+    typeof this.orchSessionState.tableName,
+    typeof this.orchSessionState.zoSchema.shape,
+    OrchEmitContext,
     DomainQS,
     DomainsQS
   >(
-    this.ingestSessionState.tableName,
-    this.ingestSessionState.zoSchema.shape,
+    this.orchSessionState.tableName,
+    this.orchSessionState.zoSchema.shape,
   );
 
-  readonly ingestSessionIssueCRF = SQLa.tableColumnsRowFactory<
-    typeof this.ingestSessionIssue.tableName,
-    typeof this.ingestSessionIssue.zoSchema.shape,
-    IngestEmitContext,
+  readonly orchSessionIssueCRF = SQLa.tableColumnsRowFactory<
+    typeof this.orchSessionIssue.tableName,
+    typeof this.orchSessionIssue.zoSchema.shape,
+    OrchEmitContext,
     DomainQS,
     DomainsQS
   >(
-    this.ingestSessionIssue.tableName,
-    this.ingestSessionIssue.zoSchema.shape,
+    this.orchSessionIssue.tableName,
+    this.orchSessionIssue.zoSchema.shape,
   );
 
   constructor(readonly deterministicPKs: boolean) {
@@ -439,14 +423,14 @@ export class IngestGovernance {
   // we call it `SQL` so that VS code extensions like frigus02.vscode-sql-tagged-template-literals
   // properly syntax-highlight code inside SQL`xyz` strings.
   get SQL() {
-    return SQLa.SQL<IngestEmitContext>(this.stsOptions);
+    return SQLa.SQL<OrchEmitContext>(this.stsOptions);
   }
 
   // type-safe wrapper for all SQL that should not be treated as SQL statements
   // but as arbitrary text to send to the SQL stream
   sqlBehavior(
-    sts: SQLa.SqlTextSupplier<IngestEmitContext>,
-  ): SQLa.SqlTextBehaviorSupplier<IngestEmitContext> {
+    sts: SQLa.SqlTextSupplier<OrchEmitContext>,
+  ): SQLa.SqlTextBehaviorSupplier<OrchEmitContext> {
     return {
       executeSqlBehavior: () => sts,
     };
@@ -455,7 +439,7 @@ export class IngestGovernance {
   viewDefn<ViewName extends string, DomainQS extends SQLa.SqlDomainQS>(
     viewName: ViewName,
   ) {
-    return SQLa.viewDefinition<ViewName, IngestEmitContext, DomainQS>(
+    return SQLa.viewDefinition<ViewName, OrchEmitContext, DomainQS>(
       viewName,
       {
         isIdempotent: true,
@@ -476,28 +460,28 @@ export class IngestGovernance {
   }
 }
 
-export type IngestSqlRegistrationExecution =
+export type OrchSqlRegistrationExecution =
   | "before-init"
   | "after-init"
   | "before-finalize"
   | "after-finalize";
 
-export class IngestSession {
+export class OrchSession {
   protected deviceDmlSingleton?: Awaited<
-    ReturnType<IngestSession["deviceSqlDML"]>
+    ReturnType<OrchSession["deviceSqlDML"]>
   >;
   protected sessionDmlSingleton?: Awaited<
-    ReturnType<IngestSession["ingestSessionSqlDML"]>
+    ReturnType<OrchSession["orchSessionSqlDML"]>
   >;
   readonly stateChangesDML: ReturnType<
-    IngestGovernance["ingestSessionStateCRF"]["insertDML"]
+    OrchGovernance["orchSessionStateCRF"]["insertDML"]
   >[] = [];
 
   constructor(
-    readonly govn: IngestGovernance,
+    readonly govn: OrchGovernance,
     readonly sqlCatalog: Record<
-      IngestSqlRegistrationExecution,
-      SQLa.SqlTextSupplier<IngestEmitContext>[]
+      OrchSqlRegistrationExecution,
+      SQLa.SqlTextSupplier<OrchEmitContext>[]
     > = {
       "before-init": [],
       "after-init": [],
@@ -507,7 +491,7 @@ export class IngestSession {
   ) {
   }
 
-  sqlCatalogSqlText(exec: IngestSqlRegistrationExecution) {
+  sqlCatalogSqlText(exec: OrchSqlRegistrationExecution) {
     switch (exec) {
       // before-finalize should include all state changes SQL as well
       case "before-finalize":
@@ -520,13 +504,13 @@ export class IngestSession {
     }
   }
 
-  sqlCatalogSqlSuppliers(exec: IngestSqlRegistrationExecution) {
+  sqlCatalogSqlSuppliers(exec: OrchSqlRegistrationExecution) {
     return this.sqlCatalog[exec];
   }
 
   async deviceSqlDML(): Promise<
     & { readonly deviceID: string }
-    & SQLa.SqlTextSupplier<IngestEmitContext>
+    & SQLa.SqlTextSupplier<OrchEmitContext>
   > {
     if (!this.deviceDmlSingleton) {
       const { emitCtx: ctx, deviceCRF, deterministicPKs } = this.govn;
@@ -552,18 +536,18 @@ export class IngestSession {
     return this.deviceDmlSingleton;
   }
 
-  async ingestSessionSqlDML(): Promise<
+  async orchSessionSqlDML(): Promise<
     & { readonly sessionID: string }
-    & SQLa.SqlTextSupplier<IngestEmitContext>
+    & SQLa.SqlTextSupplier<OrchEmitContext>
   > {
     if (!this.sessionDmlSingleton) {
-      const { emitCtx: ctx, ingestSessionCRF, deterministicPKs } = this.govn;
+      const { emitCtx: ctx, orchSessionCRF, deterministicPKs } = this.govn;
       const device = await this.deviceSqlDML();
       const sessionID = await ctx.newUUID(deterministicPKs);
       this.sessionDmlSingleton = {
         sessionID,
-        ...ingestSessionCRF.insertDML({
-          ingest_session_id: sessionID,
+        ...orchSessionCRF.insertDML({
+          orch_session_id: sessionID,
           device_id: device.deviceID,
         }),
       };
@@ -577,11 +561,11 @@ export class IngestSession {
     reason: string,
     elaboration?: string,
   ) {
-    const sessionDML = await this.ingestSessionSqlDML();
-    const { emitCtx: ctx, ingestSessionStateCRF, deterministicPKs } = this.govn;
+    const sessionDML = await this.orchSessionSqlDML();
+    const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
     this.stateChangesDML.push(
-      ingestSessionStateCRF.insertDML({
-        ingest_session_state_id: await ctx.newUUID(deterministicPKs),
+      orchSessionStateCRF.insertDML({
+        orch_session_state_id: await ctx.newUUID(deterministicPKs),
         session_id: sessionDML.sessionID,
         from_state: fromState,
         to_state: toState,
@@ -599,11 +583,11 @@ export class IngestSession {
     reason: string,
     elaboration?: string,
   ) {
-    const sessionDML = await this.ingestSessionSqlDML();
-    const { emitCtx: ctx, ingestSessionStateCRF, deterministicPKs } = this.govn;
+    const sessionDML = await this.orchSessionSqlDML();
+    const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
     this.stateChangesDML.push(
-      ingestSessionStateCRF.insertDML({
-        ingest_session_state_id: await ctx.newUUID(deterministicPKs),
+      orchSessionStateCRF.insertDML({
+        orch_session_state_id: await ctx.newUUID(deterministicPKs),
         session_id: sessionDML.sessionID,
         session_entry_id: sessionEntryID,
         from_state: fromState,
@@ -623,34 +607,34 @@ export class IngestSession {
    * @returns
    */
   diagnosticsView() {
-    return this.govn.viewDefn("ingest_session_diagnostic_text")`
+    return this.govn.viewDefn("orch_session_diagnostic_text")`
       SELECT
-          -- Including all other columns from 'ingest_session'
-          ises.* EXCLUDE (ingest_started_at, ingest_finished_at),
+          -- Including all other columns from 'orch_session'
+          ises.* EXCLUDE (orch_started_at, orch_finished_at),
           -- TODO: Casting known timestamp columns to text so emit to Excel works with GDAL (spatial)
-             -- strftime(timestamptz ingest_started_at, '%Y-%m-%d %H:%M:%S') AS ingest_started_at,
-             -- strftime(timestamptz ingest_finished_at, '%Y-%m-%d %H:%M:%S') AS ingest_finished_at,
+             -- strftime(timestamptz orch_started_at, '%Y-%m-%d %H:%M:%S') AS orch_started_at,
+             -- strftime(timestamptz orch_finished_at, '%Y-%m-%d %H:%M:%S') AS orch_finished_at,
 
-          -- Including all columns from 'ingest_session_entry'
+          -- Including all columns from 'orch_session_entry'
           isee.* EXCLUDE (session_id),
 
-          -- Including all other columns from 'ingest_session_issue'
+          -- Including all other columns from 'orch_session_issue'
           isi.* EXCLUDE (session_id, session_entry_id)
-      FROM ingest_session AS ises
-      JOIN ingest_session_entry AS isee ON ises.ingest_session_id = isee.session_id
-      LEFT JOIN ingest_session_issue AS isi ON isee.ingest_session_entry_id = isi.session_entry_id`;
+      FROM orch_session AS ises
+      JOIN orch_session_entry AS isee ON ises.orch_session_id = isee.session_id
+      LEFT JOIN orch_session_issue AS isi ON isee.orch_session_entry_id = isi.session_entry_id`;
   }
 }
 
-export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
-  readonly rules: ReturnType<typeof a.typicalAssuranceRules<IngestEmitContext>>;
+export class OrchAssuranceRules implements a.AssuranceRulesGovernance {
+  readonly rules: ReturnType<typeof a.typicalAssuranceRules<OrchEmitContext>>;
 
   constructor(
     readonly sessionID: string,
     readonly sessionEntryID: string,
-    readonly govn: IngestGovernance,
+    readonly govn: OrchGovernance,
   ) {
-    this.rules = a.typicalAssuranceRules<IngestEmitContext>(
+    this.rules = a.typicalAssuranceRules<OrchEmitContext>(
       this,
       this.govn.SQL,
     );
@@ -663,7 +647,7 @@ export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
     remediationSql?: string,
   ) {
     return ws.unindentWhitespace(`
-      INSERT INTO ingest_session_issue (ingest_session_issue_id, session_id, session_entry_id, issue_type, issue_message, remediation)
+      INSERT INTO orch_session_issue (orch_session_issue_id, session_id, session_entry_id, issue_type, issue_message, remediation)
           SELECT uuid(),
                  '${this.sessionID}',
                  '${this.sessionEntryID}',
@@ -683,7 +667,7 @@ export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
     remediationSql?: string,
   ) {
     return ws.unindentWhitespace(`
-      INSERT INTO ingest_session_issue (ingest_session_issue_id, session_id, session_entry_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
+      INSERT INTO orch_session_issue (orch_session_issue_id, session_id, session_entry_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
           SELECT uuid(),
                  '${this.sessionID}',
                  '${this.sessionEntryID}',
@@ -697,22 +681,22 @@ export class IngestAssuranceRules implements a.AssuranceRulesGovernance {
   }
 }
 
-export class IngestTableAssuranceRules<TableName extends string>
-  extends IngestAssuranceRules {
+export class OrchTableAssuranceRules<TableName extends string>
+  extends OrchAssuranceRules {
   readonly tableRules: ReturnType<
-    typeof a.typicalTableAssuranceRules<TableName, IngestEmitContext>
+    typeof a.typicalTableAssuranceRules<TableName, OrchEmitContext>
   >;
 
   constructor(
     readonly tableName: TableName,
     readonly sessionID: string,
     readonly sessionEntryID: string,
-    readonly govn: IngestGovernance,
+    readonly govn: OrchGovernance,
   ) {
     super(sessionID, sessionEntryID, govn);
     this.tableRules = a.typicalTableAssuranceRules<
       TableName,
-      IngestEmitContext
+      OrchEmitContext
     >(
       tableName,
       this,
@@ -721,43 +705,43 @@ export class IngestTableAssuranceRules<TableName extends string>
   }
 }
 
-export class IngestResumableError extends Error {
+export class OrchResumableError extends Error {
   constructor(readonly issue: string, cause?: Error) {
     super(issue);
     if (cause) this.cause = cause;
   }
 }
 
-export interface IngestArgs<Governance extends IngestGovernance, Notebook> {
-  readonly session: IngestSession;
+export interface OrchArgs<Governance extends OrchGovernance, Notebook> {
+  readonly session: OrchSession;
   readonly emitDagPuml?:
     | ((puml: string, previewUrl: string) => Promise<void>)
     | undefined;
 }
 
-export interface IngestInit<
-  Governance extends IngestGovernance,
+export interface OrchInit<
+  Governance extends OrchGovernance,
   Notebook,
-  Args extends IngestArgs<Governance, Notebook>,
+  Args extends OrchArgs<Governance, Notebook>,
 > {
   readonly govn: Governance;
   readonly newInstance: (
-    govn: IngestGovernance,
+    govn: OrchGovernance,
     args: Args,
   ) => Notebook | Promise<Notebook>;
 }
 
-export async function ingest<
-  Governance extends IngestGovernance,
+export async function orchestrate<
+  Governance extends OrchGovernance,
   Notebook,
-  Args extends IngestArgs<Governance, Notebook>,
+  Args extends OrchArgs<Governance, Notebook>,
 >(
   prototype: Notebook,
   descriptor: chainNB.NotebookDescriptor<
     Notebook,
     chainNB.NotebookCell<Notebook, chainNB.NotebookCellID<Notebook>>
   >,
-  init: IngestInit<Governance, Notebook, Args>,
+  init: OrchInit<Governance, Notebook, Args>,
   args: Args,
 ) {
   const kernel = chainNB.ObservableKernel.create<Notebook>(
@@ -767,7 +751,7 @@ export async function ingest<
   if (
     args.emitDagPuml || !kernel.isValid() || kernel.lintResults.length > 0
   ) {
-    // In case the ingestion engine created circular or other invalid states
+    // In case the orchestration engine created circular or other invalid states
     // show the state diagram as a PlantUML URL to visualize the error(s).
     const pe = await import("npm:plantuml-encoder");
     const diagram = kernel.introspectedNB.dagOps.diagram(
@@ -842,7 +826,7 @@ export async function ingest<
         "  ",
       ),
     );
-    if (error instanceof IngestResumableError) return "continue";
+    if (error instanceof OrchResumableError) return "continue";
 
     // unless the error is resumable, show error and abort
     console.error(`[Non-resumable issue in '${cell}']`, error);
