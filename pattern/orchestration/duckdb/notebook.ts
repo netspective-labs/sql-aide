@@ -1,4 +1,4 @@
-import { fs, uuid } from "./deps.ts";
+import { dax, fs, uuid, yaml } from "./deps.ts";
 import * as chainNB from "../../../lib/notebook/chain-of-responsibility.ts";
 import * as qs from "../../../lib/quality-system/mod.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
@@ -305,6 +305,53 @@ export class OrchGovernance {
     },
   });
 
+  readonly orch_session_exec_id = this.primaryKey();
+  readonly orchSessionExec = SQLa.tableDefinition("orch_session_exec", {
+    orch_session_exec_id: this.orch_session_exec_id,
+    exec_nature: this.gd.text(),
+    session_id: this.orchSession.belongsTo.orch_session_id(),
+    session_entry_id: this.orchSessionEntry.belongsTo
+      .orch_session_entry_id().optional(),
+    parent_exec_id: this.gd.selfRef(this.orch_session_exec_id).optional(),
+    namespace: this.gd.textNullable(),
+    exec_identity: this.gd.textNullable(),
+    exec_code: this.gd.text(),
+    exec_status: this.gd.integer(),
+    input_text: this.gd.textNullable(),
+    exec_error_text: this.gd.textNullable(),
+    output_text: this.gd.textNullable(),
+    output_nature: this.gd.jsonTextNullable(),
+    narrative_md: this.gd.textNullable(),
+    elaboration: this.gd.jsonTextNullable(),
+  }, {
+    isIdempotent: true,
+    populateQS: (t, c, _, tableName) => {
+      t.description = markdown`
+        Records the state of an orchestration session command or other execution.`;
+      c.exec_nature.description =
+        `the nature of ${tableName} row (e.g. shell, SQL, etc.)`;
+      c.orch_session_exec_id.description = `${tableName} primary key`;
+      c.session_id.description =
+        `${this.orchSession.tableName} row this state describes`;
+      c.session_entry_id.description =
+        `${this.orchSessionEntry.tableName} row this state describes (optional)`;
+      c.parent_exec_id.description =
+        `if this row is a child of a parent execution`;
+      c.namespace.description = `an arbitrary grouping strategy`;
+      c.exec_identity.description = `an arbitrary identity of this execution`;
+      c.exec_code.description = `the shell command, SQL or other code executed`;
+      c.input_text.description =
+        `if STDIN or other technique to send in content was used`;
+      c.exec_status.description = `numerical description of result`;
+      c.exec_error_text.description = `text representation of error from exec`;
+      c.output_text.description = `STDOUT or other result in text format`;
+      c.output_nature.description = `hints about the nature of the output`;
+      c.narrative_md.description =
+        `a block of Markdown text with human-friendly narrative of execution`;
+      c.elaboration.description = `any elaboration needed for the execution`;
+    },
+  });
+
   readonly orchSessionIssue = SQLa.tableDefinition(
     "orch_session_issue",
     {
@@ -350,6 +397,7 @@ export class OrchGovernance {
       this.orchSession,
       this.orchSessionEntry,
       this.orchSessionState,
+      this.orchSessionExec,
       this.orchSessionIssue,
     ],
     adminTableIndexes: [
@@ -357,6 +405,7 @@ export class OrchGovernance {
       ...this.orchSession.indexes,
       ...this.orchSessionEntry.indexes,
       ...this.orchSessionState.indexes,
+      ...this.orchSessionExec.indexes,
       ...this.orchSessionIssue.indexes,
     ],
   };
@@ -405,6 +454,17 @@ export class OrchGovernance {
     this.orchSessionState.zoSchema.shape,
   );
 
+  readonly orchSessionExecCRF = SQLa.tableColumnsRowFactory<
+    typeof this.orchSessionExec.tableName,
+    typeof this.orchSessionExec.zoSchema.shape,
+    OrchEmitContext,
+    DomainQS,
+    DomainsQS
+  >(
+    this.orchSessionExec.tableName,
+    this.orchSessionExec.zoSchema.shape,
+  );
+
   readonly orchSessionIssueCRF = SQLa.tableColumnsRowFactory<
     typeof this.orchSessionIssue.tableName,
     typeof this.orchSessionIssue.zoSchema.shape,
@@ -415,6 +475,26 @@ export class OrchGovernance {
     this.orchSessionIssue.tableName,
     this.orchSessionIssue.zoSchema.shape,
   );
+
+  // the following allow for type-safe access to table/columns names/symbols
+
+  readonly tableNames = {
+    [this.device.tableName]: this.device.tableName,
+    [this.orchSession.tableName]: this.orchSession.tableName,
+    [this.orchSessionEntry.tableName]: this.orchSessionEntry.tableName,
+    [this.orchSessionState.tableName]: this.orchSessionState.tableName,
+    [this.orchSessionExec.tableName]: this.orchSessionExec.tableName,
+    [this.orchSessionIssue.tableName]: this.orchSessionIssue.tableName,
+  };
+
+  readonly columnNames = {
+    [this.device.tableName]: this.device.columnNames,
+    [this.orchSession.tableName]: this.orchSession.columnNames,
+    [this.orchSessionEntry.tableName]: this.orchSessionEntry.columnNames,
+    [this.orchSessionState.tableName]: this.orchSessionState.columnNames,
+    [this.orchSessionExec.tableName]: this.orchSessionExec.columnNames,
+    [this.orchSessionIssue.tableName]: this.orchSessionIssue.columnNames,
+  };
 
   constructor(readonly deterministicPKs: boolean) {
   }
@@ -457,6 +537,160 @@ export class OrchGovernance {
       .toLowerCase() // Convert to lower case
       .replace(/^_+|_+$/g, "") // Remove leading and trailing underscores
       .replace(/__+/g, "_"); // Replace multiple underscores with a single one
+  }
+}
+
+export class DuckDbShell {
+  readonly diagnostics: ReturnType<
+    OrchGovernance["orchSessionExecCRF"]["insertDML"]
+  >[] = [];
+  constructor(
+    readonly session: OrchSession,
+    readonly args: {
+      readonly duckdbCmd: string;
+      readonly dbDestFsPathSupplier: (identity?: string) => string;
+    } = {
+      duckdbCmd: "duckdb",
+      dbDestFsPathSupplier: () => ":memory:",
+    },
+  ) {
+  }
+
+  sqlNarrativeMarkdown(
+    sql: string,
+    status: dax.CommandResult,
+    stdoutFmt?: (stdout: string) => { fmt: string; content: string },
+  ) {
+    const markdown: string[] = [`\`\`\`sql\n${sql}\n\`\`\`\n`];
+    if (status.stdout) {
+      markdown.push("### stdout");
+      const stdout = stdoutFmt?.(status.stdout) ??
+        ({ fmt: "sh", content: status.stdout });
+      markdown.push(
+        `\`\`\`${stdout.fmt}\n${stdout.content}\n\`\`\``,
+      );
+    }
+    if (status.stderr) {
+      markdown.push("### stderr");
+      markdown.push(`\`\`\`sh\n${status.stderr}\n\`\`\``);
+    }
+    return markdown;
+  }
+
+  async writeDiagnosticsSqlMD(
+    sql: string,
+    status: dax.CommandResult,
+    dir?: string,
+  ) {
+    const diagsTmpFile = await Deno.makeTempFile({
+      dir: dir ?? Deno.cwd(),
+      prefix: "ingest-diags-initDDL-",
+      suffix: ".sql.md",
+    });
+    // deno-fmt-ignore
+    await Deno.writeTextFile(diagsTmpFile, `---\n${yaml.stringify({ code: status.code })}---\n${this.sqlNarrativeMarkdown(sql, status).join("\n")}`);
+    return diagsTmpFile;
+  }
+
+  async execDiag(
+    init: {
+      exec_code: string;
+      sql: string;
+      exec_identity?: string;
+      output_nature?: string;
+    },
+    status: dax.CommandResult,
+  ) {
+    const { session, session: { govn }, args: { duckdbCmd } } = this;
+    return govn.orchSessionExecCRF.insertDML({
+      ...init,
+      orch_session_exec_id: await govn.emitCtx.newUUID(govn.deterministicPKs),
+      exec_nature: duckdbCmd,
+      exec_status: status.code,
+      input_text: init.sql,
+      exec_error_text: status.stderr && status.stderr.length
+        ? status.stderr
+        : undefined,
+      output_text: status.stdout && status.stdout.length
+        ? status.stdout
+        : undefined,
+      session_id: (await session.orchSessionSqlDML()).sessionID,
+      narrative_md: this.sqlNarrativeMarkdown(init.sql, status).join("\n"),
+    });
+  }
+
+  async execute(sql: string, identity?: string) {
+    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const dbDestFsPath = dbDestFsPathSupplier(identity);
+    const status = await dax.$`${duckdbCmd} ${dbDestFsPath}`
+      .stdout("piped")
+      .stderr("piped")
+      .stdinText(sql)
+      .noThrow();
+    const diag = await this.execDiag({
+      exec_identity: identity,
+      exec_code: `${duckdbCmd} ${dbDestFsPath}`,
+      sql,
+    }, status);
+    this.diagnostics.push(diag);
+    return { status, diag };
+  }
+
+  async jsonResult<Row>(sql: string, identity?: string) {
+    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const dbDestFsPath = dbDestFsPathSupplier(identity);
+    const status = await dax.$`${duckdbCmd} ${dbDestFsPath} --json`
+      .stdout("piped")
+      .stderr("piped")
+      .stdinText(sql)
+      .noThrow();
+    const stdout = status.stdout;
+    const diag = await this.execDiag({
+      exec_identity: identity,
+      exec_code: `${duckdbCmd} ${dbDestFsPath} --json`,
+      sql,
+      output_nature: "JSON",
+    }, status);
+    this.diagnostics.push(diag);
+    return {
+      status,
+      diag,
+      json: (stdout && stdout.trim().length > 0)
+        ? (JSON.parse(stdout) as Row[])
+        : undefined,
+    };
+  }
+
+  async emitDiagnostics(options: {
+    readonly emitJson?: ((json: string) => Promise<void>) | undefined;
+    readonly diagsMd?: {
+      readonly emit: (md: string) => Promise<void>;
+      readonly frontmatter?: Record<string, unknown>;
+    } | undefined;
+  }) {
+    const { emitJson, diagsMd } = options;
+
+    await emitJson?.(JSON.stringify(this.diagnostics, null, "  "));
+
+    if (diagsMd) {
+      const md: string[] = [
+        "---",
+        yaml.stringify(diagsMd.frontmatter ?? this.args) + "---",
+        "# Orchestration Diagnostics",
+      ];
+      for (const d of this.diagnostics) {
+        if (Array.isArray(d.insertable)) {
+          for (const i of d.insertable) {
+            md.push(`\n## ${i.exec_identity}`);
+            md.push(`${i.narrative_md}`);
+          }
+        } else {
+          md.push(`\n## ${d.insertable.exec_identity}`);
+          md.push(`${d.insertable.narrative_md}`);
+        }
+      }
+      await diagsMd.emit(md.join("\n"));
+    }
   }
 }
 
