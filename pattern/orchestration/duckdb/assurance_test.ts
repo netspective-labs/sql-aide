@@ -3,10 +3,11 @@ import { path } from "../../../deps.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as ddb from "../../../render/dialect/duckdb/mod.ts";
+import * as oa from "../assurance.ts";
 import * as mod from "./assurance.ts";
 
 export class SyntheticAssuranceRulesGovernance
-  implements mod.AssuranceRulesGovernance {
+  implements oa.AssuranceRulesGovernance {
   constructor(readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>) {
   }
 
