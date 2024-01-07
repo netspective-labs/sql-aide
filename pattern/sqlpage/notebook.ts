@@ -11,7 +11,11 @@ export function sqlPageNotebook<
   EmitContext extends SQLa.SqlEmitContext,
 >(
   prototype: SQLPageNotebook,
-  instanceSupplier: () => SQLPageNotebook,
+  instanceSupplier: (
+    registerCTS: (
+      cc: c.CustomTemplateSupplier<EmitContext, Any, Any, Any, Any>,
+    ) => void,
+  ) => SQLPageNotebook,
   ctxSupplier: () => EmitContext,
   nbDescr: chainNB.NotebookDescriptor<
     SQLPageNotebook,
@@ -21,8 +25,15 @@ export function sqlPageNotebook<
     >
   >,
 ) {
+  const custom: Record<
+    string,
+    c.CustomTemplateSupplier<EmitContext, Any, Any, Any, Any>
+  > = {};
   const kernel = chainNB.ObservableKernel.create(prototype, nbDescr);
-  const instance = instanceSupplier();
+  const instance = instanceSupplier((cc) => {
+    // if defined multiple times, the latest version will win
+    custom[cc.templatePath] = cc;
+  });
   const pkcf = SQLa.primaryKeyColumnFactory<
     EmitContext,
     SQLa.SqlDomainQS
@@ -34,8 +45,8 @@ export function sqlPageNotebook<
   }, {
     isIdempotent: true,
     qualitySystem: {
-      description: c.markdown`
-            [SQLPage](https://sql.ophir.dev/) app server content`,
+      description: c.text`
+        [SQLPage](https://sql.ophir.dev/) app server content`,
     },
   });
   const sqlPageFilesCRF = SQLa.tableColumnsRowFactory<
@@ -73,6 +84,19 @@ export function sqlPageNotebook<
         }));
       }
     };
+
+    for (const cc of Object.values(custom)) {
+      notebookSQL.push(sqlPageFilesCRF.insertDML({
+        path: cc.templatePath,
+        contents: cc.handlebarsCode({
+          tla: c.safeHandlebars(),
+          pv: c.safeHandlebars(),
+          pn: c.safePropNames(),
+          row: c.safeHandlebars(),
+        }).SQL(ctx),
+        last_modified: sqlEngineNow,
+      }));
+    }
 
     await kernel.run(instance, irs);
     return notebookSQL;

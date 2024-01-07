@@ -4,8 +4,10 @@ import * as SQLa from "../../render/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+// TODO: create type-safe browsing with lists/combo-boxes using <detail> and hide/show for drill down pattern
+
 // we want to auto-unindent our string literals and remove initial newline
-export const markdown = (
+export const text = (
   literals: TemplateStringsArray,
   ...expressions: unknown[]
 ) => {
@@ -31,9 +33,132 @@ export const markdown = (
 
 // see https://sql.ophir.dev/documentation.sql?component=debug#component
 
-export interface Component<EmitContext extends SQLa.SqlEmitContext>
-  extends SQLa.SqlTextSupplier<EmitContext> {
-  readonly name: "shell" | "list" | "text" | "table";
+export interface Component<
+  EmitContext extends SQLa.SqlEmitContext,
+  Name extends string = "shell" | "list" | "text" | "table" | "breadcrumb",
+> extends SQLa.SqlTextSupplier<EmitContext> {
+  readonly name: Name;
+}
+
+export type FlexibleText<EmitContext extends SQLa.SqlEmitContext> =
+  | string
+  | SQLa.SqlTextSupplier<EmitContext>;
+
+export type ComponentSelectExprArg<
+  EmitContext extends SQLa.SqlEmitContext,
+> = [
+  value: FlexibleText<EmitContext> | undefined,
+  as: string,
+] | undefined;
+
+export type ComponentSelectExpr<EmitContext extends SQLa.SqlEmitContext> = [
+  value: FlexibleText<EmitContext>,
+  as: string,
+];
+
+export class ComponentBuilder<
+  Name extends string,
+  EmitContext extends SQLa.SqlEmitContext,
+> {
+  /**
+   * Accept a flexible list of key value pairs and prepare a `SELECT` clause
+   * from all arguments that are defined
+   * @param ctx an EmitContext instance
+   * @param args the arguments that should be inspected and emitted
+   * @returns string array suitable to emit after `SELECT` keyword
+   */
+  selectables(
+    ctx: EmitContext,
+    ...args: ComponentSelectExprArg<EmitContext>[]
+  ): string[] {
+    // find all defined arguments (filter any `undefined`); converts a
+    // ComponentSelectExprArg to ComponentSelectExpr
+    const code = args.filter((c) => c && c[0]) as ComponentSelectExpr<
+      EmitContext
+    >[];
+    return code.map((c) =>
+      `${
+        typeof c[0] === "string"
+          ? `'${c[0].replaceAll("'", "''")}'`
+          : c[0].SQL(ctx)
+      } as ${c[1]}`
+    );
+  }
+
+  // create a selectables args list from an object when the proper name
+  // matches the `as` argument
+  select<Args extends Record<string, unknown>>(
+    args: Args,
+    ...propNames: (keyof Args)[]
+  ): ComponentSelectExpr<EmitContext>[] {
+    return propNames.map((pn) =>
+      [
+        args[pn] ? String(args[pn]) : undefined,
+        String(pn),
+      ] as ComponentSelectExpr<EmitContext>
+    );
+  }
+
+  component(
+    name: Name,
+    ...args: ComponentSelectExprArg<EmitContext>[]
+  ): Component<EmitContext, Name> {
+    return {
+      name,
+      SQL: (ctx) => {
+        const select = this.selectables(ctx, ...args);
+        // deno-fmt-ignore
+        return `SELECT '${name}' as component${select.length ? `, ${select.join(", ")}` : ""}`;
+      },
+    };
+  }
+
+  customTemplatePath(name: Name): `sqlpage/templates/${Name}.handlebars` {
+    return `sqlpage/templates/${name}.handlebars`;
+  }
+
+  custom<Args extends Record<string, unknown>>(
+    name: Name,
+    args: Args,
+    sqlBuilder: (
+      topLevel: Component<EmitContext, Name>,
+    ) => SQLa.SqlTextSupplier<EmitContext>,
+    ...specificArgNames: (keyof Args)[]
+  ): Component<EmitContext, Name> {
+    // if no args are supplied, grab them all
+    const argNames = specificArgNames.length > 0
+      ? specificArgNames
+      : Object.keys(args);
+    const sql = sqlBuilder(
+      args
+        ? this.component(name, ...this.select(args, ...argNames))
+        : this.component(name),
+    );
+    return {
+      name,
+      SQL: sql.SQL,
+    };
+  }
+
+  customNoArgs(
+    name: Name,
+    sqlBuilder: (
+      topLevel: Component<EmitContext, Name>,
+    ) => SQLa.SqlTextSupplier<EmitContext>,
+  ): Component<EmitContext, Name> {
+    return this.custom(name, {}, sqlBuilder);
+  }
+}
+
+export interface Breadcrumbs<EmitContext extends SQLa.SqlEmitContext>
+  extends Component<EmitContext> {
+  readonly name: "breadcrumb";
+  readonly items: Iterable<{
+    readonly caption: FlexibleText<EmitContext>;
+    readonly href?: FlexibleText<EmitContext>;
+    readonly active?: boolean;
+    readonly descr?: FlexibleText<EmitContext>;
+  }>;
 }
 
 export interface Shell<EmitContext extends SQLa.SqlEmitContext>
@@ -83,42 +208,102 @@ export interface Table<
   readonly sort?: boolean;
   readonly columns?: Record<ColumName, {
     readonly alignRight?: boolean;
-    readonly icon: string;
-    readonly markdown: string;
+    readonly icon?: string;
+    readonly markdown?: boolean;
   }>;
   readonly rows: Iterable<TableRow<EmitContext>>;
+}
+
+export type CustomTemplatePath<Name extends string> =
+  `sqlpage/templates/${Name}.handlebars`;
+
+// Handlebars code is not really SQL but we use the SQLa SQL emit infrastructure
+// in SQLPageNotebook instances so it's convenient to assume it's SqlTextSupplier
+export type HandlebarsCode<EmitContext extends SQLa.SqlEmitContext> =
+  SQLa.SqlTextSupplier<EmitContext>;
+
+export interface CustomTemplateSupplier<
+  EmitContext extends SQLa.SqlEmitContext,
+  Name extends string,
+  TopLevelArgs extends Record<string, unknown>,
+  Row extends Record<string, unknown>,
+  PageParams extends Record<string, unknown>,
+> {
+  readonly templatePath: CustomTemplatePath<string>;
+  readonly handlebarsCode: (
+    helpers: {
+      readonly tla: { readonly [A in keyof TopLevelArgs]: `{{${string & A}}}` };
+      readonly row: { readonly [C in keyof Row]: `{{${string & C}}}` };
+      readonly pn: { readonly [P in keyof PageParams]: `${string & P}` }; // pn = param-name
+      readonly pv: { readonly [P in keyof PageParams]: `{{${string & P}}}` }; // pv = param-var (value of param)
+    },
+  ) => HandlebarsCode<EmitContext>;
+  readonly component: (
+    tla?: TopLevelArgs,
+    ...rows: Row[]
+  ) => Component<EmitContext, Name> & TopLevelArgs;
+}
+
+/**
+ * Prepare an object proxy which takes each property of an object an returns a
+ * string named exactly the same as the key name. This is useful for type-safety
+ * in string template literals.
+ * @returns a read-only object proxy which takes the name of any key and returns the same key
+ */
+export function safePropNames<Shape extends Record<string, unknown>>() {
+  type ShapeKeyNames = {
+    readonly [PropName in keyof Shape]: `${string & PropName}`;
+  };
+  return new Proxy<ShapeKeyNames>({} as ShapeKeyNames, {
+    get: (_, p) => String(p),
+  });
+}
+
+/**
+ * Prepare an object proxy which takes each property of an object an returns
+ * name of that field as a type-safe handlebars variable like {{key}}.
+ * @returns a read-only object proxy which takes the name of any key and returns the same key as {{key}}
+ */
+export function safeHandlebars<
+  Shape extends Record<string, unknown>,
+>() {
+  type HandlebarsVars = {
+    readonly [PropName in keyof Shape]: `{{${string & PropName}}}`;
+  };
+  return new Proxy<HandlebarsVars>({} as HandlebarsVars, {
+    get: (_, p) => `{{${String(p)}}}`,
+  });
 }
 
 export function typicalComponents<
   Href extends string,
   EmitContext extends SQLa.SqlEmitContext,
 >() {
-  type CompCode = [value: string | undefined, as: string];
-  const selectables = (...args: (CompCode | undefined)[]): string[] => {
-    const code = args.filter((c) => c && c[0]) as [value: string, as: string][];
-    return code.map((c) => `'${c[0].replaceAll("'", "''")}' as ${c[1]}`);
-  };
+  const builder = new ComponentBuilder<
+    Component<EmitContext>["name"],
+    EmitContext
+  >();
 
-  // create a selectables args list from an object when the proper name
-  // matches the `as` argument
-  const select = <Args extends Record<string, unknown>>(
-    args: Args,
-    ...propNames: (keyof Args)[]
-  ): CompCode[] => {
-    return propNames.map((
-      pn,
-    ) => [args[pn] ? String(args[pn]) : undefined, String(pn)]);
-  };
-
-  const component = <Name extends Component<EmitContext>["name"]>(
-    name: Name,
-    ...args: (CompCode | undefined)[]
-  ): Component<EmitContext> => {
-    const select = selectables(...args);
+  const breadcrumbs = (
+    init: Omit<Breadcrumbs<EmitContext>, "name" | "SQL">,
+  ): Breadcrumbs<EmitContext> => {
     return {
-      name,
-      // deno-fmt-ignore
-      SQL: () => `SELECT '${name}' as component${select.length ? `, ${select.join(", ")}` : ''}`,
+      name: "breadcrumb",
+      ...init,
+      SQL: (ctx) => {
+        const topLevel = builder.component("breadcrumb");
+        // deno-fmt-ignore
+        return `${topLevel.SQL(ctx)};\n` +
+          Array.from(init.items).map((i) =>
+            `SELECT ${builder.selectables(
+                ctx,
+                [i.caption, "title"],
+                [i.href, "link"],
+                i.active ? ["true", "active"] : undefined,
+                [i.descr, "description"],
+              )}`
+          ).join(";\n");
+      },
     };
   };
 
@@ -127,12 +312,12 @@ export function typicalComponents<
   ): Shell<EmitContext> => {
     return {
       ...init,
-      ...component(
+      ...builder.component(
         "shell",
-        ...select(init, "title", "icon", "link"),
+        ...builder.select(init, "title", "icon", "link"),
         ...(init.menuItems
           ? Array.from(init.menuItems).map((mi) =>
-            [mi.caption, "menu_item"] as CompCode
+            [mi.caption, "menu_item"] as ComponentSelectExpr<EmitContext>
           )
           : []),
       ),
@@ -145,9 +330,9 @@ export function typicalComponents<
   ): Text<EmitContext> => {
     return {
       ...init,
-      ...component(
+      ...builder.component(
         "text",
-        ...select(init, "title"),
+        ...builder.select(init, "title"),
         "text" in init.content ? [init.content.text, "contents"] : undefined,
         "markdown" in init.content
           ? [init.content.markdown, "contentsmd"]
@@ -163,9 +348,9 @@ export function typicalComponents<
     return {
       ...init,
       // deno-fmt-ignore
-      SQL: () =>
-        `SELECT ${selectables(
-            ...select(init, "title", "link"),
+      SQL: (ctx) =>
+        `SELECT ${builder.selectables(ctx,
+            ...builder.select(init, "title", "link"),
             [init.descr, "description"],
           )}`,
     };
@@ -174,7 +359,10 @@ export function typicalComponents<
   const list = (
     init: Omit<List<EmitContext>, "name" | "SQL">,
   ): List<EmitContext> => {
-    const topLevel = component("list", ...select(init, "title"));
+    const topLevel = builder.component(
+      "list",
+      ...builder.select(init, "title"),
+    );
     return {
       name: "list",
       ...init,
@@ -188,7 +376,7 @@ export function typicalComponents<
   const table = <ColumnName extends string>(
     init: Omit<Table<ColumnName, EmitContext>, "name" | "SQL">,
   ): Table<ColumnName, EmitContext> => {
-    const topLevel = select(init, "search", "sort");
+    const topLevel = builder.select(init, "search", "sort");
     if (init.columns) {
       for (const [columnName, v] of Object.entries(init.columns)) {
         const args = v as typeof init.columns[ColumnName];
@@ -201,11 +389,19 @@ export function typicalComponents<
       name: "table",
       ...init,
       SQL: (ctx) => {
-        return `${component("table", ...topLevel).SQL(ctx)};\n` +
+        return `${builder.component("table", ...topLevel).SQL(ctx)};\n` +
           Array.from(init.rows).map((i) => i.SQL(ctx)).join(";\n");
       },
     };
   };
 
-  return { selectables, select, component, shell, text, list, listItem, table };
+  return {
+    builder,
+    breadcrumbs,
+    shell,
+    text,
+    list,
+    listItem,
+    table,
+  };
 }
