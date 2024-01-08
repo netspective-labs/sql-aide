@@ -196,25 +196,3 @@ pick up the location of Java and any other ASDF-based executables:
 ```bash
 export PATH=$PATH:$HOME/.asdf/shims
 ```
-
-## NPM Packaging
-
-We are experimenting with taking the Deno code and producing NPM packages. This
-doesnt work for the `pattern` or `examples` directories but the core `SQLa`
-render package should work.
-
-Build the NPM package
-
-```bash
-deno task prepare-npm
-```
-
-Publish the NPM package
-
-```bash
-deno task publish-npm
-```
-
-To publish this package, you will need the necessary permissions. Please contact
-the `netspective-labs` organization to obtain the required permissions if you
-don't have them yet.
