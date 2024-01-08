@@ -4,229 +4,261 @@ PRAGMA foreign_keys = on; -- check foreign key reference, slightly worst perform
 CREATE TABLE IF NOT EXISTS "execution_context" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "party_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_assignment_nature" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "proficiency_scale" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_status" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "probability" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "comparison_operator" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "kpi_measurement_type" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "kpi_status" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "trend" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "auditor_type" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS "party_relation_type" (
-    "code" TEXT PRIMARY KEY NOT NULL,
-    "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "severity" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "priority" (
     "code" TEXT PRIMARY KEY NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- content tables
-CREATE TABLE IF NOT EXISTS "party_role" (
-    "party_role_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS "party_type" (
+    "party_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "party_relation_type" (
+    "party_relation_type_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "party_role" (
+    "party_role_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "party_identifier_type" (
-    "party_identifier_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "party_identifier_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "person_type" (
-    "person_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "person_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "contact_type" (
-    "contact_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "contact_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "organization_role_type" (
-    "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "organization_role_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "party" (
-    "party_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "party_id" TEXT PRIMARY KEY NOT NULL,
     "party_type_id" TEXT NOT NULL,
     "party_name" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
-    FOREIGN KEY("party_type_id") REFERENCES "party_type"("code")
+    FOREIGN KEY("party_type_id") REFERENCES "party_type"("party_type_id")
 );
 CREATE TABLE IF NOT EXISTS "party_identifier" (
-    "party_identifier_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "identifier_number" TEXT NOT NULL,
-    "party_identifier_type_id" INTEGER NOT NULL,
-    "party_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "party_identifier_id" TEXT PRIMARY KEY NOT NULL,
+    "identifier_name" TEXT NOT NULL,
+    "identifier_value" TEXT NOT NULL,
+    "party_identifier_type_id" TEXT NOT NULL,
+    "party_id" TEXT NOT NULL,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("party_identifier_type_id") REFERENCES "party_identifier_type"("party_identifier_type_id"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "person" (
-    "person_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "party_id" INTEGER NOT NULL,
-    "person_type_id" INTEGER NOT NULL,
+    "person_id" TEXT PRIMARY KEY NOT NULL,
+    "party_id" TEXT NOT NULL,
+    "person_type_id" TEXT NOT NULL,
     "person_first_name" TEXT NOT NULL,
+    "person_middle_name" TEXT,
     "person_last_name" TEXT NOT NULL,
+    "previous_name" TEXT,
     "honorific_prefix" TEXT,
     "honorific_suffix" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "gender_id" TEXT NOT NULL,
+    "sex_id" TEXT NOT NULL,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
-    FOREIGN KEY("person_type_id") REFERENCES "person_type"("person_type_id")
+    FOREIGN KEY("person_type_id") REFERENCES "person_type"("person_type_id"),
+    FOREIGN KEY("gender_id") REFERENCES "gender_type"("gender_type_id"),
+    FOREIGN KEY("sex_id") REFERENCES "sex_type"("sex_type_id")
 );
 CREATE TABLE IF NOT EXISTS "party_relation" (
-    "party_relation_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "party_id" INTEGER NOT NULL,
-    "related_party_id" INTEGER NOT NULL,
+    "party_relation_id" TEXT PRIMARY KEY NOT NULL,
+    "party_id" TEXT NOT NULL,
+    "related_party_id" TEXT NOT NULL,
     "relation_type_id" TEXT NOT NULL,
-    "party_role_id" INTEGER,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "party_role_id" TEXT,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id"),
     FOREIGN KEY("related_party_id") REFERENCES "party"("party_id"),
-    FOREIGN KEY("relation_type_id") REFERENCES "party_relation_type"("code"),
+    FOREIGN KEY("relation_type_id") REFERENCES "party_relation_type"("party_relation_type_id"),
     FOREIGN KEY("party_role_id") REFERENCES "party_role"("party_role_id")
 );
 CREATE TABLE IF NOT EXISTS "organization" (
-    "organization_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "party_id" INTEGER NOT NULL,
+    "organization_id" TEXT PRIMARY KEY NOT NULL,
+    "party_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "alias" TEXT,
+    "description" TEXT,
     "license" TEXT NOT NULL,
+    "federal_tax_id_num" TEXT,
     "registration_date" DATE NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "organization_role" (
-    "organization_role_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "person_id" INTEGER NOT NULL,
-    "organization_id" INTEGER NOT NULL,
-    "organization_role_type_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "organization_role_id" TEXT PRIMARY KEY NOT NULL,
+    "person_id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "organization_role_type_id" TEXT NOT NULL,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
@@ -234,35 +266,38 @@ CREATE TABLE IF NOT EXISTS "organization_role" (
     FOREIGN KEY("organization_role_type_id") REFERENCES "organization_role_type"("organization_role_type_id")
 );
 CREATE TABLE IF NOT EXISTS "contact_electronic" (
-    "contact_electronic_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "contact_type_id" INTEGER NOT NULL,
-    "party_id" INTEGER NOT NULL,
+    "contact_electronic_id" TEXT PRIMARY KEY NOT NULL,
+    "contact_type_id" TEXT NOT NULL,
+    "party_id" TEXT NOT NULL,
     "electronics_details" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("contact_type_id"),
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "contact_land" (
-    "contact_land_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "contact_type_id" INTEGER NOT NULL,
-    "party_id" INTEGER NOT NULL,
+    "contact_land_id" TEXT PRIMARY KEY NOT NULL,
+    "contact_type_id" TEXT NOT NULL,
+    "party_id" TEXT NOT NULL,
     "address_line1" TEXT NOT NULL,
     "address_line2" TEXT NOT NULL,
     "address_zip" TEXT NOT NULL,
     "address_city" TEXT NOT NULL,
     "address_state" TEXT NOT NULL,
+    "address_territory" TEXT,
     "address_country" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "elaboration" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("contact_type_id") REFERENCES "contact_type"("contact_type_id"),
@@ -272,11 +307,11 @@ CREATE TABLE IF NOT EXISTS "contract_status" (
     "contract_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -285,11 +320,11 @@ CREATE TABLE IF NOT EXISTS "payment_type" (
     "payment_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -298,11 +333,11 @@ CREATE TABLE IF NOT EXISTS "periodicity" (
     "periodicity_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -311,11 +346,11 @@ CREATE TABLE IF NOT EXISTS "boundary_nature" (
     "boundary_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -324,11 +359,11 @@ CREATE TABLE IF NOT EXISTS "time_entry_category" (
     "time_entry_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -337,11 +372,11 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject" (
     "raci_matrix_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -350,11 +385,11 @@ CREATE TABLE IF NOT EXISTS "skill_nature" (
     "skill_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -363,24 +398,24 @@ CREATE TABLE IF NOT EXISTS "skill" (
     "skill_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "organization_role_type" (
-    "organization_role_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "organization_role_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -390,11 +425,11 @@ CREATE TABLE IF NOT EXISTS "graph" (
     "graph_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("graph_nature_id") REFERENCES "graph_nature"("graph_nature_id")
@@ -406,11 +441,11 @@ CREATE TABLE IF NOT EXISTS "boundary" (
     "boundary_nature_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("parent_boundary_id") REFERENCES "boundary"("boundary_id"),
@@ -421,11 +456,11 @@ CREATE TABLE IF NOT EXISTS "host" (
     "host_id" TEXT PRIMARY KEY NOT NULL,
     "host_name" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "description" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("host_name")
@@ -433,11 +468,11 @@ CREATE TABLE IF NOT EXISTS "host" (
 CREATE TABLE IF NOT EXISTS "host_boundary" (
     "host_boundary_id" TEXT PRIMARY KEY NOT NULL,
     "host_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("host_id") REFERENCES "host"("host_id")
@@ -446,11 +481,11 @@ CREATE TABLE IF NOT EXISTS "asset_status" (
     "asset_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -459,11 +494,11 @@ CREATE TABLE IF NOT EXISTS "asset_service_status" (
     "asset_service_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -472,11 +507,11 @@ CREATE TABLE IF NOT EXISTS "asset_type" (
     "asset_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -485,11 +520,11 @@ CREATE TABLE IF NOT EXISTS "assignment" (
     "assignment_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -501,11 +536,11 @@ CREATE TABLE IF NOT EXISTS "raci_matrix" (
     "accountable" TEXT NOT NULL,
     "consulted" TEXT NOT NULL,
     "informed" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
@@ -513,11 +548,11 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     "raci_matrix_subject_boundary_id" TEXT PRIMARY KEY NOT NULL,
     "boundary_id" TEXT NOT NULL,
     "raci_matrix_subject_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id"),
@@ -526,17 +561,17 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
 CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
     "raci_matrix_activity_id" TEXT PRIMARY KEY NOT NULL,
     "activity" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "asset" (
     "asset_id" TEXT PRIMARY KEY NOT NULL,
-    "organization_id" INTEGER NOT NULL,
+    "organization_id" TEXT NOT NULL,
     "asset_retired_date" DATE,
     "asset_status_id" INTEGER NOT NULL,
     "asset_tag" TEXT NOT NULL,
@@ -558,11 +593,11 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "asymmetric_keys_encryption_enabled" TEXT,
     "cryptographic_key_encryption_enabled" TEXT,
     "symmetric_keys_encryption_enabled" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
@@ -586,11 +621,11 @@ CREATE TABLE IF NOT EXISTS "asset_service" (
     "vendor_link" TEXT NOT NULL,
     "installation_date" DATE,
     "criticality" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
@@ -601,11 +636,11 @@ CREATE TABLE IF NOT EXISTS "vulnerability_source" (
     "short_code" TEXT NOT NULL,
     "source_url" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
@@ -620,11 +655,11 @@ CREATE TABLE IF NOT EXISTS "vulnerability" (
     "severity_id" TEXT NOT NULL,
     "solutions" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("source_id") REFERENCES "vulnerability_source"("vulnerability_source_id"),
@@ -641,11 +676,11 @@ CREATE TABLE IF NOT EXISTS "threat_source" (
     "intent" TEXT NOT NULL,
     "targeting" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("threat_source_type_id") REFERENCES "threat_source_type"("threat_source_type_id")
@@ -660,11 +695,11 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     "event_classification" TEXT NOT NULL,
     "source_of_information" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("threat_source_id") REFERENCES "threat_source"("threat_source_id"),
@@ -679,11 +714,11 @@ CREATE TABLE IF NOT EXISTS "asset_risk" (
     "relevance_id" TEXT,
     "likelihood_id" TEXT,
     "impact" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("asset_risk_type_id") REFERENCES "asset_risk_type"("asset_risk_type_id"),
@@ -701,13 +736,13 @@ CREATE TABLE IF NOT EXISTS "security_impact_analysis" (
     "existing_controls" TEXT NOT NULL,
     "priority_id" TEXT NOT NULL,
     "reported_date" DATE NOT NULL,
-    "reported_by_id" INTEGER NOT NULL,
-    "responsible_by_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "reported_by_id" TEXT NOT NULL,
+    "responsible_by_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("vulnerability_id") REFERENCES "vulnerability"("vulnerability_id"),
@@ -722,11 +757,11 @@ CREATE TABLE IF NOT EXISTS "impact_of_risk" (
     "impact_of_risk_id" TEXT PRIMARY KEY NOT NULL,
     "security_impact_analysis_id" TEXT NOT NULL,
     "impact" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
@@ -735,11 +770,11 @@ CREATE TABLE IF NOT EXISTS "proposed_controls" (
     "proposed_controls_id" TEXT PRIMARY KEY NOT NULL,
     "security_impact_analysis_id" TEXT NOT NULL,
     "controls" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("security_impact_analysis_id") REFERENCES "security_impact_analysis"("security_impact_analysis_id")
@@ -749,44 +784,44 @@ CREATE TABLE IF NOT EXISTS "billing" (
     "purpose" TEXT NOT NULL,
     "bill_rate" TEXT NOT NULL,
     "period" TEXT NOT NULL,
-    "effective_from_date" TIMESTAMP NOT NULL,
+    "effective_from_date" TIMESTAMPTZ NOT NULL,
     "effective_to_date" TEXT NOT NULL,
     "prorate" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "scheduled_task" (
     "scheduled_task_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
-    "task_date" TIMESTAMP NOT NULL,
-    "reminder_date" TIMESTAMP NOT NULL,
+    "task_date" TIMESTAMPTZ NOT NULL,
+    "reminder_date" TIMESTAMPTZ NOT NULL,
     "assigned_to" TEXT NOT NULL,
     "reminder_to" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "timesheet" (
     "timesheet_id" TEXT PRIMARY KEY NOT NULL,
-    "date_of_work" TIMESTAMP NOT NULL,
+    "date_of_work" TIMESTAMPTZ NOT NULL,
     "is_billable_id" INTEGER NOT NULL,
     "number_of_hours" INTEGER NOT NULL,
     "time_entry_category_id" INTEGER NOT NULL,
     "timesheet_summary" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("is_billable_id") REFERENCES "status_value"("status_value_id"),
@@ -800,15 +835,15 @@ CREATE TABLE IF NOT EXISTS "certificate" (
     "certificate_type" TEXT NOT NULL,
     "certificate_authority" TEXT NOT NULL,
     "validity" TEXT NOT NULL,
-    "expiration_date" TIMESTAMP,
+    "expiration_date" TIMESTAMPTZ,
     "domain_name" TEXT NOT NULL,
     "key_size" INTEGER NOT NULL,
     "path" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
@@ -824,26 +859,26 @@ CREATE TABLE IF NOT EXISTS "device" (
     "location" TEXT NOT NULL,
     "purpose" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     "security_incident_response_team_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER,
-    "person_id" INTEGER NOT NULL,
-    "organization_id" INTEGER NOT NULL,
+    "person_id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
     "training_status_id" INTEGER,
     "attended_date" DATE,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("training_subject_id"),
@@ -854,15 +889,15 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
 CREATE TABLE IF NOT EXISTS "awareness_training" (
     "awareness_training_id" TEXT PRIMARY KEY NOT NULL,
     "training_subject_id" INTEGER NOT NULL,
-    "person_id" INTEGER NOT NULL,
-    "organization_id" INTEGER NOT NULL,
+    "person_id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
     "training_status_id" INTEGER NOT NULL,
     "attended_date" DATE NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("training_subject_id") REFERENCES "training_subject"("training_subject_id"),
@@ -872,18 +907,18 @@ CREATE TABLE IF NOT EXISTS "awareness_training" (
 );
 CREATE TABLE IF NOT EXISTS "rating" (
     "rating_id" TEXT PRIMARY KEY NOT NULL,
-    "author_id" INTEGER NOT NULL,
-    "rating_given_to_id" INTEGER NOT NULL,
+    "author_id" TEXT NOT NULL,
+    "rating_given_to_id" TEXT NOT NULL,
     "rating_value_id" INTEGER NOT NULL,
     "best_rating_id" INTEGER,
     "rating_explanation" TEXT NOT NULL,
     "review_aspect" TEXT NOT NULL,
     "worst_rating_id" INTEGER,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("author_id") REFERENCES "person"("person_id"),
@@ -894,13 +929,13 @@ CREATE TABLE IF NOT EXISTS "rating" (
 );
 CREATE TABLE IF NOT EXISTS "note" (
     "note_id" TEXT PRIMARY KEY NOT NULL,
-    "party_id" INTEGER NOT NULL,
+    "party_id" TEXT NOT NULL,
     "note" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
@@ -909,11 +944,11 @@ CREATE TABLE IF NOT EXISTS "threat_source_type" (
     "threat_source_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -922,11 +957,11 @@ CREATE TABLE IF NOT EXISTS "threat_event_type" (
     "threat_event_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -935,11 +970,11 @@ CREATE TABLE IF NOT EXISTS "calendar_period" (
     "calendar_period_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -948,11 +983,11 @@ CREATE TABLE IF NOT EXISTS "tracking_period" (
     "tracking_period_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -961,19 +996,19 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
     "audit_assertion_id" TEXT PRIMARY KEY NOT NULL,
     "auditor_type_id" TEXT NOT NULL,
     "audit_purpose_id" INTEGER NOT NULL,
-    "auditor_org_id" INTEGER NOT NULL,
-    "auditor_person_id" INTEGER NOT NULL,
+    "auditor_org_id" TEXT NOT NULL,
+    "auditor_person_id" TEXT NOT NULL,
     "auditor_status_type_id" INTEGER NOT NULL,
     "scf_identifier" TEXT NOT NULL,
     "auditor_notes" TEXT NOT NULL,
     "auditor_artifacts" TEXT NOT NULL,
     "assertion_name" TEXT NOT NULL,
     "assertion_description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("auditor_type_id") REFERENCES "auditor_type"("code"),
@@ -984,24 +1019,24 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
 );
 CREATE TABLE IF NOT EXISTS "contract" (
     "contract_id" TEXT PRIMARY KEY NOT NULL,
-    "contract_from_id" INTEGER NOT NULL,
-    "contract_to_id" INTEGER NOT NULL,
+    "contract_from_id" TEXT NOT NULL,
+    "contract_to_id" TEXT NOT NULL,
     "contract_status_id" INTEGER,
     "document_reference" TEXT NOT NULL,
     "payment_type_id" INTEGER,
     "periodicity_id" INTEGER,
-    "start_date" TIMESTAMP NOT NULL,
-    "end_date" TIMESTAMP,
+    "start_date" TIMESTAMPTZ NOT NULL,
+    "end_date" TIMESTAMPTZ,
     "contract_type_id" INTEGER,
-    "date_of_last_review" TIMESTAMP,
-    "date_of_next_review" TIMESTAMP,
-    "date_of_contract_review" TIMESTAMP,
-    "date_of_contract_approval" TIMESTAMP,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "date_of_last_review" TIMESTAMPTZ,
+    "date_of_next_review" TIMESTAMPTZ,
+    "date_of_contract_review" TIMESTAMPTZ,
+    "date_of_contract_approval" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("contract_from_id") REFERENCES "party"("party_id"),
@@ -1026,12 +1061,12 @@ CREATE TABLE IF NOT EXISTS "risk_register" (
     "mitigation_further_actions" TEXT NOT NULL,
     "control_monitor_mitigation_actions_tracking_strategy" TEXT NOT NULL,
     "control_monitor_action_due_date" DATE,
-    "control_monitor_risk_owner_id" INTEGER NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "control_monitor_risk_owner_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("risk_subject_id") REFERENCES "risk_subject"("risk_subject_id"),
@@ -1046,7 +1081,7 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "incident_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "incident_date" DATE NOT NULL,
-    "time_and_time_zone" TIMESTAMP NOT NULL,
+    "time_and_time_zone" TIMESTAMPTZ NOT NULL,
     "asset_id" TEXT NOT NULL,
     "category_id" INTEGER NOT NULL,
     "sub_category_id" INTEGER NOT NULL,
@@ -1057,11 +1092,11 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "it_service_impacted" TEXT NOT NULL,
     "impacted_modules" TEXT NOT NULL,
     "impacted_dept" TEXT NOT NULL,
-    "reported_by_id" INTEGER NOT NULL,
-    "reported_to_id" INTEGER NOT NULL,
+    "reported_by_id" TEXT NOT NULL,
+    "reported_to_id" TEXT NOT NULL,
     "brief_description" TEXT NOT NULL,
     "detailed_description" TEXT NOT NULL,
-    "assigned_to_id" INTEGER NOT NULL,
+    "assigned_to_id" TEXT NOT NULL,
     "assigned_date" DATE,
     "investigation_details" TEXT NOT NULL,
     "containment_details" TEXT NOT NULL,
@@ -1070,16 +1105,16 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "lessons_learned" TEXT NOT NULL,
     "status_id" INTEGER,
     "closed_date" DATE,
-    "reopened_time" TIMESTAMP,
+    "reopened_time" TIMESTAMPTZ,
     "feedback_from_business" TEXT NOT NULL,
     "reported_to_regulatory" TEXT NOT NULL,
     "report_date" DATE,
-    "report_time" TIMESTAMP,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "report_time" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
@@ -1105,11 +1140,11 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
     "modification_of_the_reported_issue" TEXT NOT NULL,
     "testing_for_modified_issue" TEXT NOT NULL,
     "test_results" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("incident_id") REFERENCES "incident"("incident_id"),
@@ -1118,15 +1153,15 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
     "raci_matrix_assignment_id" TEXT PRIMARY KEY NOT NULL,
-    "person_id" INTEGER NOT NULL,
+    "person_id" TEXT NOT NULL,
     "subject_id" INTEGER NOT NULL,
     "activity_id" TEXT NOT NULL,
     "raci_matrix_assignment_nature_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
@@ -1136,15 +1171,15 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
 );
 CREATE TABLE IF NOT EXISTS "person_skill" (
     "person_skill_id" TEXT PRIMARY KEY NOT NULL,
-    "person_id" INTEGER NOT NULL,
+    "person_id" TEXT NOT NULL,
     "skill_nature_id" INTEGER NOT NULL,
     "skill_id" INTEGER NOT NULL,
     "proficiency_scale_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("person_id") REFERENCES "person"("person_id"),
@@ -1156,11 +1191,11 @@ CREATE TABLE IF NOT EXISTS "key_performance" (
     "key_performance_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
@@ -1188,11 +1223,11 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     "score" TEXT NOT NULL,
     "tracking_period_id" INTEGER NOT NULL,
     "trend_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("key_performance_id") REFERENCES "key_performance"("key_performance_id"),
@@ -1209,11 +1244,11 @@ CREATE TABLE IF NOT EXISTS "key_risk" (
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "base_value" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
@@ -1222,11 +1257,11 @@ CREATE TABLE IF NOT EXISTS "key_risk_indicator" (
     "key_risk_id" TEXT NOT NULL,
     "entry_date" DATE NOT NULL,
     "entry_value" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("key_risk_id") REFERENCES "key_risk"("key_risk_id")
@@ -1238,28 +1273,28 @@ CREATE TABLE IF NOT EXISTS "assertion" (
     "assertion_explain" TEXT NOT NULL,
     "assertion_expires_on" DATE,
     "assertion_expires_poam" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT
 );
 CREATE TABLE IF NOT EXISTS "attestation" (
     "attestation_id" TEXT PRIMARY KEY NOT NULL,
     "assertion_id" TEXT NOT NULL,
-    "person_id" INTEGER NOT NULL,
+    "person_id" TEXT NOT NULL,
     "attestation" TEXT NOT NULL,
     "attestation_explain" TEXT NOT NULL,
     "attested_on" DATE NOT NULL,
     "expires_on" DATE,
     "boundary_id" TEXT,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("assertion_id") REFERENCES "assertion"("assertion_id"),
@@ -1274,11 +1309,11 @@ CREATE TABLE IF NOT EXISTS "attestation_evidence" (
     "url" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "attachment" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("attestation_id") REFERENCES "attestation"("attestation_id")
@@ -1287,11 +1322,11 @@ CREATE TABLE IF NOT EXISTS "training_subject" (
     "training_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1300,11 +1335,11 @@ CREATE TABLE IF NOT EXISTS "status_value" (
     "status_value_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1313,11 +1348,11 @@ CREATE TABLE IF NOT EXISTS "rating_value" (
     "rating_value_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1326,11 +1361,11 @@ CREATE TABLE IF NOT EXISTS "contract_type" (
     "contract_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1339,11 +1374,11 @@ CREATE TABLE IF NOT EXISTS "graph_nature" (
     "graph_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1352,11 +1387,11 @@ CREATE TABLE IF NOT EXISTS "risk_subject" (
     "risk_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1365,11 +1400,11 @@ CREATE TABLE IF NOT EXISTS "risk_type" (
     "risk_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1378,11 +1413,11 @@ CREATE TABLE IF NOT EXISTS "incident_category" (
     "incident_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1391,11 +1426,11 @@ CREATE TABLE IF NOT EXISTS "incident_sub_category" (
     "incident_sub_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1404,11 +1439,11 @@ CREATE TABLE IF NOT EXISTS "incident_type" (
     "incident_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1417,11 +1452,11 @@ CREATE TABLE IF NOT EXISTS "incident_status" (
     "incident_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1430,11 +1465,11 @@ CREATE TABLE IF NOT EXISTS "asset_risk_type" (
     "asset_risk_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1443,11 +1478,11 @@ CREATE TABLE IF NOT EXISTS "audit_purpose" (
     "audit_purpose_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1456,11 +1491,11 @@ CREATE TABLE IF NOT EXISTS "audit_status" (
     "audit_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
-    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
-    "updated_at" TIMESTAMP,
+    "updated_at" TIMESTAMPTZ,
     "updated_by" TEXT,
-    "deleted_at" TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ,
     "deleted_by" TEXT,
     "activity_log" TEXT,
     UNIQUE("code")
@@ -1676,8 +1711,6 @@ INSERT INTO "execution_context" ("code", "value") VALUES ('TEST', 'test');
 INSERT INTO "execution_context" ("code", "value") VALUES ('DEVELOPMENT', 'devl');
 INSERT INTO "execution_context" ("code", "value") VALUES ('SANDBOX', 'sandbox');
 INSERT INTO "execution_context" ("code", "value") VALUES ('EXPERIMENTAL', 'experimental');
-INSERT INTO "party_type" ("code", "value") VALUES ('PERSON', 'Person');
-INSERT INTO "party_type" ("code", "value") VALUES ('ORGANIZATION', 'Organization');
 INSERT INTO "raci_matrix_assignment_nature" ("code", "value") VALUES ('RESPONSIBLE', 'Responsible');
 INSERT INTO "raci_matrix_assignment_nature" ("code", "value") VALUES ('ACCOUNTABLE', 'Accountable');
 INSERT INTO "raci_matrix_assignment_nature" ("code", "value") VALUES ('CONSULTED', 'Consulted');
@@ -1719,9 +1752,6 @@ INSERT INTO "trend" ("code", "value") VALUES ('NO_CHANGE', 'No Change	');
 INSERT INTO "trend" ("code", "value") VALUES ('UP', 'Up');
 INSERT INTO "auditor_type" ("code", "value") VALUES ('EXTERNAL', 'external');
 INSERT INTO "auditor_type" ("code", "value") VALUES ('INTERNAL', 'internal');
-INSERT INTO "party_relation_type" ("code", "value") VALUES ('PERSON_TO_PERSON', 'Person To Person');
-INSERT INTO "party_relation_type" ("code", "value") VALUES ('ORGANIZATION_TO_PERSON', 'Organization To Person');
-INSERT INTO "party_relation_type" ("code", "value") VALUES ('ORGANIZATION_TO_ORGANIZATION', 'Organization To Organization');
 INSERT INTO "severity" ("code", "value") VALUES ('CRITICAL', 'Critical');
 INSERT INTO "severity" ("code", "value") VALUES ('MAJOR', 'Major');
 INSERT INTO "severity" ("code", "value") VALUES ('MINOR', 'Minor');
@@ -1730,45 +1760,45 @@ INSERT INTO "priority" ("code", "value") VALUES ('HIGH', 'High');
 INSERT INTO "priority" ("code", "value") VALUES ('MEDIUM', 'Medium');
 INSERT INTO "priority" ("code", "value") VALUES ('LOW', 'Low');
 
-INSERT INTO "party_role" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('CUSTOMER', 'Customer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VENDOR', 'Vendor', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "party_role" ("party_role_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('1', 'VENDOR', 'Vendor', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('2', 'CUSTOMER', 'Customer', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_identifier_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('UUID', 'UUID', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DRIVING_LICENSE', 'Driving License', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PASSPORT', 'Passport', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "party_identifier_type" ("party_identifier_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('3', 'PASSPORT', 'Passport', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('4', 'UUID', 'UUID', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('5', 'DRIVING_LICENSE', 'Driving License', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "person_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('INDIVIDUAL', 'Individual', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PROFESSIONAL', 'Professional', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person_type" ("person_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('6', 'INDIVIDUAL', 'Individual', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('7', 'PROFESSIONAL', 'Professional', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "contact_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('HOME_ADDRESS', 'Home Address', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OFFICIAL_ADDRESS', 'Official Address', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MOBILE_PHONE_NUMBER', 'Mobile Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LAND_PHONE_NUMBER', 'Land Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OFFICIAL_EMAIL', 'Official Email', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PERSONAL_EMAIL', 'Personal Email', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "contact_type" ("contact_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('8', 'HOME_ADDRESS', 'Home Address', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('9', 'OFFICIAL_ADDRESS', 'Official Address', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('10', 'MOBILE_PHONE_NUMBER', 'Mobile Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('11', 'LAND_PHONE_NUMBER', 'Land Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('12', 'OFFICIAL_EMAIL', 'Official Email', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('13', 'PERSONAL_EMAIL', 'Personal Email', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization_role_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_ENGINEER', 'Security Engineer', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "organization_role_type" ("organization_role_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('14', 'PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('15', 'PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('16', 'PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('17', 'ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('18', 'ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('19', 'ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('20', 'SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('21', 'LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('22', 'SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('23', 'LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('24', 'LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('25', 'LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('26', 'LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('27', 'SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('28', 'SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('29', 'SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('30', 'SECURITY_ENGINEER', 'Security Engineer', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "contract_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
        VALUES ('ACTIVE', 'Active', NULL, NULL, NULL, NULL, NULL, NULL),
@@ -2110,33 +2140,41 @@ INSERT INTO "incident_status" ("code", "value", "created_by", "updated_at", "upd
 ;
 
 -- synthetic / test data
-INSERT INTO "graph" ("graph_id", "graph_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0SNVV71CF65F4R2F4D', (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE'), 'text-value', 'description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "graph" ("graph_id", "graph_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('1', (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE'), 'text-value', 'description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0ST9H6YR8EMV02STE8', NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('2', NULL, (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '1' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0SZY8STKENAR1MAMEB', (SELECT "boundary_id" FROM "boundary" WHERE "boundary_id" = '01HFEHZQ0ST9H6YR8EMV02STE8' AND "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID') AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '01HFEHZQ0SNVV71CF65F4R2F4D' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name Self Test', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "boundary" ("boundary_id", "parent_boundary_id", "graph_id", "boundary_nature_id", "name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('3', (SELECT "boundary_id" FROM "boundary" WHERE "boundary_id" = '2' AND "graph_id" = (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '1' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description') AND "boundary_nature_id" = (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID') AND "name" = 'Boundery Name' AND "description" = 'test description'), (SELECT "graph_id" FROM "graph" WHERE "graph_id" = '1' AND "graph_nature_id" = (SELECT "graph_nature_id" FROM "graph_nature" WHERE "code" = 'SERVICE') AND "name" = 'text-value' AND "description" = 'description'), (SELECT "boundary_nature_id" FROM "boundary_nature" WHERE "code" = 'REGULATORY_TAX_ID'), 'Boundery Name Self Test', 'test description', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "host" ("host_id", "host_name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T4666GKETTT0MB0MP', 'Test Host Name', 'description test', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "host" ("host_id", "host_name", "description", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('4', 'Test Host Name', 'description test', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "host_boundary" ("host_boundary_id", "host_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T2020TEQG1GFH8PXJ', (SELECT "host_id" FROM "host" WHERE "host_id" = '01HFEHZQ0T4666GKETTT0MB0MP' AND "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "host_boundary" ("host_boundary_id", "host_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('5', (SELECT "host_id" FROM "host" WHERE "host_id" = '4' AND "host_name" = 'Test Host Name' AND "description" = 'description test'), NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix" ("raci_matrix_id", "asset", "responsible", "accountable", "consulted", "informed", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0T1T5DK8PCZVNFRZXR', 'asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix" ("raci_matrix_id", "asset", "responsible", "accountable", "consulted", "informed", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('6', 'asset test', 'responsible', 'accountable', 'consulted', 'informed', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_subject_boundary" ("raci_matrix_subject_boundary_id", "boundary_id", "raci_matrix_subject_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0THZC03CDKVBEF3J20', (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), (SELECT "raci_matrix_subject_id" FROM "raci_matrix_subject" WHERE "code" = 'CURATION_WORKS'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix_subject_boundary" ("raci_matrix_subject_boundary_id", "boundary_id", "raci_matrix_subject_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('7', (SELECT "boundary_id" FROM "boundary" WHERE "name" = 'Boundery Name Self Test'), (SELECT "raci_matrix_subject_id" FROM "raci_matrix_subject" WHERE "code" = 'CURATION_WORKS'), NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "raci_matrix_activity" ("raci_matrix_activity_id", "activity", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('01HFEHZQ0TBA8YJNP4SZXWAS1T', 'Activity', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "raci_matrix_activity" ("raci_matrix_activity_id", "activity", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('8', 'Activity', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party" ("party_type_id", "party_name", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('PERSON', 'person', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "party" ("party_id", "party_type_id", "party_name", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('9', 'PERSON', 'person', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_identifier" ("identifier_number", "party_identifier_type_id", "party_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('test identifier', (SELECT "party_identifier_type_id" FROM "party_identifier_type" WHERE "code" = 'PASSPORT'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "party_identifier" ("party_identifier_id", "identifier_name", "identifier_value", "party_identifier_type_id", "party_id", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('10', 'idenitifier name', 'test identifier', (SELECT "party_identifier_type_id" FROM "party_identifier_type" WHERE "code" = 'PASSPORT'), (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "person" ("party_id", "person_type_id", "person_first_name", "person_last_name", "honorific_prefix", "honorific_suffix", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'PROFESSIONAL'), 'Test First Name', 'Test Last Name', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "gender_type" ("gender_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('11', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('12', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "party_relation" ("party_id", "related_party_id", "relation_type_id", "party_role_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', (SELECT "party_role_id" FROM "party_role" WHERE "code" = 'VENDOR'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "sex_type" ("sex_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('13', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('14', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "organization" ("party_id", "name", "license", "registration_date", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', 'Test License', '2023-02-06', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "person" ("person_id", "party_id", "person_type_id", "person_first_name", "person_middle_name", "person_last_name", "previous_name", "honorific_prefix", "honorific_suffix", "gender_id", "sex_id", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('15', (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "person_type_id" FROM "person_type" WHERE "code" = 'PROFESSIONAL'), 'Test First Name', NULL, 'Test Last Name', NULL, NULL, NULL, (SELECT "gender_type_id" FROM "gender_type" WHERE "code" = 'MALE'), (SELECT "sex_type_id" FROM "sex_type" WHERE "code" = 'MALE'), NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "party_relation" ("party_relation_id", "party_id", "related_party_id", "relation_type_id", "party_role_id", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('16', (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'ORGANIZATION_TO_PERSON', (SELECT "party_role_id" FROM "party_role" WHERE "code" = 'VENDOR'), NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "organization" ("organization_id", "party_id", "name", "alias", "description", "license", "federal_tax_id_num", "registration_date", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('17', (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'Test Name', NULL, NULL, 'Test License', NULL, '2023-02-06', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 
-INSERT INTO "organization_role" ("person_id", "organization_id", "organization_role_type_id", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "organization_role" ("organization_role_id", "person_id", "organization_id", "organization_role_type_id", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('18', (SELECT "person_id" FROM "person" WHERE "person_first_name" = 'Test First Name' AND "person_last_name" = 'Test Last Name'), (SELECT "organization_id" FROM "organization" WHERE "name" = 'Test Name'), (SELECT "organization_role_type_id" FROM "organization_role_type" WHERE "code" = 'ASSOCIATE_MANAGER_TECHNOLOGY'), NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO "contact_electronic" ("contact_type_id", "party_id", "electronics_details", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ((SELECT "contact_type_id" FROM "contact_type" WHERE "code" = 'MOBILE_PHONE_NUMBER'), (SELECT "party_id" FROM "party" WHERE "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "contact_electronic" ("contact_electronic_id", "contact_type_id", "party_id", "electronics_details", "elaboration", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('19', (SELECT "contact_type_id" FROM "contact_type" WHERE "code" = 'MOBILE_PHONE_NUMBER'), (SELECT "party_id" FROM "party" WHERE "party_id" = '9' AND "party_type_id" = 'PERSON' AND "party_name" = 'person'), 'electronics details', NULL, NULL, NULL, NULL, NULL, NULL, NULL);

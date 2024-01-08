@@ -3,11 +3,23 @@
 import * as SQLa from "../../render/mod.ts";
 import * as typ from "../typical/mod.ts";
 import * as govn from "./governance.ts";
+import { zod as z } from "../../deps.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
 export type EmitContext = SQLa.SqlEmitContext;
+
+export type StateCheckValues =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "PENDING"
+  | "ARCHIVED"
+  | "DELETED"
+  | "PROCESSING"
+  | "FAILED"
+  | "COMPLETED"
+  | "INPROGRESS";
 
 export const tcf = SQLa.tableColumnFactory<Any, Any, typ.TypicalDomainQS>();
 export const gts = typ.governedTemplateState<
@@ -58,10 +70,16 @@ export const execCtx = gm.textEnumTable(
   { isIdempotent: true },
 );
 
-export const partyRole = gm.autoIncPkTable(
+export const verificationType = gm.textEnumTable(
+  "verification_type",
+  govn.VerificationType,
+  { isIdempotent: true },
+);
+
+export const partyRole = gm.textPkTable(
   "party_role",
   {
-    party_role_id: autoIncPK(),
+    party_role_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
@@ -74,10 +92,10 @@ export const partyRole = gm.autoIncPkTable(
   },
 );
 
-export const partyIdentifierType = gm.autoIncPkTable(
+export const partyIdentifierType = gm.textPkTable(
   "party_identifier_type",
   {
-    party_identifier_type_id: autoIncPK(),
+    party_identifier_type_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
@@ -89,10 +107,10 @@ export const partyIdentifierType = gm.autoIncPkTable(
   },
 );
 
-export const contactType = gm.autoIncPkTable(
+export const contactType = gm.textPkTable(
   "contact_type",
   {
-    contact_type_id: autoIncPK(),
+    contact_type_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
@@ -105,10 +123,10 @@ export const contactType = gm.autoIncPkTable(
   },
 );
 
-export const organizationRoleType = gm.autoIncPkTable(
+export const organizationRoleType = gm.textPkTable(
   "organization_role_type",
   {
-    organization_role_type_id: autoIncPK(),
+    organization_role_type_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
@@ -121,36 +139,64 @@ export const organizationRoleType = gm.autoIncPkTable(
   },
 );
 
-export const partyRoleType = gm.autoIncPkTable(
+export const partyRoleType = gm.textPkTable(
   "party_role_type",
   {
-    party_role_type_id: autoIncPK(),
+    party_role_type_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
   },
 );
 
-export const personType = gm.autoIncPkTable(
+export const personType = gm.textPkTable(
   "person_type",
   {
-    person_type_id: autoIncPK(),
+    person_type_id: ulidPrimaryKey(),
     code: tcf.unique(text()),
     value: text(),
     ...gm.housekeeping.columns,
   },
 );
 
-export const partyType = gm.textEnumTable(
+export const partyType = gm.textPkTable(
   "party_type",
-  govn.PartyType,
-  { isIdempotent: true },
+  {
+    party_type_id: ulidPrimaryKey(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
 );
 
-export const partyRelationType = gm.textEnumTable(
+export const partyRelationType = gm.textPkTable(
   "party_relation_type",
-  govn.PartyRelationType,
-  { isIdempotent: true },
+  {
+    party_relation_type_id: ulidPrimaryKey(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+);
+
+export const genderType = gm.textPkTable(
+  "gender_type",
+  {
+    gender_type_id: ulidPrimaryKey(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
+);
+
+export const sexType = gm.textPkTable(
+  "sex_type",
+  {
+    sex_type_id: ulidPrimaryKey(),
+    code: tcf.unique(text()),
+    value: text(),
+    ...gm.housekeeping.columns,
+  },
 );
 
 // Typescript inference would work here but we're explicit about the array
@@ -160,14 +206,14 @@ export const allReferenceTables: (
   & typ.EnumTableDefn<EmitContext>
 )[] = [
   execCtx,
-  partyType,
-  partyRelationType,
+  verificationType,
 ];
 
-export const party = gm.autoIncPkTable("party", {
-  party_id: autoIncPK(),
-  party_type_id: partyType.references.code(),
+export const party = gm.textPkTable("party", {
+  party_id: ulidPrimaryKey(),
+  party_type_id: partyType.references.party_type_id(),
   party_name: text(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -180,12 +226,14 @@ export const party = gm.autoIncPkTable("party", {
  * Reference URL: https://help.salesforce.com/s/articleView?id=sf.c360_a_partyidentification_object.htm&type=5
  */
 
-export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
-  party_identifier_id: autoIncPK(),
-  identifier_number: text(),
+export const partyIdentifier = gm.textPkTable("party_identifier", {
+  party_identifier_id: ulidPrimaryKey(),
+  identifier_name: text(),
+  identifier_value: text(),
   party_identifier_type_id: partyIdentifierType.references
     .party_identifier_type_id(),
   party_id: party.references.party_id(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -198,15 +246,23 @@ export const partyIdentifier = gm.autoIncPkTable("party_identifier", {
  * Reference URL: https://schema.org/honorificPrefix
  * Reference URL: https://schema.org/honorificSuffix
  */
+export const previousNameElaboration = z.object({
+  previous_name: textNullable(),
+});
 
-export const person = gm.autoIncPkTable("person", {
-  person_id: autoIncPK(),
+export const person = gm.textPkTable("person", {
+  person_id: ulidPrimaryKey(),
   party_id: party.references.party_id(),
   person_type_id: personType.references.person_type_id(),
   person_first_name: text(),
+  person_middle_name: textNullable(),
   person_last_name: text(),
+  previous_name: textNullable(),
   honorific_prefix: textNullable(),
   honorific_suffix: textNullable(),
+  gender_id: genderType.references.gender_type_id(),
+  sex_id: sexType.references.sex_type_id(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -219,12 +275,13 @@ export const person = gm.autoIncPkTable("person", {
  * Reference URL: https://docs.oracle.com/cd/E29633_01/CDMRF/GUID-F52E49F4-AE6F-4FF5-8EEB-8366A66AF7E9.htm
  */
 
-export const partyRelation = gm.autoIncPkTable("party_relation", {
-  party_relation_id: autoIncPK(),
+export const partyRelation = gm.textPkTable("party_relation", {
+  party_relation_id: ulidPrimaryKey(),
   party_id: party.references.party_id(),
   related_party_id: party.references.party_id(),
-  relation_type_id: partyRelationType.references.code(),
+  relation_type_id: partyRelationType.references.party_relation_type_id(),
   party_role_id: partyRole.references.party_role_id().optional(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -233,12 +290,16 @@ export const partyRelation = gm.autoIncPkTable("party_relation", {
   },
 });
 
-export const organization = gm.autoIncPkTable("organization", {
-  organization_id: autoIncPK(),
+export const organization = gm.textPkTable("organization", {
+  organization_id: ulidPrimaryKey(),
   party_id: party.references.party_id(),
   name: text(),
+  alias: textNullable(),
+  description: textNullable(),
   license: text(),
+  federal_tax_id_num: textNullable(),
   registration_date: date(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -247,12 +308,13 @@ export const organization = gm.autoIncPkTable("organization", {
   },
 });
 
-export const organizationRole = gm.autoIncPkTable("organization_role", {
-  organization_role_id: autoIncPK(),
+export const organizationRole = gm.textPkTable("organization_role", {
+  organization_role_id: ulidPrimaryKey(),
   person_id: person.references.person_id(),
   organization_id: organization.references.organization_id(),
   organization_role_type_id: organizationRoleType.references
     .organization_role_type_id(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -260,12 +322,13 @@ export const organizationRole = gm.autoIncPkTable("organization_role", {
       "Entity to associate individuals with roles in organizations. Each organization role has a unique ID associated with it.",
   },
 });
-
-export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
-  contact_electronic_id: autoIncPK(),
+// contact_*_assurance -
+export const contactElectronic = gm.textPkTable("contact_electronic", {
+  contact_electronic_id: ulidPrimaryKey(),
   contact_type_id: contactType.references.contact_type_id(),
   party_id: party.references.party_id(),
   electronics_details: text(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -274,16 +337,26 @@ export const contactElectronic = gm.autoIncPkTable("contact_electronic", {
   },
 });
 
-export const contactLand = gm.autoIncPkTable("contact_land", {
-  contact_land_id: autoIncPK(),
+export const contactElectronicAssurance = gm.stateTable(
+  "contact_electronic_assurance",
+  {
+    contact_electronic_assurance_id: ulidPrimaryKey(),
+    contact_electronic_id: contactElectronic.references.contact_electronic_id(),
+  },
+);
+
+export const contactLand = gm.textPkTable("contact_land", {
+  contact_land_id: ulidPrimaryKey(),
   contact_type_id: contactType.references.contact_type_id(),
   party_id: party.references.party_id(),
   address_line1: text(),
   address_line2: text(),
   address_zip: text(),
   address_city: text(),
-  address_state: text(),
+  address_state: text(), // same as province so both simultaneously is not required
+  address_territory: textNullable(),
   address_country: text(),
+  elaboration: jsonTextNullable(),
   ...gm.housekeeping.columns,
 }, {
   qualitySystem: {
@@ -291,6 +364,31 @@ export const contactLand = gm.autoIncPkTable("contact_land", {
       "Entity to store land-based contact information associated with parties. Each land contact has a unique ID associated with it.",
   },
 });
+
+export const partyState = gm.stateTable("party_state", {
+  party_state_id: ulidPrimaryKey(),
+  party_id: party.references.party_id(),
+});
+
+export function StateValueCheck(
+  table: string,
+  fromStateValues: StateCheckValues[],
+  toStateValues: StateCheckValues[],
+): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
+  const fromStateCheckCondition = fromStateValues.map((value) =>
+    `${gm.stateTableCommonCol.from_state} = '${value}'`
+  ).join(" OR ");
+  const toStateCheckCondition = toStateValues.map((value) =>
+    `${gm.stateTableCommonCol.to_state} = '${value}'`
+  ).join(" OR ");
+
+  return {
+    SQL: () =>
+      `ALTER TABLE ${table} ADD CONSTRAINT from_state_check CHECK (${fromStateCheckCondition});
+       ALTER TABLE ${table} ADD CONSTRAINT to_state_check CHECK (${toStateCheckCondition});
+      `,
+  };
+}
 
 /**
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
@@ -315,20 +413,26 @@ export const allContentTables: SQLa.TableDefinition<
   EmitContext,
   typ.TypicalDomainQS
 >[] = [
+  partyType,
+  partyRelationType,
   organizationRoleType,
   partyRole,
   partyIdentifierType,
   contactType,
   party,
+  partyState,
   partyIdentifier,
   person,
   partyRelation,
   organization,
   organizationRole,
   contactElectronic,
+  contactElectronicAssurance,
   contactLand,
   personType,
   partyRoleType,
+  genderType,
+  sexType,
 ];
 
 export const vendorView = SQLa.safeViewDefinition(

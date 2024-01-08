@@ -7,6 +7,13 @@ import * as udm from "../udm/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+let syntheticUlidValue = 0;
+
+function syntheticUlid() {
+  syntheticUlidValue++;
+  return syntheticUlidValue.toString();
+}
+
 const { gm, gts, tcf } = udm;
 
 export const contractStatus = gm.autoIncPkTable(
@@ -412,7 +419,6 @@ export const allReferenceTables: (
   & typ.EnumTableDefn<udm.EmitContext>
 )[] = [
   udm.execCtx,
-  udm.partyType,
   raciMatrixAssignmentNature,
   proficiencyScale,
   vulnerabilityStatus,
@@ -422,7 +428,6 @@ export const allReferenceTables: (
   kpiStatus,
   trend,
   auditorType,
-  udm.partyRelationType,
   severity,
   priority,
 ];
@@ -1038,6 +1043,8 @@ export const allContentTables: SQLa.TableDefinition<
   udm.EmitContext,
   typ.TypicalDomainQS
 >[] = [
+  udm.partyType,
+  udm.partyRelationType,
   udm.partyRole,
   udm.partyIdentifierType,
   udm.personType,
@@ -1124,107 +1131,137 @@ export const allContentTables: SQLa.TableDefinition<
   auditorStatusType,
 ];
 
-const partyRoleInsertion = udm
-  .partyRole.insertDML([{
-    code: "CUSTOMER",
-    value: "Customer",
-  }, {
+const partyRoleInsertion = udm.partyRole
+  .insertDML([{
+    party_role_id: syntheticUlid(),
     code: "VENDOR",
     value: "Vendor",
+  }, {
+    party_role_id: syntheticUlid(),
+    code: "CUSTOMER",
+    value: "Customer",
   }]);
 
 const partyIdentifierTypeInsertion = udm
   .partyIdentifierType.insertDML([{
+    party_identifier_type_id: syntheticUlid(),
+    code: "PASSPORT",
+    value: "Passport",
+  }, {
+    party_identifier_type_id: syntheticUlid(),
     code: "UUID",
     value: "UUID",
   }, {
+    party_identifier_type_id: syntheticUlid(),
     code: "DRIVING_LICENSE",
     value: "Driving License",
-  }, {
-    code: "PASSPORT",
-    value: "Passport",
   }]);
 
 const personTypeInsertion = udm
   .personType.insertDML([{
+    person_type_id: syntheticUlid(),
     code: "INDIVIDUAL",
     value: "Individual",
   }, {
+    person_type_id: syntheticUlid(),
     code: "PROFESSIONAL",
     value: "Professional",
   }]);
 
 const contactTypeInsertion = udm
   .contactType.insertDML([{
+    contact_type_id: syntheticUlid(),
     code: "HOME_ADDRESS",
     value: "Home Address",
   }, {
+    contact_type_id: syntheticUlid(),
     code: "OFFICIAL_ADDRESS",
     value: "Official Address",
   }, {
+    contact_type_id: syntheticUlid(),
     code: "MOBILE_PHONE_NUMBER",
     value: "Mobile Phone Number",
   }, {
+    contact_type_id: syntheticUlid(),
     code: "LAND_PHONE_NUMBER",
     value: "Land Phone Number",
   }, {
+    contact_type_id: syntheticUlid(),
     code: "OFFICIAL_EMAIL",
     value: "Official Email",
   }, {
+    contact_type_id: syntheticUlid(),
     code: "PERSONAL_EMAIL",
     value: "Personal Email",
   }]);
 
 const organizationRoleTypeInsertion = udm
   .organizationRoleType.insertDML([{
+    organization_role_type_id: syntheticUlid(),
     code: "PROJECT_MANAGER_TECHNOLOGY",
     value: "Project Manager Technology",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "PROJECT_MANAGER_QUALITY",
     value: "Project Manager Quality",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "PROJECT_MANAGER_DEVOPS",
     value: "Project Manager DevOps",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "ASSOCIATE_MANAGER_TECHNOLOGY",
     value: "Associated Manager Technology",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "ASSOCIATE_MANAGER_QUALITY",
     value: "Associate Manager Quality",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "ASSOCIATE_MANAGER_DEVOPS",
     value: "Associate Manager DevOps",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT",
     value: "Senior Lead Software Engineer Architect",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "LEAD_SOFTWARE_ENGINEER_ARCHITECT",
     value: "Lead Software Engineer Architect",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER",
     value: "Senior Lead Software DevOps Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "LEAD_SOFTWARE_ENGINEER",
     value: "Lead Software Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "LEAD_SOFTWARE_QUALITY_ENGINEER",
     value: "Lead Software Quality Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "LEAD_SOFTWARE_DEVOPS_ENGINEER",
     value: "Lead Software DevOps Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "LEAD_SYSTEM_NETWORK_ENGINEER",
     value: "Lead System Network Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SENIOR_SOFTWARE_ENGINEER",
     value: "Senior Software Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SENIOR_SOFTWARE_QUALITY_ENGINEER",
     value: "Senior Software Quality Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SOFTWARE_QUALITY_ENGINEER",
     value: "Software Quality Engineer",
   }, {
+    organization_role_type_id: syntheticUlid(),
     code: "SECURITY_ENGINEER",
     value: "Security Engineer",
   }]);

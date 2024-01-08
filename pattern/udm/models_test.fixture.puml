@@ -10,8 +10,36 @@
     FontSize 12
   }
 
+  entity "party_type" as party_type {
+    * **party_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "party_relation_type" as party_relation_type {
+    * **party_relation_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   entity "organization_role_type" as organization_role_type {
-      **organization_role_type_id**: INTEGER
+    * **organization_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -25,7 +53,7 @@
   }
 
   entity "party_role" as party_role {
-      **party_role_id**: INTEGER
+    * **party_role_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -39,7 +67,7 @@
   }
 
   entity "party_identifier_type" as party_identifier_type {
-      **party_identifier_type_id**: INTEGER
+    * **party_identifier_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -53,7 +81,7 @@
   }
 
   entity "contact_type" as contact_type {
-      **contact_type_id**: INTEGER
+    * **contact_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -67,10 +95,28 @@
   }
 
   entity "party" as party {
-      **party_id**: INTEGER
+    * **party_id**: TEXT
     --
     * party_type_id: TEXT
     * party_name: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "party_state" as party_state {
+    * **party_state_id**: TEXT
+    --
+    * party_id: TEXT
+    * from_state: TEXT
+    * to_state: TEXT
+    * transition_result: TEXT
+    * transition_reason: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -81,11 +127,13 @@
   }
 
   entity "party_identifier" as party_identifier {
-      **party_identifier_id**: INTEGER
+    * **party_identifier_id**: TEXT
     --
-    * identifier_number: TEXT
-    * party_identifier_type_id: INTEGER
-    * party_id: INTEGER
+    * identifier_name: TEXT
+    * identifier_value: TEXT
+    * party_identifier_type_id: TEXT
+    * party_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -96,14 +144,19 @@
   }
 
   entity "person" as person {
-      **person_id**: INTEGER
+    * **person_id**: TEXT
     --
-    * party_id: INTEGER
-    * person_type_id: INTEGER
+    * party_id: TEXT
+    * person_type_id: TEXT
     * person_first_name: TEXT
+      person_middle_name: TEXT
     * person_last_name: TEXT
+      previous_name: TEXT
       honorific_prefix: TEXT
       honorific_suffix: TEXT
+    * gender_id: TEXT
+    * sex_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -114,12 +167,13 @@
   }
 
   entity "party_relation" as party_relation {
-      **party_relation_id**: INTEGER
+    * **party_relation_id**: TEXT
     --
-    * party_id: INTEGER
-    * related_party_id: INTEGER
+    * party_id: TEXT
+    * related_party_id: TEXT
     * relation_type_id: TEXT
-      party_role_id: INTEGER
+      party_role_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -130,12 +184,16 @@
   }
 
   entity "organization" as organization {
-      **organization_id**: INTEGER
+    * **organization_id**: TEXT
     --
-    * party_id: INTEGER
+    * party_id: TEXT
     * name: TEXT
+      alias: TEXT
+      description: TEXT
     * license: TEXT
+      federal_tax_id_num: TEXT
     * registration_date: DATE
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -146,11 +204,12 @@
   }
 
   entity "organization_role" as organization_role {
-      **organization_role_id**: INTEGER
+    * **organization_role_id**: TEXT
     --
-    * person_id: INTEGER
-    * organization_id: INTEGER
-    * organization_role_type_id: INTEGER
+    * person_id: TEXT
+    * organization_id: TEXT
+    * organization_role_type_id: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -161,11 +220,29 @@
   }
 
   entity "contact_electronic" as contact_electronic {
-      **contact_electronic_id**: INTEGER
+    * **contact_electronic_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * electronics_details: TEXT
+      elaboration: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "contact_electronic_assurance" as contact_electronic_assurance {
+    * **contact_electronic_assurance_id**: TEXT
+    --
+    * contact_electronic_id: TEXT
+    * from_state: TEXT
+    * to_state: TEXT
+    * transition_result: TEXT
+    * transition_reason: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -176,16 +253,18 @@
   }
 
   entity "contact_land" as contact_land {
-      **contact_land_id**: INTEGER
+    * **contact_land_id**: TEXT
     --
-    * contact_type_id: INTEGER
-    * party_id: INTEGER
+    * contact_type_id: TEXT
+    * party_id: TEXT
     * address_line1: TEXT
     * address_line2: TEXT
     * address_zip: TEXT
     * address_city: TEXT
     * address_state: TEXT
+      address_territory: TEXT
     * address_country: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
@@ -196,7 +275,7 @@
   }
 
   entity "person_type" as person_type {
-      **person_type_id**: INTEGER
+    * **person_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -210,7 +289,7 @@
   }
 
   entity "party_role_type" as party_role_type {
-      **party_role_type_id**: INTEGER
+    * **party_role_type_id**: TEXT
     --
     * code: TEXT
     * value: TEXT
@@ -223,12 +302,45 @@
       activity_log: TEXT
   }
 
+  entity "gender_type" as gender_type {
+    * **gender_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "sex_type" as sex_type {
+    * **sex_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  party_type |o..o{ party
+  party |o..o{ party_state
   party_identifier_type |o..o{ party_identifier
   party |o..o{ party_identifier
   party |o..o{ person
   person_type |o..o{ person
+  gender_type |o..o{ person
+  sex_type |o..o{ person
   party |o..o{ party_relation
   party |o..o{ party_relation
+  party_relation_type |o..o{ party_relation
   party_role |o..o{ party_relation
   party |o..o{ organization
   person |o..o{ organization_role
@@ -236,6 +348,7 @@
   organization_role_type |o..o{ organization_role
   contact_type |o..o{ contact_electronic
   party |o..o{ contact_electronic
+  contact_electronic |o..o{ contact_electronic_assurance
   contact_type |o..o{ contact_land
   party |o..o{ contact_land
 @enduml

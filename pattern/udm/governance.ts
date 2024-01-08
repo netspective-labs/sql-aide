@@ -8,13 +8,10 @@ export enum ExecutionContext {
   EXPERIMENTAL = "experimental",
 }
 
-export enum PartyType {
-  PERSON = "Person",
-  ORGANIZATION = "Organization",
-}
-
-export enum PartyRelationType {
-  PERSON_TO_PERSON = "Person To Person",
-  ORGANIZATION_TO_PERSON = "Organization To Person",
-  ORGANIZATION_TO_ORGANIZATION = "Organization To Organization",
+export enum VerificationType {
+  NOT_VERIFIED = "Not Verified",
+  PENDING_VERIFICATION = "Verification Pending",
+  VERIFIED = "Verified",
+  FAILED_VERIFICATION = "Verification Failed",
+  OPTED_OUT = "Opted Out",
 }

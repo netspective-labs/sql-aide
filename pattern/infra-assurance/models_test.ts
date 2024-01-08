@@ -1,7 +1,6 @@
 #!/usr/bin/env -S deno run --allow-all
 
 import $ from "https://deno.land/x/dax@0.30.1/mod.ts";
-import * as ulid from "https://deno.land/std@0.203.0/ulid/mod.ts";
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as ws from "../../lib/universal/whitespace.ts";
 import * as sqliteCLI from "../../lib/sqlite/cli.ts";
@@ -10,6 +9,13 @@ import * as tp from "../typical/mod.ts";
 import * as mod from "./models.ts";
 import * as udm from "../udm/mod.ts";
 
+let syntheticUlidValue = 0;
+
+function syntheticUlid() {
+  syntheticUlidValue++;
+  return syntheticUlidValue.toString();
+}
+
 const ctx = SQLa.typicalSqlEmitContext();
 
 const relativeFilePath = (name: string) => {
@@ -17,17 +23,17 @@ const relativeFilePath = (name: string) => {
   return $.path.relative(Deno.cwd(), absPath);
 };
 
-// const relativeFileContent = (name: string) => {
-//   const absPath = $.path.fromFileUrl(import.meta.resolve(name));
-//   return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
-// };
+const relativeFileContent = (name: string) => {
+  const absPath = $.path.fromFileUrl(import.meta.resolve(name));
+  return Deno.readTextFileSync($.path.relative(Deno.cwd(), absPath));
+};
 
 const { gts } = udm;
 const graphNatureIdSelect = mod.graphNature.select({
   code: "SERVICE",
 });
 const graphTableInsertion = mod.graph.insertDML({
-  graph_id: ulid.ulid(),
+  graph_id: syntheticUlid(),
   name: "text-value",
   graph_nature_id: graphNatureIdSelect,
   description: "description",
@@ -38,7 +44,7 @@ const boundaryNatureIdSelect = mod.boundaryNature.select({
   code: "REGULATORY_TAX_ID",
 });
 const taxIdBoundary = mod.boundary.insertDML({
-  boundary_id: ulid.ulid(),
+  boundary_id: syntheticUlid(),
   boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name",
   description: "test description",
@@ -47,7 +53,7 @@ const taxIdBoundary = mod.boundary.insertDML({
 const taxIdBoundaryIdSelect = mod.boundary.select(taxIdBoundary.insertable);
 
 const primaryBoundary = mod.boundary.insertDML({
-  boundary_id: ulid.ulid(),
+  boundary_id: syntheticUlid(),
   boundary_nature_id: boundaryNatureIdSelect,
   name: "Boundery Name Self Test",
   description: "test description",
@@ -56,19 +62,19 @@ const primaryBoundary = mod.boundary.insertDML({
 });
 
 const hostInsertion = mod.host.insertDML({
-  host_id: ulid.ulid(),
+  host_id: syntheticUlid(),
   host_name: "Test Host Name",
   description: "description test",
 });
 
 const hostID = mod.host.select(hostInsertion.insertable);
 const hostBoundaryInsertion = mod.hostBoundary.insertDML({
-  host_boundary_id: ulid.ulid(),
+  host_boundary_id: syntheticUlid(),
   host_id: hostID,
 });
 
 const raciMatrixInsertion = mod.raciMatrix.insertDML({
-  raci_matrix_id: ulid.ulid(),
+  raci_matrix_id: syntheticUlid(),
   asset: "asset test",
   responsible: "responsible",
   accountable: "accountable",
@@ -80,19 +86,20 @@ const raciMatrixSubjectIdSelect = mod.raciMatrixSubject.select({
 });
 const raciMatrixSubjectBoundaryInsertion = mod.raciMatrixSubjectBoundary
   .insertDML({
-    raci_matrix_subject_boundary_id: ulid.ulid(),
+    raci_matrix_subject_boundary_id: syntheticUlid(),
     boundary_id: mod.boundary.select({ name: "Boundery Name Self Test" }),
     raci_matrix_subject_id: raciMatrixSubjectIdSelect,
   });
 
 const raciMatrixActivityInsertion = mod.raciMatrixActivity
   .insertDML({
-    raci_matrix_activity_id: ulid.ulid(),
+    raci_matrix_activity_id: syntheticUlid(),
     activity: "Activity",
   });
 
 const partyInsertion = udm.party
   .insertDML({
+    party_id: syntheticUlid(),
     party_type_id: "PERSON",
     party_name: "person",
   });
@@ -101,25 +108,56 @@ const partyID = udm.party.select(partyInsertion.insertable);
 
 const partyIdentifierInsertion = udm.partyIdentifier
   .insertDML({
-    identifier_number: "test identifier",
+    party_identifier_id: syntheticUlid(),
+    identifier_name: "idenitifier name",
+    identifier_value: "test identifier",
     party_identifier_type_id: udm.partyIdentifierType.select({
       code: "PASSPORT",
     }),
     party_id: partyID,
   });
-
+const genderTypeInsertion = udm.genderType
+  .insertDML([{
+    gender_type_id: syntheticUlid(),
+    code: "MALE",
+    value: "Male",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "FEMALE",
+    value: "Female",
+  }]);
+const genderTypeID = udm.genderType.select({
+  code: "MALE",
+});
+const sexTypeInsertion = udm.sexType
+  .insertDML([{
+    sex_type_id: syntheticUlid(),
+    code: "MALE",
+    value: "Male",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "FEMALE",
+    value: "Female",
+  }]);
+const sexTypeID = udm.sexType.select({
+  code: "MALE",
+});
 const personInsertion = udm.person
   .insertDML({
+    person_id: syntheticUlid(),
     party_id: partyID,
     person_type_id: udm.personType.select({
       code: "PROFESSIONAL",
     }),
     person_first_name: "Test First Name",
     person_last_name: "Test Last Name",
+    gender_id: genderTypeID,
+    sex_id: sexTypeID,
   });
 
 const partyRelationInsertion = udm.partyRelation
   .insertDML({
+    party_relation_id: syntheticUlid(),
     party_id: partyID,
     related_party_id: partyID,
     relation_type_id: "ORGANIZATION_TO_PERSON",
@@ -130,6 +168,7 @@ const partyRelationInsertion = udm.partyRelation
 
 const organizationInsertion = udm.organization
   .insertDML({
+    organization_id: syntheticUlid(),
     party_id: partyID,
     name: "Test Name",
     license: "Test License",
@@ -148,6 +187,7 @@ const organizationRoleTypeCode = udm.organizationRoleType.select({
 
 const organizationRoleInsertion = udm.organizationRole
   .insertDML({
+    organization_role_id: syntheticUlid(),
     person_id: personID,
     organization_id: organizationID,
     organization_role_type_id: organizationRoleTypeCode,
@@ -155,6 +195,7 @@ const organizationRoleInsertion = udm.organizationRole
 
 const contactElectronicInsertion = udm.contactElectronic
   .insertDML({
+    contact_electronic_id: syntheticUlid(),
     contact_type_id: udm.contactType.select({
       code: "MOBILE_PHONE_NUMBER",
     }),
@@ -186,6 +227,10 @@ function sqlDDL() {
     ${partyInsertion}
 
     ${partyIdentifierInsertion}
+
+    ${genderTypeInsertion}
+
+    ${sexTypeInsertion}
 
     ${personInsertion}
 
@@ -223,17 +268,17 @@ if (import.meta.main) {
     .command(
       "test-fixtures",
       new tp.cli.Command()
-        .description("Emit all test fixtures"),
-      // .action(async () => {
-      //   const CLI = relativeFilePath("./models_test.ts");
-      //   const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
-      //     relativeFilePath(`./models_test.fixture${extn}`)
-      //   );
-      //   Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
-      //   Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
-      //   Deno.writeTextFileSync(sh, await $`./${CLI} bash`.text());
-      //   [sql, puml, sh].forEach((f) => console.log(f));
-      // }),
+        .description("Emit all test fixtures")
+        .action(async () => {
+          const CLI = relativeFilePath("./models_test.ts");
+          const [sql, puml, sh] = [".sql", ".puml", ".sh"].map((extn) =>
+            relativeFilePath(`./models_test.fixture${extn}`)
+          );
+          Deno.writeTextFileSync(sql, await $`./${CLI} sql`.text());
+          Deno.writeTextFileSync(puml, await $`./${CLI} diagram`.text());
+          Deno.writeTextFileSync(sh, await $`./${CLI} bash`.text());
+          [sql, puml, sh].forEach((f) => console.log(f));
+        }),
     ).parse(Deno.args);
 }
 
@@ -256,10 +301,10 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
 
   await tc.step("CLI SQL content", async () => {
     const output = await $`./${CLI} sql`.text();
-    // ta.assertEquals(
-    //   output,
-    //   relativeFileContent("./models_test.fixture.sql"),
-    // );
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.sql"),
+    );
     ta.assertEquals(
       output,
       output,
@@ -268,10 +313,10 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
 
   await tc.step("CLI diagram", async () => {
     const output = await $`./${CLI} diagram`.text();
-    // ta.assertEquals(
-    //   output,
-    //   relativeFileContent("./models_test.fixture.puml"),
-    // );
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.puml"),
+    );
     ta.assertEquals(
       output,
       output,
@@ -280,10 +325,10 @@ Deno.test("Information Assurance Pattern CLI", async (tc) => {
 
   await tc.step("CLI driver content", async () => {
     const output = await $`./${CLI} bash`.text();
-    // ta.assertEquals(
-    //   output,
-    //   relativeFileContent("./models_test.fixture.sh"),
-    // );
+    ta.assertEquals(
+      output,
+      relativeFileContent("./models_test.fixture.sh"),
+    );
     ta.assertEquals(
       output,
       output,
