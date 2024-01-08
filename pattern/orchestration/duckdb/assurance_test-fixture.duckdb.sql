@@ -1,8 +1,8 @@
 -- you can test this in DuckDB using:
 -- $ cat assurance_test-fixture.duckdb.sql | duckdb ":memory:"
 
-CREATE TABLE ingest_session (
-    ingest_session_id VARCHAR NOT NULL,
+CREATE TABLE orch_session (
+    orch_session_id VARCHAR NOT NULL,
     ingest_src VARCHAR NOT NULL,
     ingest_table_name VARCHAR NOT NULL,
 );
@@ -17,11 +17,11 @@ CREATE TABLE ingest_issue (
     remediation VARCHAR
 );
 
-INSERT INTO ingest_session (ingest_session_id, ingest_src, ingest_table_name)
+INSERT INTO orch_session (orch_session_id, ingest_src, ingest_table_name)
                     VALUES (uuid(), 'assurance_test-fixture-fail.csv', 'synthetic_csv_fail');
 
 CREATE TEMPORARY TABLE synthetic_csv_fail AS
-  SELECT *, row_number() OVER () as src_file_row_number, (SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id
+  SELECT *, row_number() OVER () as src_file_row_number, (SELECT orch_session_id from orch_session LIMIT 1) as orch_session_id
     FROM read_csv_auto('assurance_test-fixture-fail.csv', header=true);
 
 SELECT * FROM synthetic_csv_fail;
@@ -35,7 +35,7 @@ WITH required_column_names_in_src AS (
           WHERE table_name = 'synthetic_csv_fail')
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Missing Column',
            'Required column ' || column_name || ' is missing in synthetic_csv_fail.',
            'Ensure synthetic_csv_fail contains the column "' || column_name || '"'
@@ -54,7 +54,7 @@ WITH numeric_value_in_all_rows AS (
        AND column4 NOT SIMILAR TO '^[+-]?[0-9]+$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Data Type Mismatch',
            issue_row,
            issue_column,
@@ -72,7 +72,7 @@ WITH int_range_assurance AS (
        AND column5::INT > 100 OR column5::INT < 10
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Range Violation',
            issue_row,
            issue_column,
@@ -94,7 +94,7 @@ WITH unique_value AS (
           HAVING COUNT(*) > 1)
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Unique Value Violation',
            issue_row,
            issue_column,
@@ -112,7 +112,7 @@ WITH mandatory_value AS (
         OR TRIM(column7) = ''
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Missing Mandatory Value',
            issue_row,
            issue_column,
@@ -129,7 +129,7 @@ WITH pattern AS (
      WHERE column8 NOT SIMILAR TO '^ABC-[0-9]{4}$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Pattern Mismatch',
            issue_row,
            issue_column,
@@ -146,7 +146,7 @@ WITH allowed_values AS (
      WHERE column9 NOT IN ('Yes', 'No', 'Maybe')
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Invalid Value',
            issue_row,
            issue_column,
@@ -164,7 +164,7 @@ WITH proper_dot_com_email_address_in_all_rows AS (
        AND column2 NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.com$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-    SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
            'Format Mismatch',
            issue_row,
            issue_column,

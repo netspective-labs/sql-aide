@@ -19,7 +19,7 @@ Deno.test("DuckDB CSV Supplier", () => {
       isTempTable: true,
       extraColumnsSql: [
         "row_number() OVER () as src_file_row_number",
-        "(SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id",
+        "(SELECT orch_session_id from orch_session LIMIT 1) as orch_session_id",
       ],
     }),
   });
@@ -37,7 +37,7 @@ Deno.test("DuckDB CSV Supplier", () => {
     ddlDefn.SQL(ctx),
     ws.unindentWhitespace(`
         CREATE TEMPORARY TABLE synthetic_csv_table AS
-          SELECT *, row_number() OVER () as src_file_row_number, (SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id
+          SELECT *, row_number() OVER () as src_file_row_number, (SELECT orch_session_id from orch_session LIMIT 1) as orch_session_id
             FROM read_csv_auto('synthetic.csv', header=true);`),
   );
 });

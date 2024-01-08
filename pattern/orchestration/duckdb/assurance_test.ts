@@ -3,10 +3,11 @@ import { path } from "../../../deps.ts";
 import * as ws from "../../../lib/universal/whitespace.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as ddb from "../../../render/dialect/duckdb/mod.ts";
+import * as oa from "../assurance.ts";
 import * as mod from "./assurance.ts";
 
 export class SyntheticAssuranceRulesGovernance
-  implements mod.AssuranceRulesGovernance {
+  implements oa.AssuranceRulesGovernance {
   constructor(readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>) {
   }
 
@@ -18,7 +19,7 @@ export class SyntheticAssuranceRulesGovernance
   ) {
     return ws.unindentWhitespace(`
       INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
-          SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+          SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
                  '${typeText}',
                  ${messageSql},
                  ${remediationSql ?? "NULL"}
@@ -36,7 +37,7 @@ export class SyntheticAssuranceRulesGovernance
   ) {
     return ws.unindentWhitespace(`
       INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
-          SELECT (SELECT ingest_session_id FROM ingest_session LIMIT 1),
+          SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
                  '${typeText}',
                  ${rowNumSql},
                  ${columnNameSql},
@@ -63,8 +64,8 @@ Deno.test("DuckDB Table Content Assurance", () => {
     -- you can test this in DuckDB using:
     -- $ cat assurance_test-fixture.duckdb.sql | duckdb ":memory:"
 
-    CREATE TABLE ingest_session (
-        ingest_session_id VARCHAR NOT NULL,
+    CREATE TABLE orch_session (
+        orch_session_id VARCHAR NOT NULL,
         ingest_src VARCHAR NOT NULL,
         ingest_table_name VARCHAR NOT NULL,
     );
@@ -79,7 +80,7 @@ Deno.test("DuckDB Table Content Assurance", () => {
         remediation VARCHAR
     );
 
-    INSERT INTO ingest_session (ingest_session_id, ingest_src, ingest_table_name)
+    INSERT INTO orch_session (orch_session_id, ingest_src, ingest_table_name)
                         VALUES (uuid(), '${csvSrcFsPath}', '${tableName}');
 
     ${ddb.csvTableIntegration({
@@ -88,7 +89,7 @@ Deno.test("DuckDB Table Content Assurance", () => {
       isTempTable: true,
       extraColumnsSql: [
         "row_number() OVER () as src_file_row_number",
-        "(SELECT ingest_session_id from ingest_session LIMIT 1) as ingest_session_id",
+        "(SELECT orch_session_id from orch_session LIMIT 1) as orch_session_id",
       ],
     })}
 

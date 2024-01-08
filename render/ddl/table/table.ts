@@ -204,6 +204,10 @@ export function tableDefinition<
     [Property in keyof ColumnsShape]: (ctx: Context) => string;
   };
 
+  type ColumnIdentities = {
+    [Property in keyof ColumnsShape]: Property;
+  };
+
   const domains = tableShapeKeys.map((key) =>
     fkf.zbSchema[key].sqlDomain as c.TableColumnDefn<
       TableName,
@@ -243,6 +247,7 @@ export function tableDefinition<
   const afterColumnDefnsSS: tmpl.SqlTextSupplier<Context>[] = [];
   const constraints: con.TableColumnsConstraint<ColumnsShape, Context>[] = [];
   const indexes: idx.TableColumnsIndex<ColumnsShape, Context>[] = [];
+  const columnIdentities: ColumnIdentities = {} as Any;
   const symbolSuppliers: SqlSymbolSuppliersSchema = {} as Any;
   const symbols: SqlSymbolsSchema = {} as Any;
 
@@ -256,6 +261,7 @@ export function tableDefinition<
       unique[column.identity as (keyof UniqueColumnDefns)] = column as Any;
       constraints.push(con.uniqueConstraint(column.identity));
     }
+    (columnIdentities[column.identity] as Any) = column.identity;
     (symbolSuppliers[column.identity] as Any) = { sqlSymbol: column.sqlSymbol };
     (symbols[column.identity] as Any) = column.sqlSymbol;
   }
@@ -404,6 +410,7 @@ export function tableDefinition<
     & {
       readonly domains: typeof domains;
       readonly columns: ColumnDefns;
+      readonly columnNames: ColumnIdentities;
       readonly symbolSuppliers: SqlSymbolSuppliersSchema;
       readonly symbols: SqlSymbolsSchema;
       readonly primaryKey: PrimaryKeys;
@@ -467,6 +474,7 @@ export function tableDefinition<
       },
       graphEntityDefn,
       domains,
+      columnNames: columnIdentities,
       symbolSuppliers,
       symbols,
       columns,
