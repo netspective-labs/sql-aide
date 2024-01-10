@@ -35,11 +35,11 @@ const nbDescr = new chainNB.NotebookDescriptor<
  *       is a proper noun (product name).
  */
 class SQLPageTestNotebook {
-  readonly tc: ReturnType<typeof mod.typicalContent<SQLa.SqlEmitContext>>;
+  readonly tc: ReturnType<typeof mod.sqliteContent<SQLa.SqlEmitContext>>;
   readonly comps = mod.typicalComponents<string, SQLa.SqlEmitContext>();
 
   constructor(readonly SQL: ReturnType<typeof SQLa.SQL<SQLa.SqlEmitContext>>) {
-    this.tc = mod.typicalContent<SQLa.SqlEmitContext>(SQL);
+    this.tc = mod.sqliteContent<SQLa.SqlEmitContext>(SQL);
   }
 
   @nbDescr.disregard()

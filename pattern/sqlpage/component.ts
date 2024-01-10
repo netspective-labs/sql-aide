@@ -91,12 +91,15 @@ export class ComponentBuilder<
     args: Args,
     ...propNames: (keyof Args)[]
   ): ComponentSelectExpr<EmitContext>[] {
-    return propNames.map((pn) =>
-      [
-        args[pn] ? String(args[pn]) : undefined,
+    return propNames.map((pn) => {
+      const arg = args[pn];
+      return [
+        SQLa.isSqlTextSupplier(arg)
+          ? arg
+          : (arg ? String(args[pn]) : undefined),
         String(pn),
-      ] as ComponentSelectExpr<EmitContext>
-    );
+      ] as ComponentSelectExpr<EmitContext>;
+    });
   }
 
   component(
@@ -173,7 +176,7 @@ export interface Shell<EmitContext extends SQLa.SqlEmitContext>
 export interface Text<EmitContext extends SQLa.SqlEmitContext>
   extends Component<EmitContext> {
   readonly name: "text";
-  readonly title: string;
+  readonly title: FlexibleText<EmitContext>;
   readonly content: { readonly text: string } | { readonly markdown: string };
 }
 
@@ -225,19 +228,11 @@ export type HandlebarsCode<EmitContext extends SQLa.SqlEmitContext> =
 export interface CustomTemplateSupplier<
   EmitContext extends SQLa.SqlEmitContext,
   Name extends string,
-  TopLevelArgs extends Record<string, unknown>,
-  Row extends Record<string, unknown>,
-  PageParams extends Record<string, unknown>,
+  TopLevelArgs extends Record<string, FlexibleText<EmitContext>>,
+  Row extends Record<string, FlexibleText<EmitContext>>,
 > {
   readonly templatePath: CustomTemplatePath<string>;
-  readonly handlebarsCode: (
-    helpers: {
-      readonly tla: { readonly [A in keyof TopLevelArgs]: `{{${string & A}}}` };
-      readonly row: { readonly [C in keyof Row]: `{{${string & C}}}` };
-      readonly pn: { readonly [P in keyof PageParams]: `${string & P}` }; // pn = param-name
-      readonly pv: { readonly [P in keyof PageParams]: `{{${string & P}}}` }; // pv = param-var (value of param)
-    },
-  ) => HandlebarsCode<EmitContext>;
+  readonly handlebarsCode: () => HandlebarsCode<EmitContext>;
   readonly component: (
     tla?: TopLevelArgs,
     ...rows: Row[]
@@ -272,6 +267,22 @@ export function safeHandlebars<
   };
   return new Proxy<HandlebarsVars>({} as HandlebarsVars, {
     get: (_, p) => `{{${String(p)}}}`,
+  });
+}
+
+/**
+ * Prepare an object proxy which takes each property of an object an returns
+ * name of that field as a type-safe SQLPage URL Query param like $key.
+ * @returns a read-only object proxy which takes the name of any key and returns the same key as $key
+ */
+export function safeUrlQueryParams<
+  Shape extends Record<string, unknown>,
+>() {
+  type HandlebarsVars = {
+    readonly [PropName in keyof Shape]: `$${string & PropName}`;
+  };
+  return new Proxy<HandlebarsVars>({} as HandlebarsVars, {
+    get: (_, p) => `$${String(p)}`,
   });
 }
 

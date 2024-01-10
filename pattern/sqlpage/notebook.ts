@@ -13,7 +13,7 @@ export function sqlPageNotebook<
   prototype: SQLPageNotebook,
   instanceSupplier: (
     registerCTS: (
-      cc: c.CustomTemplateSupplier<EmitContext, Any, Any, Any, Any>,
+      ...cc: c.CustomTemplateSupplier<EmitContext, Any, Any, Any>[]
     ) => void,
   ) => SQLPageNotebook,
   ctxSupplier: () => EmitContext,
@@ -27,12 +27,14 @@ export function sqlPageNotebook<
 ) {
   const custom: Record<
     string,
-    c.CustomTemplateSupplier<EmitContext, Any, Any, Any, Any>
+    c.CustomTemplateSupplier<EmitContext, Any, Any, Any>
   > = {};
   const kernel = chainNB.ObservableKernel.create(prototype, nbDescr);
-  const instance = instanceSupplier((cc) => {
-    // if defined multiple times, the latest version will win
-    custom[cc.templatePath] = cc;
+  const instance = instanceSupplier((...cc) => {
+    for (const comp of cc) {
+      // if defined multiple times, the latest version will win
+      custom[comp.templatePath] = comp;
+    }
   });
   const pkcf = SQLa.primaryKeyColumnFactory<
     EmitContext,
@@ -88,12 +90,7 @@ export function sqlPageNotebook<
     for (const cc of Object.values(custom)) {
       notebookSQL.push(sqlPageFilesCRF.insertDML({
         path: cc.templatePath,
-        contents: cc.handlebarsCode({
-          tla: c.safeHandlebars(),
-          pv: c.safeHandlebars(),
-          pn: c.safePropNames(),
-          row: c.safeHandlebars(),
-        }).SQL(ctx),
+        contents: cc.handlebarsCode().SQL(ctx),
         last_modified: sqlEngineNow,
       }));
     }
