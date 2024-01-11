@@ -1,10 +1,9 @@
 import { pgSQLa, SQLa, zod as z } from "./deps.ts";
 import * as udm from "../udm/mod.ts";
-
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-enum TransitionStatus {
+export enum TransitionStatus {
   NONE = "None",
   SQLLOADED = "SQL Loaded",
   MIGRATED = "Migrated",
@@ -146,55 +145,15 @@ export class PgMigrate<
     };
   }
 
-  content(version: MigrationVersion) {
-    // const { ec } = this.state;
-    // const { governedModel: { domains: d } } = ec;
+  content() {
     const ctx = this.ctxSupplier();
-    const islmGovernance = SQLa.tableDefinition("islm_governance", {
+    const islmGovernance = udm.gm.stateTable("islm_governance", {
+      islm_governance_id: udm.uuidPrimaryKey(),
       state_sort_index: udm.float(),
       sp_migration: udm.text(),
       sp_migration_undo: udm.text(),
       fn_migration_status: udm.text(),
-      from_state: udm.text(),
-      to_state: udm.text(),
-      transition_result: udm.jsonTextNullable(),
-      transition_reason: udm.textNullable(),
-      transitioned_at: udm.dateTime(),
-    }, {
-      sqlNS: this.infoSchemaLifecycle,
-      isIdempotent: false,
-      constraints: (props, tableName) => {
-        const c = SQLa.tableConstraints(tableName, props);
-        return [
-          c.unique("sp_migration", "from_state", "to_state"),
-        ];
-      },
-    });
-    const islmGovnRF = SQLa.tableColumnsRowFactory(
-      islmGovernance.tableName,
-      islmGovernance.zoSchema.shape,
-    );
-    const formattedDate = this.formatDateToCustomString(version.dateTime);
-    const migrateVersion = "V" + version.version + formattedDate;
-    const migrateVersionNumber = version.versionNumber;
-    const islmGovernanceInsertion = islmGovnRF.insertDML([
-      {
-        state_sort_index: migrateVersionNumber,
-        sp_migration: this.prependMigrationSPText + migrateVersion,
-        sp_migration_undo: this.prependMigrationSPText + migrateVersion +
-          this.appendMigrationUndoSPText,
-        fn_migration_status: this.prependMigrationSPText + migrateVersion +
-          this.appendMigrationStatusFnText,
-        from_state: TransitionStatus.NONE,
-        to_state: TransitionStatus.SQLLOADED,
-        transition_reason: "SQL load for migration",
-        transitioned_at: this.sqlEngineNow,
-      },
-    ], {
-      onConflict: {
-        SQL: () => `ON CONFLICT DO NOTHING`,
-      },
-    });
+    }, ["sp_migration", "from_state", "to_state"]);
 
     const spIslmInit = pgSQLa
       .storedRoutineBuilder(
@@ -225,7 +184,10 @@ export class PgMigrate<
     >(
       this.infoSchemaLifecycle,
     );
-
+    const extn = pgSQLa.pgExtensionDefn(
+      this.infoSchemaLifecycle,
+      '"uuid-ossp"',
+    );
     const spIslmMigrateCtl = pgSQLa
       .storedRoutineBuilder(
         "islm_migrate_ctl",
@@ -261,6 +223,7 @@ export class PgMigrate<
               procedure_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.sp_migration);
               procedure_undo_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.sp_migration_undo);
               status_function_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.fn_migration_status);
+              islm_governance_id TEXT:= uuid_generate_v4();
               status INT;
               migrate_insertion_sql TEXT;
             BEGIN
@@ -275,9 +238,9 @@ export class PgMigrate<
                 -- Insert into the governance table
                 migrate_insertion_sql := $dynSQL$
                   ${searchPath}
-                  INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES ($1, $2, $3, $4, '${TransitionStatus.SQLLOADED}', '${TransitionStatus.MIGRATED}', NULL, 'Migration', CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING
+                  INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.SQLLOADED}', '${TransitionStatus.MIGRATED}', '{}', 'Migration') ON CONFLICT DO NOTHING
                 $dynSQL$;
-                EXECUTE migrate_insertion_sql USING target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
+                EXECUTE migrate_insertion_sql USING islm_governance_id, target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
               END IF;
             END;
         END LOOP;
@@ -289,6 +252,7 @@ export class PgMigrate<
           procedure_name text;
           procedure_undo_name text;
           status_function_name text;
+          islm_governance_id text;
           sp_migration_undo_sql RECORD;
         BEGIN
           SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
@@ -296,14 +260,15 @@ export class PgMigrate<
             procedure_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration);
             procedure_undo_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration_undo);
             status_function_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.fn_migration_status);
+            islm_governance_id := uuid_generate_v4();
             EXECUTE  'call ' || procedure_undo_name;
 
             -- Insert the governance table
             migrate_rb_insertion_sql := $dynSQL$
-                      INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "transitioned_at") VALUES ($1, $2, $3, $4, '${TransitionStatus.MIGRATED}', '${TransitionStatus.ROLLBACK}', NULL, 'Rollback for migration', CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING
+                      INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.MIGRATED}', '${TransitionStatus.ROLLBACK}', '{}', 'Rollback for migration') ON CONFLICT DO NOTHING
 
                     $dynSQL$;
-            EXECUTE migrate_rb_insertion_sql USING target_version_number, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
+            EXECUTE migrate_rb_insertion_sql USING islm_governance_id, target_version_number, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
           ELSE
             RAISE EXCEPTION 'Cannot perform a rollback for this version';
           END IF;
@@ -319,7 +284,7 @@ export class PgMigrate<
       islmGovernance,
       spIslmGovernance,
       spIslmMigrateSP,
-      islmGovernanceInsertion,
+      extn,
     };
   }
 

@@ -37,6 +37,9 @@ migration, follow these steps:
    import * as mod from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vx.x.x/pattern/postgres/migrate.ts";
    import * as udm from "https://raw.githubusercontent.com/netspective-labs/sql-aide/vx.x.x/pattern/udm/mod.ts";
 
+   //This uuid value is used for test purpose. You can generate the proper uuid through other means like importing from deno package (https://deno.land/std@0.211.0/uuid/mod.ts)
+   const namespace = "1b671a64-40d5-491e-99b0-da01ff1f3341";
+
    const migrate = PgMigrate.init(() => ctx, "schema_name");
    const migrationInput = {
      version: "sample",
@@ -77,7 +80,41 @@ migration, follow these steps:
 3. Customize the migration as needed, including defining rollback and status
    functions.
 
-4. Create and export a SQL Data Definition Language (DDL) function to generate
+4. Create the initial insert statement for loading the migration script
+
+   ```typescript
+   const formattedDate = PgMigrateObj.formatDateToCustomString(
+     migrationInput.dateTime,
+   );
+   const migrateVersion = "V" + migrationInput.version + formattedDate;
+   const migrateVersionNumber = migrationInput.versionNumber;
+   const islmGovernanceInsertion = PgMigrateObj.content()
+     .islmGovernance.insertDML([
+       {
+         islm_governance_id: namespace,
+         state_sort_index: migrateVersionNumber,
+         sp_migration: PgMigrateObj.prependMigrationSPText + migrateVersion,
+         sp_migration_undo: PgMigrateObj.prependMigrationSPText +
+           migrateVersion +
+           PgMigrateObj.appendMigrationUndoSPText,
+         fn_migration_status: PgMigrateObj.prependMigrationSPText +
+           migrateVersion +
+           PgMigrateObj.appendMigrationStatusFnText,
+         from_state: mod.TransitionStatus.NONE,
+         to_state: mod.TransitionStatus.SQLLOADED,
+         transition_reason: "SQL load for migration",
+         transition_result: "{}",
+         created_at: PgMigrateObj.sqlEngineNow,
+         created_by: "Admin",
+       },
+     ], {
+       onConflict: {
+         SQL: () => `ON CONFLICT DO NOTHING`,
+       },
+     });
+   ```
+
+5. Create and export a SQL Data Definition Language (DDL) function to generate
    SQL for the migrations:
 
    ```typescript
@@ -89,9 +126,11 @@ migration, follow these steps:
 
     ${searchPath}
 
-    ${PgMigrateObj.content(migrationInput).spIslmGovernance}
+    ${PgMigrateObj.content().extn}
 
-    ${PgMigrateObj.content(migrationInput).spIslmMigrateSP}
+    ${PgMigrateObj.content().spIslmGovernance}
+
+    ${PgMigrateObj.content().spIslmMigrateSP}
 
 
 
@@ -101,8 +140,10 @@ migration, follow these steps:
 
     ${createMigrationProcedure.statusFn}
 
-    CALL ${PgMigrateObj.content(migrationInput).spIslmGovernance.routineName}();
-    ${PgMigrateObj.content(migrationInput).islmGovernanceInsertion}
+    CALL ${PgMigrateObj.content().spIslmGovernance.routineName}();
+    ${islmGovernanceInsertion}
+
+
 
 
 

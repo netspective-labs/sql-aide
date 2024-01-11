@@ -16,6 +16,9 @@ import * as tp from "../typical/mod.ts";
 import * as mod from "./migrate.ts";
 import * as udm from "../udm/mod.ts";
 
+// Define a namespace UUID (you can choose any UUID)
+const namespace = "1b671a64-40d5-491e-99b0-da01ff1f3341";
+
 const {
   gm,
   gts,
@@ -176,6 +179,35 @@ const createMigrationProcedure = PgMigrateObj
         `,
   );
 
+const formattedDate = PgMigrateObj.formatDateToCustomString(
+  migrationInput.dateTime,
+);
+const migrateVersion = "V" + migrationInput.version + formattedDate;
+const migrateVersionNumber = migrationInput.versionNumber;
+const islmGovernanceInsertion = PgMigrateObj.content()
+  .islmGovernance.insertDML([
+    {
+      islm_governance_id: namespace,
+      state_sort_index: migrateVersionNumber,
+      sp_migration: PgMigrateObj.prependMigrationSPText + migrateVersion,
+      sp_migration_undo: PgMigrateObj.prependMigrationSPText + migrateVersion +
+        PgMigrateObj.appendMigrationUndoSPText,
+      fn_migration_status: PgMigrateObj.prependMigrationSPText +
+        migrateVersion +
+        PgMigrateObj.appendMigrationStatusFnText,
+      from_state: mod.TransitionStatus.NONE,
+      to_state: mod.TransitionStatus.SQLLOADED,
+      transition_reason: "SQL load for migration",
+      transition_result: "{}",
+      created_at: PgMigrateObj.sqlEngineNow,
+      created_by: "Admin",
+    },
+  ], {
+    onConflict: {
+      SQL: () => `ON CONFLICT DO NOTHING`,
+    },
+  });
+
 /**
  * Generates SQL Data Definition Language (DDL) for the migrations.
  *
@@ -189,9 +221,11 @@ function sqlDDL() {
 
     ${searchPath}
 
-    ${PgMigrateObj.content(migrationInput).spIslmGovernance}
+    ${PgMigrateObj.content().extn}
 
-    ${PgMigrateObj.content(migrationInput).spIslmMigrateSP}
+    ${PgMigrateObj.content().spIslmGovernance}
+
+    ${PgMigrateObj.content().spIslmMigrateSP}
 
     ${createMigrationProcedure.migrateSP}
 
@@ -199,8 +233,8 @@ function sqlDDL() {
 
     ${createMigrationProcedure.statusFn}
 
-    CALL ${PgMigrateObj.content(migrationInput).spIslmGovernance.routineName}();
-    ${PgMigrateObj.content(migrationInput).islmGovernanceInsertion}
+    CALL ${PgMigrateObj.content().spIslmGovernance.routineName}();
+    ${islmGovernanceInsertion}
 
 
     `;
