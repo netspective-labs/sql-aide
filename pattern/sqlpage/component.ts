@@ -38,6 +38,10 @@ export interface Component<
   Name extends string = "shell" | "list" | "text" | "table" | "breadcrumb",
 > extends SQLa.SqlTextSupplier<EmitContext> {
   readonly name: Name;
+  readonly condition?:
+    | { anyExists: string | string[] }
+    | { allExist: string | string[] }
+    | { where: SQLa.SqlTextSupplier<EmitContext> };
 }
 
 export type FlexibleText<EmitContext extends SQLa.SqlEmitContext> =
@@ -104,14 +108,34 @@ export class ComponentBuilder<
 
   component(
     name: Name,
+    conditional?: Component<EmitContext, Name>["condition"],
     ...args: ComponentSelectExprArg<EmitContext>[]
   ): Component<EmitContext, Name> {
     return {
       name,
       SQL: (ctx) => {
+        let condSql = "";
+        if (conditional) {
+          if ("anyExists" in conditional) {
+            condSql = `WHERE coalesce(${
+              Array.isArray(conditional.anyExists)
+                ? conditional.anyExists.join(", ")
+                : conditional.anyExists
+            }, '') <> ''`;
+          } else if ("allExist" in conditional) {
+            condSql = `WHERE ${
+              Array.isArray(conditional.allExist)
+                ? conditional.allExist.join(" and ")
+                : conditional.allExist
+            }`;
+          } else {
+            condSql = conditional.where.SQL(ctx);
+          }
+        }
+
         const select = this.selectables(ctx, ...args);
         // deno-fmt-ignore
-        return `SELECT '${name}' as component${select.length ? `, ${select.join(", ")}` : ""}`;
+        return `SELECT '${name}' as component${select.length ? `, ${select.join(", ")}` : ""}${condSql.length > 0 ? ` ${condSql}` : ''}`;
       },
     };
   }
@@ -134,7 +158,7 @@ export class ComponentBuilder<
       : Object.keys(args);
     const sql = sqlBuilder(
       args
-        ? this.component(name, ...this.select(args, ...argNames))
+        ? this.component(name, undefined, ...this.select(args, ...argNames))
         : this.component(name),
     );
     return {
@@ -173,11 +197,30 @@ export interface Shell<EmitContext extends SQLa.SqlEmitContext>
   readonly menuItems?: Iterable<{ caption: string }>;
 }
 
+export interface TextFragment<EmitContext extends SQLa.SqlEmitContext>
+  extends SQLa.SqlTextSupplier<EmitContext> {
+  readonly contents: string;
+  readonly bold?: boolean;
+  readonly break?: boolean;
+  readonly code?: boolean;
+  readonly color?: string;
+  readonly italics?: boolean;
+  readonly link?: string;
+  readonly size?: number;
+  readonly underline?: boolean;
+}
+
 export interface Text<EmitContext extends SQLa.SqlEmitContext>
   extends Component<EmitContext> {
   readonly name: "text";
   readonly title: FlexibleText<EmitContext>;
-  readonly content: { readonly text: string } | { readonly markdown: string };
+  readonly content?:
+    | { readonly text: FlexibleText<EmitContext> }
+    | { readonly markdown: FlexibleText<EmitContext> }
+    | { readonly html: FlexibleText<EmitContext> };
+  readonly center?: boolean;
+  readonly width?: number;
+  readonly fragments?: Iterable<TextFragment<EmitContext>>;
 }
 
 export interface ListItem<
@@ -325,6 +368,7 @@ export function typicalComponents<
       ...init,
       ...builder.component(
         "shell",
+        init.condition,
         ...builder.select(init, "title", "icon", "link"),
         ...(init.menuItems
           ? Array.from(init.menuItems).map((mi) =>
@@ -339,18 +383,31 @@ export function typicalComponents<
   const text = (
     init: Omit<Text<EmitContext>, "name" | "SQL">,
   ): Text<EmitContext> => {
-    return {
-      ...init,
-      ...builder.component(
-        "text",
-        ...builder.select(init, "title"),
-        "text" in init.content ? [init.content.text, "contents"] : undefined,
-        "markdown" in init.content
-          ? [init.content.markdown, "contentsmd"]
-          : undefined,
-      ),
-      name: "text",
-    };
+    const { content } = init;
+    const topLevel = builder.component(
+      "text",
+      init.condition,
+      ...builder.select(init, "title", "width", "center"),
+      content && "text" in content ? [content.text, "contents"] : undefined,
+      content && "markdown" in content
+        ? [content.markdown, "contents_md"]
+        : undefined,
+      content && "html" in content ? [content.html, "html"] : undefined,
+    );
+    return init.fragments
+      ? {
+        name: "text",
+        ...init,
+        SQL: (ctx) => {
+          return `${topLevel.SQL(ctx)};\n` +
+            Array.from(init.fragments!).map((i) => i.SQL(ctx)).join(";\n");
+        },
+      }
+      : {
+        ...init,
+        ...topLevel,
+        name: "text",
+      };
   };
 
   const listItem = (
@@ -372,6 +429,7 @@ export function typicalComponents<
   ): List<EmitContext> => {
     const topLevel = builder.component(
       "list",
+      init.condition,
       ...builder.select(init, "title"),
     );
     return {
@@ -400,7 +458,8 @@ export function typicalComponents<
       name: "table",
       ...init,
       SQL: (ctx) => {
-        return `${builder.component("table", ...topLevel).SQL(ctx)};\n` +
+        // deno-fmt-ignore
+        return `${builder.component("table", init.condition, ...topLevel).SQL(ctx)};\n` +
           Array.from(init.rows).map((i) => i.SQL(ctx)).join(";\n");
       },
     };
