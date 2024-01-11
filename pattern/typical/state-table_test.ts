@@ -72,6 +72,7 @@ Deno.test("State Tables Factory Test", async (tc) => {
       my_column1: z.string(),
       my_column2: z.string(),
     },
+    ["my_column1", "my_column2", "from_state", "to_state"],
   );
 
   await tc.step("table definition", () => {
@@ -99,7 +100,8 @@ Deno.test("State Tables Factory Test", async (tc) => {
           "updated_by" TEXT,
           "deleted_at" TIMESTAMPTZ,
           "deleted_by" TEXT,
-          "activity_log" TEXT
+          "activity_log" TEXT,
+          UNIQUE("my_column1", "my_column2", "from_state", "to_state")
       )`),
     );
   });

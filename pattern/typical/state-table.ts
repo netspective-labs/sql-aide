@@ -124,6 +124,7 @@ export function stateTable<
 >(
   tableName: TableName,
   userColumns: ColumnsShape,
+  uniqueColumns?: string[],
   tdOptions?: SQLa.TableDefnOptions<ColumnsShape, Context, DomainQS, DomainsQS>,
 ) {
   const columnsShape = {
@@ -188,6 +189,23 @@ export function stateTable<
   };
 
   // const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
+  const params = {
+    ...tdOptions,
+    isIdempotent: true,
+    sqlNS: tdOptions?.sqlNS ?? tdOptions?.sqlNS,
+  };
+  if (uniqueColumns) {
+    params.constraints = (props, tableName) => {
+      const c = SQLa.tableConstraints(tableName, props);
+      const unCol = uniqueColumns.map((column) => `${column}`);
+      return [
+        c.unique(
+          ...unCol,
+        ),
+      ];
+    };
+  }
+
   const td = SQLa.tableDefinition<
     TableName,
     ColumnsShape,
@@ -197,11 +215,7 @@ export function stateTable<
   >(
     tableName,
     columnsShape,
-    {
-      ...tdOptions,
-      isIdempotent: true,
-      sqlNS: tdOptions?.sqlNS ?? tdOptions?.sqlNS,
-    },
+    params,
   );
 
   return {
@@ -247,6 +261,7 @@ export function stateTablesFactory<
   >(
     tableName: TableName,
     userColumns: ColumnShape,
+    uniqueColumns?: string[],
     tdOptions?: defaultTdOptions,
   ) {
     return stateTable<
@@ -258,6 +273,7 @@ export function stateTablesFactory<
     >(
       tableName,
       userColumns,
+      uniqueColumns,
       tdOptions ?? defaultTdOptions,
     );
   }
