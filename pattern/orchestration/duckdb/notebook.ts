@@ -80,6 +80,7 @@ export class DuckDbShell {
     readonly args: {
       readonly duckdbCmd: string;
       readonly dbDestFsPathSupplier: (identity?: string) => string;
+      readonly preambleSQL?: (sql: string, identity?: string) => string;
     } = {
       duckdbCmd: "duckdb",
       dbDestFsPathSupplier: () => ":memory:",
@@ -151,8 +152,13 @@ export class DuckDbShell {
   }
 
   async execute(sql: string, identity?: string) {
-    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
     const dbDestFsPath = dbDestFsPathSupplier(identity);
+    if (preambleSQL) {
+      // preambleSQL helps prepare the DuckDB environment with configuration SQL
+      // e.g. `SET autoload_known_extensions=false;`
+      sql = preambleSQL(sql, identity) + sql;
+    }
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath}`
       .stdout("piped")
       .stderr("piped")
@@ -168,8 +174,13 @@ export class DuckDbShell {
   }
 
   async jsonResult<Row>(sql: string, identity?: string) {
-    const { args: { duckdbCmd, dbDestFsPathSupplier } } = this;
+    const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
     const dbDestFsPath = dbDestFsPathSupplier(identity);
+    if (preambleSQL) {
+      // preambleSQL helps prepare the DuckDB environment with configuration SQL;
+      // e.g. `SET autoinstall_known_extensions = true;`
+      sql = preambleSQL(sql, identity) + sql;
+    }
     const status = await dax.$`${duckdbCmd} ${dbDestFsPath} --json`
       .stdout("piped")
       .stderr("piped")
