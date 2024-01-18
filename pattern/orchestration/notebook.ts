@@ -97,6 +97,11 @@ export class OrchSession<
         ...orchSessionCRF.insertDML({
           orch_session_id: sessionID,
           device_id: device.deviceID,
+          orch_started_at: this.govn.emitCtx.newCurrentTimestamp,
+          // orch_started_at and diagnostics_arg, diagnostics_json, diagnostics_md should be
+          // supplied after session is completed
+          diagnostics_md:
+            `Session ${sessionID} markdown diagnostics not provided (not completed?)`,
         }),
       };
     }

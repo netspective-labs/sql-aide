@@ -90,6 +90,9 @@ export class OrchGovernance<EmitContext extends OrchEmitContext> {
     orch_started_at: this.gd.createdAt(),
     orch_finished_at: this.gd.dateTimeNullable(),
     elaboration: this.gd.jsonTextNullable(),
+    args_json: this.gd.jsonTextNullable(),
+    diagnostics_json: this.gd.jsonTextNullable(),
+    diagnostics_md: this.gd.textNullable(),
   }, {
     isIdempotent: true,
     populateQS: (t, c, _, tableName) => {
@@ -99,6 +102,12 @@ export class OrchGovernance<EmitContext extends OrchEmitContext> {
         `${tableName} primary key and internal label (UUID)`;
       c.elaboration.description =
         `JSON governance data (description, documentation, usage, etc. in JSON)`;
+      c.args_json.description =
+        `Sesison arguments in a machine-friendly (engine-dependent) JSON format`;
+      c.diagnostics_json.description =
+        `Diagnostics in a machine-friendly (engine-dependent) JSON format`;
+      c.diagnostics_md.description =
+        `Diagnostics in a human-friendly readable markdown format`;
     },
   });
 

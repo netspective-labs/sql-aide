@@ -72,6 +72,12 @@ export class DuckDbShell {
   readonly diagnostics: ReturnType<
     DuckDbOrchGovernance["orchSessionExecCRF"]["insertDML"]
   >[] = [];
+  // RegEx to find `-- diagnostics-md-ignore-start "X"` / `-- diagnostics-md-ignore-finish "X"` pairs
+  readonly ignoreDiagsSqlMdRegExp = new RegExp(
+    /--\s*diagnostics-md-ignore-start\s+"(.+?)"[\s\S]*?--\s*diagnostics-md-ignore-finish\s+"\1"/,
+    "gm",
+  );
+
   constructor(
     readonly session: o.OrchSession<
       DuckDbOrchGovernance,
@@ -93,18 +99,24 @@ export class DuckDbShell {
     status: dax.CommandResult,
     stdoutFmt?: (stdout: string) => { fmt: string; content: string },
   ) {
-    const markdown: string[] = [`\`\`\`sql\n${sql}\n\`\`\`\n`];
+    const mdSQL = sql.replaceAll(
+      this.ignoreDiagsSqlMdRegExp,
+      (_, name) => `-- removed ${name} from diagnostics Markdown`,
+    );
+
+    // note that our code blocks start with four ```` because SQL might include Markdown with blocks too
+    const markdown: string[] = [`\`\`\`\`sql\n${mdSQL}\n\`\`\`\`\n`];
     if (status.stdout) {
       markdown.push("### stdout");
       const stdout = stdoutFmt?.(status.stdout) ??
         ({ fmt: "sh", content: status.stdout });
       markdown.push(
-        `\`\`\`${stdout.fmt}\n${stdout.content}\n\`\`\``,
+        `\`\`\`\`${stdout.fmt}\n${stdout.content}\n\`\`\`\``,
       );
     }
     if (status.stderr) {
       markdown.push("### stderr");
-      markdown.push(`\`\`\`sh\n${status.stderr}\n\`\`\``);
+      markdown.push(`\`\`\`\`sh\n${status.stderr}\n\`\`\`\``);
     }
     return markdown;
   }
@@ -203,36 +215,20 @@ export class DuckDbShell {
     };
   }
 
-  async emitDiagnostics(options: {
-    readonly emitJson?: ((json: string) => Promise<void>) | undefined;
-    readonly diagsMd?: {
-      readonly emit: (md: string) => Promise<void>;
-      readonly frontmatter?: Record<string, unknown>;
-    } | undefined;
-  }) {
-    const { emitJson, diagsMd } = options;
-
-    await emitJson?.(JSON.stringify(this.diagnostics, null, "  "));
-
-    if (diagsMd) {
-      const md: string[] = [
-        "---",
-        yaml.stringify(diagsMd.frontmatter ?? this.args) + "---",
-        "# Orchestration Diagnostics",
-      ];
-      for (const d of this.diagnostics) {
-        if (Array.isArray(d.insertable)) {
-          for (const i of d.insertable) {
-            md.push(`\n## ${i.exec_identity}`);
-            md.push(`${i.narrative_md}`);
-          }
-        } else {
-          md.push(`\n## ${d.insertable.exec_identity}`);
-          md.push(`${d.insertable.narrative_md}`);
+  diagnosticsMarkdown() {
+    const md: string[] = [];
+    for (const d of this.diagnostics) {
+      if (Array.isArray(d.insertable)) {
+        for (const i of d.insertable) {
+          md.push(`\n## ${i.exec_identity}`);
+          md.push(`${i.narrative_md}`);
         }
+      } else {
+        md.push(`\n## ${d.insertable.exec_identity}`);
+        md.push(`${d.insertable.narrative_md}`);
       }
-      await diagsMd.emit(md.join("\n"));
     }
+    return md.join("\n");
   }
 }
 
