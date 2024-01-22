@@ -293,7 +293,7 @@ export async function orchestrate<
     if (!kernel.isValid() || kernel.lintResults.length > 0) {
       console.error("Invalid Kernel, inspect the DAG:");
       console.log(previewURL);
-      return;
+      return undefined;
     }
   }
 
@@ -372,4 +372,5 @@ export async function orchestrate<
 
   // now that everything is setup, execute
   await kernel.run(workflow, initRunState);
+  return workflow;
 }

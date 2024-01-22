@@ -1,4 +1,5 @@
 import { dax, uuid, yaml } from "./deps.ts";
+import * as md from "../../../lib/universal/markdown.ts";
 import * as SQLa from "../../../render/mod.ts";
 import * as a from "./assurance.ts";
 import * as o from "../mod.ts";
@@ -77,6 +78,12 @@ export class DuckDbShell {
     /--\s*diagnostics-md-ignore-start\s+"(.+?)"[\s\S]*?--\s*diagnostics-md-ignore-finish\s+"\1"/,
     "gm",
   );
+  #diagnosticsMD: md.MarkdownDocument<
+    Any,
+    ReturnType<typeof md.typicalMarkdownTags>
+  >;
+  #execIndex = 0;
+  #stdErrsEncountered = 0;
 
   constructor(
     readonly session: o.OrchSession<
@@ -87,42 +94,62 @@ export class DuckDbShell {
       readonly duckdbCmd: string;
       readonly dbDestFsPathSupplier: (identity?: string) => string;
       readonly preambleSQL?: (sql: string, identity?: string) => string;
+      readonly diagnosticsMD?: () => md.MarkdownDocument<
+        Any,
+        ReturnType<typeof md.typicalMarkdownTags>
+      >;
     } = {
       duckdbCmd: "duckdb",
       dbDestFsPathSupplier: () => ":memory:",
     },
   ) {
+    this.#diagnosticsMD = args.diagnosticsMD?.() ?? new md.MarkdownDocument();
+  }
+
+  get stdErrsEncountered() {
+    return this.#stdErrsEncountered;
   }
 
   sqlNarrativeMarkdown(
-    sql: string,
+    ctx: {
+      exec_code: string;
+      sql: string;
+      exec_identity: string;
+      output_nature?: string;
+    },
     status: dax.CommandResult,
-    stdoutFmt?: (stdout: string) => { fmt: string; content: string },
+    options: {
+      stdoutFmt?: (stdout: string) => { fmt: string; content: string };
+    } = {},
   ) {
+    const { sql, exec_identity: identity } = ctx;
+    const { stdoutFmt = (content) => ({ fmt: "sh", content }) } = options;
     const mdSQL = sql.replaceAll(
       this.ignoreDiagsSqlMdRegExp,
       (_, name) => `-- removed ${name} from diagnostics Markdown`,
     );
 
-    // note that our code blocks start with four ```` because SQL might include Markdown with blocks too
-    const markdown: string[] = [`\`\`\`\`sql\n${mdSQL}\n\`\`\`\`\n`];
-    if (status.stdout) {
-      markdown.push("### stdout");
-      const stdout = stdoutFmt?.(status.stdout) ??
-        ({ fmt: "sh", content: status.stdout });
-      markdown.push(
-        `\`\`\`\`${stdout.fmt}\n${stdout.content}\n\`\`\`\``,
-      );
-    }
-    if (status.stderr) {
-      markdown.push("### stderr");
-      markdown.push(`\`\`\`\`sh\n${status.stderr}\n\`\`\`\``);
-    }
+    const { h2, h3, code } = this.#diagnosticsMD.tags;
+    const stdout = stdoutFmt(status.stdout);
+    if (status.stderr) this.#stdErrsEncountered++;
+
+    // deno-fmt-ignore
+    const markdown = this.#diagnosticsMD.append`
+
+      ${h2(identity)}
+
+      ${code("sql", mdSQL)}
+      ${status.stdout ? (h3(`\`${identity}\` STDOUT (status: \`${status.code}\`)`)) : `No STDOUT emitted by \`${identity}\` (status: \`${status.code}\`).`}
+      ${status.stdout ? (code(stdout.fmt, stdout.content)) : ``}
+      ${status.stderr ? (h3(`\`${identity}\` STDERR`)) : `No STDERR emitted by \`${identity}\`.`}
+      ${status.stderr ? (code("sh", status.stderr)) : ``}
+    `;
+
     return markdown;
   }
 
   async writeDiagnosticsSqlMD(
-    sql: string,
+    ctx: Parameters<DuckDbShell["sqlNarrativeMarkdown"]>[0],
     status: dax.CommandResult,
     dir?: string,
   ) {
@@ -132,26 +159,22 @@ export class DuckDbShell {
       suffix: ".sql.md",
     });
     // deno-fmt-ignore
-    await Deno.writeTextFile(diagsTmpFile, `---\n${yaml.stringify({ code: status.code })}---\n${this.sqlNarrativeMarkdown(sql, status).join("\n")}`);
+    await Deno.writeTextFile(diagsTmpFile, `---\n${yaml.stringify({ code: status.code })}---\n${this.sqlNarrativeMarkdown(ctx, status)}`);
     return diagsTmpFile;
   }
 
   async execDiag(
-    init: {
-      exec_code: string;
-      sql: string;
-      exec_identity?: string;
-      output_nature?: string;
-    },
+    ctx: Parameters<DuckDbShell["sqlNarrativeMarkdown"]>[0],
     status: dax.CommandResult,
+    options?: Parameters<DuckDbShell["sqlNarrativeMarkdown"]>[2],
   ) {
     const { session, session: { govn }, args: { duckdbCmd } } = this;
     return govn.orchSessionExecCRF.insertDML({
-      ...init,
+      ...ctx,
       orch_session_exec_id: await govn.emitCtx.newUUID(govn.deterministicPKs),
       exec_nature: duckdbCmd,
       exec_status: status.code,
-      input_text: init.sql,
+      input_text: ctx.sql,
       exec_error_text: status.stderr && status.stderr.length
         ? status.stderr
         : undefined,
@@ -159,11 +182,11 @@ export class DuckDbShell {
         ? status.stdout
         : undefined,
       session_id: (await session.orchSessionSqlDML()).sessionID,
-      narrative_md: this.sqlNarrativeMarkdown(init.sql, status).join("\n"),
+      narrative_md: this.sqlNarrativeMarkdown(ctx, status, options),
     });
   }
 
-  async execute(sql: string, identity?: string) {
+  async execute(sql: string, identity = `execute_${this.#execIndex}`) {
     const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
     const dbDestFsPath = dbDestFsPathSupplier(identity);
     if (preambleSQL) {
@@ -182,10 +205,14 @@ export class DuckDbShell {
       sql,
     }, status);
     this.diagnostics.push(diag);
+    this.#execIndex++;
     return { status, diag };
   }
 
-  async jsonResult<Row>(sql: string, identity?: string) {
+  async jsonResult<Row>(
+    sql: string,
+    identity = `jsonResult_${this.#execIndex}`,
+  ) {
     const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
     const dbDestFsPath = dbDestFsPathSupplier(identity);
     if (preambleSQL) {
@@ -199,13 +226,18 @@ export class DuckDbShell {
       .stdinText(sql)
       .noThrow();
     const stdout = status.stdout;
-    const diag = await this.execDiag({
-      exec_identity: identity,
-      exec_code: `${duckdbCmd} ${dbDestFsPath} --json`,
-      sql,
-      output_nature: "JSON",
-    }, status);
+    const diag = await this.execDiag(
+      {
+        exec_identity: identity,
+        exec_code: `${duckdbCmd} ${dbDestFsPath} --json`,
+        sql,
+        output_nature: "JSON",
+      },
+      status,
+      { stdoutFmt: (content) => ({ fmt: "json", content }) },
+    );
     this.diagnostics.push(diag);
+    this.#execIndex++;
     return {
       status,
       diag,
@@ -216,19 +248,10 @@ export class DuckDbShell {
   }
 
   diagnosticsMarkdown() {
-    const md: string[] = [];
-    for (const d of this.diagnostics) {
-      if (Array.isArray(d.insertable)) {
-        for (const i of d.insertable) {
-          md.push(`\n## ${i.exec_identity}`);
-          md.push(`${i.narrative_md}`);
-        }
-      } else {
-        md.push(`\n## ${d.insertable.exec_identity}`);
-        md.push(`${d.insertable.narrative_md}`);
-      }
-    }
-    return md.join("\n");
+    const dmd = this.#diagnosticsMD;
+    return this.#diagnosticsMD.markdownText(() =>
+      `## Contents\n\n${dmd.tocMarkdownLists()}\n`
+    );
   }
 }
 
