@@ -161,36 +161,36 @@ export function governedDomains<
     date: z.date,
     dateNullable: () => z.date().optional(),
 
-    dateTime: () =>
+    dateTime: (omitTimeZone?: boolean) =>
       z.date(
         SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodDateDescr({ isDateTime: true }),
+          SQLa.sqlDomainZodDateDescr({ isDateTime: true, omitTimeZone }),
         ),
       ),
-    dateTimeNullable: () =>
+    dateTimeNullable: (omitTimeZone?: boolean) =>
       z.date(
         SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodDateDescr({ isDateTime: true }),
+          SQLa.sqlDomainZodDateDescr({ isDateTime: true, omitTimeZone }),
         ),
       ).optional(),
 
-    createdAt: () =>
+    createdAt: (omitTimeZone?: boolean) =>
       z.date(
         SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodDateDescr({ isCreatedAt: true }),
+          SQLa.sqlDomainZodDateDescr({ isCreatedAt: true, omitTimeZone }),
         ),
       ).default(new Date()).optional(),
-    updatedAt: () =>
+    updatedAt: (omitTimeZone?: boolean) =>
       z.date(
         SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true }),
+          SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true, omitTimeZone }),
         ),
       ).default(new Date()).optional(),
 
-    deletedAt: () =>
+    deletedAt: (omitTimeZone?: boolean) =>
       z.date(
         SQLa.zodSqlDomainRawCreateParams(
-          SQLa.sqlDomainZodDateDescr({ isDeletedAt: true }),
+          SQLa.sqlDomainZodDateDescr({ isDeletedAt: true, omitTimeZone }),
         ),
       ).optional(),
 

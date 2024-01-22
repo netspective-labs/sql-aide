@@ -23,22 +23,22 @@ const pkcf = SQLa.primaryKeyColumnFactory<
 >();
 export const textPrimaryKey = () => pkcf.primaryKey(z.string());
 
-const createdAt = () =>
+const createdAt = (omitTimeZone?: boolean) =>
   z.date(
     SQLa.zodSqlDomainRawCreateParams(
-      SQLa.sqlDomainZodDateDescr({ isCreatedAt: true }),
+      SQLa.sqlDomainZodDateDescr({ isCreatedAt: true, omitTimeZone }),
     ),
   ).default(new Date()).optional();
-const updatedAt = () =>
+const updatedAt = (omitTimeZone?: boolean) =>
   z.date(
     SQLa.zodSqlDomainRawCreateParams(
-      SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true }),
+      SQLa.sqlDomainZodDateDescr({ isUpdatedAt: true, omitTimeZone }),
     ),
   ).default(new Date()).optional();
-const deletedAt = () =>
+const deletedAt = (omitTimeZone?: boolean) =>
   z.date(
     SQLa.zodSqlDomainRawCreateParams(
-      SQLa.sqlDomainZodDateDescr({ isDeletedAt: true }),
+      SQLa.sqlDomainZodDateDescr({ isDeletedAt: true, omitTimeZone }),
     ),
   ).default(new Date()).optional();
 const sdf = SQLa.sqlDomainsFactory<

@@ -43,7 +43,11 @@ export function sqlPageNotebook<
   const sqlPageFiles = SQLa.tableDefinition("sqlpage_files", {
     path: pkcf.primaryKey(z.string()),
     contents: z.string(),
-    last_modified: z.date().default(new Date()).optional(),
+    last_modified: z.date(
+      SQLa.zodSqlDomainRawCreateParams(
+        SQLa.sqlDomainZodDateDescr({ isCreatedAt: true, omitTimeZone: true }),
+      ),
+    ),
   }, {
     isIdempotent: true,
     qualitySystem: {

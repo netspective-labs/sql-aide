@@ -992,12 +992,17 @@ export type SqlDomainZodDateDescr = SqlDomainZodDescrMeta & {
   readonly isCreatedAt?: boolean;
   readonly isUpdatedAt?: boolean;
   readonly isDeletedAt?: boolean;
+  readonly omitTimeZone?: boolean;
 };
 
 export function sqlDomainZodDateDescr(
   options: Pick<
     SqlDomainZodDateDescr,
-    "isDateTime" | "isCreatedAt" | "isUpdatedAt" | "isDeletedAt"
+    | "isDateTime"
+    | "isCreatedAt"
+    | "isUpdatedAt"
+    | "isDeletedAt"
+    | "omitTimeZone"
   >,
 ): SqlDomainZodDateDescr {
   return {
@@ -1066,6 +1071,7 @@ export function zodDateSqlDomainFactory<
         readonly isOptional?: boolean;
         readonly parents?: z.ZodTypeAny[];
         readonly formattedDate?: (date: Date) => string;
+        readonly omitTimeZone?: boolean;
       },
     ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
@@ -1092,6 +1098,7 @@ export function zodDateSqlDomainFactory<
         readonly isOptional?: boolean;
         readonly parents?: z.ZodTypeAny[];
         readonly formattedDate?: (date: Date) => string;
+        readonly omitTimeZone?: boolean;
       },
     ): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
@@ -1101,7 +1108,7 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMPTZ`;
+            return init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`;
           },
         }),
         sqlDmlQuotedLiteral: (_, value, quotedLiteral) => {
@@ -1114,7 +1121,8 @@ export function zodDateSqlDomainFactory<
           }
           return quotedLiteral(value);
         },
-        polygenixDataType: () => `TIMESTAMPTZ`,
+        polygenixDataType: () =>
+          init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`,
       };
     },
     createdAt: <
@@ -1124,6 +1132,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
+      readonly omitTimeZone?: boolean;
     }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
@@ -1135,7 +1144,7 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMPTZ`;
+            return init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`;
           },
         }),
         sqlDefaultValue: () => ({
@@ -1146,7 +1155,8 @@ export function zodDateSqlDomainFactory<
             return `CURRENT_TIMESTAMP`;
           },
         }),
-        polygenixDataType: () => `TIMESTAMPTZ`,
+        polygenixDataType: () =>
+          init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`,
       };
     },
     updatedAt: <
@@ -1156,6 +1166,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
+      readonly omitTimeZone?: boolean;
     }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
@@ -1167,10 +1178,11 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMPTZ`;
+            return init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`;
           },
         }),
-        polygenixDataType: () => `TIMESTAMPTZ`,
+        polygenixDataType: () =>
+          init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`,
       };
     },
     deletedAt: <
@@ -1180,6 +1192,7 @@ export function zodDateSqlDomainFactory<
       readonly identity?: Identity;
       readonly parents?: z.ZodTypeAny[];
       readonly dateFormat?: Intl.DateTimeFormatOptions;
+      readonly omitTimeZone?: boolean;
     }): SqlDomain<ZodType, Context, Identity, QualitySystem> => {
       return {
         ...ztaSDF.defaults<Identity>(
@@ -1191,10 +1204,11 @@ export function zodDateSqlDomainFactory<
             if (tmpl.isMsSqlServerDialect(ctx.sqlDialect)) {
               return `DATETIME2`;
             }
-            return `TIMESTAMPTZ`;
+            return init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`;
           },
         }),
-        polygenixDataType: () => `TIMESTAMPTZ`,
+        polygenixDataType: () =>
+          init?.omitTimeZone ? `TIMESTAMP` : `TIMESTAMPTZ`,
       };
     },
   };
@@ -1603,24 +1617,28 @@ export function zodTypeSqlDomainFactory<
       case z.ZodFirstPartyTypeKind.ZodDate: {
         if (zodDefHook?.descrMeta) {
           if (isSqlDomainZodDateDescr(zodDefHook.descrMeta)) {
+            const dateInit = {
+              ...init,
+              omitTimeZone: zodDefHook.descrMeta.omitTimeZone,
+            };
             if (zodDefHook.descrMeta.isCreatedAt) {
               return zodDefHook.descrMeta.isCreatedAt
-                ? dateSDF.createdAt(init)
+                ? dateSDF.createdAt(dateInit)
                 : zodDefHook.descrMeta.isDateTime
-                ? dateSDF.dateTime(zodType, init)
-                : dateSDF.date(zodType, init);
+                ? dateSDF.dateTime(zodType, dateInit)
+                : dateSDF.date(zodType, dateInit);
             } else if (zodDefHook.descrMeta.isUpdatedAt) {
               return zodDefHook.descrMeta.isUpdatedAt
-                ? dateSDF.updatedAt(init)
+                ? dateSDF.updatedAt(dateInit)
                 : zodDefHook.descrMeta.isDateTime
-                ? dateSDF.dateTime(zodType, init)
-                : dateSDF.date(zodType, init);
+                ? dateSDF.dateTime(zodType, dateInit)
+                : dateSDF.date(zodType, dateInit);
             } else {
               return zodDefHook.descrMeta.isDeletedAt
-                ? dateSDF.deletedAt(init)
+                ? dateSDF.deletedAt(dateInit)
                 : zodDefHook.descrMeta.isDateTime
-                ? dateSDF.dateTime(zodType, init)
-                : dateSDF.date(zodType, init);
+                ? dateSDF.dateTime(zodType, dateInit)
+                : dateSDF.date(zodType, dateInit);
             }
           } else {
             throw new Error(
@@ -1632,7 +1650,7 @@ export function zodTypeSqlDomainFactory<
             );
           }
         } else {
-          return dateSDF.date(zodType, init);
+          return dateSDF.date(zodType, { ...init });
         }
       }
 

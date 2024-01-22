@@ -35,6 +35,7 @@ export interface OrchEmitContext extends SQLa.SqlEmitContext {
 }
 
 export class OrchGovernance<EmitContext extends OrchEmitContext> {
+  readonly omitTimeZone = true;
   readonly gk = tp.governedKeys<DomainQS, DomainsQS, EmitContext>();
   readonly gd = tp.governedDomains<DomainQS, DomainsQS, EmitContext>();
   readonly gts = tp.governedTemplateState<
@@ -87,8 +88,8 @@ export class OrchGovernance<EmitContext extends OrchEmitContext> {
   readonly orchSession = SQLa.tableDefinition("orch_session", {
     orch_session_id: this.primaryKey(),
     device_id: this.device.belongsTo.device_id(),
-    orch_started_at: this.gd.createdAt(),
-    orch_finished_at: this.gd.dateTimeNullable(),
+    orch_started_at: this.gd.createdAt(this.omitTimeZone),
+    orch_finished_at: this.gd.dateTimeNullable(this.omitTimeZone),
     elaboration: this.gd.jsonTextNullable(),
     args_json: this.gd.jsonTextNullable(),
     diagnostics_json: this.gd.jsonTextNullable(),
@@ -144,7 +145,7 @@ export class OrchGovernance<EmitContext extends OrchEmitContext> {
     to_state: this.gd.text(),
     transition_result: this.gd.jsonTextNullable(),
     transition_reason: this.gd.textNullable(),
-    transitioned_at: this.gd.createdAt(),
+    transitioned_at: this.gd.createdAt(this.omitTimeZone),
     elaboration: this.gd.jsonTextNullable(),
   }, {
     isIdempotent: true,
