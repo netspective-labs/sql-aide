@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "denoland.vscode-deno",
-    "frigus02.vscode-sql-tagged-template-literals",
     "yzhang.markdown-all-in-one",
     "shd101wyy.markdown-preview-enhanced",
     "mechatroner.rainbow-csv",
