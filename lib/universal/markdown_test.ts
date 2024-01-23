@@ -1,7 +1,11 @@
 import { testingAsserts as ta } from "../../deps-test.ts";
 import * as mod from "./markdown.ts";
 
-const golden1 = `# Markdown test
+const golden1 = `- [Markdown test](#markdown-test)
+  - [Second level heading](#second-level-heading)
+    - [Third level heading](#third-level-heading)
+
+# Markdown test
 
 This is a test document which should prepare **some bold text** and ***some italic text***.
 
@@ -43,28 +47,28 @@ Deno.test("Generated Markdown", () => {
 
     ${t.table(["h-column1", "h-column2"], ["r1-column1", "r1-column2"])}`;
 
-  ta.assertEquals(md.markdownText(), golden1);
+  ta.assertEquals(md.markdownText(() => md.tocMarkdownLists() + "\n"), golden1);
   ta.assertEquals(md.tableOfContents, {
     headings: [
       {
         level: 1,
         heading: "Markdown test",
         anchorName: "markdown-test",
-        anchorText: `<a name="markdown-test">Markdown test</a>`,
+        anchorText: `Markdown test`,
         tocItemText: `[Markdown test](#markdown-test)`,
       },
       {
         level: 2,
         heading: "Second level heading",
         anchorName: "second-level-heading",
-        anchorText: `<a name="second-level-heading">Second level heading</a>`,
+        anchorText: `Second level heading`,
         tocItemText: `[Second level heading](#second-level-heading)`,
       },
       {
         level: 3,
         heading: "Third level heading",
         anchorName: "third-level-heading",
-        anchorText: `<a name="third-level-heading">Third level heading</a>`,
+        anchorText: `Third level heading`,
         tocItemText: `[Third level heading](#third-level-heading)`,
       },
     ],

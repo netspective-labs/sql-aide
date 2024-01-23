@@ -2,7 +2,7 @@ import * as ws from "./whitespace.ts";
 
 export function typicalMarkdownTags(options: {
   readonly toc?: {
-    heading: (text: string, level: number) => void;
+    heading: (text: string, level: number) => string;
   };
 } = {}) {
   const wrap = (wrapper: string, str: string) => `${wrapper}${str}${wrapper}`;
@@ -66,9 +66,9 @@ export function typicalMarkdownTags(options: {
   const bold = (str: string) => wrap("**", str);
 
   const heading = (level: number, str: string) => {
-    const markdown = spaces(join(times(always("#"), level)), str);
-    options?.toc?.heading(str, level);
-    return markdown;
+    // in case table of contents rewriting is required, do it now
+    const rewrittenText = options?.toc?.heading(str, level);
+    return spaces(join(times(always("#"), level)), rewrittenText ?? str);
   };
 
   const h1 = (str: string) => heading(1, str);
@@ -149,16 +149,16 @@ export class MarkdownDocument<
     readonly tags: Tags = typicalMarkdownTags({
       toc: {
         heading: (text, level) => {
-          if (this.tableOfContents) {
-            const anchorName = this.tags.anchorName(text);
-            this.tableOfContents?.headings.push({
-              heading: text,
-              level,
-              anchorName,
-              anchorText: `<a name="${anchorName}">${text}</a>`,
-              tocItemText: `[${text}](#${anchorName})`,
-            });
-          }
+          const anchorName = this.tags.anchorName(text);
+          const state = {
+            heading: text,
+            level,
+            anchorName,
+            anchorText: text,
+            tocItemText: `[${text}](#${anchorName})`,
+          };
+          this.tableOfContents.headings.push(state);
+          return state.anchorText;
         },
       },
     }) as Tags,
