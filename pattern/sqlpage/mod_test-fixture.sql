@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS "sqlpage_files" (
     "path" TEXT PRIMARY KEY NOT NULL,
     "contents" TEXT NOT NULL,
-    "last_modified" DATE
+    "last_modified" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO "sqlpage_files" ("path", "contents", "last_modified") VALUES ('index.sql', 'SELECT ''shell'' as component, ''Test Center'' as title, ''book'' as icon, ''/'' as link, ''issues'' as menu_item, ''schema'' as menu_item;
