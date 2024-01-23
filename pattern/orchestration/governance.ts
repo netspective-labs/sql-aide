@@ -26,7 +26,14 @@ export interface OrchEmitContext extends SQLa.SqlEmitContext {
    * which returns the current time from the client (TypeScript).
    * @returns SQL supplier of the Javascript runtime's current time
    */
-  readonly newCurrentTimestamp: SQLa.SqlTextSupplier<SQLa.SqlEmitContext>;
+  readonly jsRuntimeNow: SQLa.SqlTextSupplier<SQLa.SqlEmitContext>;
+
+  /**
+   * Compute the current timestamp and prepare db-specific dialect SQL function
+   * which returns the current time from the database (SQL) engine.
+   * @returns SQL supplier of the Database's current time
+   */
+  readonly sqlEngineNow: SQLa.SqlTextSupplier<SQLa.SqlEmitContext>;
 
   /**
    * Property to pass into insert or other DML when we want to ignore conflicts.

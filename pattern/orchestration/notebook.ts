@@ -84,7 +84,7 @@ export class OrchSession<
     return this.deviceDmlSingleton;
   }
 
-  async orchSessionSqlDML(): Promise<
+  async orchSessionSqlDML(now = this.govn.emitCtx.jsRuntimeNow): Promise<
     & { readonly sessionID: string }
     & SQLa.SqlTextSupplier<EmitContext>
   > {
@@ -97,7 +97,7 @@ export class OrchSession<
         ...orchSessionCRF.insertDML({
           orch_session_id: sessionID,
           device_id: device.deviceID,
-          orch_started_at: this.govn.emitCtx.newCurrentTimestamp,
+          orch_started_at: now,
           // orch_started_at and diagnostics_arg, diagnostics_json, diagnostics_md should be
           // supplied after session is completed
           diagnostics_md:
@@ -112,6 +112,7 @@ export class OrchSession<
     fromState: string,
     toState: string,
     reason: string,
+    at = this.govn.emitCtx.jsRuntimeNow,
     elaboration?: string,
   ) {
     const sessionDML = await this.orchSessionSqlDML();
@@ -123,10 +124,32 @@ export class OrchSession<
         from_state: fromState,
         to_state: toState,
         transition_reason: reason,
-        transitioned_at: ctx.newCurrentTimestamp,
+        transitioned_at: at,
         elaboration,
       }),
     );
+  }
+
+  async entryStateDML(
+    sessionEntryID: string,
+    fromState: string,
+    toState: string,
+    reason: string,
+    at = this.govn.emitCtx.jsRuntimeNow,
+    elaboration?: string,
+  ) {
+    const sessionDML = await this.orchSessionSqlDML();
+    const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
+    return orchSessionStateCRF.insertDML({
+      orch_session_state_id: await ctx.newUUID(deterministicPKs),
+      session_id: sessionDML.sessionID,
+      session_entry_id: sessionEntryID,
+      from_state: fromState,
+      to_state: toState,
+      transition_reason: reason,
+      transitioned_at: at,
+      elaboration,
+    });
   }
 
   async registerEntryState(
@@ -134,21 +157,18 @@ export class OrchSession<
     fromState: string,
     toState: string,
     reason: string,
+    at = this.govn.emitCtx.jsRuntimeNow,
     elaboration?: string,
   ) {
-    const sessionDML = await this.orchSessionSqlDML();
-    const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
     this.stateChangesDML.push(
-      orchSessionStateCRF.insertDML({
-        orch_session_state_id: await ctx.newUUID(deterministicPKs),
-        session_id: sessionDML.sessionID,
-        session_entry_id: sessionEntryID,
-        from_state: fromState,
-        to_state: toState,
-        transition_reason: reason,
-        transitioned_at: ctx.newCurrentTimestamp,
+      await this.entryStateDML(
+        sessionEntryID,
+        fromState,
+        toState,
+        reason,
+        at,
         elaboration,
-      }),
+      ),
     );
   }
 
@@ -316,7 +336,13 @@ export async function orchestrate<
       if (active.fromState == fromState && active.toState == toState) return;
     }
     // if we get here it means we're actually changing the state
-    await session.registerState(fromState, toState, reason, elaboration);
+    await session.registerState(
+      fromState,
+      toState,
+      reason,
+      govn.emitCtx.jsRuntimeNow,
+      elaboration,
+    );
     cellStates.push({ fromState, toState });
   };
 

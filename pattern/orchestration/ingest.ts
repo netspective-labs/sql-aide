@@ -1,6 +1,7 @@
 import { fs } from "./deps.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as g from "./governance.ts";
+import * as nb from "./notebook.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -29,11 +30,15 @@ export interface IngestSourceStructAssuranceContext<
 }
 
 export interface IngestableResource<
+  Governance extends g.OrchGovernance<EmitContext>,
   EmitContext extends g.OrchEmitContext,
 > {
   readonly uri: string;
   readonly nature: string;
-  readonly workflow: (sessionID: string, sessionEntryID: string) => {
+  readonly workflow: (
+    session: nb.OrchSession<Governance, EmitContext>,
+    sessionEntryID: string,
+  ) => Promise<{
     readonly ingestSQL: (
       issac: IngestSourceStructAssuranceContext<EmitContext>,
     ) =>
@@ -45,12 +50,13 @@ export interface IngestableResource<
     readonly exportResourceSQL: (targetSchema: string) =>
       | Promise<SQLa.SqlTextSupplier<EmitContext>>
       | SQLa.SqlTextSupplier<EmitContext>;
-  };
+  }>;
 }
 
 export interface InvalidIngestSource<
+  Governance extends g.OrchGovernance<EmitContext>,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<EmitContext> {
+> extends IngestableResource<Governance, EmitContext> {
   readonly nature: "ERROR";
   readonly error: Error;
   readonly tableName: string;
@@ -58,8 +64,9 @@ export interface InvalidIngestSource<
 
 export interface CsvFileIngestSource<
   TableName extends string,
+  Governance extends g.OrchGovernance<EmitContext>,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<EmitContext> {
+> extends IngestableResource<Governance, EmitContext> {
   readonly nature: "CSV";
   readonly tableName: TableName;
 }
@@ -67,8 +74,9 @@ export interface CsvFileIngestSource<
 export interface ExcelSheetIngestSource<
   SheetName extends string,
   TableName extends string,
+  Governance extends g.OrchGovernance<EmitContext>,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<EmitContext> {
+> extends IngestableResource<Governance, EmitContext> {
   readonly nature: "Excel Workbook Sheet";
   readonly sheetName: SheetName;
   readonly tableName: TableName;
@@ -94,7 +102,7 @@ export interface IngestFsPatternSourcesSupplier<PotentialIngestSource>
 export class ErrorIngestSource<
   Governance extends g.OrchGovernance<EmitContext>,
   EmitContext extends g.OrchEmitContext,
-> implements InvalidIngestSource<EmitContext> {
+> implements InvalidIngestSource<Governance, EmitContext> {
   readonly nature = "ERROR";
   readonly tableName = "ERROR";
   constructor(
@@ -105,7 +113,10 @@ export class ErrorIngestSource<
   ) {
   }
 
-  workflow(): ReturnType<InvalidIngestSource<EmitContext>["workflow"]> {
+  // deno-lint-ignore require-await
+  async workflow(): ReturnType<
+    InvalidIngestSource<Governance, EmitContext>["workflow"]
+  > {
     return {
       ingestSQL: async (issac) =>
         // deno-fmt-ignore

@@ -35,7 +35,7 @@ export class DuckDbOrchEmitContext implements o.OrchEmitContext {
    * Compute the current timestamp and prepare DuckDB SQL
    * @returns SQL supplier of the Javascript runtime's current time
    */
-  get newCurrentTimestamp(): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
+  get jsRuntimeNow(): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
     return {
       SQL: () => {
         const now = new Date();
@@ -54,7 +54,7 @@ export class DuckDbOrchEmitContext implements o.OrchEmitContext {
     return { SQL: () => `ON CONFLICT DO NOTHING` };
   }
 
-  get sqlEngineNow(): SQLa.SqlTextSupplier<DuckDbOrchEmitContext> {
+  get sqlEngineNow(): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
     return { SQL: () => `CURRENT_TIMESTAMP` };
   }
 }
