@@ -273,10 +273,16 @@ export class DuckDbOrchAssuranceRules extends o.OrchAssuranceRules {
   }
 }
 
-export class DuckDbOrchTableAssuranceRules<TableName extends string>
-  extends DuckDbOrchAssuranceRules {
+export class DuckDbOrchTableAssuranceRules<
+  TableName extends string,
+  ColumnName extends string,
+> extends DuckDbOrchAssuranceRules {
   readonly tableRules: ReturnType<
-    typeof a.typicalTableAssuranceRules<TableName, DuckDbOrchEmitContext>
+    typeof a.typicalTableAssuranceRules<
+      TableName,
+      ColumnName,
+      DuckDbOrchEmitContext
+    >
   >;
 
   constructor(
@@ -288,6 +294,7 @@ export class DuckDbOrchTableAssuranceRules<TableName extends string>
     super(sessionID, sessionEntryID, govn);
     this.tableRules = a.typicalTableAssuranceRules<
       TableName,
+      ColumnName,
       DuckDbOrchEmitContext
     >(
       tableName,

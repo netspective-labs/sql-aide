@@ -5,9 +5,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
   govn: oa.AssuranceRulesGovernance,
   SQL: ReturnType<typeof SQLa.SQL<Context>>,
 ) {
-  const requiredColumnNamesInTable = (
-    tableName: string,
-    requiredColNames: string[],
+  const requiredColumnNamesInTable = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    requiredColNames: ColumnName[],
   ) => {
     const cteName = "required_column_names_in_src";
     // deno-fmt-ignore
@@ -27,9 +30,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const intValueInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const intValueInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
   ) => {
     const cteName = "numeric_value_in_all_rows";
     // deno-fmt-ignore
@@ -52,9 +58,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const intRangeInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const intRangeInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
     minSql: number | string,
     maxSql: number | string,
   ) => {
@@ -79,9 +88,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const uniqueValueInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const uniqueValueInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
   ) => {
     const cteName = "unique_value";
     // deno-fmt-ignore
@@ -108,9 +120,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const mandatoryValueInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const mandatoryValueInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
   ) => {
     const cteName = "mandatory_value";
     // deno-fmt-ignore
@@ -133,9 +148,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const patternValueInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const patternValueInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
     pattern: string,
     patternHuman = pattern,
     patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
@@ -160,9 +178,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
         )}`;
   };
 
-  const onlyAllowedValuesInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const onlyAllowedValuesInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
     valuesSql: string,
     valuesHuman = valuesSql,
     patternSql = `${columnName} NOT IN (${valuesSql})`,
@@ -188,9 +209,12 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
   };
 
   // this is not a particularly helpful rule, but it's a good example approach
-  const dotComEmailValueInAllTableRows = (
-    tableName: string,
-    columnName: string,
+  const dotComEmailValueInAllTableRows = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    columnName: ColumnName,
   ) => {
     const cteName = "proper_dot_com_email_address_in_all_rows";
     // deno-fmt-ignore
@@ -227,6 +251,7 @@ export function typicalAssuranceRules<Context extends SQLa.SqlEmitContext>(
 
 export function typicalTableAssuranceRules<
   TableName extends string,
+  ColumnName extends string,
   Context extends SQLa.SqlEmitContext,
 >(
   tableName: TableName,
@@ -235,31 +260,43 @@ export function typicalTableAssuranceRules<
 ) {
   const ar = typicalAssuranceRules(govn, SQL);
 
-  const requiredColumnNames = (requiredColNames: string[]) =>
-    ar.requiredColumnNamesInTable(tableName, requiredColNames);
+  const requiredColumnNames = (requiredColNames: ColumnName[]) =>
+    ar.requiredColumnNamesInTable<TableName, ColumnName>(
+      tableName,
+      requiredColNames,
+    );
 
-  const intValueInAllRows = (columnName: string) =>
-    ar.intValueInAllTableRows(tableName, columnName);
+  const intValueInAllRows = (columnName: ColumnName) =>
+    ar.intValueInAllTableRows<TableName, ColumnName>(tableName, columnName);
 
   const intRangeInAllRows = (
-    columnName: string,
+    columnName: ColumnName,
     minSql: number | string,
     maxSql: number | string,
-  ) => ar.intRangeInAllTableRows(tableName, columnName, minSql, maxSql);
+  ) =>
+    ar.intRangeInAllTableRows<TableName, ColumnName>(
+      tableName,
+      columnName,
+      minSql,
+      maxSql,
+    );
 
-  const uniqueValueInAllRows = (columnName: string) =>
-    ar.uniqueValueInAllTableRows(tableName, columnName);
+  const uniqueValueInAllRows = (columnName: ColumnName) =>
+    ar.uniqueValueInAllTableRows<TableName, ColumnName>(tableName, columnName);
 
-  const mandatoryValueInAllRows = (columnName: string) =>
-    ar.mandatoryValueInAllTableRows(tableName, columnName);
+  const mandatoryValueInAllRows = (columnName: ColumnName) =>
+    ar.mandatoryValueInAllTableRows<TableName, ColumnName>(
+      tableName,
+      columnName,
+    );
 
   const patternValueInAllRows = (
-    columnName: string,
+    columnName: ColumnName,
     pattern: string,
     patternHuman = pattern,
     patternSql = `${columnName} NOT SIMILAR TO '${pattern}'`,
   ) =>
-    ar.patternValueInAllTableRows(
+    ar.patternValueInAllTableRows<TableName, ColumnName>(
       tableName,
       columnName,
       pattern,
@@ -268,12 +305,12 @@ export function typicalTableAssuranceRules<
     );
 
   const onlyAllowedValuesInAllRows = (
-    columnName: string,
+    columnName: ColumnName,
     valuesSql: string,
     valuesHuman = valuesSql,
     patternSql = `${columnName} NOT IN (${valuesSql})`,
   ) =>
-    ar.onlyAllowedValuesInAllTableRows(
+    ar.onlyAllowedValuesInAllTableRows<TableName, ColumnName>(
       tableName,
       columnName,
       valuesSql,
