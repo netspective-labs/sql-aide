@@ -47,11 +47,11 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
 
 WITH numeric_value_in_all_rows AS (
     SELECT 'column4' AS issue_column,
-           column4 AS invalid_value,
+           "column4" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column4 IS NOT NULL
-       AND column4 NOT SIMILAR TO '^[+-]?[0-9]+$'
+      FROM "synthetic_csv_fail"
+     WHERE "column4" IS NOT NULL
+       AND "column4" NOT SIMILAR TO '^[+-]?[0-9]+$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -65,11 +65,11 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
 
 WITH int_range_assurance AS (
     SELECT 'column5' AS issue_column,
-           column5 AS invalid_value,
+           "column5" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column5 IS NOT NULL
-       AND column5::INT > 100 OR column5::INT < 10
+      FROM "synthetic_csv_fail"
+     WHERE "column5" IS NOT NULL
+       AND "column5"::INT > 100 OR "column5"::INT < 10
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -78,19 +78,19 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
            issue_column,
            invalid_value,
            'Value ' || invalid_value || ' in ' || issue_column || ' out of range (10-100)',
-           'Ensure values in column5 are between 10 and 100'
+           'Ensure values in "column5" are between 10 and 100'
       FROM int_range_assurance;
 
 WITH unique_value AS (
     SELECT 'column6' AS issue_column,
-           column6 AS invalid_value,
+           "column6" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column6 IS NOT NULL
-       AND column6 IN (
-          SELECT column6
-            FROM synthetic_csv_fail
-        GROUP BY column6
+      FROM "synthetic_csv_fail"
+     WHERE "column6" IS NOT NULL
+       AND "column6" IN (
+          SELECT "column6"
+            FROM "synthetic_csv_fail"
+        GROUP BY "column6"
           HAVING COUNT(*) > 1)
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
@@ -105,11 +105,11 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
 
 WITH mandatory_value AS (
     SELECT 'column7' AS issue_column,
-           column7 AS invalid_value,
+           "column7" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column7 IS NULL
-        OR TRIM(column7) = ''
+      FROM "synthetic_csv_fail"
+     WHERE "column7" IS NULL
+        OR TRIM("column7") = ''
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -123,10 +123,10 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
 
 WITH pattern AS (
     SELECT 'column8' AS issue_column,
-           column8 AS invalid_value,
+           "column8" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column8 NOT SIMILAR TO '^ABC-[0-9]{4}$'
+      FROM "synthetic_csv_fail"
+     WHERE "column8" NOT SIMILAR TO '^ABC-[0-9]{4}$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -140,10 +140,10 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
 
 WITH allowed_values AS (
     SELECT 'column9' AS issue_column,
-           column9 AS invalid_value,
+           "column9" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column9 NOT IN ('Yes', 'No', 'Maybe')
+      FROM "synthetic_csv_fail"
+     WHERE "column9" NOT IN ('Yes', 'No', 'Maybe')
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -157,11 +157,11 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, inval
 
 WITH proper_dot_com_email_address_in_all_rows AS (
     SELECT 'column2' AS issue_column,
-           column2 AS invalid_value,
+           "column2" AS invalid_value,
            src_file_row_number AS issue_row
-      FROM synthetic_csv_fail
-     WHERE column2 IS NOT NULL
-       AND column2 NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.com$'
+      FROM "synthetic_csv_fail"
+     WHERE "column2" IS NOT NULL
+       AND "column2" NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.com$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),

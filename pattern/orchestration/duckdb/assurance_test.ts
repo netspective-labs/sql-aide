@@ -55,7 +55,7 @@ Deno.test("DuckDB Table Content Assurance", () => {
     SQLa.SQL<typeof ctx>(ddlOptions),
   );
   const tableName = "synthetic_csv_fail";
-  const tar = mod.typicalAssuranceRules(arGovn, arGovn.SQL);
+  const tar = mod.typicalValueAssuranceRules(arGovn, arGovn.SQL);
   const ttar = mod.typicalTableAssuranceRules(tableName, arGovn, arGovn.SQL);
   const csvSrcFsPath = "assurance_test-fixture-fail.csv";
 

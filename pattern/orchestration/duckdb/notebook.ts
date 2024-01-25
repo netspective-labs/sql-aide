@@ -256,8 +256,11 @@ export class DuckDbShell {
 }
 
 export class DuckDbOrchAssuranceRules extends o.OrchAssuranceRules {
-  readonly rules: ReturnType<
-    typeof a.typicalAssuranceRules<DuckDbOrchEmitContext>
+  readonly structAR: ReturnType<
+    typeof a.typicalStructureAssuranceRules<DuckDbOrchEmitContext>
+  >;
+  readonly valueAR: ReturnType<
+    typeof a.typicalValueAssuranceRules<DuckDbOrchEmitContext>
   >;
 
   constructor(
@@ -266,7 +269,11 @@ export class DuckDbOrchAssuranceRules extends o.OrchAssuranceRules {
     readonly govn: DuckDbOrchGovernance,
   ) {
     super(sessionID, sessionEntryID);
-    this.rules = a.typicalAssuranceRules<DuckDbOrchEmitContext>(
+    this.structAR = a.typicalStructureAssuranceRules<DuckDbOrchEmitContext>(
+      this,
+      this.govn.SQL,
+    );
+    this.valueAR = a.typicalValueAssuranceRules<DuckDbOrchEmitContext>(
       this,
       this.govn.SQL,
     );
