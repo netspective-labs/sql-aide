@@ -6,9 +6,13 @@ import * as nb from "./notebook.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
+export type State = `ENTER(${string})` | `EXIT(${string})`;
+
 export interface IngestSourceStructAssuranceContext<
+  InitState extends State,
   EmitContext extends g.OrchEmitContext,
 > {
+  readonly initState: () => InitState;
   readonly sessionEntryInsertDML: () =>
     | Promise<
       ReturnType<
@@ -31,6 +35,8 @@ export interface IngestSourceStructAssuranceContext<
 
 export interface IngestableResource<
   Governance extends g.OrchGovernance<EmitContext>,
+  InitState extends State,
+  TerminalState extends State,
   EmitContext extends g.OrchEmitContext,
 > {
   readonly uri: string;
@@ -40,7 +46,7 @@ export interface IngestableResource<
     sessionEntryID: string,
   ) => Promise<{
     readonly ingestSQL: (
-      issac: IngestSourceStructAssuranceContext<EmitContext>,
+      issac: IngestSourceStructAssuranceContext<InitState, EmitContext>,
     ) =>
       | Promise<SQLa.SqlTextSupplier<EmitContext>>
       | SQLa.SqlTextSupplier<EmitContext>;
@@ -50,13 +56,17 @@ export interface IngestableResource<
     readonly exportResourceSQL: (targetSchema: string) =>
       | Promise<SQLa.SqlTextSupplier<EmitContext>>
       | SQLa.SqlTextSupplier<EmitContext>;
+    readonly terminalState: () => TerminalState;
   }>;
 }
 
 export interface InvalidIngestSource<
   Governance extends g.OrchGovernance<EmitContext>,
+  InitState extends State,
+  TerminalState extends State,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<Governance, EmitContext> {
+> extends
+  IngestableResource<Governance, InitState, TerminalState, EmitContext> {
   readonly nature: "ERROR";
   readonly error: Error;
   readonly tableName: string;
@@ -65,8 +75,11 @@ export interface InvalidIngestSource<
 export interface CsvFileIngestSource<
   TableName extends string,
   Governance extends g.OrchGovernance<EmitContext>,
+  InitState extends State,
+  TerminalState extends State,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<Governance, EmitContext> {
+> extends
+  IngestableResource<Governance, InitState, TerminalState, EmitContext> {
   readonly nature: "CSV";
   readonly tableName: TableName;
 }
@@ -75,8 +88,11 @@ export interface ExcelSheetIngestSource<
   SheetName extends string,
   TableName extends string,
   Governance extends g.OrchGovernance<EmitContext>,
+  InitState extends State,
+  TerminalState extends State,
   EmitContext extends g.OrchEmitContext,
-> extends IngestableResource<Governance, EmitContext> {
+> extends
+  IngestableResource<Governance, InitState, TerminalState, EmitContext> {
   readonly nature: "Excel Workbook Sheet";
   readonly sheetName: SheetName;
   readonly tableName: TableName;
@@ -101,8 +117,15 @@ export interface IngestFsPatternSourcesSupplier<PotentialIngestSource>
 
 export class ErrorIngestSource<
   Governance extends g.OrchGovernance<EmitContext>,
+  InitState extends State,
   EmitContext extends g.OrchEmitContext,
-> implements InvalidIngestSource<Governance, EmitContext> {
+> implements
+  InvalidIngestSource<
+    Governance,
+    InitState,
+    "EXIT(ErrorIngestSource)",
+    EmitContext
+  > {
   readonly nature = "ERROR";
   readonly tableName = "ERROR";
   constructor(
@@ -115,7 +138,12 @@ export class ErrorIngestSource<
 
   // deno-lint-ignore require-await
   async workflow(): ReturnType<
-    InvalidIngestSource<Governance, EmitContext>["workflow"]
+    InvalidIngestSource<
+      Governance,
+      InitState,
+      "EXIT(ErrorIngestSource)",
+      EmitContext
+    >["workflow"]
   > {
     return {
       ingestSQL: async (issac) =>
@@ -132,6 +160,7 @@ export class ErrorIngestSource<
         this.govn.SQL`
           -- error: ${this.error.message} exportResourceSQL(${targetSchema})
         `,
+      terminalState: () => "EXIT(ErrorIngestSource)",
     };
   }
 }
