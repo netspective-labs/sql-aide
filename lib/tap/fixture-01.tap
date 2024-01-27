@@ -1,0 +1,19 @@
+TAP version 14
+1..4
+# comment at top of file
+ok 1 - Input file opened
+not ok 2 - First line of the input valid
+  ---
+  message: First line invalid
+  severity: fail
+  data:
+    got: Flirble
+    expect: Fnible
+  ...
+ok 3 - Read the rest of the file
+# comment 2
+not ok 4 - Summarized correctly # TODO Not written yet
+  ---
+  message: Can't make summary yet
+  severity: todo
+  ...
