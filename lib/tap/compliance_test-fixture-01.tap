@@ -1,0 +1,17 @@
+TAP version 14
+1..1
+# Quality System (QS) Compliance Assertions and Attestations version 1
+ok 1 - Requirements & Specifications
+
+# Subtest: Requirements & Specifications
+  1..3
+  ok 1 - SCF Control ID: SYS.01 - Requirement \#1234 completed
+  ok 2 - SCF Control ID: SYS.02 - Requirement \#1235 completed
+  not ok 3 - SCF Control ID: SYS.03 - Requirement \#1236 incomplete
+    ---
+    Audit Note: Pending minor revisions. See comments in Jira ticket ABC-123
+    Jira Ticket: ABC-123
+    Pull Request: 'https://github.com/repo/pull/789'
+    ...
+
+
