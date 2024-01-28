@@ -38,9 +38,8 @@ export class DuckDbOrchEmitContext implements o.OrchEmitContext {
   get jsRuntimeNow(): SQLa.SqlTextSupplier<SQLa.SqlEmitContext> {
     return {
       SQL: () => {
-        const now = new Date();
-        // deno-fmt-ignore
-        return `make_timestamp(${now.getFullYear()}, ${now.getMonth()+1}, ${now.getDay()}, ${now.getHours()}, ${now.getMinutes()}, ${`${now.getSeconds()}.${now.getMilliseconds()}`})`;
+        // DuckDB can parse string in ISO 8601 format
+        return `'${new Date().toISOString()}'`;
       },
     };
   }
