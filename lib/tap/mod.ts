@@ -1,11 +1,12 @@
 import * as yaml from "https://deno.land/std@0.213.0/yaml/stringify.ts";
+import * as safety from "../universal/safety.ts";
 
-export interface TapNode<Kind extends string> {
-  readonly kind: Kind;
+export interface TapNode<Nature extends string> {
+  readonly nature: Nature;
 }
 
-export interface TapDirective<Kind extends string> {
-  readonly kind: Kind;
+export interface TapDirective<Nature extends string> {
+  readonly nature: Nature;
 }
 
 export interface VersionNode extends TapNode<"version"> {
@@ -15,7 +16,11 @@ export interface VersionNode extends TapNode<"version"> {
 export interface PlanNode extends TapNode<"plan"> {
   readonly start: number;
   readonly end: number;
-  readonly skip?: Readonly<SkipDirective>;
+  readonly skip?: SkipDirective;
+}
+
+export interface MutatablePlanNode extends safety.DeepWriteable<PlanNode> {
+  readonly nextPlanIndex: () => number;
 }
 
 export interface SkipDirective extends TapDirective<"SKIP"> {
@@ -42,105 +47,157 @@ export interface FooterNode extends TapDirective<"footer"> {
 
 export interface TestCase<Diagnosable extends Record<string, unknown>>
   extends TapNode<"test-case"> {
-  readonly index: number;
+  readonly index?: number;
   readonly description: string;
   readonly ok: boolean;
-  readonly directive?: Readonly<Directive>;
-  readonly diagnostic?: Readonly<Diagnosable>;
-  readonly subTest?: Readonly<NestedTestSuite<Diagnosable>>;
+  readonly directive?: Directive;
+  readonly diagnostic?: Diagnosable;
+  readonly subtests?: SubTests<Diagnosable>;
 }
 
-export interface SubTest<Diagnosable extends Record<string, unknown>>
-  extends TapNode<"sub-test"> {
-  readonly title: string;
-  readonly body: Iterable<Readonly<TestSuiteElement<Diagnosable>>>;
+export interface SubTests<Diagnosable extends Record<string, unknown>> {
+  readonly body: Iterable<TestSuiteElement<Diagnosable>>;
+  readonly title?: string;
+  readonly plan?: PlanNode;
 }
 
 export type TestSuiteElement<Diagnosable extends Record<string, unknown>> =
   | CommentNode
-  | TestCase<Diagnosable>
-  | SubTest<Diagnosable>
-  | NestedTestSuite<Diagnosable>;
-
-export interface NestedTestSuite<Diagnosable extends Record<string, unknown>>
-  extends TapNode<"nested-suite"> {
-  readonly title: string;
-  readonly body: Iterable<Readonly<TestSuiteElement<Diagnosable>>>;
-  readonly plan?: Readonly<PlanNode>;
-  readonly diagnostic?: Readonly<Diagnosable>;
-}
+  | TestCase<Diagnosable>;
 
 export interface TapContent<Diagnosable extends Record<string, unknown>> {
-  readonly version?: Readonly<VersionNode>;
-  readonly plan?: Readonly<PlanNode>;
-  readonly body: Iterable<Readonly<TestSuiteElement<Diagnosable>>>;
-  readonly footers: Iterable<Readonly<FooterNode>>;
+  readonly version?: VersionNode;
+  readonly plan?: PlanNode;
+  readonly body: Iterable<TestSuiteElement<Diagnosable>>;
+  readonly footers: Iterable<FooterNode>;
 }
 
-type InitTestCase<Diagnosable extends Record<string, unknown>> =
-  & Partial<Pick<TestCase<Diagnosable>, "index" | "diagnostic">>
-  & { readonly todo?: string; readonly skip?: string };
+type InitTestCaseBuilder<
+  Diagnosable extends Record<string, unknown>,
+  Elaboration extends Diagnosable,
+> =
+  & Partial<Pick<TestCase<Elaboration>, "index" | "diagnostic">>
+  & {
+    readonly subtests?: (
+      bb: BodyBuilder<Elaboration>,
+    ) => Promise<SubTests<Elaboration>> | SubTests<Elaboration>;
+    readonly todo?: string;
+    readonly skip?: string;
+  };
 
-export class BodyBuilder<Diagnosable extends Record<string, unknown>> {
-  #plansCount = 0;
-  readonly content: TestSuiteElement<Diagnosable>[] = [];
-
-  get plansCount() {
-    return this.#plansCount;
+export class BodyFactory<Diagnosable extends Record<string, unknown>> {
+  constructor(
+    readonly nestedBodyBuilder: () => BodyBuilder<Diagnosable>,
+  ) {
   }
 
-  testCase<Elaboration extends Diagnosable = Diagnosable>(
+  async testCase<Elaboration extends Diagnosable = Diagnosable>(
     ok: boolean,
     description: string,
-    init?: InitTestCase<Elaboration>,
+    init?: InitTestCaseBuilder<Diagnosable, Elaboration>,
   ) {
     const directive = (): Directive | undefined => {
-      if (init?.todo) return { kind: "TODO", reason: init.todo };
-      if (init?.skip) return { kind: "SKIP", reason: init.skip };
+      if (init?.todo) return { nature: "TODO", reason: init.todo };
+      if (init?.skip) return { nature: "SKIP", reason: init.skip };
       return undefined;
     };
+
+    let subtests: SubTests<Elaboration> | undefined = undefined;
+    if (init?.subtests) {
+      let nestedBB: BodyBuilder<Elaboration> | undefined = undefined;
+      nestedBB = this.nestedBodyBuilder() as BodyBuilder<Elaboration>;
+      subtests = await init.subtests(nestedBB);
+    }
+
     const testCase: TestCase<Elaboration> = {
-      kind: "test-case",
+      nature: "test-case",
       ok,
       description,
-      index: init?.index ?? ++this.#plansCount,
+      index: init?.index,
       directive: directive(),
-      ...init,
+      diagnostic: init?.diagnostic,
+      subtests,
     };
     return testCase;
   }
 
   ok<Elaboration extends Diagnosable = Diagnosable>(
     description: string,
-    init?: InitTestCase<Elaboration>,
+    init?: InitTestCaseBuilder<Diagnosable, Elaboration>,
   ) {
-    const tc = this.testCase<Elaboration>(true, description, init);
-    this.content.push(tc);
-    return this;
+    return this.testCase<Elaboration>(true, description, init);
   }
 
   notOk<Elaboration extends Diagnosable = Diagnosable>(
     description: string,
-    init?: InitTestCase<Elaboration>,
+    init?: InitTestCaseBuilder<Diagnosable, Elaboration>,
   ) {
-    const tc = this.testCase<Elaboration>(false, description, init);
-    this.content.push(tc);
+    return this.testCase<Elaboration>(false, description, init);
+  }
+
+  comment(comment: string) {
+    return { nature: "comment", content: comment } as CommentNode;
+  }
+}
+
+export class BodyBuilder<Diagnosable extends Record<string, unknown>> {
+  readonly factory = new BodyFactory<Diagnosable>(() =>
+    new BodyBuilder<Diagnosable>()
+  );
+  readonly content: TestSuiteElement<Diagnosable>[] = [];
+
+  plan() {
+    const result: PlanNode = {
+      nature: "plan",
+      start: 1,
+      end: this.content.filter((e) => e.nature === "test-case").length,
+    };
+    return result;
+  }
+
+  async compose<Elaboration extends Diagnosable = Diagnosable>(
+    ...elems: (
+      | Promise<TestSuiteElement<Elaboration>>
+      | TestSuiteElement<Elaboration>
+    )[]
+  ) {
+    this.content.push(...await Promise.all(elems));
+  }
+
+  async ok<Elaboration extends Diagnosable = Diagnosable>(
+    description: string,
+    init?: InitTestCaseBuilder<Diagnosable, Elaboration>,
+  ) {
+    this.content.push(await this.factory.ok<Elaboration>(description, init));
+    return this;
+  }
+
+  async notOk<Elaboration extends Diagnosable = Diagnosable>(
+    description: string,
+    init?: InitTestCaseBuilder<Diagnosable, Elaboration>,
+  ) {
+    this.content.push(await this.factory.notOk<Elaboration>(description, init));
     return this;
   }
 
   comment(comment: string) {
-    this.content.push({ kind: "comment", content: comment });
+    this.content.push({ nature: "comment", content: comment });
     return this;
   }
 }
 
 export class TapContentBuilder<
   Diagnosable extends Record<string, unknown> = Record<string, unknown>,
+  BB extends BodyBuilder<Diagnosable> = BodyBuilder<Diagnosable>,
 > {
-  #bb = new BodyBuilder<Diagnosable>();
+  #bb: BB;
   readonly footers: FooterNode[] = [];
 
-  constructor(readonly version = 14) {
+  constructor(
+    readonly bbSupplier: () => BB,
+    readonly version = 14,
+  ) {
+    this.#bb = bbSupplier();
   }
 
   get body() {
@@ -148,25 +205,23 @@ export class TapContentBuilder<
   }
 
   async populate(
-    init: (
-      bb: BodyBuilder<Diagnosable>,
-      footers: FooterNode[],
-    ) => void | Promise<void>,
+    init: (bb: BB, footers: FooterNode[]) => void | Promise<void>,
   ) {
     await init(this.body, this.footers);
     return this;
   }
 
   tapContent(): TapContent<Diagnosable> {
-    const body = this.body.content;
     return {
-      version: { kind: "version", version: this.version },
-      plan: body.length < 1
-        ? { kind: "plan", start: -1, end: -1 }
-        : { kind: "plan", start: 1, end: this.body.plansCount },
-      body,
+      version: { nature: "version", version: this.version },
+      plan: this.body.plan(),
+      body: this.body.content,
       footers: this.footers,
     };
+  }
+
+  static create() {
+    return new TapContentBuilder(() => new BodyBuilder());
   }
 }
 
@@ -175,14 +230,13 @@ export function stringify<Diagnosable extends Record<string, unknown>>(
 ): string {
   let result = "";
 
-  // Function to escape special characters
   function escapeSpecialChars(str: string): string {
     return str.replace(/#/g, "\\#");
   }
 
-  // Helper function for processing elements
   function processElement(
     element: TestSuiteElement<Diagnosable>,
+    nextIndex: () => number,
     depth: number,
   ): string {
     const indent = "  ".repeat(depth);
@@ -199,47 +253,45 @@ export function stringify<Diagnosable extends Record<string, unknown>>(
       return `${indent}  ---\n${yamlIndented}\n${indent}  ...\n`;
     };
 
-    switch (element.kind) {
+    switch (element.nature) {
       case "test-case": {
+        const index = nextIndex();
         const description = escapeSpecialChars(element.description);
-        elementResult += `${indent}${
-          element.ok ? "ok" : "not ok"
-        } ${element.index} - ${description}`;
+        elementResult += `${indent}${element.ok ? "ok" : "not ok"} ${
+          element.index ?? index
+        } - ${description}`;
         if (element.directive) {
           const directiveReason = escapeSpecialChars(element.directive.reason);
-          elementResult += ` # ${element.directive.kind} ${directiveReason}`;
+          elementResult += ` # ${element.directive.nature} ${directiveReason}`;
         }
         if (element.diagnostic) {
           elementResult += `\n${yamlBlock(element.diagnostic)}`;
+        }
+        if (element.subtests) {
+          const subtests = element.subtests;
+          if (subtests.title) {
+            elementResult += `\n\n${indent}# Subtest: ${
+              escapeSpecialChars(subtests.title)
+            }\n`;
+          }
+          if (subtests.plan) {
+            elementResult += `${"  ".repeat(depth + 1)}1..${subtests.plan.end}`;
+            if (subtests.plan.skip) {
+              const planReason = escapeSpecialChars(subtests.plan.skip.reason);
+              elementResult += ` # SKIP ${planReason}`;
+            }
+            elementResult += "\n";
+          }
+          let subElemIdx = 0;
+          for (const nestedElement of subtests.body) {
+            elementResult += processElement(
+              nestedElement,
+              () => ++subElemIdx,
+              depth + 1,
+            );
+          }
         }
         elementResult += "\n";
-        break;
-      }
-      case "sub-test": {
-        const subTitle = escapeSpecialChars(element.title);
-        elementResult += `${indent}# Subtest: ${subTitle}\n`;
-        for (const nestedElement of element.body) {
-          elementResult += processElement(nestedElement, depth + 1);
-        }
-        break;
-      }
-      case "nested-suite": {
-        const suiteTitle = escapeSpecialChars(element.title);
-        elementResult += `${indent}# Nested Suite: ${suiteTitle}\n`;
-        if (element.plan) {
-          elementResult += `${indent}1..${element.plan.end}`;
-          if (element.plan.skip) {
-            const planReason = escapeSpecialChars(element.plan.skip.reason);
-            elementResult += ` # SKIP ${planReason}`;
-          }
-          elementResult += "\n";
-        }
-        for (const nestedElement of element.body) {
-          elementResult += processElement(nestedElement, depth + 1);
-        }
-        if (element.diagnostic) {
-          elementResult += `\n${yamlBlock(element.diagnostic)}`;
-        }
         break;
       }
       case "comment": {
@@ -266,9 +318,9 @@ export function stringify<Diagnosable extends Record<string, unknown>>(
     result += "\n";
   }
 
-  // Process body elements
+  let index = 0;
   for (const element of tc.body) {
-    result += processElement(element, 0);
+    result += processElement(element, () => ++index, 0);
   }
 
   // Process footers
