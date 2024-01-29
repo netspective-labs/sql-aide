@@ -1,4 +1,9 @@
 {
+  "compilerOptions": {
+    // required for Deno 1.40.0+ until lib/notebook/chain-of-responsibility.ts upgraded to use TC39 decorators
+    // see: https://github.com/tc39/proposal-decorators
+    "experimentalDecorators": true
+  },
   "tasks": {
     "init": "git config core.hooksPath .githooks",
     "doctor": "support/bin/doctor.ts",
