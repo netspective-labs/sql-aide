@@ -1,31 +1,30 @@
 import * as tap from "./protocol.ts";
 
-export class TapComplianceBodyBuilder<Diagnosable extends tap.Diagnostics>
-  extends tap.BodyBuilder<Diagnosable> {
-}
+export class TapComplianceBuilder<
+  SubjectArea extends string,
+  Diagnosable extends tap.Diagnostics,
+> {
+  readonly contentBuilder = new tap.TapContentBuilder<Diagnosable>();
 
-export class TapComplianceBuilder<Diagnosable extends tap.Diagnostics> {
-  #tcb = new tap.TapContentBuilder<Diagnosable>();
-
-  constructor() {
-    this.header();
+  constructor(header = true) {
+    if (header) this.header();
   }
 
   header(
     content =
       "Quality System (QS) Compliance Assertions and Attestations version 1",
   ) {
-    this.#tcb.bb.comment(content);
+    this.contentBuilder.bb.comment(content);
     return this;
   }
 
   async subject(
-    area: string,
+    area: SubjectArea,
     elems: (
       factory: tap.BodyFactory<Diagnosable>,
     ) => AsyncGenerator<tap.TestSuiteElement<Diagnosable>>,
   ) {
-    await this.#tcb.bb.ok(area, {
+    await this.contentBuilder.bb.ok(area, {
       subtests: async (bb) => {
         await bb.populate(elems);
         return {
@@ -44,15 +43,15 @@ export class TapComplianceBuilder<Diagnosable extends tap.Diagnostics> {
       factory: tap.BodyFactory<Diagnosable>,
     ) => AsyncGenerator<tap.TestSuiteElement<Diagnosable>>,
   ) {
-    await this.#tcb.bb.populate(elems);
+    await this.contentBuilder.bb.populate(elems);
     return this;
   }
 
   tapContent() {
-    return this.#tcb.tapContent();
+    return this.contentBuilder.tapContent();
   }
 
   tapContentText() {
-    return this.#tcb.tapContentText();
+    return this.contentBuilder.tapContentText();
   }
 }

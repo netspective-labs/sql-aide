@@ -26,13 +26,11 @@ Deno.test("TAP compliance with untyped diagnostics", async () => {
 });
 
 Deno.test("TAP compliance with typed diagnostics", async () => {
-  const fixture01 = (await new mod.TapComplianceBuilder<
-    {
-      "Audit Note": string;
-      "Jira Ticket"?: string;
-      "Pull Request"?: string;
-    }
-  >().subject("Requirements & Specifications", async function* (c) {
+  const fixture01 = (await new mod.TapComplianceBuilder<string, {
+    "Audit Note": string;
+    "Jira Ticket"?: string;
+    "Pull Request"?: string;
+  }>().subject("Requirements & Specifications", async function* (c) {
     yield c.ok("SCF Control ID: SYS.01 - Requirement #1234 completed");
     yield c.ok("SCF Control ID: SYS.02 - Requirement #1235 completed");
     yield c.notOk("SCF Control ID: SYS.03 - Requirement #1236 incomplete", {
