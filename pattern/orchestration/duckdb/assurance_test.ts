@@ -100,6 +100,11 @@ Deno.test("DuckDB Table Content Assurance", () => {
       'column4', 'column5', 'column6',
       'column7', 'column8', 'column9'])}
 
+    ${ttar.requiredColumnNamesStrict(
+      ['column1 ', ' column2', 'column3',
+      'column4', 'column5', 'column6',
+      'column7', 'column8', 'column9'])}
+
     -- NOTE: If the above does not pass, meaning not all columns with the proper
     --       names are present, do not run the queries below because they assume
     --       proper names and existence of columns.

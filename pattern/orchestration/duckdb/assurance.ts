@@ -33,9 +33,34 @@ export function typicalStructureAssuranceRules<
         `'Ensure ${tableName} contains the column "' || column_name || '"'`
         )}`;
   };
+  const requiredColumnNamesInTableStrict = <
+    TableName extends string,
+    ColumnName extends string,
+  >(
+    tableName: TableName,
+    requiredColNames: ColumnName[],
+  ) => {
+    const cteName = "required_column_names_in_src";
+    // deno-fmt-ignore
+    return SQL`
+      WITH ${cteName} AS (
+          SELECT column_name
+            FROM (VALUES ${requiredColNames.map(cn => `('${cn.toLocaleUpperCase()}')`).join(', ')}) AS required(column_name)
+           WHERE required.column_name NOT IN (
+               SELECT column_name
+                 FROM information_schema.columns
+                WHERE table_name = '${tableName}')
+      )
+      ${govn.insertIssueCtePartial(cteName,
+        'Missing Column',
+        `'Required column ' || column_name || ' is missing in ${tableName}.'`,
+        `'Ensure ${tableName} contains the column "' || column_name || '"'`
+        )}`;
+  };
 
   return {
     requiredColumnNamesInTable,
+    requiredColumnNamesInTableStrict,
   };
 }
 
@@ -387,6 +412,12 @@ export function typicalTableAssuranceRules<
       requiredColNames,
     );
 
+  const requiredColumnNamesStrict = (requiredColNames: ColumnName[]) =>
+    structAR.requiredColumnNamesInTableStrict<TableName, ColumnName>(
+      tableName,
+      requiredColNames,
+    );
+
   const intValueInAllRows = (columnName: ColumnName) =>
     valueAR.intValueInAllTableRows<TableName, ColumnName>(
       tableName,
@@ -488,5 +519,6 @@ export function typicalTableAssuranceRules<
     onlyAllowAlphabetsInAllRows,
     onlyAllowAlphabetsAndNumbersInAllRows,
     onlyAllowValidDateTimeInAllRows,
+    requiredColumnNamesStrict,
   };
 }
