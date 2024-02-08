@@ -1,13 +1,13 @@
-column1,column2,column3,column4,column5,column6,column7,column8,column9
-Valid,example@example.com,123,10,50,Unique1,Mandatory,ABC-1234,Yes
-"Invalid (Email, Integer): Invalid email in column2 and non-integer in column4",invalid-email,123,abc,200,Unique2,Mandatory,ABC-1234,No
-"Invalid (Range, Mandatory): Value out of range in column5 and missing mandatory value in column7",user@example.com,123,20,5,Unique3,,ABC-1235,Yes
-"Invalid (Pattern): Pattern mismatch in column8",example@example.com,123,30,150,Unique4,Mandatory,ABC-ABCD,Yes
-"Invalid (List): Value not in allowed list in column9",user@example.com,123,40,60,Unique5,Mandatory,XYZ-1234,No
-"Duplicate (Unique): Duplicate value in column6",example@example.com,123,50,70,Unique1,Mandatory,ABC-1234,Maybe
-"Invalid (Negative Integer): Negative integer in column4",invalid-email,123,-10,80,Unique6,Mandatory,ABC-1234,Yes
-Valid,user@example.com,123,60,90,Unique7,,ABC-1234,No
-Valid,example@example.com,123,70,100,Unique8,Mandatory,ABC-1234,Yes
-"Invalid (Range): Value out of range in column5",user@example.com,123,80,110,Unique9,Mandatory,XYZ-1234,Maybe
-Valid,example@example.com,123,90,120,Unique10,Mandatory,ABC-1234,Yes
-"Invalid (List): Value not in allowed list in column9",invalid-email,123,100,130,Unique11,Mandatory,ABC-1234,No
+column1,column2,column3,column4,column5,column6,column7,column8,column9,Column 10, Column with space before,Column with space after ,COLUMN with UPPERCASE
+Valid,example@example.com,123,10,50,Unique1,Mandatory,ABC-1234,Yes,Column 10 data 2,Column with space before data 1,Column with space after data 1,COLUMN with UPPERCASE data 1
+"Invalid (Email, Integer): Invalid email in column2 and non-integer in column4",invalid-email,123,abc,200,Unique2,Mandatory,ABC-1234,No,Column 10 data 2,Column with space before data 2,Column with space after data 2,COLUMN with UPPERCASE data 2
+"Invalid (Range, Mandatory): Value out of range in column5 and missing mandatory value in column7",user@example.com,123,20,5,Unique3,,ABC-1235,Yes,Column 10 data 3,Column with space before data 3,Column with space after data 3,COLUMN with UPPERCASE data 3
+"Invalid (Pattern): Pattern mismatch in column8",example@example.com,123,30,150,Unique4,Mandatory,ABC-ABCD,Yes,Column 10 data 4,Column with space before data 4,Column with space after data 4,COLUMN with UPPERCASE data 4
+"Invalid (List): Value not in allowed list in column9",user@example.com,123,40,60,Unique5,Mandatory,XYZ-1234,No,Column 10 data 5,Column with space before data 5,Column with space after data 5,COLUMN with UPPERCASE data 5
+"Duplicate (Unique): Duplicate value in column6",example@example.com,123,50,70,Unique1,Mandatory,ABC-1234,Maybe,Column 10 data 6,Column with space before data 6,Column with space after data 6,COLUMN with UPPERCASE data 6
+"Invalid (Negative Integer): Negative integer in column4",invalid-email,123,-10,80,Unique6,Mandatory,ABC-1234,Yes,Column 10 data 7,Column with space before data 7,Column with space after data 7,COLUMN with UPPERCASE data 7
+Valid,user@example.com,123,60,90,Unique7,,ABC-1234,No,Column 10 data 8,Column with space before data 8,Column with space after data 8,COLUMN with UPPERCASE data 8
+Valid,example@example.com,123,70,100,Unique8,Mandatory,ABC-1234,Yes,Column 10 data 9,Column with space before data 9,Column with space after data 9,COLUMN with UPPERCASE data 9
+"Invalid (Range): Value out of range in column5",user@example.com,123,80,110,Unique9,Mandatory,XYZ-1234,Maybe,Column 10 data 9,Column with space before data 9,Column with space after data 9,COLUMN with UPPERCASE data 9
+Valid,example@example.com,123,90,120,Unique10,Mandatory,ABC-1234,Yes,Column 10 data 10,Column with space before data 10,Column with space after data 10,COLUMN with UPPERCASE data 10
+"Invalid (List): Value not in allowed list in column9",invalid-email,123,100,130,Unique11,Mandatory,ABC-1234,No,Column 10 data11,Column with space before data 11,Column with space after data 11,COLUMN with UPPERCASE data 11

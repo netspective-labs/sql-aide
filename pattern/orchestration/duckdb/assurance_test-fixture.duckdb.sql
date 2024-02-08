@@ -41,6 +41,21 @@ INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
            'Ensure synthetic_csv_fail contains the column "' || column_name || '"'
       FROM required_column_names_in_src;
 
+WITH required_column_names_in_src AS (
+    SELECT column_name
+      FROM (VALUES ('Column 10'), (' Column with space before'), ('Column with space after '), ('COLUMN with UPPERCASE')) AS required(column_name)
+     WHERE required.column_name NOT IN (
+         SELECT column_name
+           FROM information_schema.columns
+          WHERE table_name = 'synthetic_csv_fail')
+)
+INSERT INTO ingest_issue (session_id, issue_type, issue_message, remediation)
+    SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
+           'Missing Column',
+           'Required column ' || column_name || ' is missing in synthetic_csv_fail.',
+           'Ensure synthetic_csv_fail contains the column "' || column_name || '"'
+      FROM required_column_names_in_src;
+
 -- NOTE: If the above does not pass, meaning not all columns with the proper
 --       names are present, do not run the queries below because they assume
 --       proper names and existence of columns.
