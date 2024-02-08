@@ -49,7 +49,7 @@ and then use `deno` to install the latest version of the binary:
 
 ```bash
 export SQLa_VERSION=`curl -fsSL https://api.github.com/repos/netspective-labs/sql-aide/tags | jq '.[0].name' -r`
-deno install -A -f --unstable https://raw.githubusercontent.com/netspective-labs/sql-aide/${SQLa_VERSION}/lib/postgres/pgpass/pgpass.ts
+deno install -A -f https://raw.githubusercontent.com/netspective-labs/sql-aide/${SQLa_VERSION}/lib/postgres/pgpass/pgpass.ts
 ```
 
 ### `pgpass` usage

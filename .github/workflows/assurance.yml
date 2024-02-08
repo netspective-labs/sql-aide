@@ -34,17 +34,17 @@ jobs:
           echo "SELECT json('{\"foo\":\"bar\"}');" | sqlite3 || (echo 'JSON functions are NOT supported' && false)
 
       # syntax check all files in case tests don't exist
-      - run: deno check --no-lock --unstable $(find . -name '*.ts' -not -path './support/*')
+      - run: deno check --no-lock $(find . -name '*.ts' -not -path './support/*')
 
       # Run all test files in the repository and collect code coverage.
       # The example runs with all permissions, but it is recommended to run
       # with the minimal permissions your program needs (for example --allow-read).
-      - run: deno test --allow-all --unstable --coverage=coverage --v8-flags="--max-old-space-size=4096" 
+      - run: deno test --allow-all --coverage=coverage --v8-flags="--max-old-space-size=4096" 
 
       # This generates a report from the collected coverage in `deno test --coverage`.
       # It is stored as a .lcov file which integrates well with services such
       # as Codecov, Coveralls and Travis CI.
-      - run: deno --unstable coverage ./coverage --lcov > coverage.lcov
+      - run: deno coverage ./coverage --lcov > coverage.lcov
 
       - name: Collect coverage
         uses: codecov/codecov-action@v3 # upload the report on Codecov

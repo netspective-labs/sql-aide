@@ -88,7 +88,7 @@ framework.
 ## Unit Testing
 
 ```bash
-deno test -A --unstable
+deno test -A
 ```
 
 ## Directory Structure
