@@ -13,6 +13,24 @@ export const markdown = qs.qsMarkdown;
 export const DETERMINISTIC_UUID_NAMESPACE =
   "b6c7390a-69ea-4814-ae3e-c0c6ed3a913f";
 
+export interface OrchPathSupplier {
+  readonly resolvedPath: (relativePath: string) => string;
+}
+
+export interface OrchPathMutator {
+  readonly movedPath: (
+    relativePath: string,
+    dest: OrchPathSupplier,
+  ) => Promise<string> | string;
+}
+
+export interface OrchPathStore {
+  readonly storedContent: (
+    path: string,
+    content: string | ReadableStream<string>,
+  ) => Promise<string> | string;
+}
+
 export interface OrchEmitContext extends SQLa.SqlEmitContext {
   /**
    * UUID generator when the value is needed by the Javascript runtime

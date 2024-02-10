@@ -26,6 +26,7 @@ export class OrchSession<
   >[] = [];
 
   constructor(
+    readonly sessionID: string,
     readonly govn: Governance,
     readonly sqlCatalog: Record<
       OrchSqlRegistrationExecution,
@@ -84,16 +85,13 @@ export class OrchSession<
     return this.deviceDmlSingleton;
   }
 
-  async orchSessionSqlDML(now = this.govn.emitCtx.jsRuntimeNow): Promise<
-    & { readonly sessionID: string }
-    & SQLa.SqlTextSupplier<EmitContext>
-  > {
+  async orchSessionSqlDML(
+    now = this.govn.emitCtx.jsRuntimeNow,
+  ): Promise<SQLa.SqlTextSupplier<EmitContext>> {
     if (!this.sessionDmlSingleton) {
-      const { emitCtx: ctx, orchSessionCRF, deterministicPKs } = this.govn;
+      const { sessionID, govn: { orchSessionCRF } } = this;
       const device = await this.deviceSqlDML();
-      const sessionID = await ctx.newUUID(deterministicPKs);
       this.sessionDmlSingleton = {
-        sessionID,
         ...orchSessionCRF.insertDML({
           orch_session_id: sessionID,
           device_id: device.deviceID,
@@ -115,12 +113,11 @@ export class OrchSession<
     at = this.govn.emitCtx.jsRuntimeNow,
     elaboration?: string,
   ) {
-    const sessionDML = await this.orchSessionSqlDML();
     const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
     this.stateChangesDML.push(
       orchSessionStateCRF.insertDML({
         orch_session_state_id: await ctx.newUUID(deterministicPKs),
-        session_id: sessionDML.sessionID,
+        session_id: this.sessionID,
         from_state: fromState,
         to_state: toState,
         transition_reason: reason,
@@ -138,11 +135,10 @@ export class OrchSession<
     at = this.govn.emitCtx.jsRuntimeNow,
     elaboration?: string,
   ) {
-    const sessionDML = await this.orchSessionSqlDML();
     const { emitCtx: ctx, orchSessionStateCRF, deterministicPKs } = this.govn;
     return orchSessionStateCRF.insertDML({
       orch_session_state_id: await ctx.newUUID(deterministicPKs),
-      session_id: sessionDML.sessionID,
+      session_id: this.sessionID,
       session_entry_id: sessionEntryID,
       from_state: fromState,
       to_state: toState,

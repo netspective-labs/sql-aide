@@ -91,7 +91,7 @@ export class DuckDbShell {
     >,
     readonly args: {
       readonly duckdbCmd: string;
-      readonly dbDestFsPathSupplier: (identity?: string) => string;
+      readonly dbDestFsPathSupplier: () => string;
       readonly preambleSQL?: (sql: string, identity?: string) => string;
       readonly diagnosticsMD?: () => md.MarkdownDocument<
         Any,
@@ -167,7 +167,7 @@ export class DuckDbShell {
     status: dax.CommandResult,
     options?: Parameters<DuckDbShell["sqlNarrativeMarkdown"]>[2],
   ) {
-    const { session, session: { govn }, args: { duckdbCmd } } = this;
+    const { session: { sessionID, govn }, args: { duckdbCmd } } = this;
     return govn.orchSessionExecCRF.insertDML({
       ...ctx,
       orch_session_exec_id: await govn.emitCtx.newUUID(govn.deterministicPKs),
@@ -180,14 +180,14 @@ export class DuckDbShell {
       output_text: status.stdout && status.stdout.length
         ? status.stdout
         : undefined,
-      session_id: (await session.orchSessionSqlDML()).sessionID,
+      session_id: sessionID,
       narrative_md: this.sqlNarrativeMarkdown(ctx, status, options),
     });
   }
 
   async execute(sql: string, identity = `execute_${this.#execIndex}`) {
     const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
-    const dbDestFsPath = dbDestFsPathSupplier(identity);
+    const dbDestFsPath = dbDestFsPathSupplier();
     if (preambleSQL) {
       // preambleSQL helps prepare the DuckDB environment with configuration SQL
       // e.g. `SET autoload_known_extensions=false;`
@@ -213,7 +213,7 @@ export class DuckDbShell {
     identity = `jsonResult_${this.#execIndex}`,
   ) {
     const { args: { duckdbCmd, dbDestFsPathSupplier, preambleSQL } } = this;
-    const dbDestFsPath = dbDestFsPathSupplier(identity);
+    const dbDestFsPath = dbDestFsPathSupplier();
     if (preambleSQL) {
       // preambleSQL helps prepare the DuckDB environment with configuration SQL;
       // e.g. `SET autoinstall_known_extensions = true;`
