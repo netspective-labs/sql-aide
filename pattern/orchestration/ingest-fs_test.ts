@@ -29,18 +29,21 @@ Deno.test("ingestWatchedFs only single files", async () => {
   const tempDir = await setupTestDirectory();
   try {
     let singleFileIngressCount = 0;
+    let drainingCount = 0;
 
     const watchPaths: WatchFsPath<string, string>[] = [{
       pathID: "testPath",
       rootPath: tempDir,
-      onIngress: (_entry) => {
+      onIngress: (entry) => {
         singleFileIngressCount++;
+        if (entry.draining) drainingCount++;
       },
     }];
 
-    await ingestWatchedFs({ watch: false, watchPaths });
+    await ingestWatchedFs({ drain: "individual", watch: false, watchPaths });
 
     ta.assertEquals(singleFileIngressCount, 8, "8 single files expected");
+    ta.assertEquals(drainingCount, 8, "8 drained files expected");
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }
@@ -77,7 +80,7 @@ Deno.test("ingestWatchedFs grouped files", async () => {
       },
     }];
 
-    await ingestWatchedFs({ watch: false, watchPaths });
+    await ingestWatchedFs({ drain: "individual", watch: false, watchPaths });
 
     ta.assertEquals(groups.size, 2, "2 files groups expected");
     ta.assertEquals(groupTriggers, 2, "2 groups triggers expected");
@@ -128,7 +131,7 @@ Deno.test("ingestWatchedFs mixed single and grouped files", async () => {
       },
     }];
 
-    await ingestWatchedFs({ watch: false, watchPaths });
+    await ingestWatchedFs({ drain: "individual", watch: false, watchPaths });
 
     ta.assertEquals(singleFileIngressCount, 2, "2 single files expected");
     ta.assertEquals(groupTriggers, 2, "2 groups expected");

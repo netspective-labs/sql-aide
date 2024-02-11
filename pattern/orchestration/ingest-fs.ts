@@ -1,11 +1,10 @@
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-// read the following Deno TypeScript code in a file called `ingest-fs.ts` and let me know when you're ready:
-
 export type IngressEntry<PathID extends string, RootPath extends string> = {
   readonly fsPath: string;
   readonly watchPath: WatchFsPath<PathID, RootPath>;
+  readonly draining: boolean;
 };
 
 export interface WatchFsPath<PathID extends string, RootPath extends string> {
@@ -18,10 +17,12 @@ export interface WatchFsPath<PathID extends string, RootPath extends string> {
 }
 
 export interface IngestFsArgs<PathID extends string, RootPath extends string> {
-  /**
-   * True to process existing files in paths then start watching or false to
-   * only process the existing files and not watch for new files.
-   */
+  readonly drain?:
+    | ((
+      entries: IngressEntry<PathID, RootPath>[],
+      path: WatchFsPath<PathID, RootPath>,
+    ) => Promise<void> | void)
+    | "individual";
   readonly watch: boolean;
   readonly watchPaths: Iterable<WatchFsPath<PathID, RootPath>>;
 }
@@ -44,30 +45,41 @@ export async function ingestWatchedFs<
     // Process the event if it's a "create" or if we're initializing from existing files
     if (event.kind === "create" || event.kind === "existing") {
       for (const fsPath of event.paths) {
+        const draining = event.kind === "existing";
         await watchPath.onIngress(
-          { fsPath, watchPath },
-          event.kind !== "existing" ? event : undefined,
+          { fsPath, watchPath, draining },
+          draining ? undefined : event,
         );
       }
     }
   };
 
-  // Process existing files in each watched directory first
-  for (const watchPath of args.watchPaths) {
-    for await (const entry of Deno.readDir(watchPath.rootPath)) {
-      if (entry.isFile) {
-        // Simulate a "create" event for each existing file
-        const filePath = `${watchPath.rootPath}/${entry.name}`;
-        await handleEvent(
-          { kind: "existing", paths: [filePath] },
-          watchPath,
-        );
+  if (args.drain) {
+    for (const watchPath of args.watchPaths) {
+      const drained: IngressEntry<PathID, RootPath>[] = [];
+      const drainingIndividual = args.drain === "individual";
+      for await (const entry of Deno.readDir(watchPath.rootPath)) {
+        if (entry.isFile) {
+          // Simulate a "create" event for each existing file
+          const fsPath = `${watchPath.rootPath}/${entry.name}`;
+          if (drainingIndividual) {
+            await handleEvent(
+              { kind: "existing", paths: [fsPath] },
+              watchPath,
+            );
+          } else {
+            drained.push({ fsPath, watchPath, draining: true });
+          }
+        }
+      }
+      if (args.drain !== "individual") {
+        await args.drain(drained, watchPath);
       }
     }
   }
 
   if (args.watch) {
-    // Then start watching each path for new file events
+    // Start watching each path for new file events (will not return from function)
     for (const watchPath of args.watchPaths) {
       const watcher = Deno.watchFs(watchPath.rootPath);
 

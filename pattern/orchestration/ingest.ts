@@ -1,4 +1,4 @@
-import { fs, path } from "./deps.ts";
+import { fs } from "./deps.ts";
 import * as SQLa from "../../render/mod.ts";
 import * as g from "./governance.ts";
 import * as nb from "./notebook.ts";
@@ -110,7 +110,7 @@ export interface IngestSourcesSupplier<
 export interface IngestFsPatternSourcesSupplier<PotentialIngestSource>
   extends IngestSourcesSupplier<PotentialIngestSource, [fs.WalkEntry]> {
   readonly pattern: RegExp;
-  readonly sources: (entry: fs.WalkEntry) =>
+  readonly sources: (entry: { readonly path: string | URL }) =>
     | Promise<Iterable<PotentialIngestSource>>
     | Iterable<PotentialIngestSource>;
 }
@@ -162,40 +162,5 @@ export class ErrorIngestSource<
         `,
       terminalState: () => "EXIT(ErrorIngestSource)",
     };
-  }
-}
-
-export interface IngestFsPathTree<SessionID, Path extends string> {
-  readonly ingressHome: () => Path;
-  readonly inProcessHome: (sessionId?: SessionID) => Path;
-  readonly archiveHome: () => Path;
-  readonly egressHome: () => Path;
-}
-
-export function ingestFsPathTree<SessionID, Path extends string>(
-  rootPath: Path,
-): IngestFsPathTree<SessionID, Path> {
-  return {
-    ingressHome: () => path.join(rootPath, "ingress") as Path,
-    inProcessHome: (sessionId) =>
-      sessionId
-        ? path.join(rootPath, "in-process", String(sessionId)) as Path
-        : path.join(rootPath, "in-process") as Path,
-    archiveHome: () => path.join(rootPath, "archive") as Path,
-    egressHome: () => path.join(rootPath, "egress") as Path,
-  };
-}
-
-export interface WatchFsPath<PathID extends string, RootPath extends string> {
-  readonly pathID: PathID;
-  readonly rootPath: RootPath;
-}
-
-export interface IngestFsArgs<PathID extends string, RootPath extends string> {
-  readonly watchPaths: Iterable<WatchFsPath<PathID, RootPath>>;
-}
-
-export class IngestFS<PathID extends string, RootPath extends string> {
-  constructor(readonly args: IngestFsArgs<PathID, RootPath>) {
   }
 }
