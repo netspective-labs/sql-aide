@@ -3,7 +3,7 @@ TAP version 14
 # comment at top of file
 ok 1 - Input file opened (with subtests)
 
-# Subtest: subtests
+# Subtest: Input file opened (with subtests)
   1..2
   ok 1 - sub 1
   not ok 2 - sub 2

@@ -3,10 +3,12 @@ import * as tap from "./protocol.ts";
 export class TapComplianceBuilder<
   SubjectArea extends string,
   Diagnosable extends tap.Diagnostics,
+> extends tap.TapContentBuilder<
+  SubjectArea,
+  Diagnosable
 > {
-  readonly contentBuilder = new tap.TapContentBuilder<Diagnosable>();
-
   constructor(header = true) {
+    super();
     if (header) this.header();
   }
 
@@ -14,44 +16,17 @@ export class TapComplianceBuilder<
     content =
       "Quality System (QS) Compliance Assertions and Attestations version 1",
   ) {
-    this.contentBuilder.bb.comment(content);
+    this.bb.comment(content);
     return this;
   }
 
-  async subject(
-    area: SubjectArea,
+  async subject<Topic extends string, TopicDiagnosable extends tap.Diagnostics>(
+    subject: SubjectArea,
     elems: (
-      factory: tap.BodyFactory<Diagnosable>,
-    ) => AsyncGenerator<tap.TestSuiteElement<Diagnosable>>,
+      bb: tap.BodyBuilder<Topic, TopicDiagnosable>,
+    ) => void | Promise<void>,
   ) {
-    await this.contentBuilder.bb.ok(area, {
-      subtests: async (bb) => {
-        await bb.populate(elems);
-        return {
-          nature: "sub-test",
-          body: bb.content,
-          title: area,
-          plan: bb.plan(),
-        };
-      },
-    });
+    await this.bb.okParent<Topic, TopicDiagnosable>(subject, elems);
     return this;
-  }
-
-  async populate(
-    elems: (
-      factory: tap.BodyFactory<Diagnosable>,
-    ) => AsyncGenerator<tap.TestSuiteElement<Diagnosable>>,
-  ) {
-    await this.contentBuilder.bb.populate(elems);
-    return this;
-  }
-
-  tapContent() {
-    return this.contentBuilder.tapContent();
-  }
-
-  tapContentText() {
-    return this.contentBuilder.tapContentText();
   }
 }

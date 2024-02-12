@@ -4,10 +4,10 @@ import * as mod from "./compliance.ts";
 
 Deno.test("TAP compliance with untyped diagnostics", async () => {
   const tcb = new mod.TapComplianceBuilder();
-  await tcb.subject("Requirements & Specifications", async function* (c) {
-    yield c.ok("SCF Control ID: SYS.01 - Requirement #1234 completed");
-    yield c.ok("SCF Control ID: SYS.02 - Requirement #1235 completed");
-    yield c.notOk("SCF Control ID: SYS.03 - Requirement #1236 incomplete", {
+  await tcb.subject("Requirements & Specifications", (c) => {
+    c.ok("SCF Control ID: SYS.01 - Requirement #1234 completed");
+    c.ok("SCF Control ID: SYS.02 - Requirement #1235 completed");
+    c.notOk("SCF Control ID: SYS.03 - Requirement #1236 incomplete", {
       diagnostics: {
         "Audit Note":
           "Pending minor revisions. See comments in Jira ticket ABC-123",
@@ -30,10 +30,10 @@ Deno.test("TAP compliance with typed diagnostics", async () => {
     "Audit Note": string;
     "Jira Ticket"?: string;
     "Pull Request"?: string;
-  }>().subject("Requirements & Specifications", async function* (c) {
-    yield c.ok("SCF Control ID: SYS.01 - Requirement #1234 completed");
-    yield c.ok("SCF Control ID: SYS.02 - Requirement #1235 completed");
-    yield c.notOk("SCF Control ID: SYS.03 - Requirement #1236 incomplete", {
+  }>().subject("Requirements & Specifications", (c) => {
+    c.ok("SCF Control ID: SYS.01 - Requirement #1234 completed");
+    c.ok("SCF Control ID: SYS.02 - Requirement #1235 completed");
+    c.notOk("SCF Control ID: SYS.03 - Requirement #1236 incomplete", {
       diagnostics: {
         "Audit Note":
           "Pending minor revisions. See comments in Jira ticket ABC-123",

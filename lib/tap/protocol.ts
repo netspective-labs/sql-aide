@@ -50,56 +50,113 @@ export interface FooterNode extends TapDirective<"footer"> {
   readonly content: string;
 }
 
-export interface TestCase<Diagnosable extends Diagnostics>
-  extends TapNode<"test-case"> {
+export interface TestCase<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> extends TapNode<"test-case"> {
   readonly index?: number;
-  readonly description: string;
+  readonly description: Describable;
   readonly ok: boolean;
   readonly directive?: Directive;
   readonly diagnostics?: Diagnosable;
-  readonly subtests?: SubTests<Diagnosable>;
 }
 
-export interface SubTests<Diagnosable extends Diagnostics> {
-  readonly body: Iterable<TestSuiteElement<Diagnosable>>;
+export interface ParentTestCase<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+  SubtestDescribable extends string,
+  SubtestDiagnosable extends Diagnostics,
+> extends TestCase<Describable, Diagnosable> {
+  readonly subtests: SubTests<SubtestDescribable, SubtestDiagnosable>;
+}
+
+export function isParentTestCase<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+  SubtestDescribable extends string,
+  SubtestDiagnosable extends Diagnostics,
+>(
+  o: TestCase<Describable, Diagnosable>,
+): o is ParentTestCase<
+  Describable,
+  Diagnosable,
+  SubtestDescribable,
+  SubtestDiagnosable
+> {
+  if ("subtests" in o) return true;
+  return false;
+}
+
+export interface SubTests<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> {
+  readonly body: Iterable<TestSuiteElement<Describable, Diagnosable>>;
   readonly title?: string;
   readonly plan?: PlanNode;
 }
 
-export type TestSuiteElement<Diagnosable extends Diagnostics> =
+export type TestSuiteElement<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> =
   | CommentNode
-  | TestCase<Diagnosable>;
+  | TestCase<Describable, Diagnosable>;
 
-export interface TapContent<Diagnosable extends Diagnostics> {
+export interface TapContent<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> {
   readonly version?: VersionNode;
   readonly plan?: PlanNode;
-  readonly body: Iterable<TestSuiteElement<Diagnosable>>;
+  readonly body: Iterable<TestSuiteElement<Describable, Diagnosable>>;
   readonly footers: Iterable<FooterNode>;
 }
 
-export type InitTestCaseBuilder<Diagnosable extends Diagnostics> =
-  & Partial<Pick<TestCase<Diagnosable>, "index" | "diagnostics">>
+export type InitTestCaseBuilder<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> =
+  & Partial<Pick<TestCase<Describable, Diagnosable>, "index" | "diagnostics">>
   & {
-    readonly subtests?: (
-      bb: BodyBuilder<Diagnosable>,
-    ) => Promise<SubTests<Diagnosable>> | SubTests<Diagnosable>;
     readonly todo?: string;
     readonly skip?: string;
   };
 
-export type TestCaseBuilderArgs<Diagnosable extends Diagnostics> =
-  InitTestCaseBuilder<Diagnosable>;
+export type TestCaseBuilderArgs<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> = InitTestCaseBuilder<Describable, Diagnosable>;
 
-export class BodyFactory<Diagnosable extends Diagnostics> {
-  constructor(
-    readonly nestedBodyBuilder: () => BodyBuilder<Diagnosable>,
-  ) {
+export type ParentTestCaseBuilderArgs<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+  SubtestDescribable extends string,
+  SubtestDiagnosable extends Diagnostics,
+> = TestCaseBuilderArgs<Describable, Diagnosable> & {
+  readonly nestedBodyBuilder?: () => BodyBuilder<
+    SubtestDescribable,
+    SubtestDiagnosable
+  >;
+  readonly subtests: (
+    bb: BodyBuilder<SubtestDescribable, SubtestDiagnosable>,
+  ) =>
+    | Promise<SubTests<SubtestDescribable, SubtestDiagnosable>>
+    | SubTests<SubtestDescribable, SubtestDiagnosable>;
+};
+
+export class BodyFactory<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> {
+  constructor() {
   }
 
+  // deno-lint-ignore require-await
   async testCase(
     ok: boolean,
-    description: string,
-    args?: TestCaseBuilderArgs<Diagnosable>,
+    description: Describable,
+    args?: TestCaseBuilderArgs<Describable, Diagnosable>,
   ) {
     const directive = (): Directive | undefined => {
       if (args?.todo) return { nature: "TODO", reason: args.todo };
@@ -107,13 +164,46 @@ export class BodyFactory<Diagnosable extends Diagnostics> {
       return undefined;
     };
 
-    let subtests: SubTests<Diagnosable> | undefined = undefined;
-    if (args?.subtests) {
-      const nestedBB = this.nestedBodyBuilder();
-      subtests = await args.subtests(nestedBB);
-    }
+    const testCase: TestCase<Describable, Diagnosable> = {
+      nature: "test-case",
+      ok,
+      description,
+      index: args?.index,
+      directive: directive(),
+      diagnostics: args?.diagnostics,
+    };
+    return testCase;
+  }
 
-    const testCase: TestCase<Diagnosable> = {
+  async parentTestCase<
+    SubtestDescribable extends string,
+    SubtestDiagnosable extends Diagnostics,
+  >(
+    ok: boolean,
+    description: Describable,
+    args: ParentTestCaseBuilderArgs<
+      Describable,
+      Diagnosable,
+      SubtestDescribable,
+      SubtestDiagnosable
+    >,
+  ) {
+    const directive = (): Directive | undefined => {
+      if (args?.todo) return { nature: "TODO", reason: args.todo };
+      if (args?.skip) return { nature: "SKIP", reason: args.skip };
+      return undefined;
+    };
+
+    const nestedBB = args.nestedBodyBuilder?.() ??
+      new BodyBuilder<SubtestDescribable, SubtestDiagnosable>();
+    const subtests = await args.subtests(nestedBB);
+
+    const testCase: ParentTestCase<
+      Describable,
+      Diagnosable,
+      SubtestDescribable,
+      SubtestDiagnosable
+    > = {
       nature: "test-case",
       ok,
       description,
@@ -125,12 +215,98 @@ export class BodyFactory<Diagnosable extends Diagnostics> {
     return testCase;
   }
 
-  ok(description: string, args?: TestCaseBuilderArgs<Diagnosable>) {
+  ok(
+    description: Describable,
+    args?: TestCaseBuilderArgs<Describable, Diagnosable>,
+  ) {
     return this.testCase(true, description, args);
   }
 
-  notOk(description: string, args?: TestCaseBuilderArgs<Diagnosable>) {
+  notOk(
+    description: Describable,
+    args?: TestCaseBuilderArgs<Describable, Diagnosable>,
+  ) {
     return this.testCase(false, description, args);
+  }
+
+  async okParent<
+    SubtestDescribable extends string,
+    SubtestDiagnosable extends Diagnostics,
+  >(
+    description: Describable,
+    args:
+      | ((
+        bb: BodyBuilder<SubtestDescribable, SubtestDiagnosable>,
+      ) => void | Promise<void>)
+      | ParentTestCaseBuilderArgs<
+        Describable,
+        Diagnosable,
+        SubtestDescribable,
+        SubtestDiagnosable
+      >,
+  ) {
+    if (typeof args === "function") {
+      return await this.parentTestCase<SubtestDescribable, SubtestDiagnosable>(
+        true,
+        description,
+        {
+          subtests: async (bb) => {
+            await args(bb);
+            return {
+              title: description,
+              body: bb.content,
+              plan: bb.plan(),
+            };
+          },
+        },
+      );
+    }
+
+    return await this.parentTestCase<SubtestDescribable, SubtestDiagnosable>(
+      true,
+      description,
+      args,
+    );
+  }
+
+  async notOkParent<
+    SubtestDescribable extends string,
+    SubtestDiagnosable extends Diagnostics,
+  >(
+    description: Describable,
+    args:
+      | ((
+        bb: BodyBuilder<SubtestDescribable, SubtestDiagnosable>,
+      ) => void | Promise<void>)
+      | ParentTestCaseBuilderArgs<
+        Describable,
+        Diagnosable,
+        SubtestDescribable,
+        SubtestDiagnosable
+      >,
+  ) {
+    if (typeof args === "function") {
+      return await this.parentTestCase<SubtestDescribable, SubtestDiagnosable>(
+        false,
+        description,
+        {
+          subtests: async (bb) => {
+            await args(bb);
+            return {
+              title: description,
+              body: bb.content,
+              plan: bb.plan(),
+            };
+          },
+        },
+      );
+    }
+
+    return await this.parentTestCase<SubtestDescribable, SubtestDiagnosable>(
+      false,
+      description,
+      args,
+    );
   }
 
   comment(comment: string) {
@@ -138,11 +314,12 @@ export class BodyFactory<Diagnosable extends Diagnostics> {
   }
 }
 
-export class BodyBuilder<Diagnosable extends Diagnostics> {
-  readonly factory = new BodyFactory<Diagnosable>(() =>
-    new BodyBuilder<Diagnosable>()
-  );
-  readonly content: TestSuiteElement<Diagnosable>[] = [];
+export class BodyBuilder<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> {
+  readonly factory = new BodyFactory<Describable, Diagnosable>();
+  readonly content: TestSuiteElement<Describable, Diagnosable>[] = [];
 
   plan() {
     const result: PlanNode = {
@@ -158,8 +335,10 @@ export class BodyBuilder<Diagnosable extends Diagnostics> {
    */
   async populate(
     elems: (
-      factory: BodyFactory<Diagnosable>,
-    ) => AsyncGenerator<TestSuiteElement<Diagnosable>>,
+      factory: BodyFactory<Describable, Diagnosable>,
+    ) =>
+      | Generator<TestSuiteElement<Describable, Diagnosable>>
+      | AsyncGenerator<TestSuiteElement<Describable, Diagnosable>>,
   ) {
     for await (const e of elems(this.factory)) {
       this.content.push(e);
@@ -171,15 +350,20 @@ export class BodyBuilder<Diagnosable extends Diagnostics> {
    * when subtypes might have different diagnostics types.
    * @param elems
    */
-  async populateCustom<CustomD extends Diagnostics>(
+  async populateCustom<
+    CustomDe extends Describable,
+    CustomD extends Diagnostics,
+  >(
     elems: (
-      factory: BodyFactory<CustomD>,
-    ) => AsyncGenerator<TestSuiteElement<CustomD>>,
+      factory: BodyFactory<CustomDe, CustomD>,
+    ) =>
+      | Generator<TestSuiteElement<CustomDe, CustomD>>
+      | AsyncGenerator<TestSuiteElement<CustomDe, CustomD>>,
   ) {
-    const customF = new BodyFactory<CustomD>(() => new BodyBuilder<CustomD>());
+    const customF = new BodyFactory<CustomDe, CustomD>();
     for await (const e of elems(customF)) {
       // coerce the CustomD for storage into this.content
-      this.content.push(e as TestSuiteElement<Diagnosable>);
+      this.content.push(e as TestSuiteElement<CustomDe, Diagnosable>);
     }
   }
 
@@ -192,26 +376,76 @@ export class BodyBuilder<Diagnosable extends Diagnostics> {
    */
   async compose(
     ...elems: (
-      | Promise<TestSuiteElement<Diagnosable>>
-      | TestSuiteElement<Diagnosable>
+      | Promise<TestSuiteElement<Describable, Diagnosable>>
+      | TestSuiteElement<Describable, Diagnosable>
     )[]
   ) {
     this.content.push(...await Promise.all(elems));
   }
 
   async ok(
-    description: string,
-    init?: InitTestCaseBuilder<Diagnosable>,
+    description: Describable,
+    init?: TestCaseBuilderArgs<Describable, Diagnosable>,
   ) {
     this.content.push(await this.factory.ok(description, init));
     return this;
   }
 
   async notOk(
-    description: string,
-    init?: InitTestCaseBuilder<Diagnosable>,
+    description: Describable,
+    init?: TestCaseBuilderArgs<Describable, Diagnosable>,
   ) {
     this.content.push(await this.factory.notOk(description, init));
+    return this;
+  }
+
+  async okParent<
+    SubtestDescribable extends string,
+    SubtestDiagnosable extends Diagnostics,
+  >(
+    description: Describable,
+    init:
+      | ((
+        bb: BodyBuilder<SubtestDescribable, SubtestDiagnosable>,
+      ) => void | Promise<void>)
+      | ParentTestCaseBuilderArgs<
+        Describable,
+        Diagnosable,
+        SubtestDescribable,
+        SubtestDiagnosable
+      >,
+  ) {
+    this.content.push(
+      await this.factory.okParent<SubtestDescribable, SubtestDiagnosable>(
+        description,
+        init,
+      ),
+    );
+    return this;
+  }
+
+  async notOkParent<
+    SubtestDescribable extends string,
+    SubtestDiagnosable extends Diagnostics,
+  >(
+    description: Describable,
+    init:
+      | ((
+        bb: BodyBuilder<SubtestDescribable, SubtestDiagnosable>,
+      ) => void | Promise<void>)
+      | ParentTestCaseBuilderArgs<
+        Describable,
+        Diagnosable,
+        SubtestDescribable,
+        SubtestDiagnosable
+      >,
+  ) {
+    this.content.push(
+      await this.factory.notOkParent<SubtestDescribable, SubtestDiagnosable>(
+        description,
+        init,
+      ),
+    );
     return this;
   }
 
@@ -221,8 +455,11 @@ export class BodyBuilder<Diagnosable extends Diagnostics> {
   }
 }
 
-export class TapContentBuilder<Diagnosable extends Diagnostics> {
-  readonly bb = new BodyBuilder<Diagnosable>();
+export class TapContentBuilder<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+> {
+  readonly bb = new BodyBuilder<Describable, Diagnosable>();
   readonly footers: FooterNode[] = [];
 
   constructor(
@@ -230,11 +467,13 @@ export class TapContentBuilder<Diagnosable extends Diagnostics> {
   ) {
   }
 
-  tapContent(): TapContent<Diagnosable> {
+  tapContent(): TapContent<Describable, Diagnosable> {
     return {
       version: { nature: "version", version: this.version },
       plan: this.bb.plan(),
-      body: this.bb.content as Iterable<TestSuiteElement<Diagnosable>>,
+      body: this.bb.content as Iterable<
+        TestSuiteElement<Describable, Diagnosable>
+      >,
       footers: this.footers,
     };
   }
@@ -244,8 +483,11 @@ export class TapContentBuilder<Diagnosable extends Diagnostics> {
   }
 }
 
-export function stringify<Diagnosable extends Diagnostics>(
-  tc: TapContent<Diagnosable>,
+export function stringify<
+  Describable extends string,
+  Diagnosable extends Diagnostics,
+>(
+  tc: TapContent<Describable, Diagnosable>,
 ): string {
   let result = "";
 
@@ -254,7 +496,7 @@ export function stringify<Diagnosable extends Diagnostics>(
   }
 
   function processElement(
-    element: TestSuiteElement<Diagnosable>,
+    element: TestSuiteElement<Describable, Diagnosable>,
     nextIndex: () => number,
     depth: number,
   ): string {
@@ -286,7 +528,7 @@ export function stringify<Diagnosable extends Diagnostics>(
         if (element.diagnostics) {
           elementResult += `\n${yamlBlock(element.diagnostics)}`;
         }
-        if (element.subtests) {
+        if (isParentTestCase(element)) {
           const subtests = element.subtests;
           if (subtests.title) {
             elementResult += `\n\n${indent}# Subtest: ${
@@ -304,7 +546,7 @@ export function stringify<Diagnosable extends Diagnostics>(
           let subElemIdx = 0;
           for (const nestedElement of subtests.body) {
             elementResult += processElement(
-              nestedElement,
+              nestedElement as TestSuiteElement<Describable, Diagnosable>,
               () => ++subElemIdx,
               depth + 1,
             );
