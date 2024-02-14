@@ -477,10 +477,6 @@ export class TapContentBuilder<
       footers: this.footers,
     };
   }
-
-  tapContentText() {
-    return stringify(this.tapContent());
-  }
 }
 
 export function stringify<

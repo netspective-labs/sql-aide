@@ -1,6 +1,5 @@
 import { assertEquals, path } from "./deps-test.ts";
 import * as mod from "./protocol.ts";
-import { Diagnostics } from "./protocol.ts";
 
 Deno.test("TAP untyped diagnostics content generator (custom subtests)", async () => {
   const fixture01 = new mod.TapContentBuilder();
@@ -53,7 +52,7 @@ Deno.test("TAP untyped diagnostics content generator (custom subtests)", async (
     await Deno.readTextFile(
       path.fromFileUrl(import.meta.resolve("./protocol_test-fixture-01.tap")),
     ),
-    fixture01.tapContentText(),
+    mod.stringify(fixture01.tapContent()),
   );
 });
 
@@ -101,7 +100,7 @@ Deno.test("TAP untyped diagnostics content generator (simple subtests)", async (
     await Deno.readTextFile(
       path.fromFileUrl(import.meta.resolve("./protocol_test-fixture-01.tap")),
     ),
-    fixture01.tapContentText(),
+    mod.stringify(fixture01.tapContent()),
   );
 });
 
@@ -140,7 +139,7 @@ Deno.test("TAP typed diagnostics content generator", async () => {
   // the diagnostics might be different for specific cases
   await bb.populateCustom<
     string,
-    { message: string; severity?: string; data?: Diagnostics }
+    { message: string; severity?: string; data?: mod.Diagnostics }
   >(
     async function* (f) {
       yield f.notOk("First line of the input valid", {
@@ -171,6 +170,6 @@ Deno.test("TAP typed diagnostics content generator", async () => {
     await Deno.readTextFile(
       path.fromFileUrl(import.meta.resolve("./protocol_test-fixture-01.tap")),
     ),
-    fixture01.tapContentText(),
+    mod.stringify(fixture01.tapContent()),
   );
 });

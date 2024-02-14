@@ -26,7 +26,7 @@ Deno.test("TAP compliance with untyped diagnostics", async () => {
 });
 
 Deno.test("TAP compliance with typed diagnostics", async () => {
-  const fixture01 = (await new mod.TapComplianceBuilder<string, {
+  const fixture01 = await new mod.TapComplianceBuilder<string, {
     "Audit Note": string;
     "Jira Ticket"?: string;
     "Pull Request"?: string;
@@ -41,12 +41,12 @@ Deno.test("TAP compliance with typed diagnostics", async () => {
         "Pull Request": new URL("https://github.com/repo/pull/789").toString(),
       },
     });
-  })).tapContentText();
+  });
 
   assertEquals(
     await Deno.readTextFile(
       path.fromFileUrl(import.meta.resolve("./compliance_test-fixture-01.tap")),
     ),
-    fixture01,
+    tap.stringify(fixture01.tapContent()),
   );
 });

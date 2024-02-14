@@ -1,20 +1,24 @@
 import * as p from "./protocol.ts";
 
-export interface TapContentHtmlOptions<Diagnosable extends p.Diagnostics> {
-  readonly preamble?: (tc: p.TapContent<Diagnosable>) => string;
-  readonly title: (tc: p.TapContent<Diagnosable>) => string;
-  readonly css: (tc: p.TapContent<Diagnosable>) => string;
+export interface TapContentHtmlOptions<
+  Describable extends string,
+  Diagnosable extends p.Diagnostics,
+> {
+  readonly preamble?: (tc: p.TapContent<Describable, Diagnosable>) => string;
+  readonly title: (tc: p.TapContent<Describable, Diagnosable>) => string;
+  readonly css: (tc: p.TapContent<Describable, Diagnosable>) => string;
   readonly diagnosticsHtml: (
     diagnostics: p.Diagnostics,
-    tc: p.TapContent<Diagnosable>,
+    tc: p.TapContent<Describable, Diagnosable>,
   ) => string;
 }
 
 export function tapContentDefaultHtmlOptions<
+  Describable extends string,
   Diagnosable extends p.Diagnostics,
 >(
-  init?: Partial<TapContentHtmlOptions<Diagnosable>>,
-): TapContentHtmlOptions<Diagnosable> {
+  init?: Partial<TapContentHtmlOptions<Describable, Diagnosable>>,
+): TapContentHtmlOptions<Describable, Diagnosable> {
   const title = () => `TAP Test Results`;
 
   const css = (): string => `
@@ -46,8 +50,11 @@ export function tapContentDefaultHtmlOptions<
   return { title, css, diagnosticsHtml, ...init };
 }
 
-export function tapContentHTML<Diagnosable extends p.Diagnostics>(
-  tc: p.TapContent<Diagnosable>,
+export function tapContentHTML<
+  Describable extends string,
+  Diagnosable extends p.Diagnostics,
+>(
+  tc: p.TapContent<Describable, Diagnosable>,
   options = tapContentDefaultHtmlOptions(),
 ) {
   const { title, css, diagnosticsHtml } = options;
@@ -72,13 +79,13 @@ export function tapContentHTML<Diagnosable extends p.Diagnostics>(
 
   // Inner function for processing test elements, including subtests
   function processTestElements(
-    body: Iterable<p.TestSuiteElement<Diagnosable>>,
+    body: Iterable<p.TestSuiteElement<string, p.Diagnostics>>,
     level = 0,
   ): string {
     let contentHtml = "";
     for (const element of body) {
       if (element.nature === "test-case") {
-        const test = element as p.TestCase<Diagnosable>;
+        const test = element as p.TestCase<string, p.Diagnostics>;
         const statusEmoji = test.ok
           ? '<span class="ok">✅</span>'
           : '<span class="not-ok">❌</span>';
@@ -94,8 +101,10 @@ export function tapContentHTML<Diagnosable extends p.Diagnostics>(
           contentHtml += `<div>${diagnosticsHtml(test.diagnostics, tc)}</div>`;
         }
 
-        if (test.subtests) {
-          contentHtml += processTestElements(test.subtests.body, level + 1);
+        if (p.isParentTestCase(test)) {
+          if (test.subtests) {
+            contentHtml += processTestElements(test.subtests.body, level + 1);
+          }
         }
 
         contentHtml += `</div></details>`;
@@ -108,16 +117,20 @@ export function tapContentHTML<Diagnosable extends p.Diagnostics>(
   }
 }
 
-export interface TapContentMarkdownOptions<Diagnosable extends p.Diagnostics> {
-  readonly preamble?: (tc: p.TapContent<Diagnosable>) => string;
+export interface TapContentMarkdownOptions<
+  Describable extends string,
+  Diagnosable extends p.Diagnostics,
+> {
+  readonly preamble?: (tc: p.TapContent<Describable, Diagnosable>) => string;
   readonly diagnosticsMarkdown: (diagnostics: p.Diagnostics) => string;
 }
 
 export function tapContentDefaultMarkdownOptions<
+  Describable extends string,
   Diagnosable extends p.Diagnostics,
 >(
-  init?: Partial<TapContentMarkdownOptions<Diagnosable>>,
-): TapContentMarkdownOptions<Diagnosable> {
+  init?: Partial<TapContentMarkdownOptions<Describable, Diagnosable>>,
+): TapContentMarkdownOptions<Describable, Diagnosable> {
   const diagnosticsMarkdown = (
     diagnostics: p.Diagnostics,
   ) => {
@@ -133,9 +146,12 @@ export function tapContentDefaultMarkdownOptions<
   return { diagnosticsMarkdown, ...init };
 }
 
-export function tapContentMarkdown<Diagnosable extends p.Diagnostics>(
-  tapContent: p.TapContent<Diagnosable>,
-  options = tapContentDefaultMarkdownOptions<Diagnosable>(),
+export function tapContentMarkdown<
+  Describable extends string,
+  Diagnosable extends p.Diagnostics,
+>(
+  tapContent: p.TapContent<Describable, Diagnosable>,
+  options = tapContentDefaultMarkdownOptions<Describable, Diagnosable>(),
 ) {
   const { preamble, diagnosticsMarkdown } = options;
 
@@ -152,13 +168,13 @@ export function tapContentMarkdown<Diagnosable extends p.Diagnostics>(
   return markdown;
 
   function processTestElements(
-    body: Iterable<p.TestSuiteElement<Diagnosable>>,
+    body: Iterable<p.TestSuiteElement<string, p.Diagnostics>>,
     indent = "",
   ) {
     let contentMarkdown = "";
     for (const element of body) {
       if (element.nature === "test-case") {
-        const test = element as p.TestCase<Diagnosable>;
+        const test = element as p.TestCase<string, p.Diagnostics>;
         const status = test.ok ? "✅" : "❌";
         contentMarkdown += `${indent}- ${status} ${test.description}\n`;
 
@@ -175,10 +191,12 @@ export function tapContentMarkdown<Diagnosable extends p.Diagnostics>(
           }\n`;
         }
 
-        if (test.subtests) {
-          contentMarkdown += `${indent}  - Subtests:\n${
-            processTestElements(test.subtests.body, indent + "    ")
-          }\n`;
+        if (p.isParentTestCase(test)) {
+          if (test.subtests) {
+            contentMarkdown += `${indent}  - Subtests:\n${
+              processTestElements(test.subtests.body, indent + "    ")
+            }\n`;
+          }
         }
       } else if (element.nature === "comment") {
         const comment = element as p.CommentNode;
@@ -187,4 +205,67 @@ export function tapContentMarkdown<Diagnosable extends p.Diagnostics>(
     }
     return contentMarkdown;
   }
+}
+
+export function tapFormat<Canonical extends string, Aliases extends string>(
+  identity: Canonical,
+  emit: (tc: p.TapContent<string, p.Diagnostics>) => string,
+  ...aliases: Aliases[]
+) {
+  return { identity, aliases, emit };
+}
+
+export const tapFormats = [
+  tapFormat("canonical", (tc) => p.stringify(tc), "--text", "--tap", ".tap"),
+  tapFormat("html", (tc) => tapContentHTML(tc), "--html", "HTML", ".html"),
+  tapFormat(
+    "markdown",
+    (tc) => tapContentMarkdown(tc),
+    "--md",
+    "--markdown",
+    ".md",
+  ),
+  tapFormat(
+    "json",
+    (tc) => JSON.stringify(tc, null, "  "),
+    "--json",
+    "--JSON",
+    "JSON",
+    ".json",
+  ),
+];
+
+export type TapFormatCanonical = (typeof tapFormats)[number]["identity"];
+export type TapFormat =
+  | TapFormatCanonical
+  | (typeof tapFormats)[number]["aliases"][number];
+
+export function emittableTapContent<
+  Describable extends string,
+  Diagnosable extends p.Diagnostics,
+>(
+  tc: p.TapContent<Describable, Diagnosable>,
+  format?: TapFormat | undefined,
+  options?: {
+    readonly defaultFmt?: ReturnType<typeof tapFormat>["emit"];
+    readonly onUnknownFormat?: (
+      format: TapFormat,
+      tc: p.TapContent<Describable, Diagnosable>,
+    ) => string | undefined;
+  },
+) {
+  const {
+    defaultFmt =
+      ((tc: p.TapContent<Describable, Diagnosable>) => p.stringify(tc)),
+    onUnknownFormat = ((format: TapFormat) => `Unknown format '${format}'.`),
+  } = options ??
+    {};
+  if (!format) return defaultFmt(tc);
+
+  for (const f of tapFormats) {
+    if (f.identity == format || f.aliases.find((a) => a == format)) {
+      return f.emit(tc);
+    }
+  }
+  return onUnknownFormat(format, tc);
 }
