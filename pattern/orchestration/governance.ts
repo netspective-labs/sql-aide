@@ -113,6 +113,7 @@ export class OrchGovernance<EmitContext extends OrchEmitContext> {
   readonly orchSession = SQLa.tableDefinition("orch_session", {
     orch_session_id: this.primaryKey(),
     device_id: this.device.belongsTo.device_id(),
+    version: this.gd.text(),
     orch_started_at: this.gd.createdAt(this.omitTimeZone),
     orch_finished_at: this.gd.dateTimeNullable(this.omitTimeZone),
     elaboration: this.gd.jsonTextNullable(),

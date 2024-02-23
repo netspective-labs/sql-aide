@@ -28,6 +28,7 @@ export class OrchSession<
   constructor(
     readonly sessionID: string,
     readonly govn: Governance,
+    readonly version: string,
     readonly sqlCatalog: Record<
       OrchSqlRegistrationExecution,
       SQLa.SqlTextSupplier<EmitContext>[]
@@ -95,6 +96,7 @@ export class OrchSession<
         ...orchSessionCRF.insertDML({
           orch_session_id: sessionID,
           device_id: device.deviceID,
+          version: this.version,
           orch_started_at: now,
           // orch_started_at and diagnostics_arg, diagnostics_json, diagnostics_md should be
           // supplied after session is completed
