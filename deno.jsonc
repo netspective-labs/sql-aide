@@ -14,6 +14,7 @@
     "prepare-publish": "git semtag final",
     "prepare-npm": "deno run -A support/package-npm/build-npm.ts",
     "publish-npm": "cd support/package-npm && npm publish",
-    "sync-sqlpkg": "rsync -av --delete ~/.sqlpkg/ ./support/bin/sqlpkg/"
+    "sync-sqlpkg": "rsync -av --delete ~/.sqlpkg/ ./support/bin/sqlpkg/",
+    "generate-doc": "deno doc --html --name=\"SQL Aide Documentation\" --output=./support/documentation ./render/mod.ts ./pattern/**/*.ts"
   }
 }
