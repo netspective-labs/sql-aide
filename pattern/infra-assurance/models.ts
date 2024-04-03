@@ -2140,6 +2140,7 @@ const assetServiceView = SQLa.safeViewDefinition(
   {
     name: udm.text(),
     server: udm.text(),
+    boundary: udm.text(),
     description: udm.text(),
     port: udm.text(),
     experimental_version: udm.text(),
@@ -2160,13 +2161,14 @@ const assetServiceView = SQLa.safeViewDefinition(
   },
 )`
   SELECT
-  asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+  asser.name,ast.name as server,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
   asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
   ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
   FROM asset_service asser
   INNER JOIN asset ast ON ast.asset_id = asser.asset_id
   INNER JOIN organization o ON o.organization_id=ast.organization_id
-  INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id`;
+  INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id
+  INNER JOIN boundary bnt ON bnt.boundary_id=ast.boundary_id`;
 
 export const riskRegisterView = SQLa.safeViewDefinition(
   "risk_register_view",

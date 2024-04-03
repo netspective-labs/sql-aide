@@ -1737,15 +1737,16 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
     SELECT
-    asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.name,ast.name as server,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
     asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
     ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
     FROM asset_service asser
     INNER JOIN asset ast ON ast.asset_id = asser.asset_id
     INNER JOIN organization o ON o.organization_id=ast.organization_id
-    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id;
+    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id
+    INNER JOIN boundary bnt ON bnt.boundary_id=ast.boundary_id;
 CREATE VIEW IF NOT EXISTS "risk_register_view"("risk_register_id", "description", "risk_subject", "risk_type", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner") AS
     SELECT rr.risk_register_id,
     rr.description,
