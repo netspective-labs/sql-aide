@@ -506,6 +506,7 @@ export const raciMatrixActivity = gm.textPkTable("raci_matrix_activity", {
 export const asset = gm.textPkTable("asset", {
   asset_id: udm.ulidPrimaryKey(),
   organization_id: udm.organization.references.organization_id(),
+  boundary_id: boundary.references.boundary_id().optional(),
   asset_retired_date: udm.dateNullable(),
   asset_status_id: assetStatus.references.asset_status_id(),
   asset_tag: udm.text(),
@@ -1045,6 +1046,8 @@ export const allContentTables: SQLa.TableDefinition<
 >[] = [
   udm.partyType,
   udm.partyRelationType,
+  udm.sexType,
+  udm.genderType,
   udm.partyRole,
   udm.partyIdentifierType,
   udm.personType,
@@ -1685,6 +1688,98 @@ const incidentStatusInsertion = incidentStatus.insertDML([
   { code: "WORK_IN_PROGRESS", value: "Work In Progress" },
 ]);
 
+const partyTypeInsertion = udm
+  .partyType.insertDML([{
+    party_type_id: syntheticUlid(),
+    code: "PERSON",
+    value: "Person",
+  }, {
+    party_type_id: syntheticUlid(),
+    code: "ORGANIZATION",
+    value: "Organization",
+  }]);
+
+const sexTypeInsertion = udm
+  .sexType.insertDML([{
+    sex_type_id: syntheticUlid(),
+    code: "MALE",
+    value: "Male",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "FEMALE",
+    value: "Female",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "INTERSEX",
+    value: "Intersex",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "X",
+    value: "X",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "NOT_LISTED_PLEASE_DESCRIBE",
+    value: "Not listed, please describe",
+  }, {
+    sex_type_id: syntheticUlid(),
+    code: "UNKNOWN",
+    value: "Unknown",
+  }]);
+
+const genderTypeInsertion = udm
+  .genderType.insertDML([{
+    gender_type_id: syntheticUlid(),
+    code: "MALE",
+    value: "Male",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "FEMALE",
+    value: "Female",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "OTHER",
+    value: "Other",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "NONBINARY",
+    value: "Nonbinary",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "AGENDER",
+    value: "Agender",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "TRANGENDER",
+    value: "Transgender",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "CISGENDER",
+    value: "Cisgender",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "GENDERQUEER",
+    value: "Genderqueer",
+  }, {
+    gender_type_id: syntheticUlid(),
+    code: "PREFER_NOT_TO_ANSWER",
+    value: "Prefer not to answer",
+  }]);
+
+const partyRelationTypeInsertion = udm
+  .partyRelationType.insertDML([{
+    party_relation_type_id: syntheticUlid(),
+    code: "PERSON_TO_PERSON",
+    value: "Person To Person",
+  }, {
+    party_relation_type_id: syntheticUlid(),
+    code: "ORGANIZATION_TO_PERSON",
+    value: "Organization To Person",
+  }, {
+    party_relation_type_id: syntheticUlid(),
+    code: "ORGANIZATION_TO_ORGANIZATION",
+    value: "Organization To Organization",
+  }]);
+
 const securityResponseTeamView = SQLa.safeViewDefinition(
   "security_incident_response_team_view",
   {
@@ -2155,6 +2250,14 @@ export function sqlDDL() {
     ${partyRoleInsertion}
 
     ${partyIdentifierTypeInsertion}
+
+    ${partyTypeInsertion}
+
+    ${sexTypeInsertion}
+
+    ${genderTypeInsertion}
+
+    ${partyRelationTypeInsertion}
 
     ${personTypeInsertion}
 
