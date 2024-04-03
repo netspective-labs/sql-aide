@@ -38,6 +38,34 @@
       activity_log: TEXT
   }
 
+  entity "sex_type" as sex_type {
+    * **sex_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "gender_type" as gender_type {
+    * **gender_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   entity "party_role" as party_role {
     * **party_role_id**: TEXT
     --
@@ -543,6 +571,7 @@
     * **asset_id**: TEXT
     --
     * organization_id: TEXT
+      boundary_id: TEXT
       asset_retired_date: DATE
     * asset_status_id: INTEGER
     * asset_tag: TEXT
@@ -1464,6 +1493,8 @@
   party |o..o{ party_identifier
   party |o..o{ person
   person_type |o..o{ person
+  gender_type |o..o{ person
+  sex_type |o..o{ person
   party |o..o{ party_relation
   party |o..o{ party_relation
   party_relation_type |o..o{ party_relation
@@ -1484,6 +1515,7 @@
   boundary |o..o{ raci_matrix_subject_boundary
   raci_matrix_subject |o..o{ raci_matrix_subject_boundary
   organization |o..o{ asset
+  boundary |o..o{ asset
   asset_status |o..o{ asset
   asset_type |o..o{ asset
   assignment |o..o{ asset

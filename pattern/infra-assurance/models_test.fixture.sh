@@ -123,6 +123,32 @@ CREATE TABLE IF NOT EXISTS "party_relation_type" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "sex_type" (
+    "sex_type_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "gender_type" (
+    "gender_type_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
 CREATE TABLE IF NOT EXISTS "party_role" (
     "party_role_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
@@ -606,6 +632,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_activity" (
 CREATE TABLE IF NOT EXISTS "asset" (
     "asset_id" TEXT PRIMARY KEY NOT NULL,
     "organization_id" TEXT NOT NULL,
+    "boundary_id" TEXT,
     "asset_retired_date" DATE,
     "asset_status_id" INTEGER NOT NULL,
     "asset_tag" TEXT NOT NULL,
@@ -635,6 +662,7 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("organization_id") REFERENCES "organization"("organization_id"),
+    FOREIGN KEY("boundary_id") REFERENCES "boundary"("boundary_id"),
     FOREIGN KEY("asset_status_id") REFERENCES "asset_status"("asset_status_id"),
     FOREIGN KEY("asset_type_id") REFERENCES "asset_type"("asset_type_id"),
     FOREIGN KEY("assignment_id") REFERENCES "assignment"("assignment_id")
@@ -1709,15 +1737,16 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
     SELECT
-    asser.name,ast.name as server,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.name,ast.name as server,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
     asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
     ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
     FROM asset_service asser
     INNER JOIN asset ast ON ast.asset_id = asser.asset_id
     INNER JOIN organization o ON o.organization_id=ast.organization_id
-    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id;
+    INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id
+    INNER JOIN boundary bnt ON bnt.boundary_id=ast.boundary_id;
 CREATE VIEW IF NOT EXISTS "risk_register_view"("risk_register_id", "description", "risk_subject", "risk_type", "impact_to_the_organization", "rating_likelihood_id", "rating_impact_id", "rating_overall_risk_id", "controls_in_place", "control_effectivenes", "over_all_residual_risk_rating_id", "mitigation_further_actions", "control_monitor_mitigation_actions_tracking_strategy", "control_monitor_action_due_date", "control_monitor_risk_owner") AS
     SELECT rr.risk_register_id,
     rr.description,
@@ -1802,6 +1831,34 @@ INSERT INTO "party_identifier_type" ("party_identifier_type_id", "code", "value"
        VALUES ('3', 'PASSPORT', 'Passport', NULL, NULL, NULL, NULL, NULL, NULL),
               ('4', 'UUID', 'UUID', NULL, NULL, NULL, NULL, NULL, NULL),
               ('5', 'DRIVING_LICENSE', 'Driving License', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "party_type" ("party_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('31', 'PERSON', 'Person', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('32', 'ORGANIZATION', 'Organization', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "sex_type" ("sex_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('33', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('34', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('35', 'INTERSEX', 'Intersex', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('36', 'X', 'X', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('37', 'NOT_LISTED_PLEASE_DESCRIBE', 'Not listed, please describe', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('38', 'UNKNOWN', 'Unknown', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "gender_type" ("gender_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('39', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('40', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('41', 'OTHER', 'Other', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('42', 'NONBINARY', 'Nonbinary', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('43', 'AGENDER', 'Agender', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('44', 'TRANGENDER', 'Transgender', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('45', 'CISGENDER', 'Cisgender', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('46', 'GENDERQUEER', 'Genderqueer', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('47', 'PREFER_NOT_TO_ANSWER', 'Prefer not to answer', NULL, NULL, NULL, NULL, NULL, NULL);
+
+INSERT INTO "party_relation_type" ("party_relation_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
+       VALUES ('48', 'PERSON_TO_PERSON', 'Person To Person', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('49', 'ORGANIZATION_TO_PERSON', 'Organization To Person', NULL, NULL, NULL, NULL, NULL, NULL),
+              ('50', 'ORGANIZATION_TO_ORGANIZATION', 'Organization To Organization', NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO "person_type" ("person_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
        VALUES ('6', 'INDIVIDUAL', 'Individual', NULL, NULL, NULL, NULL, NULL, NULL),
