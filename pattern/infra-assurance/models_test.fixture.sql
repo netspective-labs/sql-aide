@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS "contact_land" (
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "contract_status" (
-    "contract_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "contract_status_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS "contract_status" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "payment_type" (
-    "payment_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "payment_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS "payment_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "periodicity" (
-    "periodicity_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "periodicity_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -369,7 +369,7 @@ CREATE TABLE IF NOT EXISTS "periodicity" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "boundary_nature" (
-    "boundary_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "boundary_nature_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -382,7 +382,7 @@ CREATE TABLE IF NOT EXISTS "boundary_nature" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "time_entry_category" (
-    "time_entry_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "time_entry_category_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -395,7 +395,7 @@ CREATE TABLE IF NOT EXISTS "time_entry_category" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "raci_matrix_subject" (
-    "raci_matrix_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "raci_matrix_subject_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -408,7 +408,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_subject" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "skill_nature" (
-    "skill_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "skill_nature_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS "skill_nature" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "skill" (
-    "skill_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "skill_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS "organization_role_type" (
 );
 CREATE TABLE IF NOT EXISTS "graph" (
     "graph_id" TEXT PRIMARY KEY NOT NULL,
-    "graph_nature_id" INTEGER NOT NULL,
+    "graph_nature_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -464,7 +464,7 @@ CREATE TABLE IF NOT EXISTS "boundary" (
     "boundary_id" TEXT PRIMARY KEY NOT NULL,
     "parent_boundary_id" TEXT,
     "graph_id" TEXT NOT NULL,
-    "boundary_nature_id" INTEGER NOT NULL,
+    "boundary_nature_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -504,7 +504,7 @@ CREATE TABLE IF NOT EXISTS "host_boundary" (
     FOREIGN KEY("host_id") REFERENCES "host"("host_id")
 );
 CREATE TABLE IF NOT EXISTS "asset_status" (
-    "asset_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_status_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -517,7 +517,20 @@ CREATE TABLE IF NOT EXISTS "asset_status" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "asset_service_status" (
-    "asset_service_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_service_status_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "asset_service_type" (
+    "asset_service_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -530,7 +543,7 @@ CREATE TABLE IF NOT EXISTS "asset_service_status" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "asset_type" (
-    "asset_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -543,7 +556,7 @@ CREATE TABLE IF NOT EXISTS "asset_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "assignment" (
-    "assignment_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "assignment_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -573,7 +586,7 @@ CREATE TABLE IF NOT EXISTS "raci_matrix" (
 CREATE TABLE IF NOT EXISTS "raci_matrix_subject_boundary" (
     "raci_matrix_subject_boundary_id" TEXT PRIMARY KEY NOT NULL,
     "boundary_id" TEXT NOT NULL,
-    "raci_matrix_subject_id" INTEGER NOT NULL,
+    "raci_matrix_subject_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMPTZ,
@@ -600,13 +613,13 @@ CREATE TABLE IF NOT EXISTS "asset" (
     "organization_id" TEXT NOT NULL,
     "boundary_id" TEXT,
     "asset_retired_date" DATE,
-    "asset_status_id" INTEGER NOT NULL,
+    "asset_status_id" TEXT NOT NULL,
     "asset_tag" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "asset_type_id" INTEGER NOT NULL,
+    "asset_type_id" TEXT NOT NULL,
     "asset_workload_category" TEXT NOT NULL,
-    "assignment_id" INTEGER NOT NULL,
+    "assignment_id" TEXT NOT NULL,
     "barcode_or_rfid_tag" TEXT NOT NULL,
     "installed_date" DATE,
     "planned_retirement_date" DATE,
@@ -636,9 +649,10 @@ CREATE TABLE IF NOT EXISTS "asset" (
 CREATE TABLE IF NOT EXISTS "asset_service" (
     "asset_service_id" TEXT PRIMARY KEY NOT NULL,
     "asset_id" TEXT NOT NULL,
+    "asset_service_type_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "asset_service_status_id" INTEGER NOT NULL,
+    "asset_service_status_id" TEXT NOT NULL,
     "port" TEXT NOT NULL,
     "experimental_version" TEXT NOT NULL,
     "production_version" TEXT NOT NULL,
@@ -657,6 +671,7 @@ CREATE TABLE IF NOT EXISTS "asset_service" (
     "deleted_by" TEXT,
     "activity_log" TEXT,
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
+    FOREIGN KEY("asset_service_type_id") REFERENCES "asset_service_type"("asset_service_type_id"),
     FOREIGN KEY("asset_service_status_id") REFERENCES "asset_service_status"("asset_service_status_id")
 );
 CREATE TABLE IF NOT EXISTS "vulnerability_source" (
@@ -698,7 +713,7 @@ CREATE TABLE IF NOT EXISTS "threat_source" (
     "threat_source_id" TEXT PRIMARY KEY NOT NULL,
     "title" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
-    "threat_source_type_id" INTEGER NOT NULL,
+    "threat_source_type_id" TEXT NOT NULL,
     "source_of_information" TEXT NOT NULL,
     "capability" TEXT NOT NULL,
     "intent" TEXT NOT NULL,
@@ -719,7 +734,7 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
     "threat_source_id" TEXT NOT NULL,
     "asset_id" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
-    "threat_event_type_id" INTEGER NOT NULL,
+    "threat_event_type_id" TEXT NOT NULL,
     "event_classification" TEXT NOT NULL,
     "source_of_information" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -736,7 +751,7 @@ CREATE TABLE IF NOT EXISTS "threat_event" (
 );
 CREATE TABLE IF NOT EXISTS "asset_risk" (
     "asset_risk_id" TEXT PRIMARY KEY NOT NULL,
-    "asset_risk_type_id" INTEGER NOT NULL,
+    "asset_risk_type_id" TEXT NOT NULL,
     "asset_id" TEXT NOT NULL,
     "threat_event_id" TEXT NOT NULL,
     "relevance_id" TEXT,
@@ -841,9 +856,9 @@ CREATE TABLE IF NOT EXISTS "scheduled_task" (
 CREATE TABLE IF NOT EXISTS "timesheet" (
     "timesheet_id" TEXT PRIMARY KEY NOT NULL,
     "date_of_work" TIMESTAMPTZ NOT NULL,
-    "is_billable_id" INTEGER NOT NULL,
+    "is_billable_id" TEXT NOT NULL,
     "number_of_hours" INTEGER NOT NULL,
-    "time_entry_category_id" INTEGER NOT NULL,
+    "time_entry_category_id" TEXT NOT NULL,
     "timesheet_summary" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -897,10 +912,10 @@ CREATE TABLE IF NOT EXISTS "device" (
 );
 CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
     "security_incident_response_team_id" TEXT PRIMARY KEY NOT NULL,
-    "training_subject_id" INTEGER,
+    "training_subject_id" TEXT,
     "person_id" TEXT NOT NULL,
     "organization_id" TEXT NOT NULL,
-    "training_status_id" INTEGER,
+    "training_status_id" TEXT,
     "attended_date" DATE,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -916,10 +931,10 @@ CREATE TABLE IF NOT EXISTS "security_incident_response_team" (
 );
 CREATE TABLE IF NOT EXISTS "awareness_training" (
     "awareness_training_id" TEXT PRIMARY KEY NOT NULL,
-    "training_subject_id" INTEGER NOT NULL,
+    "training_subject_id" TEXT NOT NULL,
     "person_id" TEXT NOT NULL,
     "organization_id" TEXT NOT NULL,
-    "training_status_id" INTEGER NOT NULL,
+    "training_status_id" TEXT NOT NULL,
     "attended_date" DATE NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -937,11 +952,11 @@ CREATE TABLE IF NOT EXISTS "rating" (
     "rating_id" TEXT PRIMARY KEY NOT NULL,
     "author_id" TEXT NOT NULL,
     "rating_given_to_id" TEXT NOT NULL,
-    "rating_value_id" INTEGER NOT NULL,
-    "best_rating_id" INTEGER,
+    "rating_value_id" TEXT NOT NULL,
+    "best_rating_id" TEXT,
     "rating_explanation" TEXT NOT NULL,
     "review_aspect" TEXT NOT NULL,
-    "worst_rating_id" INTEGER,
+    "worst_rating_id" TEXT,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
     "updated_at" TIMESTAMPTZ,
@@ -969,7 +984,7 @@ CREATE TABLE IF NOT EXISTS "note" (
     FOREIGN KEY("party_id") REFERENCES "party"("party_id")
 );
 CREATE TABLE IF NOT EXISTS "threat_source_type" (
-    "threat_source_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_source_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -982,7 +997,7 @@ CREATE TABLE IF NOT EXISTS "threat_source_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "threat_event_type" (
-    "threat_event_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "threat_event_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -995,7 +1010,7 @@ CREATE TABLE IF NOT EXISTS "threat_event_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "calendar_period" (
-    "calendar_period_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "calendar_period_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1008,7 +1023,7 @@ CREATE TABLE IF NOT EXISTS "calendar_period" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "tracking_period" (
-    "tracking_period_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "tracking_period_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1023,10 +1038,10 @@ CREATE TABLE IF NOT EXISTS "tracking_period" (
 CREATE TABLE IF NOT EXISTS "audit_assertion" (
     "audit_assertion_id" TEXT PRIMARY KEY NOT NULL,
     "auditor_type_id" TEXT NOT NULL,
-    "audit_purpose_id" INTEGER NOT NULL,
+    "audit_purpose_id" TEXT NOT NULL,
     "auditor_org_id" TEXT NOT NULL,
     "auditor_person_id" TEXT NOT NULL,
-    "auditor_status_type_id" INTEGER NOT NULL,
+    "auditor_status_type_id" TEXT NOT NULL,
     "scf_identifier" TEXT NOT NULL,
     "auditor_notes" TEXT NOT NULL,
     "auditor_artifacts" TEXT NOT NULL,
@@ -1049,13 +1064,13 @@ CREATE TABLE IF NOT EXISTS "contract" (
     "contract_id" TEXT PRIMARY KEY NOT NULL,
     "contract_from_id" TEXT NOT NULL,
     "contract_to_id" TEXT NOT NULL,
-    "contract_status_id" INTEGER,
+    "contract_status_id" TEXT,
     "document_reference" TEXT NOT NULL,
-    "payment_type_id" INTEGER,
-    "periodicity_id" INTEGER,
+    "payment_type_id" TEXT,
+    "periodicity_id" TEXT,
     "start_date" TIMESTAMPTZ NOT NULL,
     "end_date" TIMESTAMPTZ,
-    "contract_type_id" INTEGER,
+    "contract_type_id" TEXT,
     "date_of_last_review" TIMESTAMPTZ,
     "date_of_next_review" TIMESTAMPTZ,
     "date_of_contract_review" TIMESTAMPTZ,
@@ -1077,15 +1092,15 @@ CREATE TABLE IF NOT EXISTS "contract" (
 CREATE TABLE IF NOT EXISTS "risk_register" (
     "risk_register_id" TEXT PRIMARY KEY NOT NULL,
     "description" TEXT NOT NULL,
-    "risk_subject_id" INTEGER NOT NULL,
-    "risk_type_id" INTEGER NOT NULL,
+    "risk_subject_id" TEXT NOT NULL,
+    "risk_type_id" TEXT NOT NULL,
     "impact_to_the_organization" TEXT NOT NULL,
-    "rating_likelihood_id" INTEGER,
-    "rating_impact_id" INTEGER,
-    "rating_overall_risk_id" INTEGER,
+    "rating_likelihood_id" TEXT,
+    "rating_impact_id" TEXT,
+    "rating_overall_risk_id" TEXT,
     "controls_in_place" TEXT NOT NULL,
     "control_effectivenes" INTEGER NOT NULL,
-    "over_all_residual_risk_rating_id" INTEGER,
+    "over_all_residual_risk_rating_id" TEXT,
     "mitigation_further_actions" TEXT NOT NULL,
     "control_monitor_mitigation_actions_tracking_strategy" TEXT NOT NULL,
     "control_monitor_action_due_date" DATE,
@@ -1111,11 +1126,11 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "incident_date" DATE NOT NULL,
     "time_and_time_zone" TIMESTAMPTZ NOT NULL,
     "asset_id" TEXT NOT NULL,
-    "category_id" INTEGER NOT NULL,
-    "sub_category_id" INTEGER NOT NULL,
+    "category_id" TEXT NOT NULL,
+    "sub_category_id" TEXT NOT NULL,
     "severity_id" TEXT NOT NULL,
     "priority_id" TEXT,
-    "internal_or_external_id" INTEGER,
+    "internal_or_external_id" TEXT,
     "location" TEXT NOT NULL,
     "it_service_impacted" TEXT NOT NULL,
     "impacted_modules" TEXT NOT NULL,
@@ -1131,7 +1146,7 @@ CREATE TABLE IF NOT EXISTS "incident" (
     "eradication_details" TEXT NOT NULL,
     "business_impact" TEXT NOT NULL,
     "lessons_learned" TEXT NOT NULL,
-    "status_id" INTEGER,
+    "status_id" TEXT,
     "closed_date" DATE,
     "reopened_time" TIMESTAMPTZ,
     "feedback_from_business" TEXT NOT NULL,
@@ -1182,7 +1197,7 @@ CREATE TABLE IF NOT EXISTS "incident_root_cause" (
 CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
     "raci_matrix_assignment_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" TEXT NOT NULL,
-    "subject_id" INTEGER NOT NULL,
+    "subject_id" TEXT NOT NULL,
     "activity_id" TEXT NOT NULL,
     "raci_matrix_assignment_nature_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1200,8 +1215,8 @@ CREATE TABLE IF NOT EXISTS "raci_matrix_assignment" (
 CREATE TABLE IF NOT EXISTS "person_skill" (
     "person_skill_id" TEXT PRIMARY KEY NOT NULL,
     "person_id" TEXT NOT NULL,
-    "skill_nature_id" INTEGER NOT NULL,
-    "skill_id" INTEGER NOT NULL,
+    "skill_nature_id" TEXT NOT NULL,
+    "skill_id" TEXT NOT NULL,
     "proficiency_scale_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -1231,7 +1246,7 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     "key_performance_indicator_id" TEXT PRIMARY KEY NOT NULL,
     "key_performance_id" TEXT NOT NULL,
     "asset_id" TEXT NOT NULL,
-    "calendar_period_id" INTEGER NOT NULL,
+    "calendar_period_id" TEXT NOT NULL,
     "kpi_comparison_operator_id" TEXT NOT NULL,
     "kpi_context" TEXT NOT NULL,
     "kpi_lower_threshold_critical" TEXT NOT NULL,
@@ -1249,7 +1264,7 @@ CREATE TABLE IF NOT EXISTS "key_performance_indicator" (
     "kpi_unit_of_measure" TEXT NOT NULL,
     "kpi_value" TEXT NOT NULL,
     "score" TEXT NOT NULL,
-    "tracking_period_id" INTEGER NOT NULL,
+    "tracking_period_id" TEXT NOT NULL,
     "trend_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -1347,7 +1362,7 @@ CREATE TABLE IF NOT EXISTS "attestation_evidence" (
     FOREIGN KEY("attestation_id") REFERENCES "attestation"("attestation_id")
 );
 CREATE TABLE IF NOT EXISTS "training_subject" (
-    "training_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "training_subject_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1360,7 +1375,7 @@ CREATE TABLE IF NOT EXISTS "training_subject" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "status_value" (
-    "status_value_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "status_value_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1373,7 +1388,7 @@ CREATE TABLE IF NOT EXISTS "status_value" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "rating_value" (
-    "rating_value_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "rating_value_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1386,7 +1401,7 @@ CREATE TABLE IF NOT EXISTS "rating_value" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "contract_type" (
-    "contract_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "contract_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1399,7 +1414,7 @@ CREATE TABLE IF NOT EXISTS "contract_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "graph_nature" (
-    "graph_nature_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "graph_nature_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1412,7 +1427,7 @@ CREATE TABLE IF NOT EXISTS "graph_nature" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "risk_subject" (
-    "risk_subject_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "risk_subject_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1425,7 +1440,7 @@ CREATE TABLE IF NOT EXISTS "risk_subject" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "risk_type" (
-    "risk_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "risk_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1438,7 +1453,7 @@ CREATE TABLE IF NOT EXISTS "risk_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "incident_category" (
-    "incident_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_category_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1451,7 +1466,7 @@ CREATE TABLE IF NOT EXISTS "incident_category" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "incident_sub_category" (
-    "incident_sub_category_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_sub_category_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1464,7 +1479,7 @@ CREATE TABLE IF NOT EXISTS "incident_sub_category" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "incident_type" (
-    "incident_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1477,7 +1492,7 @@ CREATE TABLE IF NOT EXISTS "incident_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "incident_status" (
-    "incident_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "incident_status_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1490,7 +1505,7 @@ CREATE TABLE IF NOT EXISTS "incident_status" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "asset_risk_type" (
-    "asset_risk_type_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "asset_risk_type_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1503,7 +1518,7 @@ CREATE TABLE IF NOT EXISTS "asset_risk_type" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "audit_purpose" (
-    "audit_purpose_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "audit_purpose_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1516,7 +1531,7 @@ CREATE TABLE IF NOT EXISTS "audit_purpose" (
     UNIQUE("code")
 );
 CREATE TABLE IF NOT EXISTS "audit_status" (
-    "audit_status_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "audit_status_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
     "value" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1703,9 +1718,9 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "organization_id", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
     SELECT
-    asser.name,ast.name as server,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.name,ast.name as server,ast.organization_id,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
     asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
     ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
     FROM asset_service asser
@@ -1788,412 +1803,6 @@ INSERT INTO "severity" ("code", "value") VALUES ('LOW', 'Low');
 INSERT INTO "priority" ("code", "value") VALUES ('HIGH', 'High');
 INSERT INTO "priority" ("code", "value") VALUES ('MEDIUM', 'Medium');
 INSERT INTO "priority" ("code", "value") VALUES ('LOW', 'Low');
-
-INSERT INTO "party_role" ("party_role_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('1', 'VENDOR', 'Vendor', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('2', 'CUSTOMER', 'Customer', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "party_identifier_type" ("party_identifier_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('3', 'PASSPORT', 'Passport', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('4', 'UUID', 'UUID', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('5', 'DRIVING_LICENSE', 'Driving License', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "party_type" ("party_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('31', 'PERSON', 'Person', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('32', 'ORGANIZATION', 'Organization', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "sex_type" ("sex_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('33', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('34', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('35', 'INTERSEX', 'Intersex', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('36', 'X', 'X', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('37', 'NOT_LISTED_PLEASE_DESCRIBE', 'Not listed, please describe', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('38', 'UNKNOWN', 'Unknown', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "gender_type" ("gender_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('39', 'MALE', 'Male', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('40', 'FEMALE', 'Female', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('41', 'OTHER', 'Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('42', 'NONBINARY', 'Nonbinary', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('43', 'AGENDER', 'Agender', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('44', 'TRANGENDER', 'Transgender', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('45', 'CISGENDER', 'Cisgender', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('46', 'GENDERQUEER', 'Genderqueer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('47', 'PREFER_NOT_TO_ANSWER', 'Prefer not to answer', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "party_relation_type" ("party_relation_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('48', 'PERSON_TO_PERSON', 'Person To Person', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('49', 'ORGANIZATION_TO_PERSON', 'Organization To Person', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('50', 'ORGANIZATION_TO_ORGANIZATION', 'Organization To Organization', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "person_type" ("person_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('6', 'INDIVIDUAL', 'Individual', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('7', 'PROFESSIONAL', 'Professional', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "contact_type" ("contact_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('8', 'HOME_ADDRESS', 'Home Address', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('9', 'OFFICIAL_ADDRESS', 'Official Address', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('10', 'MOBILE_PHONE_NUMBER', 'Mobile Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('11', 'LAND_PHONE_NUMBER', 'Land Phone Number', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('12', 'OFFICIAL_EMAIL', 'Official Email', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('13', 'PERSONAL_EMAIL', 'Personal Email', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "organization_role_type" ("organization_role_type_id", "code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('14', 'PROJECT_MANAGER_TECHNOLOGY', 'Project Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('15', 'PROJECT_MANAGER_QUALITY', 'Project Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('16', 'PROJECT_MANAGER_DEVOPS', 'Project Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('17', 'ASSOCIATE_MANAGER_TECHNOLOGY', 'Associated Manager Technology', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('18', 'ASSOCIATE_MANAGER_QUALITY', 'Associate Manager Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('19', 'ASSOCIATE_MANAGER_DEVOPS', 'Associate Manager DevOps', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('20', 'SENIOR_LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Senior Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('21', 'LEAD_SOFTWARE_ENGINEER_ARCHITECT', 'Lead Software Engineer Architect', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('22', 'SENIOR_LEAD_SOFTWARE_QUALITY_ENGINEER', 'Senior Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('23', 'LEAD_SOFTWARE_ENGINEER', 'Lead Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('24', 'LEAD_SOFTWARE_QUALITY_ENGINEER', 'Lead Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('25', 'LEAD_SOFTWARE_DEVOPS_ENGINEER', 'Lead Software DevOps Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('26', 'LEAD_SYSTEM_NETWORK_ENGINEER', 'Lead System Network Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('27', 'SENIOR_SOFTWARE_ENGINEER', 'Senior Software Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('28', 'SENIOR_SOFTWARE_QUALITY_ENGINEER', 'Senior Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('29', 'SOFTWARE_QUALITY_ENGINEER', 'Software Quality Engineer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('30', 'SECURITY_ENGINEER', 'Security Engineer', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "contract_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ACTIVE', 'Active', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('AWAITING_APPROVAL', 'Awaiting Approval', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('AWAITING_APPROVAL_FOR_RENEWAL', 'Awaiting Approval For Renewal', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CANCELED', 'Canceled', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DENIED', 'Denied', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FINISHED', 'Finished', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IN_PREPARATION', 'In Preparation', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUOTE_REQUESTED', 'Quote Requested', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUOTED', 'Quoted', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('STANDARD_CONTRACT', 'Standard Contract', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SUSPENDED', 'Suspended', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VALIDATED', 'Validated', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "payment_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('BOTH', 'Both', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LOANS', 'Loans', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NONE', 'None', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RENTS', 'Rents', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "periodicity" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ANNUAL', 'Annual', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BI_MONTHLY', 'Bi Monthly', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BI_WEEKLY', 'Bi Weekly', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DAILY', 'Daily', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MONTHLY', 'Monthly', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OTHER', 'Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUARTERLY', 'Quarterly', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SEMI_ANNUAL', 'Semi Annual', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SEMI_MONTHLY', 'Semi Monthly', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('WEEKLY', 'Weekly', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "boundary_nature" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('REGULATORY_TAX_ID', 'Regulatory Tax ID', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "time_entry_category" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('MISC_MEETINGS', 'Misc Meetings', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISC_OTHER', 'Misc Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISC_VACATION', 'Misc Vacation', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISC_WORK_ITEM', 'Misc Work Item', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PACKAGE', 'Package', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PROJECT', 'Project', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REQUEST', 'Request', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TASK', 'Task', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "raci_matrix_subject" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('PROJECT_LEADERSHIP', 'Project Leadership', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PROJECT_MANAGEMENT', 'Project Management', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('APPLICATION_DEVELOPMENT', 'Application Development', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DEV_OPERATIONS', 'Dev Operations', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUALITY_ASSURANCE', 'Quality Assurance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SEARCH_ENGINE_OPTIMIZATION', 'Search Engine Optimization', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('USER_INTERFASE_USABILITY', 'User Interfase And Usability', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BUSINESS_ANALYST', 'Business Analyst (Abm)', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CURATION_COORDINATION', 'Curation Coordination', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('KNOWLEDGE_REPRESENTATION', 'Knowledge Representation', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MARKETING_OUTREACH', 'Marketing Outreach', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CURATION_WORKS', 'Curation Works', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "skill_nature" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('SOFTWARE', 'Software', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HARDWARE', 'Hardware', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "skill" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ANGULAR', 'Angular', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DENO', 'Deno', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TYPESCRIPT', 'Typescript', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('POSTGRESQL', 'PostgreSQL', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MYSQL', 'MySQL', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HUGO', 'Hugo', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PHP', 'PHP', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('JAVASCRIPT', 'JavaScript', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PYTHON', 'Python', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DOT_NET', '.NET', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ORACLE', 'Oracle', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('JAVA', 'Java', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('JQUERY', 'jQuery', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OSQUERY', 'Osquery', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REACTJS', 'ReactJs', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "asset_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('AWAITING_RECEIPT', 'Awaiting Receipt', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IN_STOCK', 'In Stock', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IN_USE', 'In Use', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISSING', 'Missing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETIRED', 'Retired', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETURNED_FOR_MAINTENANCE', 'Returned For Maintenance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('UNDEFINED', 'Undefined', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "asset_service_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ACTIVE', 'Active', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('INACTIVE', 'Inactive', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DELETED', 'DELETED', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "asset_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ACCOUNT', 'Account', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BUSINESS_SERVICE', 'Business Service', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CABLE', 'Cable', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CABLE_DEVICE', 'Cable Device', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('COLLECTIVE_EQUIPMENT', 'Collective Equipment', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('COMPUTER', 'Computer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CPU', 'Cpu', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DOMAIN', 'Domain', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SERVER', 'Server', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('EXTENSION_CARD', 'Extension Card', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('GLOBAL_SOFTWARE_LICENSE', 'Global Software License', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LAPTOP', 'Laptop', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LASER_PRINTER', 'Laser Printer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LICENSE_CONTRACT', 'License Contract', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MAINTENANCE_CONTRACT', 'Maintenance Contract', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MASS_STORAGE', 'Mass Storage', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MOBILE_DEVICE', 'Mobile Device', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MONITOR', 'Monitor', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NETWORK_HARDWARE', 'Network Hardware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NETWORK_INTERFACE', 'Network Interface', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OEM_SOFTWARE_LICENSE', 'Oem Software License', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PRINTER', 'Printer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RACKMOUNT_MONITOR', 'Rackmount Monitor', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SCANNER', 'Scanner', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_ACCESS_AUTHORIZATION', 'Software Access Authorization', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_ACCESS_REMOVAL', 'Software Access Removal', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_ADD_WORK_ORDER', 'Software Add Work Order', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_INSTALLATION', 'Software Installation', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_LICENSE', 'Software License', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_REMOVAL_WORK_ORDER', 'Software Removal Work Order', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('STANDARD_ASSET', 'Standard Asset', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TELECOMMUNICATION_EQUIPMENT', 'Telecommunication Equipment', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TELEPHONE', 'Telephone', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VIRTUAL_MACHINE', 'Virtual Machine', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_POLICY', 'Security Policy', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('EMPLOYEE_DATA', 'Employee Data', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('API', 'Api', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FIREWALL', 'Firewall', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "assignment" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('AWAITING_RECEIPT', 'Awaiting receipt', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IN_STOCK', 'In Stock', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IN_USE', 'In Use', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISSING', 'Missing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETURNED_FOR_MAINTENANCE', 'Returned For Maintenance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETURNED_TO_SUPPLIER', 'Returned To Supplier', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RETIRED', 'Retired', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "threat_source_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('PHISHING', 'Phishing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SPAM', 'Spam', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SPYWARE_AND_MALWARE_FOR_EXTORTION', 'Spyware and malware for extortion', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('THEFT_OF_PRIVATE_INFORMATION', 'Theft of private information', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ONLINE_SCAMS', 'Online scams', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DESTROY_OR_ABUSE_CRITICAL_INFRASTRUCTURE', 'Destroy or abuse critical infrastructure', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('THREATEN_NATIONAL_SECURITY', 'Threaten national security', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DISRUPT_ECONOMIES', 'Disrupt economies', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CAUSE_BODILY_HARM_TO_CITIZENS', 'Cause bodily harm to citizens', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DENIAL_OF_SERVICE_ATTACKS', 'Denial-of-Service Attacks', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DOXING', 'Doxing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LEAKING_INFORMATION', 'Leaking Information', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('THE_USE_OF_THE_SOFTWARE_RECAP', 'The Use of the Software RECAP', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BLOGGING_ANONYMOUSLY', 'Blogging Anonymously', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('GEO_BOMBING', 'Geo-bombing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('WEBSITE_MIRRORING', 'Website Mirroring', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CHANGING_THE_CODE_FOR_WEBSITES_OR_WEBSITE_DEFACEMENTS', 'Changing the Code for Websites or website defacements', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "threat_event_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('VIRUSES', 'Viruses', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('WORMS', 'Worms', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TROJANS', 'Trojans', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RANSOMWARE', 'Ransomware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CRYPTOJACKING', 'Cryptojacking', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SPYWARE', 'Spyware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ADWARE', 'Adware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FILELESS_MALWARE', 'Fileless malware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ROOTKITS', 'Rootkits', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BAITING', 'Baiting', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PRETEXTING', 'Pretexting', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PHISHING', 'Phishing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VISHING', 'Vishing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SMISHING', 'Smishing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PIGGYBACKING', 'Piggybacking', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TAILGATING', 'Tailgating', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('EMAIL_HIJACKING', 'Email Hijacking', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DNS_SPOOFING', 'DNS spoofing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IP_SPOOFING', 'IP spoofing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HTTPS_SPOOFING', 'HTTPS spoofing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HTTP_FLOOD_DDOS', 'HTTP flood DDoS', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SYN_FLOOD_DDOS', 'SYN flood DDoS', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('UDP_FLOOD_DDOS', 'UDP flood DDoS', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ICMP_FLOOD', 'ICMP flood', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NTP_AMPLIFICATION', 'NTP amplification', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SQL_INJECTION', 'SQL injection', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CODE_INJECTION', 'Code injection', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OS_COMMAND_INJECTION', 'OS Command Injection', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LDAP_INJECTION', 'LDAP injection', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('XML_EXTERNAL_ENTITIES_INJECTION', 'XML eXternal Entities (XXE) Injection', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CROSS_SITE_SCRIPTING', 'Cross Site Scripting (XSS)', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BROKEN_ACCESS_CONTROL', 'Broken Access Control', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CRYPTOGRAPHIC_FAILURES', 'Cryptographic Failures', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('INSECURE_DESIGN', 'Insecure Design', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_MISCONFIGURATION', 'Security Misconfiguration', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VULNERABLE_AND_OUTDATED_COMPONENTS', 'Vulnerable and Outdated Components', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('IDENTIFICATION_AND_AUTHENTICATION_FAILURES', 'Identification and Authentication Failures', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SOFTWARE_AND_DATA_INTEGRITY_FAILURES', 'Software and Data Integrity Failures', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_LOGGING_AND_MONITORING_FAILURES', 'Security Logging and Monitoring Failures', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SERVER_SIDE_REQUEST_FORGERY', 'Server Side Request Forgery', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "calendar_period" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('TWENTY_FOUR_HOURS_SEVEN_DAYS', '24x7', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BUSINESS_HOURS', 'Business hours', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NON_BUSINESS_HOURS', 'Non-business hours', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "tracking_period" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('DAY', 'Day', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HOUR', 'Hour', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MONTH', 'Month', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OTHER', 'Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUARTER', 'Quarter', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('WEEK', 'Week', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('YEAR', 'Year', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "audit_purpose" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('MEANING_DRY_RUN', 'exmeaning dry runternal', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OFFICIAL', 'official', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "audit_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('OUTSTANDING', 'Outstanding', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FULFILLED', 'Fulfilled', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REJECTED', 'Rejected', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ACCEPTED', 'Accepted', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "training_subject" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('HIPAA', 'HIPAA', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CYBER_SECURITY', 'Cyber Security', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OBSERVABILITY_OPEN_TELEMETRY', 'Observability Open Telemetry', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('BEST_PRACTICES_OF_AGILE', 'Practices of Agile Workflow', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "status_value" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('YES', 'Yes', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NO', 'No', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "rating_value" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ONE', '1', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('TWO', '2', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('THREE', '3', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FOUR', '4', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FIVE', '5', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "contract_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('GENERAL_CONTRACT_FOR_SERVICES', 'General Contract for Services', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('EMPLOYMENT_AGREEMENT', 'Employment Agreement', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NONCOMPETE_AGREEMENT', 'Noncompete Agreement', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VENDOR_SLA', 'Vendor SLA', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VENDOR_NDA', 'Vendor NDA', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "graph_nature" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('SERVICE', 'Service', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('APP', 'Application', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "asset_risk_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('SECURITY', 'Security', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "risk_subject" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('TECHNICAL_RISK', 'Technical Risk', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "risk_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('BUDGET', 'Budget', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('QUALITY', 'Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SCHEDULE', 'Schedule', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SCHEDULE_AND_BUDGET', 'Schedule And Budget', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "incident_category" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ACCESS', 'Access', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DATA', 'Data', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FACILITIES', 'Facilities', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FAILURE', 'Failure', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('GENERAL_INFORMATION', 'General Information', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HARDWARE', 'Hardware', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HOW_TO', 'How To', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OTHER', 'Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PERFORMANCE', 'Performance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY', 'Security', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SERVICE_DELIVERY', 'Service Delivery', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SERVICE_PORTFOLIO', 'Service Portfolio', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('STATUS', 'Status', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SUPPORT', 'Support', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('THRIFTY', 'Thrifty', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "incident_sub_category" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('AUTHORIZATION_ERROR', 'Authorization Error', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('AVAILABILITY', 'Availability', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DATA_OR_FILE_CORRUPTED', 'Data Or File Corrupted', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DATA_OR_FILE_INCORRECT', 'Data Or File Incorrect', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('DATA_OR_FILE_MISSING', 'Data Or File Missing', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ERROR_MESSAGE', 'Error Message', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FUNCTION_OR_FEATURE_NOT_WORKING', 'Function Or Feature Not Working', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('FUNCTIONALITY', 'Functionality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('GENERAL_INFORMATION', 'General Information', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HARDWARE_FAILURE', 'Hardware Failure', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('HOW_TO', 'How To', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('INCIDENT_RESOLUTION_QUALITY', 'Incident Resolution Quality', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('INCIDENT_RESOLUTION_TIME', 'Incident Resolution Time', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('JOB_FAILED', 'Job Failed', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('LOGIN_FAILURE', 'Login Failure', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('MISSING_OR_STOLEN', 'Missing Or Stolen', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('NEW_SERVICE', 'New Service', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PERFORMANCE', 'Performance', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PERFORMANCE_DEGRADATION', 'Performance Degradation', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PERSON', 'Person', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_BREACH', 'Security Breach', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SECURITY_EVENT', 'Security Event/Message', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('STATUS', 'Status', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('STORAGE_LIMIT_EXCEEDED', 'Storage Limit Exceeded', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SYSTEM_DOWN', 'System Down', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SYSTEM_OR_APPLICATION_HANGS', 'System Or Application Hangs', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('UPGRADE_NEW_RELEASE', 'Upgrade/New Release', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('VIRUS_ALERT', 'Virus Alert', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "incident_type" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('COMPLAINT', 'Complaint', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('INCIDENT', 'Incident', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REQUEST_FOR_INFORMATION', 'Request For Information', NULL, NULL, NULL, NULL, NULL, NULL);
-
-INSERT INTO "incident_status" ("code", "value", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log")
-       VALUES ('ACCEPTED', 'Accepted', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('ASSIGNED', 'Assigned', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CANCELLED', 'Cancelled', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CATEGORIZE', 'Categorize', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('CLOSED', 'Closed', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('OPEN', 'Open', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PENDING_CHANGE', 'Pending Change', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PENDING_CUSTOMER', 'Pending Customer', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PENDING_EVIDENCE', 'Pending Evidence', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PENDING_OTHER', 'Pending Other', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('PENDING_VENDOR', 'Pending Vendor', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REFERRED', 'Referred', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REJECTED', 'Rejected', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REOPENED', 'Reopened', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('REPLACED_PROBLEM', 'Replaced Problem', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('RESOLVED', 'Resolved', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('SUSPENDED', 'Suspended', NULL, NULL, NULL, NULL, NULL, NULL),
-              ('WORK_IN_PROGRESS', 'Work In Progress', NULL, NULL, NULL, NULL, NULL, NULL);
 ;
 
 -- synthetic / test data
