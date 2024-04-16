@@ -1595,10 +1595,13 @@ CREATE VIEW IF NOT EXISTS "awareness_training_view"("person_name", "person_role"
     INNER JOIN organization_role orl ON orl.person_id = at.person_id AND orl.organization_id = at.organization_id
     INNER JOIN organization_role_type ort ON ort.organization_role_type_id = orl.organization_role_type_id
     INNER JOIN training_subject sub ON sub.code = at.training_subject_id;
-CREATE VIEW IF NOT EXISTS "person_skill_view"("person_name", "skill", "proficiency") AS
-    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
+CREATE VIEW IF NOT EXISTS "person_skill_view"("person_name", "skill", "proficiency", "organization_id", "organization") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency,organization_id,
+    org.name as organization
     FROM person_skill ps
     INNER JOIN person p ON p.person_id = ps.person_id
+    INNER JOIN party_relation pr ON pr.party_id = p.party_id
+    INNER JOIN organization org ON org.party_id = pr.related_party_id
     INNER JOIN skill s ON s.skill_id = ps.skill_id
     INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id,person_name,s.value,proficiency;
 CREATE VIEW IF NOT EXISTS "security_incident_response_view"("incident", "incident_date", "asset_name", "category", "severity", "priority", "internal_or_external", "location", "it_service_impacted", "impacted_modules", "impacted_dept", "reported_by", "reported_to", "brief_description", "detailed_description", "assigned_to", "assigned_date", "investigation_details", "containment_details", "eradication_details", "business_impact", "lessons_learned", "status", "closed_date", "feedback_from_business", "reported_to_regulatory", "report_date", "report_time", "root_cause_of_the_issue", "probability_of_issue", "testing_for_possible_root_cause_analysis", "solution", "likelihood_of_risk", "modification_of_the_reported_issue", "testing_for_modified_issue", "test_results") AS
@@ -1752,12 +1755,13 @@ CREATE VIEW IF NOT EXISTS "contract_view"("contract_by", "contract_to", "payment
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "organization_id", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
+CREATE VIEW IF NOT EXISTS "asset_service_view"("name", "server", "organization_id", "asset_type", "asset_service_type_id", "boundary", "description", "port", "experimental_version", "production_version", "latest_vendor_version", "resource_utilization", "log_file", "url", "vendor_link", "installation_date", "criticality", "owner", "tag", "asset_criticality", "asymmetric_keys", "cryptographic_key", "symmetric_keys") AS
     SELECT
-    asser.name,ast.name as server,ast.organization_id,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+    asser.name,ast.name as server,ast.organization_id,astyp.value as asset_type,astyp.asset_service_type_id,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
     asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
     ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
     FROM asset_service asser
+    INNER JOIN asset_service_type astyp ON astyp.asset_service_type_id = asser.asset_service_type_id
     INNER JOIN asset ast ON ast.asset_id = asser.asset_id
     INNER JOIN organization o ON o.organization_id=ast.organization_id
     INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id
@@ -1782,6 +1786,12 @@ CREATE VIEW IF NOT EXISTS "risk_register_view"("risk_register_id", "description"
     INNER JOIN risk_subject rs on rs.risk_subject_id = rr.risk_subject_id
     INNER JOIN risk_type rt on rt.risk_type_id=rr.risk_type_id
     INNER JOIN person p on p.person_id=rr.control_monitor_risk_owner_id;
+CREATE VIEW IF NOT EXISTS "person_organiztion_view"("person_name", "organization_id", "organization") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,organization_id,org.name as organization
+    FROM person p
+    INNER JOIN party_relation pr ON pr.party_id = p.party_id
+    INNER JOIN party_relation_type prt ON prt.party_relation_type_id = pr.relation_type_id AND prt.code = 'ORGANIZATION_TO_PERSON'
+    INNER JOIN organization org ON org.party_id = pr.related_party_id;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
