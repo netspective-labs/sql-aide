@@ -1200,11 +1200,16 @@ const personSkillView = SQLa.safeViewDefinition(
     person_name: udm.text(),
     skill: udm.text(),
     proficiency: udm.text(),
+    organization_id: udm.text(),
+    organization: udm.text(),
   },
 )`
-  SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency
+  SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,s.value AS skill,prs.value AS proficiency,organization_id,
+  org.name as organization
   FROM person_skill ps
   INNER JOIN person p ON p.person_id = ps.person_id
+  INNER JOIN party_relation pr ON pr.party_id = p.party_id
+  INNER JOIN organization org ON org.party_id = pr.related_party_id
   INNER JOIN skill s ON s.skill_id = ps.skill_id
   INNER JOIN proficiency_scale prs ON prs.code = ps.proficiency_scale_id GROUP BY ps.person_id,ps.skill_id,person_name,s.value,proficiency`;
 
@@ -1520,6 +1525,8 @@ const assetServiceView = SQLa.safeViewDefinition(
     name: udm.text(),
     server: udm.text(),
     organization_id: udm.text(),
+    asset_type: udm.text(),
+    asset_service_type_id: udm.text(),
     boundary: udm.text(),
     description: udm.text(),
     port: udm.text(),
@@ -1541,10 +1548,11 @@ const assetServiceView = SQLa.safeViewDefinition(
   },
 )`
   SELECT
-  asser.name,ast.name as server,ast.organization_id,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
+  asser.name,ast.name as server,ast.organization_id,astyp.value as asset_type,astyp.asset_service_type_id,bnt.name as boundary,asser.description,asser.port,asser.experimental_version,asser.production_version,asser.latest_vendor_version,asser.resource_utilization,asser.log_file,asser.url,
   asser.vendor_link,asser.installation_date,asser.criticality,o.name AS owner,sta.value as tag, ast.criticality as asset_criticality,ast.asymmetric_keys_encryption_enabled as asymmetric_keys,
   ast.cryptographic_key_encryption_enabled as cryptographic_key,ast.symmetric_keys_encryption_enabled as symmetric_keys
   FROM asset_service asser
+  INNER JOIN asset_service_type astyp ON astyp.asset_service_type_id = asser.asset_service_type_id
   INNER JOIN asset ast ON ast.asset_id = asser.asset_id
   INNER JOIN organization o ON o.organization_id=ast.organization_id
   INNER JOIN asset_status sta ON sta.asset_status_id=ast.asset_status_id
@@ -1590,6 +1598,20 @@ export const riskRegisterView = SQLa.safeViewDefinition(
   INNER JOIN risk_type rt on rt.risk_type_id=rr.risk_type_id
   INNER JOIN person p on p.person_id=rr.control_monitor_risk_owner_id`;
 
+const personOrganiztionView = SQLa.safeViewDefinition(
+  "person_organiztion_view",
+  {
+    person_name: udm.text(),
+    organization_id: udm.text(),
+    organization: udm.text(),
+  },
+)`
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,organization_id,org.name as organization
+    FROM person p
+    INNER JOIN party_relation pr ON pr.party_id = p.party_id
+    INNER JOIN party_relation_type prt ON prt.party_relation_type_id = pr.relation_type_id AND prt.code = 'ORGANIZATION_TO_PERSON'
+    INNER JOIN organization org ON org.party_id = pr.related_party_id`;
+
 export const allContentViews: SQLa.ViewDefinition<
   Any,
   udm.EmitContext,
@@ -1608,6 +1630,7 @@ export const allContentViews: SQLa.ViewDefinition<
   contractView,
   assetServiceView,
   riskRegisterView,
+  personOrganiztionView,
 ];
 
 export function sqlDDL() {
