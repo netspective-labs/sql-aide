@@ -454,6 +454,7 @@ export interface StoredRoutineDefnOptions<
   readonly sqlNS?: tmpl.SqlNamespaceSupplier;
 }
 
+// deno-lint-ignore no-empty-interface
 export interface StoredProcedureDefnOptions<
   RoutineName extends string,
   Context extends tmpl.SqlEmitContext,
