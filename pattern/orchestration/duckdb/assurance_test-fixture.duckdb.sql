@@ -66,7 +66,7 @@ WITH numeric_value_in_all_rows AS (
            src_file_row_number AS issue_row
       FROM "synthetic_csv_fail"
      WHERE "column4" IS NOT NULL
-       AND "column4" NOT SIMILAR TO '^[+-]?[0-9]+$'
+       AND CAST("column4" AS VARCHAR) NOT SIMILAR TO '^[+-]?[0-9]+$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -141,7 +141,7 @@ WITH pattern AS (
            "column8" AS invalid_value,
            src_file_row_number AS issue_row
       FROM "synthetic_csv_fail"
-     WHERE "column8" NOT SIMILAR TO '^ABC-[0-9]{4}$'
+     WHERE CAST("column8" AS VARCHAR) NOT SIMILAR TO '^ABC-[0-9]{4}$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
@@ -176,7 +176,7 @@ WITH proper_dot_com_email_address_in_all_rows AS (
            src_file_row_number AS issue_row
       FROM "synthetic_csv_fail"
      WHERE "column2" IS NOT NULL
-       AND "column2" NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.com$'
+       AND CAST("column2" AS VARCHAR) NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.com$'
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
