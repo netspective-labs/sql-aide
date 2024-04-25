@@ -85,7 +85,7 @@ export function typicalValueAssuranceRules<Context extends SQLa.SqlEmitContext>(
                  src_file_row_number AS issue_row
             FROM "${tableName}"
            WHERE "${columnName}" IS NOT NULL
-             AND "${columnName}" NOT SIMILAR TO '^[+-]?[0-9]+$'
+             AND CAST("${columnName}" AS VARCHAR) NOT SIMILAR TO '^[+-]?[0-9]+$'
       )
       ${govn.insertRowValueIssueCtePartial(cteName,
         'Data Type Mismatch',
@@ -195,7 +195,7 @@ export function typicalValueAssuranceRules<Context extends SQLa.SqlEmitContext>(
     columnName: ColumnName,
     pattern: string,
     patternHuman = pattern,
-    patternSql = `"${columnName}" NOT SIMILAR TO '${pattern}'`,
+    patternSql = `CAST("${columnName}" AS VARCHAR) NOT SIMILAR TO '${pattern}'`,
   ) => {
     const cteName = "pattern";
     const escapedHumanMsgFragment = escapedSqlLiteral(patternHuman);
@@ -367,7 +367,7 @@ export function typicalValueAssuranceRules<Context extends SQLa.SqlEmitContext>(
                  src_file_row_number AS issue_row
             FROM "${tableName}"
            WHERE "${columnName}" IS NOT NULL
-             AND "${columnName}" NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$'
+             AND CAST("${columnName}" AS VARCHAR) NOT SIMILAR TO '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$'
       )
       ${govn.insertRowValueIssueCtePartial(cteName,
         'Format Mismatch',
@@ -453,7 +453,7 @@ export function typicalTableAssuranceRules<
     columnName: ColumnName,
     pattern: string,
     patternHuman = pattern,
-    patternSql = `"${columnName}" NOT SIMILAR TO '${pattern}'`,
+    patternSql = `CAST("${columnName}" AS VARCHAR) NOT SIMILAR TO '${pattern}'`,
   ) =>
     valueAR.patternValueInAllTableRows<TableName, ColumnName>(
       tableName,
