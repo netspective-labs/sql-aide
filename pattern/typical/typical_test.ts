@@ -141,6 +141,7 @@ export function syntheticSchema<Context extends SQLa.SqlEmitContext>(
 }
 
 Deno.test("SQL Aide (SQLa) emit template", () => {
+  // deno-lint-ignore no-empty-interface
   interface SyntheticTmplContext extends SQLa.SqlEmitContext {
   }
   const stContext = (): SyntheticTmplContext => SQLa.typicalSqlEmitContext();

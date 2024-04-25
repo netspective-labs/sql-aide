@@ -175,7 +175,7 @@ export function typicalValueAssuranceRules<Context extends SQLa.SqlEmitContext>(
                  src_file_row_number AS issue_row
             FROM "${tableName}"
            WHERE "${columnName}" IS NULL
-              OR TRIM("${columnName}") = ''
+              OR TRIM(CAST("${columnName}" AS VARCHAR)) = ''
       )
       ${govn.insertRowValueIssueCtePartial(cteName,
         'Missing Mandatory Value',

@@ -124,7 +124,7 @@ WITH mandatory_value AS (
            src_file_row_number AS issue_row
       FROM "synthetic_csv_fail"
      WHERE "column7" IS NULL
-        OR TRIM("column7") = ''
+        OR TRIM(CAST("column7" AS VARCHAR)) = ''
 )
 INSERT INTO ingest_issue (session_id, issue_type, issue_row, issue_column, invalid_value, issue_message, remediation)
     SELECT (SELECT orch_session_id FROM orch_session LIMIT 1),
