@@ -1096,13 +1096,13 @@ CREATE TABLE IF NOT EXISTS "audit_assertion" (
 );
 CREATE TABLE IF NOT EXISTS "contract" (
     "contract_id" TEXT PRIMARY KEY NOT NULL,
-    "contract_from_id" TEXT NOT NULL,
-    "contract_to_id" TEXT NOT NULL,
+    "contract_from_id" TEXT,
+    "contract_to_id" TEXT,
     "contract_status_id" TEXT,
     "document_reference" TEXT NOT NULL,
     "payment_type_id" TEXT,
     "periodicity_id" TEXT,
-    "start_date" TIMESTAMPTZ NOT NULL,
+    "start_date" TIMESTAMPTZ,
     "end_date" TIMESTAMPTZ,
     "contract_type_id" TEXT,
     "date_of_last_review" TIMESTAMPTZ,
@@ -1577,6 +1577,121 @@ CREATE TABLE IF NOT EXISTS "audit_status" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "employee_process_status" (
+    "employee_process_status_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "hiring_process" (
+    "hiring_process_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "hiring_process_checklist" (
+    "hiring_process_checklist_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "hiring_checklist" (
+    "hiring_checklist_id" TEXT PRIMARY KEY NOT NULL,
+    "hiring_process" TEXT NOT NULL,
+    "hiring_process_checklist" TEXT NOT NULL,
+    "contract_id" TEXT NOT NULL,
+    "summary" TEXT,
+    "asset_id" TEXT,
+    "assign_party" TEXT,
+    "checklist_date" DATE,
+    "checklist_time" TIMESTAMPTZ,
+    "process_status" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    FOREIGN KEY("hiring_process") REFERENCES "hiring_process"("hiring_process_id"),
+    FOREIGN KEY("hiring_process_checklist") REFERENCES "hiring_process_checklist"("hiring_process_checklist_id"),
+    FOREIGN KEY("contract_id") REFERENCES "contract"("contract_id"),
+    FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
+    FOREIGN KEY("assign_party") REFERENCES "party"("party_id"),
+    FOREIGN KEY("process_status") REFERENCES "employee_process_status"("employee_process_status_id")
+);
+CREATE TABLE IF NOT EXISTS "termination_process" (
+    "termination_process_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "termination_process_checklist" (
+    "termination_process_checklist_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "termination_checklist" (
+    "termination_checklist_id" TEXT PRIMARY KEY NOT NULL,
+    "termination_process" TEXT NOT NULL,
+    "termination_process_checklist" TEXT NOT NULL,
+    "contract_id" TEXT NOT NULL,
+    "summary" TEXT,
+    "asset_id" TEXT,
+    "assign_party" TEXT,
+    "checklist_date" DATE,
+    "checklist_time" TIMESTAMPTZ,
+    "process_status" TEXT,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    FOREIGN KEY("termination_process") REFERENCES "termination_process"("termination_process_id"),
+    FOREIGN KEY("termination_process_checklist") REFERENCES "termination_process_checklist"("termination_process_checklist_id"),
+    FOREIGN KEY("contract_id") REFERENCES "contract"("contract_id"),
+    FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
+    FOREIGN KEY("assign_party") REFERENCES "party"("party_id"),
+    FOREIGN KEY("process_status") REFERENCES "employee_process_status"("employee_process_status_id")
+);
 
 --content views
 CREATE VIEW IF NOT EXISTS "security_incident_response_team_view"("person_name", "organization_name", "team_role", "email") AS
@@ -1792,6 +1907,72 @@ CREATE VIEW IF NOT EXISTS "person_organiztion_view"("person_name", "organization
     INNER JOIN party_relation pr ON pr.party_id = p.party_id
     INNER JOIN party_relation_type prt ON prt.party_relation_type_id = pr.relation_type_id AND prt.code = 'ORGANIZATION_TO_PERSON'
     INNER JOIN organization org ON org.party_id = pr.related_party_id;
+CREATE VIEW IF NOT EXISTS "employe_contract_view"("contract_by", "contract_to", "payment_type", "contract_status", "contract_type", "document_reference", "periodicity", "start_date", "end_date", "date_of_last_review", "date_of_next_review", "date_of_contract_review", "date_of_contract_approval") AS
+    SELECT
+    p1.party_name as contract_by,
+    p2.party_name as contract_to,
+    pt.value as payment_type,
+    cs.value as contract_status,
+    ctp.value as contract_type,
+    ct.document_reference,
+    p.value as periodicity,
+    ct.start_date,
+    ct.end_date,
+    ct.date_of_last_review,
+    ct.date_of_next_review,
+    ct.date_of_contract_review,
+    ct.date_of_contract_approval
+    FROM contract ct
+    INNER JOIN party p1 on p1.party_id = ct.contract_from_id
+    INNER JOIN party p2 on p2.party_id = ct.contract_to_id
+    INNER JOIN payment_type pt on pt.code = ct.payment_type_id
+    INNER JOIN contract_status cs on cs.code = ct.contract_status_id
+    INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id AND ctp.code = 'EMPLOYMENT_AGREEMENT'
+    INNER JOIN periodicity p on p.code = ct.periodicity_id;
+CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("hiring_checklist", "checklist", "joining_date", "organization", "employee", "summary", "asset", "reporting_officer", "checklist_date", "checklist_time", "process_status") AS
+    SELECT
+    hp.value as process,
+    hpc.value as checklist,
+    c.start_date as joining_date,
+    po.party_name as organization,
+    pe.party_name as employee,
+    hc.summary,
+    ast.name as asset,
+    pr.party_name as reporting_officer,
+    hc.checklist_date,
+    hc.checklist_time,
+    eps.value as process_status
+    FROM hiring_checklist hc
+    INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
+    INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
+    INNER JOIN contract c on c.contract_id = hc.contract_id
+    INNER JOIN party po on po.party_id = c.contract_from_id
+    INNER JOIN party pe on pe.party_id = c.contract_to_id
+    LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+    LEFT JOIN party pr on pr.party_id = hc.assign_party
+    LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status;
+CREATE VIEW IF NOT EXISTS "termination_checklist_view"("termination_checklist", "checklist", "joining_date", "organization", "employee", "summary", "asset", "reporting_officer", "checklist_date", "checklist_time", "process_status") AS
+    SELECT
+    tp.value as process,
+    tpc.value as checklist,
+    c.start_date as joining_date,
+    po.party_name as organization,
+    pe.party_name as employee,
+    hc.summary,
+    ast.name as asset,
+    pr.party_name as reporting_officer,
+    hc.checklist_date,
+    hc.checklist_time,
+    eps.value as process_status
+    FROM termination_checklist hc
+    INNER JOIN termination_process tp on tp.termination_process_id = hc.termination_process
+    INNER JOIN termination_process_checklist tpc on tpc.termination_process_checklist_id = hc.termination_process_checklist
+    INNER JOIN contract c on c.contract_id = hc.contract_id
+    INNER JOIN party po on po.party_id = c.contract_from_id
+    INNER JOIN party pe on pe.party_id = c.contract_to_id
+    LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+    LEFT JOIN party pr on pr.party_id = hc.assign_party
+    LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
