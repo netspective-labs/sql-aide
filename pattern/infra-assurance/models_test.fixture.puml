@@ -1030,13 +1030,13 @@
   entity "contract" as contract {
     * **contract_id**: TEXT
     --
-    * contract_from_id: TEXT
-    * contract_to_id: TEXT
+      contract_from_id: TEXT
+      contract_to_id: TEXT
       contract_status_id: TEXT
     * document_reference: TEXT
       payment_type_id: TEXT
       periodicity_id: TEXT
-    * start_date: TIMESTAMPTZ
+      start_date: TIMESTAMPTZ
       end_date: TIMESTAMPTZ
       contract_type_id: TEXT
       date_of_last_review: TIMESTAMPTZ
@@ -1503,6 +1503,118 @@
       activity_log: TEXT
   }
 
+  entity "employee_process_status" as employee_process_status {
+    * **employee_process_status_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "hiring_process" as hiring_process {
+    * **hiring_process_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "hiring_process_checklist" as hiring_process_checklist {
+    * **hiring_process_checklist_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "hiring_checklist" as hiring_checklist {
+    * **hiring_checklist_id**: TEXT
+    --
+    * hiring_process: TEXT
+    * hiring_process_checklist: TEXT
+    * contract_id: TEXT
+      summary: TEXT
+      asset_id: TEXT
+      assign_party: TEXT
+      checklist_date: DATE
+      checklist_time: TIMESTAMPTZ
+      process_status: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "termination_process" as termination_process {
+    * **termination_process_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "termination_process_checklist" as termination_process_checklist {
+    * **termination_process_checklist_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "termination_checklist" as termination_checklist {
+    * **termination_checklist_id**: TEXT
+    --
+    * termination_process: TEXT
+    * termination_process_checklist: TEXT
+    * contract_id: TEXT
+      summary: TEXT
+      asset_id: TEXT
+      assign_party: TEXT
+      checklist_date: DATE
+      checklist_time: TIMESTAMPTZ
+      process_status: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   party_type |o..o{ party
   party_identifier_type |o..o{ party_identifier
   party |o..o{ party_identifier
@@ -1608,4 +1720,16 @@
   person |o..o{ attestation
   boundary |o..o{ attestation
   attestation |o..o{ attestation_evidence
+  hiring_process |o..o{ hiring_checklist
+  hiring_process_checklist |o..o{ hiring_checklist
+  contract |o..o{ hiring_checklist
+  asset |o..o{ hiring_checklist
+  party |o..o{ hiring_checklist
+  employee_process_status |o..o{ hiring_checklist
+  termination_process |o..o{ termination_checklist
+  termination_process_checklist |o..o{ termination_checklist
+  contract |o..o{ termination_checklist
+  asset |o..o{ termination_checklist
+  party |o..o{ termination_checklist
+  employee_process_status |o..o{ termination_checklist
 @enduml

@@ -127,7 +127,7 @@ export const assetStatus = gm.textPkTable(
 );
 
 /**
- * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/application_server.html
+ * Reference URL: https://docs.microfocuss.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/application_server.html
  */
 /**
  * https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/directory_server.html
@@ -428,6 +428,65 @@ export const incidentStatus = gm.textPkTable(
   "incident_status",
   {
     incident_status_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+/**
+ * Reference URL: https://vertabelo.com/blog/designing-a-database-for-a-recruitment-system/
+ */
+
+export const employeeProcessStatus = gm.textPkTable(
+  "employee_process_status",
+  {
+    employee_process_status_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const hiringProcess = gm.textPkTable(
+  "hiring_process",
+  {
+    hiring_process_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const hiringProcessChecklist = gm.textPkTable(
+  "hiring_process_checklist",
+  {
+    hiring_process_checklist_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const terminationProcess = gm.textPkTable(
+  "termination_process",
+  {
+    termination_process_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const terminationProcessChecklist = gm.textPkTable(
+  "termination_process_checklist",
+  {
+    termination_process_checklist_id: udm.ulidPrimaryKey(),
     code: tcf.unique(udm.text()),
     value: udm.text(),
     ...gm.housekeeping.columns,
@@ -829,14 +888,14 @@ export const contract = gm.textPkTable(
   "contract",
   {
     contract_id: udm.ulidPrimaryKey(),
-    contract_from_id: udm.party.references.party_id(),
-    contract_to_id: udm.party.references.party_id(),
+    contract_from_id: udm.party.references.party_id().optional(),
+    contract_to_id: udm.party.references.party_id().optional(),
     contract_status_id: contractStatus.references.contract_status_id()
       .optional(),
     document_reference: udm.text(),
     payment_type_id: paymentType.references.payment_type_id().optional(),
     periodicity_id: periodicity.references.periodicity_id().optional(),
-    start_date: udm.dateTime(),
+    start_date: udm.dateTimeNullable(),
     end_date: udm.dateTimeNullable(),
     contract_type_id: contractType.references.contract_type_id().optional(),
     date_of_last_review: udm.dateTimeNullable(),
@@ -1061,6 +1120,48 @@ export const attestationEvidence = gm.textPkTable(
   },
 );
 
+/**
+ * Reference URL: https://vertabelo.com/blog/designing-a-database-for-a-recruitment-system/
+ */
+
+export const hiringChecklist = gm.textPkTable(
+  "hiring_checklist",
+  {
+    hiring_checklist_id: udm.ulidPrimaryKey(),
+    hiring_process: hiringProcess.references.hiring_process_id(),
+    hiring_process_checklist: hiringProcessChecklist.references
+      .hiring_process_checklist_id(),
+    contract_id: contract.references.contract_id(),
+    summary: udm.textNullable(),
+    asset_id: asset.references.asset_id().optional(),
+    assign_party: udm.party.references.party_id().optional(),
+    checklist_date: udm.dateNullable(),
+    checklist_time: udm.dateTimeNullable(),
+    process_status: employeeProcessStatus.references
+      .employee_process_status_id().optional(),
+    ...gm.housekeeping.columns,
+  },
+);
+
+export const terminationChecklist = gm.textPkTable(
+  "termination_checklist",
+  {
+    termination_checklist_id: udm.ulidPrimaryKey(),
+    termination_process: terminationProcess.references.termination_process_id(),
+    termination_process_checklist: terminationProcessChecklist.references
+      .termination_process_checklist_id(),
+    contract_id: contract.references.contract_id(),
+    summary: udm.textNullable(),
+    asset_id: asset.references.asset_id().optional(),
+    assign_party: udm.party.references.party_id().optional(),
+    checklist_date: udm.dateNullable(),
+    checklist_time: udm.dateTimeNullable(),
+    process_status: employeeProcessStatus.references
+      .employee_process_status_id().optional(),
+    ...gm.housekeeping.columns,
+  },
+);
+
 // Typescript inference would work here but we're explicit about the array
 // type to improve performance
 export const allContentTables: SQLa.TableDefinition<
@@ -1157,6 +1258,13 @@ export const allContentTables: SQLa.TableDefinition<
   assetRiskType,
   auditPurpose,
   auditorStatusType,
+  employeeProcessStatus,
+  hiringProcess,
+  hiringProcessChecklist,
+  hiringChecklist,
+  terminationProcess,
+  terminationProcessChecklist,
+  terminationChecklist,
 ];
 
 const securityResponseTeamView = SQLa.safeViewDefinition(
@@ -1612,6 +1720,122 @@ const personOrganiztionView = SQLa.safeViewDefinition(
     INNER JOIN party_relation_type prt ON prt.party_relation_type_id = pr.relation_type_id AND prt.code = 'ORGANIZATION_TO_PERSON'
     INNER JOIN organization org ON org.party_id = pr.related_party_id`;
 
+const employeContractView = SQLa.safeViewDefinition(
+  "employe_contract_view",
+  {
+    contract_by: udm.text(),
+    contract_to: udm.text(),
+    payment_type: udm.text(),
+    contract_status: udm.text(),
+    contract_type: udm.text(),
+    document_reference: udm.text(),
+    periodicity: udm.text(),
+    start_date: udm.date(),
+    end_date: udm.dateNullable(),
+    date_of_last_review: udm.dateNullable(),
+    date_of_next_review: udm.dateNullable(),
+    date_of_contract_review: udm.dateNullable(),
+    date_of_contract_approval: udm.dateNullable(),
+  },
+)`
+      SELECT
+      p1.party_name as contract_by,
+      p2.party_name as contract_to,
+      pt.value as payment_type,
+      cs.value as contract_status,
+      ctp.value as contract_type,
+      ct.document_reference,
+      p.value as periodicity,
+      ct.start_date,
+      ct.end_date,
+      ct.date_of_last_review,
+      ct.date_of_next_review,
+      ct.date_of_contract_review,
+      ct.date_of_contract_approval
+      FROM contract ct
+      INNER JOIN party p1 on p1.party_id = ct.contract_from_id
+      INNER JOIN party p2 on p2.party_id = ct.contract_to_id
+      INNER JOIN payment_type pt on pt.code = ct.payment_type_id
+      INNER JOIN contract_status cs on cs.code = ct.contract_status_id
+      INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id AND ctp.code = 'EMPLOYMENT_AGREEMENT'
+      INNER JOIN periodicity p on p.code = ct.periodicity_id`;
+
+const hiringChecklistView = SQLa.safeViewDefinition(
+  "hiring_checklist_view",
+  {
+    hiring_checklist: udm.text(),
+    checklist: udm.text(),
+    joining_date: udm.text(),
+    organization: udm.text(),
+    employee: udm.text(),
+    summary: udm.textNullable(),
+    asset: udm.textNullable(),
+    reporting_officer: udm.textNullable(),
+    checklist_date: udm.dateNullable(),
+    checklist_time: udm.dateTimeNullable(),
+    process_status: udm.textNullable(),
+  },
+)`
+      SELECT
+      hp.value as process,
+      hpc.value as checklist,
+      c.start_date as joining_date,
+      po.party_name as organization,
+      pe.party_name as employee,
+      hc.summary,
+      ast.name as asset,
+      pr.party_name as reporting_officer,
+      hc.checklist_date,
+      hc.checklist_time,
+      eps.value as process_status
+      FROM hiring_checklist hc
+      INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
+      INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
+      INNER JOIN contract c on c.contract_id = hc.contract_id
+      INNER JOIN party po on po.party_id = c.contract_from_id
+      INNER JOIN party pe on pe.party_id = c.contract_to_id
+      LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+      LEFT JOIN party pr on pr.party_id = hc.assign_party
+      LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status`;
+
+const terminationChecklistView = SQLa.safeViewDefinition(
+  "termination_checklist_view",
+  {
+    termination_checklist: udm.text(),
+    checklist: udm.text(),
+    joining_date: udm.text(),
+    organization: udm.text(),
+    employee: udm.text(),
+    summary: udm.textNullable(),
+    asset: udm.textNullable(),
+    reporting_officer: udm.textNullable(),
+    checklist_date: udm.dateNullable(),
+    checklist_time: udm.dateTimeNullable(),
+    process_status: udm.textNullable(),
+  },
+)`
+      SELECT
+      tp.value as process,
+      tpc.value as checklist,
+      c.start_date as joining_date,
+      po.party_name as organization,
+      pe.party_name as employee,
+      hc.summary,
+      ast.name as asset,
+      pr.party_name as reporting_officer,
+      hc.checklist_date,
+      hc.checklist_time,
+      eps.value as process_status
+      FROM termination_checklist hc
+      INNER JOIN termination_process tp on tp.termination_process_id = hc.termination_process
+      INNER JOIN termination_process_checklist tpc on tpc.termination_process_checklist_id = hc.termination_process_checklist
+      INNER JOIN contract c on c.contract_id = hc.contract_id
+      INNER JOIN party po on po.party_id = c.contract_from_id
+      INNER JOIN party pe on pe.party_id = c.contract_to_id
+      LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+      LEFT JOIN party pr on pr.party_id = hc.assign_party
+      LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status`;
+
 export const allContentViews: SQLa.ViewDefinition<
   Any,
   udm.EmitContext,
@@ -1631,6 +1855,9 @@ export const allContentViews: SQLa.ViewDefinition<
   assetServiceView,
   riskRegisterView,
   personOrganiztionView,
+  employeContractView,
+  hiringChecklistView,
+  terminationChecklistView,
 ];
 
 export function sqlDDL() {
