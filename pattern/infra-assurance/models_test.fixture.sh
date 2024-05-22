@@ -1590,6 +1590,45 @@ CREATE TABLE IF NOT EXISTS "employee_process_status" (
     "activity_log" TEXT,
     UNIQUE("code")
 );
+CREATE TABLE IF NOT EXISTS "payroll_items_type" (
+    "payroll_items_type_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "interview_medium" (
+    "interview_medium_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
+CREATE TABLE IF NOT EXISTS "notice_period" (
+    "notice_period_id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "created_by" TEXT DEFAULT 'UNKNOWN',
+    "updated_at" TIMESTAMPTZ,
+    "updated_by" TEXT,
+    "deleted_at" TIMESTAMPTZ,
+    "deleted_by" TEXT,
+    "activity_log" TEXT,
+    UNIQUE("code")
+);
 CREATE TABLE IF NOT EXISTS "hiring_process" (
     "hiring_process_id" TEXT PRIMARY KEY NOT NULL,
     "code" TEXT /* UNIQUE COLUMN */ NOT NULL,
@@ -1619,13 +1658,16 @@ CREATE TABLE IF NOT EXISTS "hiring_process_checklist" (
 CREATE TABLE IF NOT EXISTS "hiring_checklist" (
     "hiring_checklist_id" TEXT PRIMARY KEY NOT NULL,
     "hiring_process" TEXT NOT NULL,
-    "hiring_process_checklist" TEXT NOT NULL,
+    "hiring_process_checklist" TEXT,
     "contract_id" TEXT NOT NULL,
     "summary" TEXT,
+    "note" TEXT,
     "asset_id" TEXT,
     "assign_party" TEXT,
-    "checklist_date" DATE,
-    "checklist_time" TIMESTAMPTZ,
+    "checklist_date" TIMESTAMPTZ,
+    "interview_medium" TEXT,
+    "payroll_items_type" TEXT,
+    "notice_period" TEXT,
     "process_status" TEXT,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_by" TEXT DEFAULT 'UNKNOWN',
@@ -1639,6 +1681,9 @@ CREATE TABLE IF NOT EXISTS "hiring_checklist" (
     FOREIGN KEY("contract_id") REFERENCES "contract"("contract_id"),
     FOREIGN KEY("asset_id") REFERENCES "asset"("asset_id"),
     FOREIGN KEY("assign_party") REFERENCES "party"("party_id"),
+    FOREIGN KEY("interview_medium") REFERENCES "interview_medium"("interview_medium_id"),
+    FOREIGN KEY("payroll_items_type") REFERENCES "payroll_items_type"("payroll_items_type_id"),
+    FOREIGN KEY("notice_period") REFERENCES "notice_period"("notice_period_id"),
     FOREIGN KEY("process_status") REFERENCES "employee_process_status"("employee_process_status_id")
 );
 CREATE TABLE IF NOT EXISTS "termination_process" (
@@ -1929,50 +1974,46 @@ CREATE VIEW IF NOT EXISTS "employe_contract_view"("contract_by", "contract_to", 
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id AND ctp.code = 'EMPLOYMENT_AGREEMENT'
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("hiring_checklist", "checklist", "joining_date", "organization", "employee", "summary", "asset", "reporting_officer", "checklist_date", "checklist_time", "process_status") AS
+CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("employee_name", "first_name", "middle_name", "last_name", "process", "checklist", "check_list_value", "note", "organization", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country") AS
     SELECT
-    hp.value as process,
-    hpc.value as checklist,
-    c.start_date as joining_date,
-    po.party_name as organization,
-    pe.party_name as employee,
-    hc.summary,
-    ast.name as asset,
-    pr.party_name as reporting_officer,
-    hc.checklist_date,
-    hc.checklist_time,
-    eps.value as process_status
-    FROM hiring_checklist hc
-    INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
-    INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
-    INNER JOIN contract c on c.contract_id = hc.contract_id
-    INNER JOIN party po on po.party_id = c.contract_from_id
-    INNER JOIN party pe on pe.party_id = c.contract_to_id
-    LEFT JOIN asset ast on ast.asset_id = hc.asset_id
-    LEFT JOIN party pr on pr.party_id = hc.assign_party
-    LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status;
-CREATE VIEW IF NOT EXISTS "termination_checklist_view"("termination_checklist", "checklist", "joining_date", "organization", "employee", "summary", "asset", "reporting_officer", "checklist_date", "checklist_time", "process_status") AS
-    SELECT
-    tp.value as process,
-    tpc.value as checklist,
-    c.start_date as joining_date,
-    po.party_name as organization,
-    pe.party_name as employee,
-    hc.summary,
-    ast.name as asset,
-    pr.party_name as reporting_officer,
-    hc.checklist_date,
-    hc.checklist_time,
-    eps.value as process_status
-    FROM termination_checklist hc
-    INNER JOIN termination_process tp on tp.termination_process_id = hc.termination_process
-    INNER JOIN termination_process_checklist tpc on tpc.termination_process_checklist_id = hc.termination_process_checklist
-    INNER JOIN contract c on c.contract_id = hc.contract_id
-    INNER JOIN party po on po.party_id = c.contract_from_id
-    INNER JOIN party pe on pe.party_id = c.contract_to_id
-    LEFT JOIN asset ast on ast.asset_id = hc.asset_id
-    LEFT JOIN party pr on pr.party_id = hc.assign_party
-    LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status;
+                paremp.party_name as employee_name,
+                peremp.person_first_name first_name,
+                peremp.person_middle_name middle_name,
+                peremp.person_last_name last_name,
+                hp.value as process,
+                hpc.value as checklist,
+                CASE
+                  WHEN hpc.code IN ('DATE_OF_DATA_COLLECTION', 'DATE_OF_INTERVIEW','DATE_OF_JOINING') THEN hc.checklist_date
+                  WHEN hpc.code IN ('INTERVIEWER','IDENTIFYING_THE_REPORTING_OFFICER','EXPERIENCE_CERTIFICATES_FROM_PREVIOUS_EMPLOYERS','RELIEVING_ORDER_FROM_PREVIOUS_EMPLOYERS','SALARY_CERTIFICATE_FROM_THE_LAST_EMPLOYER','ALL_EDUCATIONAL_CERTIFICATES_AND_FINAL_MARK_LIST_FROM_10TH_ONWARDS','PASSPORT_SIZE_COLOUR_PHOTOGRAPH','FOR_ADDRESS_PROOF_AADHAAR_&_PAN_CARD','ASSIGNING_TO_THE_TEAM_AND_REPORTING_OFFICER','INDUCTION_TO_THE_TEAM') THEN parint.party_name
+                  WHEN hpc.code IN ('MEDIUM_OF_INTERVIEW') THEN im.value
+                  WHEN hpc.code IN ('DEDUCTIONS','EMPLOYEE_BENEFITS_AND_FACILITIES') THEN pit.value
+                  WHEN hpc.code IN ('NOTICE_PERIOD') THEN np.value
+                  WHEN hpc.code IN ('LATEST_RESUME(HARD_COPY)_[UPDATE_YOUR_HOME_ADDRESS_,_RESIDENCE_PHONE_AND_MOBILE_NUMBER_CORRECTLY]','PREPARING_WELCOME_CARD','JOINING_REPORT','FILLING_JOINING_FORM_WITH_PERSONNEL_AND_OFFICIAL_DETAILS(BANK,EPF,_ESI_&_KERALA_SHOPS_ACCOUNT_DETAILS)','SIGNING_THE_CONFIDENTIALITY_AGREEMENT','THE_GREETING_OF_NEW_EMPLOYEES','THE_JOB','THE_MAIN_TERMS_AND_CONDITIONS_OF_EMPLOYMENT','COMPANY_RULES','EMPLOYEE_BENEFITS_AND_FACILITIES_HR_INDUCTION','WORKING_DAYS_&_HOURS','DREES_CODE','LAYOUT_OF_THE_WORKPLACE') THEN eps.value
+                  ELSE hc.summary
+                END AS check_list_value,
+                hc.note,
+                parorg.party_name as organization,
+                clemp.address_line1,
+                clemp.address_line2,
+                clemp.address_zip,
+                clemp.address_city,
+                clemp.address_state,
+                clemp.address_country
+                FROM hiring_checklist hc
+                INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
+                INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
+                INNER JOIN contract c on c.contract_id = hc.contract_id
+                INNER JOIN party parorg on parorg.party_id = c.contract_from_id
+                INNER JOIN party paremp on paremp.party_id = c.contract_to_id
+                INNER JOIN person peremp on peremp.party_id = c.contract_to_id
+                INNER JOIN contact_land clemp on  clemp.party_id = paremp.party_id
+                LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+                LEFT JOIN party pr on pr.party_id = hc.assign_party
+                LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status
+                LEFT JOIN party parint on parint.party_id = hc.assign_party
+                LEFT JOIN interview_medium im on im.interview_medium_id = hc.interview_medium
+                LEFT JOIN payroll_items_type pit on pit.payroll_items_type_id = hc.payroll_items_type
+                LEFT JOIN notice_period np on np.notice_period_id = hc.notice_period;
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
