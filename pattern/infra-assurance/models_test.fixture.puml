@@ -1517,6 +1517,48 @@
       activity_log: TEXT
   }
 
+  entity "payroll_items_type" as payroll_items_type {
+    * **payroll_items_type_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "interview_medium" as interview_medium {
+    * **interview_medium_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
+  entity "notice_period" as notice_period {
+    * **notice_period_id**: TEXT
+    --
+    * code: TEXT
+    * value: TEXT
+      created_at: TIMESTAMPTZ
+      created_by: TEXT
+      updated_at: TIMESTAMPTZ
+      updated_by: TEXT
+      deleted_at: TIMESTAMPTZ
+      deleted_by: TEXT
+      activity_log: TEXT
+  }
+
   entity "hiring_process" as hiring_process {
     * **hiring_process_id**: TEXT
     --
@@ -1549,13 +1591,16 @@
     * **hiring_checklist_id**: TEXT
     --
     * hiring_process: TEXT
-    * hiring_process_checklist: TEXT
+      hiring_process_checklist: TEXT
     * contract_id: TEXT
       summary: TEXT
+      note: TEXT
       asset_id: TEXT
       assign_party: TEXT
-      checklist_date: DATE
-      checklist_time: TIMESTAMPTZ
+      checklist_date: TIMESTAMPTZ
+      interview_medium: TEXT
+      payroll_items_type: TEXT
+      notice_period: TEXT
       process_status: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
@@ -1725,6 +1770,9 @@
   contract |o..o{ hiring_checklist
   asset |o..o{ hiring_checklist
   party |o..o{ hiring_checklist
+  interview_medium |o..o{ hiring_checklist
+  payroll_items_type |o..o{ hiring_checklist
+  notice_period |o..o{ hiring_checklist
   employee_process_status |o..o{ hiring_checklist
   termination_process |o..o{ termination_checklist
   termination_process_checklist |o..o{ termination_checklist

@@ -450,6 +450,28 @@ export const employeeProcessStatus = gm.textPkTable(
   { isIdempotent: true },
 );
 
+export const interviewMedium = gm.textPkTable(
+  "interview_medium",
+  {
+    interview_medium_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const payrollItemsType = gm.textPkTable(
+  "payroll_items_type",
+  {
+    payroll_items_type_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
 export const hiringProcess = gm.textPkTable(
   "hiring_process",
   {
@@ -487,6 +509,17 @@ export const terminationProcessChecklist = gm.textPkTable(
   "termination_process_checklist",
   {
     termination_process_checklist_id: udm.ulidPrimaryKey(),
+    code: tcf.unique(udm.text()),
+    value: udm.text(),
+    ...gm.housekeeping.columns,
+  },
+  { isIdempotent: true },
+);
+
+export const noticePeriod = gm.textPkTable(
+  "notice_period",
+  {
+    notice_period_id: udm.ulidPrimaryKey(),
     code: tcf.unique(udm.text()),
     value: udm.text(),
     ...gm.housekeeping.columns,
@@ -1130,13 +1163,19 @@ export const hiringChecklist = gm.textPkTable(
     hiring_checklist_id: udm.ulidPrimaryKey(),
     hiring_process: hiringProcess.references.hiring_process_id(),
     hiring_process_checklist: hiringProcessChecklist.references
-      .hiring_process_checklist_id(),
+      .hiring_process_checklist_id().optional(),
     contract_id: contract.references.contract_id(),
     summary: udm.textNullable(),
+    note: udm.textNullable(),
     asset_id: asset.references.asset_id().optional(),
     assign_party: udm.party.references.party_id().optional(),
-    checklist_date: udm.dateNullable(),
-    checklist_time: udm.dateTimeNullable(),
+    checklist_date: udm.dateTimeNullable(),
+    interview_medium: interviewMedium.references.interview_medium_id()
+      .optional(),
+    payroll_items_type: payrollItemsType.references.payroll_items_type_id()
+      .optional(),
+    notice_period: noticePeriod.references.notice_period_id()
+      .optional(),
     process_status: employeeProcessStatus.references
       .employee_process_status_id().optional(),
     ...gm.housekeeping.columns,
@@ -1259,6 +1298,9 @@ export const allContentTables: SQLa.TableDefinition<
   auditPurpose,
   auditorStatusType,
   employeeProcessStatus,
+  payrollItemsType,
+  interviewMedium,
+  noticePeriod,
   hiringProcess,
   hiringProcessChecklist,
   hiringChecklist,
@@ -1763,78 +1805,61 @@ const employeContractView = SQLa.safeViewDefinition(
 const hiringChecklistView = SQLa.safeViewDefinition(
   "hiring_checklist_view",
   {
-    hiring_checklist: udm.text(),
+    employee_name: udm.text(),
+    first_name: udm.text(),
+    middle_name: udm.text(),
+    last_name: udm.text(),
+    process: udm.text(),
     checklist: udm.text(),
-    joining_date: udm.text(),
+    check_list_value: udm.text(),
+    note: udm.text(),
     organization: udm.text(),
-    employee: udm.text(),
-    summary: udm.textNullable(),
-    asset: udm.textNullable(),
-    reporting_officer: udm.textNullable(),
-    checklist_date: udm.dateNullable(),
-    checklist_time: udm.dateTimeNullable(),
-    process_status: udm.textNullable(),
+    address_line1: udm.text(),
+    address_line2: udm.text(),
+    address_zip: udm.text(),
+    address_city: udm.text(),
+    address_state: udm.text(),
+    address_country: udm.text(),
   },
-)`
-      SELECT
-      hp.value as process,
-      hpc.value as checklist,
-      c.start_date as joining_date,
-      po.party_name as organization,
-      pe.party_name as employee,
-      hc.summary,
-      ast.name as asset,
-      pr.party_name as reporting_officer,
-      hc.checklist_date,
-      hc.checklist_time,
-      eps.value as process_status
-      FROM hiring_checklist hc
-      INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
-      INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
-      INNER JOIN contract c on c.contract_id = hc.contract_id
-      INNER JOIN party po on po.party_id = c.contract_from_id
-      INNER JOIN party pe on pe.party_id = c.contract_to_id
-      LEFT JOIN asset ast on ast.asset_id = hc.asset_id
-      LEFT JOIN party pr on pr.party_id = hc.assign_party
-      LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status`;
-
-const terminationChecklistView = SQLa.safeViewDefinition(
-  "termination_checklist_view",
-  {
-    termination_checklist: udm.text(),
-    checklist: udm.text(),
-    joining_date: udm.text(),
-    organization: udm.text(),
-    employee: udm.text(),
-    summary: udm.textNullable(),
-    asset: udm.textNullable(),
-    reporting_officer: udm.textNullable(),
-    checklist_date: udm.dateNullable(),
-    checklist_time: udm.dateTimeNullable(),
-    process_status: udm.textNullable(),
-  },
-)`
-      SELECT
-      tp.value as process,
-      tpc.value as checklist,
-      c.start_date as joining_date,
-      po.party_name as organization,
-      pe.party_name as employee,
-      hc.summary,
-      ast.name as asset,
-      pr.party_name as reporting_officer,
-      hc.checklist_date,
-      hc.checklist_time,
-      eps.value as process_status
-      FROM termination_checklist hc
-      INNER JOIN termination_process tp on tp.termination_process_id = hc.termination_process
-      INNER JOIN termination_process_checklist tpc on tpc.termination_process_checklist_id = hc.termination_process_checklist
-      INNER JOIN contract c on c.contract_id = hc.contract_id
-      INNER JOIN party po on po.party_id = c.contract_from_id
-      INNER JOIN party pe on pe.party_id = c.contract_to_id
-      LEFT JOIN asset ast on ast.asset_id = hc.asset_id
-      LEFT JOIN party pr on pr.party_id = hc.assign_party
-      LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status`;
+)`SELECT
+            paremp.party_name as employee_name,
+            peremp.person_first_name first_name,
+            peremp.person_middle_name middle_name,
+            peremp.person_last_name last_name,
+            hp.value as process,
+            hpc.value as checklist,
+            CASE
+              WHEN hpc.code IN ('DATE_OF_DATA_COLLECTION', 'DATE_OF_INTERVIEW','DATE_OF_JOINING') THEN hc.checklist_date
+              WHEN hpc.code IN ('INTERVIEWER','IDENTIFYING_THE_REPORTING_OFFICER','EXPERIENCE_CERTIFICATES_FROM_PREVIOUS_EMPLOYERS','RELIEVING_ORDER_FROM_PREVIOUS_EMPLOYERS','SALARY_CERTIFICATE_FROM_THE_LAST_EMPLOYER','ALL_EDUCATIONAL_CERTIFICATES_AND_FINAL_MARK_LIST_FROM_10TH_ONWARDS','PASSPORT_SIZE_COLOUR_PHOTOGRAPH','FOR_ADDRESS_PROOF_AADHAAR_&_PAN_CARD','ASSIGNING_TO_THE_TEAM_AND_REPORTING_OFFICER','INDUCTION_TO_THE_TEAM') THEN parint.party_name
+              WHEN hpc.code IN ('MEDIUM_OF_INTERVIEW') THEN im.value
+              WHEN hpc.code IN ('DEDUCTIONS','EMPLOYEE_BENEFITS_AND_FACILITIES') THEN pit.value
+              WHEN hpc.code IN ('NOTICE_PERIOD') THEN np.value
+              WHEN hpc.code IN ('LATEST_RESUME(HARD_COPY)_[UPDATE_YOUR_HOME_ADDRESS_,_RESIDENCE_PHONE_AND_MOBILE_NUMBER_CORRECTLY]','PREPARING_WELCOME_CARD','JOINING_REPORT','FILLING_JOINING_FORM_WITH_PERSONNEL_AND_OFFICIAL_DETAILS(BANK,EPF,_ESI_&_KERALA_SHOPS_ACCOUNT_DETAILS)','SIGNING_THE_CONFIDENTIALITY_AGREEMENT','THE_GREETING_OF_NEW_EMPLOYEES','THE_JOB','THE_MAIN_TERMS_AND_CONDITIONS_OF_EMPLOYMENT','COMPANY_RULES','EMPLOYEE_BENEFITS_AND_FACILITIES_HR_INDUCTION','WORKING_DAYS_&_HOURS','DREES_CODE','LAYOUT_OF_THE_WORKPLACE') THEN eps.value
+              ELSE hc.summary
+            END AS check_list_value,
+            hc.note,
+            parorg.party_name as organization,
+            clemp.address_line1,
+            clemp.address_line2,
+            clemp.address_zip,
+            clemp.address_city,
+            clemp.address_state,
+            clemp.address_country
+            FROM hiring_checklist hc
+            INNER JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
+            INNER JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
+            INNER JOIN contract c on c.contract_id = hc.contract_id
+            INNER JOIN party parorg on parorg.party_id = c.contract_from_id
+            INNER JOIN party paremp on paremp.party_id = c.contract_to_id
+            INNER JOIN person peremp on peremp.party_id = c.contract_to_id
+            INNER JOIN contact_land clemp on  clemp.party_id = paremp.party_id
+            LEFT JOIN asset ast on ast.asset_id = hc.asset_id
+            LEFT JOIN party pr on pr.party_id = hc.assign_party
+            LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status
+            LEFT JOIN party parint on parint.party_id = hc.assign_party
+            LEFT JOIN interview_medium im on im.interview_medium_id = hc.interview_medium
+            LEFT JOIN payroll_items_type pit on pit.payroll_items_type_id = hc.payroll_items_type
+            LEFT JOIN notice_period np on np.notice_period_id = hc.notice_period`;
 
 export const allContentViews: SQLa.ViewDefinition<
   Any,
@@ -1857,7 +1882,6 @@ export const allContentViews: SQLa.ViewDefinition<
   personOrganiztionView,
   employeContractView,
   hiringChecklistView,
-  terminationChecklistView,
 ];
 
 export function sqlDDL() {
