@@ -1643,13 +1643,13 @@
     * **termination_checklist_id**: TEXT
     --
     * termination_process: TEXT
-    * termination_process_checklist: TEXT
+      termination_process_checklist: TEXT
     * contract_id: TEXT
       summary: TEXT
+      note: TEXT
       asset_id: TEXT
       assign_party: TEXT
       checklist_date: DATE
-      checklist_time: TIMESTAMPTZ
       process_status: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
