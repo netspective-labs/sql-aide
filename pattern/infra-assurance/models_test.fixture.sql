@@ -1987,9 +1987,12 @@ CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_n
         peremp.person_middle_name middle_name,
         peremp.person_last_name last_name,
         tp.value as process,
-        tpc.value as checklist,
         CASE
             WHEN ast.name IS NOT NULL THEN ast.name
+            ELSE tpc.value
+        END as checklist,
+        CASE
+            WHEN ast.name IS NOT NULL THEN eps.value
             WHEN tpc.code IN ('DATE_OF_RESIGNATION', 'ACCEPTANCE_OF_RESIGNATION','INFORM_HR_DEPARTMENT_AND_NEGOTIATE_THE_EXIT_DATES_BASED_ON_PROJECT_NEEDS','FINALISING_THE_DATE_OF_RELIEVING','RELIEVING_CONFIRMATION_FROM_PROJECT_MANAGER') THEN tc.checklist_date
             WHEN tpc.code IN ('TEAM_COMMUNICATION','TRANSITION_OF_RESPONSIBILITIES','DOCUMENT_WORK_FOR_KNOWLEDGE_TRANSFER') THEN eps.value
             WHEN tp.code IN ('CONDUCT_AN_EXIT_INTERVIEW','COMMUNICATE_THE_DEPARTURE','COMPLETE_AND_FILE_THE_PAPERWORK','SETTLE_THE_FINAL_PAY','ISSUING_RELIEVING_LETTER_SALARY_CERTIFICATE_AND_EXPERIENCE_CERTIFICATE','UPDATE_ORGANIZATIONAL_CHARTS-MASTER_DATA') THEN eps.value
@@ -2013,6 +2016,16 @@ CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_n
         INNER JOIN party paremp on paremp.party_id = c.contract_to_id
         INNER JOIN person peremp on peremp.party_id = c.contract_to_id
         INNER JOIN contact_land clemp on  clemp.party_id = paremp.party_id;
+CREATE VIEW IF NOT EXISTS "terminated_person_organiztion_view"("person_name", "organization_id", "organization") AS
+    SELECT p.person_first_name || ' ' || p.person_last_name AS person_name,organization_id,org.name as organization
+    FROM person p
+    INNER JOIN party_relation pr ON pr.party_id = p.party_id
+    INNER JOIN party_relation_type prt ON prt.party_relation_type_id = pr.relation_type_id AND prt.code = 'ORGANIZATION_TO_PERSON'
+    INNER JOIN organization org ON org.party_id = pr.related_party_id
+    INNER JOIN contract c on c.contract_to_id = p.party_id
+    INNER JOIN contract_type ct on ct.contract_type_id = c.contract_type_id AND ct.code='EMPLOYMENT_AGREEMENT'
+    INNER JOIN contract_status cs on cs.contract_status_id = c.contract_status_id AND cs.code='FINISHED'
+    WHERE end_date!='NULL';
 
 -- seed Data
 INSERT INTO "execution_context" ("code", "value") VALUES ('PRODUCTION', 'production');
