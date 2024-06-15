@@ -16,6 +16,7 @@ export function foreignKeysFactory<
   DomainQS extends d.SqlDomainQS,
   DomainsQS extends d.SqlDomainsQS<DomainsQS>,
 >(
+  tableNS: tmpl.QualifiedNamingStrategySupplier | undefined,
   tableName: TableName,
   zodRawShape: ColumnsShape,
   sdf: ReturnType<
@@ -30,6 +31,7 @@ export function foreignKeysFactory<
   };
 
   type ForeignKeySource = {
+    readonly tableNS?: tmpl.QualifiedNamingStrategySupplier;
     readonly tableName: TableName;
     readonly columnName: ColumnName;
     readonly incomingRefs: Set<ForeignKeyDestination>;
@@ -73,11 +75,15 @@ export function foreignKeysFactory<
           );
           const fkClause: tmpl.SqlTextSupplier<Context> = {
             SQL: ((ctx) => {
-              const ns = ctx.sqlNamingStrategy(ctx, {
+              const qns = ctx.sqlNamingStrategy(ctx, {
+                quoteIdentifiers: true,
+                qnss: reference.foreignKeySource.tableNS,
+              });
+              const cns = ctx.sqlNamingStrategy(ctx, {
                 quoteIdentifiers: true,
               });
-              const tn = ns.tableName;
-              const cn = ns.tableColumnName;
+              const tn = qns.tableName;
+              const cn = cns.tableColumnName;
               // don't use the foreignTableName passed in because it could be
               // mutated for self-refs in table definition phase
               return `FOREIGN KEY(${
@@ -110,6 +116,7 @@ export function foreignKeysFactory<
   const inferredPlaceholder = (columnName: ColumnName) => {
     const incomingRefs = new Set<ForeignKeyDestination>();
     const refSource: ForeignKeySource = {
+      tableNS,
       tableName,
       columnName,
       incomingRefs,

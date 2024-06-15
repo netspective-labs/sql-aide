@@ -143,6 +143,7 @@ export function tableDefinition<
     DomainQS,
     DomainsQS
   >(
+    tdOptions?.sqlNS,
     tableName,
     zodRawShape,
     sdf,
