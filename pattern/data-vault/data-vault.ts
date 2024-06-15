@@ -163,6 +163,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
     tableName: TableName,
     columnsShape: ColumnsShape,
     options?: {
+      readonly sqlNS?: SQLa.SqlNamespaceSupplier;
       readonly constraints?: <
         TableName extends string,
       >(
@@ -189,7 +190,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
       columnsShape,
       {
         isIdempotent: true,
-        sqlNS: ddlOptions?.sqlNS,
+        sqlNS: options?.sqlNS ?? ddlOptions?.sqlNS,
         constraints: options?.constraints,
       },
     );
@@ -282,6 +283,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
             ...columnsShape,
             ...housekeeping.columns,
           },
+          { sqlNS: tdOptions?.sqlNS ?? hubTableDefn.sqlNS },
         ),
         hubTable: hubTableDefn,
         tdOptions,
@@ -347,6 +349,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
             ...columnsShape,
             ...housekeeping.columns,
           },
+          { sqlNS: tdOptions?.sqlNS ?? linkTableDefn.sqlNS },
         ),
         linkTable: linkTableDefn,
       };
@@ -419,7 +422,11 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
  * dataVaultTemplateState is a "typical schema" emitter object for data vault models.
  * @returns a single object with helper functions as properties (for executing SQL templates)
  */
-export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>() {
+export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>(
+  ddlOptions?: {
+    readonly defaultNS?: SQLa.SqlNamespaceSupplier;
+  },
+) {
   const gts = typ.governedTemplateState<
     DataVaultDomainQS,
     DataVaultDomainsQS,
@@ -427,6 +434,9 @@ export function dataVaultTemplateState<Context extends SQLa.SqlEmitContext>() {
   >();
   return {
     ...gts,
-    ...dataVaultGovn<Context>(gts.ddlOptions),
+    ...dataVaultGovn<Context>({
+      ...gts.ddlOptions,
+      sqlNS: ddlOptions?.defaultNS,
+    }),
   };
 }
