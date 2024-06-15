@@ -88,7 +88,7 @@ framework.
 ## Unit Testing
 
 ```bash
-deno test -A
+deno test --parallel --allow-all --v8-flags="--max-old-space-size=4096"
 ```
 
 ## Directory Structure
