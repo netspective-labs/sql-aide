@@ -131,6 +131,7 @@ export function dataVaultGovn<Context extends SQLa.SqlEmitContext>(
         // to emit it as part of the an insert DML SQL statement
         isColumnEmittable: (name) =>
           name == "created_at" || name == "created_by" || name == "provenance",
+        sqlNS: ddlOptions?.sqlNS,
       };
       return result as SQLa.InsertStmtPreparerOptions<
         Any,

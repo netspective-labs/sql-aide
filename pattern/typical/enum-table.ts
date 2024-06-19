@@ -126,6 +126,7 @@ export function ordinalEnumTable<
     // emit it as part of the insert DML statement
     defaultIspOptions: {
       isColumnEmittable: (name) => name == "created_at" ? false : true,
+      sqlNS: tdOptions?.sqlNS,
     },
   });
   const etn: EnumTableDefn<Context> = {
@@ -278,6 +279,7 @@ export function textEnumTable<
     // emit it as part of the insert DML statement
     defaultIspOptions: {
       isColumnEmittable: (name) => name == "created_at" ? false : true,
+      sqlNS: tdOptions?.sqlNS,
     },
   });
   const etn: EnumTableDefn<Context> = {
@@ -434,6 +436,7 @@ export function varCharEnumTable<
     // emit it as part of the insert DML statement
     defaultIspOptions: {
       isColumnEmittable: (name) => name == "created_at" ? false : true,
+      sqlNS: tdOptions?.sqlNS,
     },
   });
   const etn: EnumTableDefn<Context> = {

@@ -2,6 +2,7 @@ import * as safety from "../../lib/universal/safety.ts";
 import * as r from "../../lib/universal/record.ts";
 import * as tmpl from "../emit/sql.ts";
 import * as d from "../domain/mod.ts";
+import * as ns from "../emit/namespace.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -26,6 +27,7 @@ export interface InsertStmtPreparerOptions<
   DomainQS extends d.SqlDomainQS,
   InsertableColumnName extends keyof InsertableRecord = keyof InsertableRecord,
 > {
+  readonly sqlNS?: ns.SqlNamespaceSupplier;
   readonly isColumnEmittable?: (
     columnName: keyof InsertableRecord,
     record: InsertableRecord,
@@ -73,7 +75,8 @@ export interface InsertStmtPreparerOptions<
     records: InsertableRecord | InsertableRecord[],
     names: InsertableColumnName[],
     values: [value: unknown, sqlText: string][][],
-    ns: tmpl.SqlObjectNames,
+    tableNS: tmpl.SqlObjectNames,
+    columnsNS: tmpl.SqlObjectNames,
     ctx: Context,
   ) => string;
 }
@@ -159,6 +162,7 @@ export function typicalInsertValuesSqlPreparerSync<
   const { sqlTextEmitOptions: eo } = ctx;
   const ns = ctx.sqlNamingStrategy(ctx, {
     quoteIdentifiers: true,
+    qnss: ispOptions?.sqlNS,
   });
   const names: InsertableColumnName[] = [];
   const values: [value: unknown, valueSqlText: string][][] = [];
@@ -242,7 +246,13 @@ export function typicalInsertStmtSqlPreparerSync<
   return {
     SQL: (ctx) => {
       const { returning: returningArg, where, onConflict } = ispOptions ?? {};
-      const ns = ctx.sqlNamingStrategy(ctx, { quoteIdentifiers: true });
+      const tns = ctx.sqlNamingStrategy(ctx, {
+        quoteIdentifiers: true,
+        qnss: ispOptions?.sqlNS,
+      });
+      const cns = ctx.sqlNamingStrategy(ctx, {
+        quoteIdentifiers: true,
+      });
       const { names, values } = typicalInsertValuesSqlPreparerSync(
         ctx,
         ir,
@@ -273,7 +283,7 @@ export function typicalInsertStmtSqlPreparerSync<
           case "primary-keys":
             returningSQL = ` RETURNING ${
               candidateColumns("primary-keys").map((isd) =>
-                ns.tableColumnName({ tableName, columnName: isd.identity })
+                cns.tableColumnName({ tableName, columnName: isd.identity })
               ).join(", ")
             }`;
             break;
@@ -282,7 +292,7 @@ export function typicalInsertStmtSqlPreparerSync<
         if (returning.columns) {
           returningSQL = ` RETURNING ${
             returning!.columns!.map((n) =>
-              ns.tableColumnName({ tableName, columnName: String(n) })
+              cns.tableColumnName({ tableName, columnName: String(n) })
             ).join(", ")
           }`;
         } else {
@@ -294,7 +304,7 @@ export function typicalInsertStmtSqlPreparerSync<
         `(${row.map((value) => value[1]).join(", ")})`
       ).join(",\n              ");
       // deno-fmt-ignore
-      const SQL = `INSERT INTO ${ns.tableName(tableName)} (${names.map(n => ns.tableColumnName({ tableName, columnName: String(n) })).join(", ")})${multiValues ? "\n       " : " "}VALUES ${valuesClause}${sqlText(where)}${sqlText(onConflict)}${returningSQL}`;
+      const SQL = `INSERT INTO ${tns.tableName(tableName)} (${names.map(n => cns.tableColumnName({ tableName, columnName: String(n) })).join(", ")})${multiValues ? "\n       " : " "}VALUES ${valuesClause}${sqlText(where)}${sqlText(onConflict)}${returningSQL}`;
       return ispOptions?.transformSQL
         ? ispOptions?.transformSQL(
           SQL,
@@ -302,7 +312,8 @@ export function typicalInsertStmtSqlPreparerSync<
           ir,
           names,
           values,
-          ns,
+          tns,
+          cns,
           ctx,
         )
         : SQL;

@@ -21,11 +21,11 @@
     [created_at] DATETIME2 DEFAULT GETDATE()
 );
 
-    INSERT INTO [job_position_status] ([code], [value]) VALUES ('Current', 'Current');
-INSERT INTO [job_position_status] ([code], [value]) VALUES ('Past', 'Past');
-INSERT INTO [job_position_status] ([code], [value]) VALUES ('Future', 'Future');
-INSERT INTO [job_position_status] ([code], [value]) VALUES ('Draft', 'Draft');
-INSERT INTO [job_position_status] ([code], [value]) VALUES ('Archive', 'Archive');
+    INSERT INTO [dbo].[job_position_status] ([code], [value]) VALUES ('Current', 'Current');
+INSERT INTO [dbo].[job_position_status] ([code], [value]) VALUES ('Past', 'Past');
+INSERT INTO [dbo].[job_position_status] ([code], [value]) VALUES ('Future', 'Future');
+INSERT INTO [dbo].[job_position_status] ([code], [value]) VALUES ('Draft', 'Draft');
+INSERT INTO [dbo].[job_position_status] ([code], [value]) VALUES ('Archive', 'Archive');
 
     CREATE TABLE [dbo].[job_position] (
     [job_position_id] INTEGER IDENTITY(1,1) PRIMARY KEY,
