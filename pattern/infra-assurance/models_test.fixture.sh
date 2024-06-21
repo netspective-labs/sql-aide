@@ -1974,12 +1974,13 @@ CREATE VIEW IF NOT EXISTS "employe_contract_view"("contract_by", "contract_to", 
     INNER JOIN contract_status cs on cs.code = ct.contract_status_id
     INNER JOIN contract_type ctp on ctp.code = ct.contract_type_id AND ctp.code = 'EMPLOYMENT_AGREEMENT'
     INNER JOIN periodicity p on p.code = ct.periodicity_id;
-CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("employee_name", "first_name", "middle_name", "last_name", "process", "checklist", "check_list_value", "note", "organization", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country") AS
+CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("employee_name", "first_name", "middle_name", "last_name", "organization_id", "process", "checklist", "check_list_value", "note", "organization_name", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country") AS
     SELECT
         paremp.party_name as employee_name,
         peremp.person_first_name first_name,
         peremp.person_middle_name middle_name,
         peremp.person_last_name last_name,
+        org.organization_id,
         hp.value as process,
         hpc.value as checklist,
         CASE
@@ -1992,7 +1993,7 @@ CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("employee_name", "first_name",
           ELSE hc.summary
         END AS check_list_value,
         hc.note,
-        parorg.party_name as organization,
+        parorg.party_name as organization_name,
         clemp.address_line1,
         clemp.address_line2,
         clemp.address_zip,
@@ -2000,26 +2001,28 @@ CREATE VIEW IF NOT EXISTS "hiring_checklist_view"("employee_name", "first_name",
         clemp.address_state,
         clemp.address_country
         FROM hiring_checklist hc
-        LEFT JOIN hiring_process hp on hp.hiring_process_id = hc.hiring_process
-        LEFT JOIN hiring_process_checklist hpc on hpc.hiring_process_checklist_id = hc.hiring_process_checklist
-        INNER JOIN contract c on c.contract_id = hc.contract_id
-        INNER JOIN party parorg on parorg.party_id = c.contract_from_id
-        INNER JOIN party paremp on paremp.party_id = c.contract_to_id
-        INNER JOIN person peremp on peremp.party_id = c.contract_to_id
-        INNER JOIN contact_land clemp on  clemp.party_id = paremp.party_id
-        LEFT JOIN asset ast on ast.asset_id = hc.asset_id
-        LEFT JOIN party pr on pr.party_id = hc.assign_party
-        LEFT JOIN employee_process_status eps on eps.employee_process_status_id = hc.process_status
-        LEFT JOIN party parint on parint.party_id = hc.assign_party
-        LEFT JOIN interview_medium im on im.interview_medium_id = hc.interview_medium
-        LEFT JOIN payroll_items_type pit on pit.payroll_items_type_id = hc.payroll_items_type
-        LEFT JOIN notice_period np on np.notice_period_id = hc.notice_period;
-CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_name", "middle_name", "last_name", "process", "checklist", "check_list_value", "note", "organization", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country") AS
+        LEFT JOIN hiring_process hp ON hp.hiring_process_id = hc.hiring_process
+        LEFT JOIN hiring_process_checklist hpc ON hpc.hiring_process_checklist_id = hc.hiring_process_checklist
+        INNER JOIN contract c ON c.contract_id = hc.contract_id
+        INNER JOIN organization org ON org.party_id =  c.contract_from_id
+        INNER JOIN party parorg ON parorg.party_id = c.contract_from_id
+        INNER JOIN party paremp ON paremp.party_id = c.contract_to_id
+        INNER JOIN person peremp ON peremp.party_id = c.contract_to_id
+        INNER JOIN contact_land clemp ON  clemp.party_id = paremp.party_id
+        LEFT JOIN asset ast ON ast.asset_id = hc.asset_id
+        LEFT JOIN party pr ON pr.party_id = hc.assign_party
+        LEFT JOIN employee_process_status eps ON eps.employee_process_status_id = hc.process_status
+        LEFT JOIN party parint ON parint.party_id = hc.assign_party
+        LEFT JOIN interview_medium im ON im.interview_medium_id = hc.interview_medium
+        LEFT JOIN payroll_items_type pit ON pit.payroll_items_type_id = hc.payroll_items_type
+        LEFT JOIN notice_period np ON np.notice_period_id = hc.notice_period;
+CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_name", "middle_name", "last_name", "organization_id", "process", "checklist", "check_list_value", "note", "organization_name", "address_line1", "address_line2", "address_zip", "address_city", "address_state", "address_country") AS
     SELECT
         paremp.party_name as employee_name,
         peremp.person_first_name first_name,
         peremp.person_middle_name middle_name,
         peremp.person_last_name last_name,
+        org.organization_id,
         tp.value as process,
         CASE
             WHEN ast.name IS NOT NULL THEN ast.name
@@ -2039,7 +2042,7 @@ CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_n
         clemp.address_city,
         clemp.address_state,
         clemp.address_country,
-        parorg.party_name as organization
+        parorg.party_name as organization_name
         FROM termination_checklist tc
         LEFT JOIN termination_process tp on tp.termination_process_id=tc.termination_process
         LEFT JOIN termination_process_checklist tpc on tpc.termination_process_checklist_id=tc.termination_process_checklist
@@ -2048,6 +2051,7 @@ CREATE VIEW IF NOT EXISTS "termination_checklist_view"("employee_name", "first_n
         INNER JOIN contract c on c.contract_id = tc.contract_id
         INNER JOIN party parorg on parorg.party_id = c.contract_from_id
         INNER JOIN party paremp on paremp.party_id = c.contract_to_id
+        INNER JOIN organization org ON org.party_id =  c.contract_from_id
         INNER JOIN person peremp on peremp.party_id = c.contract_to_id
         INNER JOIN contact_land clemp on  clemp.party_id = paremp.party_id;
 CREATE VIEW IF NOT EXISTS "terminated_person_organiztion_view"("person_name", "organization_id", "organization") AS
