@@ -127,7 +127,11 @@ const syntheticSchema = () => {
         return [
           tif.index(undefined, "column_unique", "created_at"),
           tif.index(
-            { indexIdentity: "custom_index_name", isUnique: true },
+            {
+              indexIdentity: "custom_index_name",
+              isUnique: true,
+              indexMethod: "btree",
+            },
             "text_primary_key",
             "created_at",
           ),
@@ -661,7 +665,7 @@ Deno.test("SQL Aide (SQLa) Table DDL Constraints and documentation", async (tc) 
       );
 
       CREATE INDEX "idx_synthetic_table_with_constraints__column_unique__created_at" ON "synthetic_table_with_constraints"("column_unique", "created_at");
-      CREATE UNIQUE INDEX custom_index_name ON "synthetic_table_with_constraints"("text_primary_key", "created_at");
+      CREATE UNIQUE INDEX custom_index_name ON "synthetic_table_with_constraints" USING btree ("text_primary_key", "created_at");
 
       COMMENT ON table "synthetic_table_with_constraints" IS 'synthetic_table_with_constraints table description in prepareQS';
       COMMENT ON column "synthetic_table_with_constraints"."text_primary_key" IS 'text_primary_key description in prepareQS';
