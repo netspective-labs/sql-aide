@@ -28,6 +28,7 @@ export function tableIndexesFactory<
         readonly indexIdentity?: string;
         readonly isUnique?: boolean;
         readonly isIdempotent?: boolean;
+        readonly indexMethod?: string;
       },
       ...indexedColumnNames: ColumnName[]
     ) => {
@@ -44,7 +45,7 @@ export function tableIndexesFactory<
             ns.domainName(String(c))
           );
           // deno-fmt-ignore
-          return `CREATE ${options?.isUnique ? "UNIQUE " : ""}INDEX ${options?.isIdempotent ? 'IF NOT EXISTS ' : ''}${indexIdentity} ON ${ns.tableName(tableName)}(${
+          return `CREATE ${options?.isUnique ? "UNIQUE " : ""}INDEX ${options?.isIdempotent ? 'IF NOT EXISTS ' : ''}${indexIdentity} ON ${ns.tableName(tableName)}${options?.indexMethod ? ' USING '+options.indexMethod+' ' : ''}(${
             ucQuoted.join(", ")
           })`;
         },
