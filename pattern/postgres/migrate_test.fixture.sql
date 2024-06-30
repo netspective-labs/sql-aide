@@ -54,7 +54,7 @@ BEGIN
             procedure_name TEXT := format('info_schema_lifecycle."%s"()', r.sp_migration);
             procedure_undo_name TEXT := format('info_schema_lifecycle."%s"()', r.sp_migration_undo);
             status_function_name TEXT := format('info_schema_lifecycle."%s"()', r.fn_migration_status);
-            islm_governance_id TEXT:= uuid_generate_v4();
+            islm_governance_id TEXT:= info_schema_lifecycle.uuid_generate_v4();
             status INT;
             migrate_insertion_sql TEXT;
           BEGIN

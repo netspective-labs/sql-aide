@@ -223,7 +223,7 @@ export class PgMigrate<
               procedure_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.sp_migration);
               procedure_undo_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.sp_migration_undo);
               status_function_name TEXT := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', r.fn_migration_status);
-              islm_governance_id TEXT:= uuid_generate_v4();
+              islm_governance_id TEXT:= ${this.infoSchemaLifecycle.sqlNamespace}.uuid_generate_v4();
               status INT;
               migrate_insertion_sql TEXT;
             BEGIN
