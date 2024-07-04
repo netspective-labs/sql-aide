@@ -147,13 +147,18 @@ export class PgMigrate<
 
   content() {
     const ctx = this.ctxSupplier();
-    const islmGovernance = udm.gm.stateTable("islm_governance", {
-      islm_governance_id: udm.uuidPrimaryKey(),
-      state_sort_index: udm.float(),
-      sp_migration: udm.text(),
-      sp_migration_undo: udm.text(),
-      fn_migration_status: udm.text(),
-    }, ["sp_migration", "from_state", "to_state"]);
+    const islmGovernance = udm.gm.stateTable(
+      "islm_governance",
+      {
+        islm_governance_id: udm.uuidPrimaryKey(),
+        state_sort_index: udm.float(),
+        sp_migration: udm.text(),
+        sp_migration_undo: udm.text(),
+        fn_migration_status: udm.text(),
+      },
+      ["sp_migration", "from_state", "to_state"],
+      { isIdempotent: true, sqlNS: this.infoSchemaLifecycle },
+    );
 
     const spIslmInit = pgSQLa
       .storedRoutineBuilder(
@@ -178,12 +183,6 @@ export class PgMigrate<
       NULL;
     `;
 
-    const searchPath = pgSQLa.pgSearchPath<
-      typeof this.infoSchemaLifecycle.sqlNamespace,
-      SQLa.SqlEmitContext
-    >(
-      this.infoSchemaLifecycle,
-    );
     const extn = pgSQLa.pgExtensionDefn(
       this.infoSchemaLifecycle,
       '"uuid-ossp"',
@@ -237,7 +236,6 @@ export class PgMigrate<
 
                 -- Insert into the governance table
                 migrate_insertion_sql := $dynSQL$
-                  ${searchPath}
                   INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.SQLLOADED}', '${TransitionStatus.MIGRATED}', '{}', 'Migration') ON CONFLICT DO NOTHING
                 $dynSQL$;
                 EXECUTE migrate_insertion_sql USING islm_governance_id, target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
@@ -260,7 +258,7 @@ export class PgMigrate<
             procedure_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration);
             procedure_undo_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration_undo);
             status_function_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.fn_migration_status);
-            islm_governance_id := uuid_generate_v4();
+            islm_governance_id := ${this.infoSchemaLifecycle.sqlNamespace}.uuid_generate_v4();
             EXECUTE  'call ' || procedure_undo_name;
 
             -- Insert the governance table

@@ -85,12 +85,6 @@ const PgMigrateObj = mod.PgMigrate.init(
   () => ctx,
   infoSchemaLifecycle.sqlNamespace,
 );
-const searchPath = pgSQLa.pgSearchPath<
-  typeof infoSchemaLifecycle.sqlNamespace,
-  SQLa.SqlEmitContext
->(
-  PgMigrateObj.infoSchemaLifecycle,
-);
 
 /*
  * Defines the SQL schema for a sample schema "sample_schema".
@@ -101,12 +95,6 @@ const searchPath = pgSQLa.pgSearchPath<
 const migrateCreateSchema = SQLa.sqlSchemaDefn("sample_schema", {
   isIdempotent: true,
 });
-const migSearchPath = pgSQLa.pgSearchPath<
-  typeof migrateCreateSchema.sqlNamespace,
-  SQLa.SqlEmitContext
->(
-  migrateCreateSchema,
-);
 
 /**
  * Defines the SQL schema for a sample table "sample_table1".
@@ -123,6 +111,10 @@ const migrateCreateTable = gm.autoIncPkTable(
     age: udm.integer(),
     email: udm.text(),
     ...gm.housekeeping.columns,
+  },
+  {
+    isIdempotent: true,
+    sqlNS: migrateCreateSchema,
   },
 );
 
@@ -149,7 +141,6 @@ const createMigrationProcedure = PgMigrateObj
 
             /*
              ${migrateCreateSchema.SQL(ctx)};
-             ${migSearchPath};
              ${migrateCreateTable.SQL(ctx)};
             */
 
@@ -218,8 +209,6 @@ function sqlDDL() {
   return SQLa.SQL<EmitContext>(gts.ddlOptions)`
     -- synthetic / test data
     ${PgMigrateObj.infoSchemaLifecycle}
-
-    ${searchPath}
 
     ${PgMigrateObj.content().extn}
 

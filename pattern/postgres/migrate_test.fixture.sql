@@ -1,13 +1,11 @@
 -- synthetic / test data
 CREATE SCHEMA IF NOT EXISTS "info_schema_lifecycle";
 
-SET search_path TO "info_schema_lifecycle";
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA "info_schema_lifecycle";
 
 CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_init"() AS $$
 BEGIN
-  CREATE TABLE IF NOT EXISTS "islm_governance" (
+  CREATE TABLE IF NOT EXISTS "info_schema_lifecycle"."islm_governance" (
       "islm_governance_id" TEXT PRIMARY KEY NOT NULL,
       "state_sort_index" FLOAT NOT NULL,
       "sp_migration" TEXT NOT NULL,
@@ -68,7 +66,6 @@ BEGIN
   
               -- Insert into the governance table
               migrate_insertion_sql := $dynSQL$
-                SET search_path TO "info_schema_lifecycle";
                 INSERT INTO info_schema_lifecycle.islm_governance ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, 'SQL Loaded', 'Migrated', '{}', 'Migration') ON CONFLICT DO NOTHING
               $dynSQL$;
               EXECUTE migrate_insertion_sql USING islm_governance_id, target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
@@ -91,7 +88,7 @@ BEGIN
           procedure_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration);
           procedure_undo_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration_undo);
           status_function_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.fn_migration_status);
-          islm_governance_id := uuid_generate_v4();
+          islm_governance_id := info_schema_lifecycle.uuid_generate_v4();
           EXECUTE  'call ' || procedure_undo_name;
   
           -- Insert the governance table
@@ -122,8 +119,7 @@ BEGIN
 
   /*
    CREATE SCHEMA IF NOT EXISTS "sample_schema";
-   SET search_path TO "sample_schema";;
-   CREATE TABLE IF NOT EXISTS "sample_table1" (
+   CREATE TABLE IF NOT EXISTS "sample_schema"."sample_table1" (
     "sample_table1_id" SERIAL PRIMARY KEY,
     "name" TEXT,
     "age" INTEGER NOT NULL,
