@@ -124,8 +124,6 @@ migration, follow these steps:
     -- synthetic / test data
     ${PgMigrateObj.infoSchemaLifecycle}
 
-    ${searchPath}
-
     ${PgMigrateObj.content().extn}
 
     ${PgMigrateObj.content().spIslmGovernance}
