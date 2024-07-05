@@ -25,6 +25,7 @@ export class PgMigrate<
     readonly ctxSupplier: () => Context,
     readonly schemaName: SchemaName,
     readonly prependMigrationSPText = "migration_",
+    readonly prependMigrateSPText = "migrate_",
     readonly appendMigrationUndoSPText = "_undo",
     readonly appendMigrationStatusFnText = "_status",
   ) {
@@ -45,7 +46,7 @@ export class PgMigrate<
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const seconds = String(date.getSeconds()).padStart(2, "0");
 
-    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
   migrationScaffold<
@@ -70,14 +71,14 @@ export class PgMigrate<
     spOptions?: pgSQLa.StoredProcedureDefnOptions<string, Context>,
   ) {
     const formattedDate = this.formatDateToCustomString(version.dateTime);
-    const migrateVersion = "V" + version.version + formattedDate;
+    const migrateVersion = version.version + "_" + formattedDate;
     const migrateTemplateBody = migrateTemplate(argsDefn);
     const { isIdempotent = true, headerBodySeparator: _hbSep = "$$" } =
       spOptions ?? {};
     const ctx = this.ctxSupplier();
     const migrateTemplateBodySqlText = migrateTemplateBody.SQL(ctx);
     const migrateSP = pgSQLa.storedProcedure(
-      this.prependMigrationSPText + migrateVersion,
+      this.prependMigrateSPText + migrateVersion,
       {},
       (name, args, _) =>
         pgSQLa.typedPlPgSqlBody(name, args, ctx, {
