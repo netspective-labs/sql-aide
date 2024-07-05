@@ -89,7 +89,7 @@ export class PgMigrate<
         autoBeginEnd: false,
         isIdempotent: isIdempotent,
         sqlNS: this.infoSchemaLifecycle,
-        headerBodySeparator: "$migrateVersion" + migrateVersion + "SP$",
+        headerBodySeparator: "$migrateVersionSP$",
       },
     )`
     BEGIN
@@ -113,7 +113,7 @@ export class PgMigrate<
         autoBeginEnd: false,
         isIdempotent: true,
         sqlNS: this.infoSchemaLifecycle,
-        headerBodySeparator: "$migrateVersion" + migrateVersion + "undo$",
+        headerBodySeparator: "$migrateVersionUndo$",
       },
     )`${rollbackTemplateBodySqlText}`;
     const statusTemplateBody = statusTemplate(argsDefn);
@@ -132,7 +132,7 @@ export class PgMigrate<
         autoBeginEnd: false,
         isIdempotent: true,
         sqlNS: this.infoSchemaLifecycle,
-        headerBodySeparator: "$fnMigrateVersion" + migrateVersion + "Status$",
+        headerBodySeparator: "$fnMigrateVersionStatus$",
       },
     )`
     DECLARE
