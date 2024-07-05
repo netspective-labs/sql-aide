@@ -110,7 +110,7 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migrate_sample_20231016101645"() AS $migrateVersionsample_20231016101645SP$
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migrate_sample_20231016101645"() AS $migrateVersionSP$
 BEGIN
   IF info_schema_lifecycle."migration_sample_20231016101645_status"() = 0 THEN
     -- Add any PostgreSQL you need either manually constructed or SQLa.
@@ -139,18 +139,18 @@ BEGIN
   END IF;
 END
 
-$migrateVersionsample_20231016101645SP$ LANGUAGE PLPGSQL;
+$migrateVersionSP$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migration_sample_20231016101645_undo"() AS $migrateVersionsample_20231016101645undo$
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migration_sample_20231016101645_undo"() AS $migrateVersionUndo$
 BEGIN
   -- Add any PostgreSQL you need either manually constructed or SQLa.
   -- Your code will be placed automatically into a ISLM rollback stored procedure.
   -- DROP table if exists "sample_schema".sample_table1;
           
 END;
-$migrateVersionsample_20231016101645undo$ LANGUAGE PLPGSQL;
+$migrateVersionUndo$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_sample_20231016101645_status"() RETURNS integer AS $fnMigrateVersionsample_20231016101645Status$
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_sample_20231016101645_status"() RETURNS integer AS $fnMigrateVersionStatus$
 DECLARE
   status INTEGER := 0; -- Initialize status to 0 (not executed)
 BEGIN
@@ -170,7 +170,7 @@ BEGIN
           
 END;
 
-$fnMigrateVersionsample_20231016101645Status$ LANGUAGE PLPGSQL;
+$fnMigrateVersionStatus$ LANGUAGE PLPGSQL;
 
 CALL islm_init();
 INSERT INTO "islm_governance" ("islm_governance_id", "state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('1b671a64-40d5-491e-99b0-da01ff1f3341', 1, 'migration_Vsample20231016101645', 'migration_Vsample20231016101645_undo', 'migration_Vsample20231016101645_status', 'None', 'SQL Loaded', '{}', 'SQL load for migration', (CURRENT_TIMESTAMP), 'Admin', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
