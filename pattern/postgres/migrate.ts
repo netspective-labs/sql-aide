@@ -10,9 +10,8 @@ export enum TransitionStatus {
   ROLLBACK = "Rollback",
 }
 
-interface MigrationVersion {
+export interface MigrationVersion {
   readonly version: string;
-  readonly versionNumber: number;
   readonly dateTime: Date;
 }
 
@@ -71,7 +70,7 @@ export class PgMigrate<
     spOptions?: pgSQLa.StoredProcedureDefnOptions<string, Context>,
   ) {
     const formattedDate = this.formatDateToCustomString(version.dateTime);
-    const migrateVersion = version.version + "_" + formattedDate;
+    const migrateVersion = "V" + version.version + "_" + formattedDate;
     const migrateTemplateBody = migrateTemplate(argsDefn);
     const { isIdempotent = true, headerBodySeparator: _hbSep = "$$" } =
       spOptions ?? {};
@@ -152,7 +151,7 @@ export class PgMigrate<
       "islm_governance",
       {
         islm_governance_id: udm.uuidPrimaryKey(),
-        state_sort_index: udm.float(),
+        migrate_version: udm.text(),
         sp_migration: udm.text(),
         sp_migration_undo: udm.text(),
         fn_migration_status: udm.text(),
@@ -193,7 +192,7 @@ export class PgMigrate<
         "islm_migrate_ctl",
         {
           "task": udm.text(),
-          "target_version_number": udm.floatNullable(),
+          "target_version": udm.text(),
         },
       );
 
@@ -208,14 +207,15 @@ export class PgMigrate<
     )`
     DECLARE
       r RECORD;
-      t text;
+      t TEXT;
+      extracted_ts TEXT;
     BEGIN
       CASE task
       WHEN 'migrate' THEN
         FOR r IN (
-          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.NONE}' AND to_state = '${TransitionStatus.SQLLOADED}' AND (state_sort_index NOT IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}')) AND
-          (target_version_number IS NULL OR state_sort_index<=target_version_number)
-          ORDER BY state_sort_index
+          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.NONE}' AND to_state = '${TransitionStatus.SQLLOADED}' AND (migrate_version NOT IN (SELECT migrate_version FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}')) AND
+          (migrate_version IS NULL OR to_timestamp(substring(migrate_version FROM '(\\d{14})$'), 'YYYYMMDDHH24MISS')::timestamp<=to_timestamp(substring(target_version FROM '(\\d{14})$'), 'YYYYMMDDHH24MISS')::timestamp)
+          ORDER BY migrate_version
         ) LOOP
           -- Check if migration has been executed
           -- Construct procedure and status function names
@@ -237,9 +237,9 @@ export class PgMigrate<
 
                 -- Insert into the governance table
                 migrate_insertion_sql := $dynSQL$
-                  INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.SQLLOADED}', '${TransitionStatus.MIGRATED}', '{}', 'Migration') ON CONFLICT DO NOTHING
+                  INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","migrate_version", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.SQLLOADED}', '${TransitionStatus.MIGRATED}', '{}', 'Migration') ON CONFLICT DO NOTHING
                 $dynSQL$;
-                EXECUTE migrate_insertion_sql USING islm_governance_id, target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
+                EXECUTE migrate_insertion_sql USING islm_governance_id, target_version, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
               END IF;
             END;
         END LOOP;
@@ -254,7 +254,7 @@ export class PgMigrate<
           islm_governance_id text;
           sp_migration_undo_sql RECORD;
         BEGIN
-          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
+          SELECT sp_migration,sp_migration_undo,fn_migration_status FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' AND migrate_version=target_version AND (target_version IN (SELECT migrate_version FROM ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} WHERE from_state = '${TransitionStatus.SQLLOADED}' AND to_state = '${TransitionStatus.MIGRATED}' ORDER BY migrate_version DESC LIMIT 1))  INTO sp_migration_undo_sql;
           IF sp_migration_undo_sql IS NOT NULL THEN
             procedure_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration);
             procedure_undo_name := format('${this.infoSchemaLifecycle.sqlNamespace}."%s"()', sp_migration_undo_sql.sp_migration_undo);
@@ -264,10 +264,10 @@ export class PgMigrate<
 
             -- Insert the governance table
             migrate_rb_insertion_sql := $dynSQL$
-                      INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.MIGRATED}', '${TransitionStatus.ROLLBACK}', '{}', 'Rollback for migration') ON CONFLICT DO NOTHING
+                      INSERT INTO ${this.infoSchemaLifecycle.sqlNamespace}.${islmGovernance.tableName} ("islm_governance_id","migrate_version", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, '${TransitionStatus.MIGRATED}', '${TransitionStatus.ROLLBACK}', '{}', 'Rollback for migration') ON CONFLICT DO NOTHING
 
                     $dynSQL$;
-            EXECUTE migrate_rb_insertion_sql USING islm_governance_id, target_version_number, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
+            EXECUTE migrate_rb_insertion_sql USING islm_governance_id, target_version, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
           ELSE
             RAISE EXCEPTION 'Cannot perform a rollback for this version';
           END IF;

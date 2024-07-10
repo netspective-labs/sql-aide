@@ -7,7 +7,7 @@ CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_init"() AS $$
 BEGIN
   CREATE TABLE IF NOT EXISTS "info_schema_lifecycle"."islm_governance" (
       "islm_governance_id" TEXT PRIMARY KEY NOT NULL,
-      "state_sort_index" FLOAT NOT NULL,
+      "migrate_version" TEXT NOT NULL,
       "sp_migration" TEXT NOT NULL,
       "sp_migration_undo" TEXT NOT NULL,
       "fn_migration_status" TEXT NOT NULL,
@@ -33,18 +33,19 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate_ctl"("task" TEXT, "target_version_number" FLOAT) AS $$
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate_ctl"("task" TEXT, "target_version" TEXT) AS $$
 BEGIN
   DECLARE
     r RECORD;
-    t text;
+    t TEXT;
+    extracted_ts TEXT;
   BEGIN
     CASE task
     WHEN 'migrate' THEN
       FOR r IN (
-        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'None' AND to_state = 'SQL Loaded' AND (state_sort_index NOT IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated')) AND
-        (target_version_number IS NULL OR state_sort_index<=target_version_number)
-        ORDER BY state_sort_index
+        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'None' AND to_state = 'SQL Loaded' AND (migrate_version NOT IN (SELECT migrate_version FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated')) AND
+        (migrate_version IS NULL OR to_timestamp(substring(migrate_version FROM '(\d{14})$'), 'YYYYMMDDHH24MISS')::timestamp<=to_timestamp(substring(target_version FROM '(\d{14})$'), 'YYYYMMDDHH24MISS')::timestamp)
+        ORDER BY migrate_version
       ) LOOP
         -- Check if migration has been executed
         -- Construct procedure and status function names
@@ -66,9 +67,9 @@ BEGIN
   
               -- Insert into the governance table
               migrate_insertion_sql := $dynSQL$
-                INSERT INTO info_schema_lifecycle.islm_governance ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, 'SQL Loaded', 'Migrated', '{}', 'Migration') ON CONFLICT DO NOTHING
+                INSERT INTO info_schema_lifecycle.islm_governance ("islm_governance_id","migrate_version", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, 'SQL Loaded', 'Migrated', '{}', 'Migration') ON CONFLICT DO NOTHING
               $dynSQL$;
-              EXECUTE migrate_insertion_sql USING islm_governance_id, target_version_number, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
+              EXECUTE migrate_insertion_sql USING islm_governance_id, target_version, r.sp_migration, r.sp_migration_undo, r.fn_migration_status;
             END IF;
           END;
       END LOOP;
@@ -83,7 +84,7 @@ BEGIN
         islm_governance_id text;
         sp_migration_undo_sql RECORD;
       BEGIN
-        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND state_sort_index=target_version_number AND (target_version_number IN (SELECT state_sort_index FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' ORDER BY state_sort_index DESC LIMIT 1))  INTO sp_migration_undo_sql;
+        SELECT sp_migration,sp_migration_undo,fn_migration_status FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' AND migrate_version=target_version AND (target_version IN (SELECT migrate_version FROM info_schema_lifecycle.islm_governance WHERE from_state = 'SQL Loaded' AND to_state = 'Migrated' ORDER BY migrate_version DESC LIMIT 1))  INTO sp_migration_undo_sql;
         IF sp_migration_undo_sql IS NOT NULL THEN
           procedure_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration);
           procedure_undo_name := format('info_schema_lifecycle."%s"()', sp_migration_undo_sql.sp_migration_undo);
@@ -93,10 +94,10 @@ BEGIN
   
           -- Insert the governance table
           migrate_rb_insertion_sql := $dynSQL$
-                    INSERT INTO info_schema_lifecycle.islm_governance ("islm_governance_id","state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, 'Migrated', 'Rollback', '{}', 'Rollback for migration') ON CONFLICT DO NOTHING
+                    INSERT INTO info_schema_lifecycle.islm_governance ("islm_governance_id","migrate_version", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason") VALUES ($1, $2, $3, $4, $5, 'Migrated', 'Rollback', '{}', 'Rollback for migration') ON CONFLICT DO NOTHING
   
                   $dynSQL$;
-          EXECUTE migrate_rb_insertion_sql USING islm_governance_id, target_version_number, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
+          EXECUTE migrate_rb_insertion_sql USING islm_governance_id, target_version, sp_migration_undo_sql.sp_migration, sp_migration_undo_sql.sp_migration_undo, sp_migration_undo_sql.fn_migration_status;
         ELSE
           RAISE EXCEPTION 'Cannot perform a rollback for this version';
         END IF;
@@ -110,9 +111,9 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migrate_sample_20231016101645"() AS $migrateVersionSP$
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migrate_Vsample_20231016101645"() AS $migrateVersionSP$
 BEGIN
-  IF info_schema_lifecycle."migration_sample_20231016101645_status"() = 0 THEN
+  IF info_schema_lifecycle."migration_Vsample_20231016101645_status"() = 0 THEN
     -- Add any PostgreSQL you need either manually constructed or SQLa.
 -- Your code will be placed automatically into a ISLM migration stored procedure.
 -- Use SQLa or Atlas for any code that you need. For example:
@@ -141,7 +142,7 @@ END
 
 $migrateVersionSP$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migration_sample_20231016101645_undo"() AS $migrateVersionUndo$
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."migration_Vsample_20231016101645_undo"() AS $migrateVersionUndo$
 BEGIN
   -- Add any PostgreSQL you need either manually constructed or SQLa.
   -- Your code will be placed automatically into a ISLM rollback stored procedure.
@@ -150,7 +151,7 @@ BEGIN
 END;
 $migrateVersionUndo$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_sample_20231016101645_status"() RETURNS integer AS $fnMigrateVersionStatus$
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_Vsample_20231016101645_status"() RETURNS integer AS $fnMigrateVersionStatus$
 DECLARE
   status INTEGER := 0; -- Initialize status to 0 (not executed)
 BEGIN
@@ -173,6 +174,6 @@ END;
 $fnMigrateVersionStatus$ LANGUAGE PLPGSQL;
 
 CALL islm_init();
-INSERT INTO "islm_governance" ("islm_governance_id", "state_sort_index", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('1b671a64-40d5-491e-99b0-da01ff1f3341', 1, 'migration_Vsample20231016101645', 'migration_Vsample20231016101645_undo', 'migration_Vsample20231016101645_status', 'None', 'SQL Loaded', '{}', 'SQL load for migration', (CURRENT_TIMESTAMP), 'Admin', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO "islm_governance" ("islm_governance_id", "migrate_version", "sp_migration", "sp_migration_undo", "fn_migration_status", "from_state", "to_state", "transition_result", "transition_reason", "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "activity_log") VALUES ('1b671a64-40d5-491e-99b0-da01ff1f3341', 'Vsample20231016101645', 'migration_Vsample20231016101645', 'migration_Vsample20231016101645_undo', 'migration_Vsample20231016101645_status', 'None', 'SQL Loaded', '{}', 'SQL load for migration', (CURRENT_TIMESTAMP), 'Admin', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 
 
