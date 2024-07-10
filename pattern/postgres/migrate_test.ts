@@ -24,9 +24,8 @@ const {
   gts,
 } = udm;
 
-const migrationInput = {
+const migrationInput: mod.MigrationVersion = {
   version: "sample",
-  versionNumber: 1,
   dateTime: new Date(2023, 10, 16, 10, 16, 45),
 };
 
@@ -174,12 +173,11 @@ const formattedDate = PgMigrateObj.formatDateToCustomString(
   migrationInput.dateTime,
 );
 const migrateVersion = "V" + migrationInput.version + formattedDate;
-const migrateVersionNumber = migrationInput.versionNumber;
 const islmGovernanceInsertion = PgMigrateObj.content()
   .islmGovernance.insertDML([
     {
       islm_governance_id: namespace,
-      state_sort_index: migrateVersionNumber,
+      migrate_version: migrateVersion,
       sp_migration: PgMigrateObj.prependMigrationSPText + migrateVersion,
       sp_migration_undo: PgMigrateObj.prependMigrationSPText + migrateVersion +
         PgMigrateObj.appendMigrationUndoSPText,
