@@ -67,6 +67,7 @@ BEGIN
     COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."elaboration" IS 'Any optional extra metadata or "elaboration"';
 
     CREATE TABLE IF NOT EXISTS "info_schema_lifecycle"."islm_governance" (
+        "islm_version" TEXT,
         "migration_routine_name" TEXT NOT NULL,
         "migration_version" TEXT NOT NULL,
         "migration_reason" TEXT,
@@ -88,6 +89,7 @@ BEGIN
     );
 
     COMMENT ON TABLE "info_schema_lifecycle"."islm_governance" IS 'Table to manage schema migrations and their governance lifecycle';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."islm_version" IS 'The ISLM version';
     COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_routine_name" IS 'The primary stored function/procedure name for this migration version';
     COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_version" IS 'The version part of the migration routine name (vYYYY_MM_DD_HH_MM)';
     COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_reason" IS 'The reason for performing the migration';
