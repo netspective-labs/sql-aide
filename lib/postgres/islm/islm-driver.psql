@@ -1,0 +1,4 @@
+-- setup ISLM infrastructure (tables and stored routines)
+\ir islm-infrastructure.psql
+
+-- add all files that are used by the app/service

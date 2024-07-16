@@ -1,0 +1,462 @@
+/******************************************************************************
+ * The Information Schema Lifecycle Manager (ISLM) is a PostgreSQL-native 
+ * schema migration system designed to manage and automate database schema 
+ * evolution.
+ * 
+ * ISLM encapsulates schema evolution (migration) logic within PostgreSQL 
+ * stored routines, providing a robust and manageable approach to database 
+ * schema evolution. ISLM operates within a dedicated schema named 
+ * `info_schema_lifecycle` with stateless "helper" functions named `islm_*` 
+ * for helping DBAs orchestrate the migrations based on naming conventions.
+ * 
+ * Components:
+ * 
+ * 1. Schema and Bootstrap Procedure:
+ *    - The `info_schema_lifecycle` schema is created to contain all ISLM-related objects.
+ *    - The `islm_bootstrap_idempotent` procedure creates essential tables: `islm_infrastructure_artifact` and `islm_governance`.
+ *      - `islm_infrastructure_artifact`: Stores governance and infrastructure-related artifacts.
+ *      - `islm_governance`: Manages schema migrations and their lifecycle, including details such as migration routine names, versions, reasons, idempotency, and SCXML states.
+ * 
+ * 2. Helper Functions:
+ *    - `migration_routine_candidate`: Finds migration routines based on naming conventions and returns relevant details, including possible undo and status routines.
+ *    - `migration_routine_state`: Provides the migration status for each candidate routine by joining the results of `migration_routine_candidate` with the `islm_governance` table.
+ * 
+ * 3. Instruction and Script Generation:
+ *    - `islm_migration_instruction`: Discovers migration routines and generates instructions for their execution, based on the current state and idempotency.
+ *    - `islm_migration_script`: Generates a SQL script for executing migration routines, based on the instructions from `islm_migration_instruction`.
+ * 
+ * The ISLM encapsulates schema evolution logic within PostgreSQL stored routines, 
+ * offering a structured and automated approach to database schema management. 
+ * It ensures that schema migrations are tracked, versioned, and can be governed effectively.
+ *****************************************************************************/
+
+-- DROP SCHEMA IF EXISTS "info_schema_lifecycle" CASCADE;
+CREATE SCHEMA IF NOT EXISTS "info_schema_lifecycle";
+
+/**
+ * `islm_bootstrap_idempotent` bootstraps the Information Schema Lifecycle Management (ISLM)
+ * package by creating governance tables and other objects required by stored
+ * routines.
+ *
+ * Dependencies:
+ * - None.
+ */
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_bootstrap_idempotent"() 
+LANGUAGE plpgsql AS 
+$$
+BEGIN
+    CREATE TABLE IF NOT EXISTS "info_schema_lifecycle"."islm_infrastructure_artifact" (
+        "artifact_id" TEXT PRIMARY KEY NOT NULL,
+        "artifact_nature" TEXT NOT NULL,
+        "artifact_xml" XML,
+        "artifact_json" JSONB,
+        "artifact_text" TEXT,
+        "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        "created_by" TEXT DEFAULT CURRENT_USER,
+        "elaboration" JSONB
+    );
+
+    COMMENT ON TABLE "info_schema_lifecycle"."islm_infrastructure_artifact" IS 'Table to store arbitrary artifacts such as SCXML state charts or other governance/infrastructure-related artifacts';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."artifact_id" IS 'The unique identifier for the artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."artifact_nature" IS 'The nature or type of the artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."artifact_xml" IS 'Optional XML artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."artifact_json" IS 'Optional JSON artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."artifact_text" IS 'Optional text artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."created_at" IS 'When the artifact was created';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."created_by" IS 'Who, at the database level, created the artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_infrastructure_artifact"."elaboration" IS 'Any optional extra metadata or "elaboration"';
+
+    CREATE TABLE IF NOT EXISTS "info_schema_lifecycle"."islm_governance" (
+        "migration_routine_name" TEXT NOT NULL,
+        "migration_version" TEXT NOT NULL,
+        "migration_reason" TEXT,
+        "is_idempotent" BOOLEAN NOT NULL,
+        "migration_undo_routine_name" TEXT,
+        "migration_status_routine_name" TEXT,
+        "scxml_id" TEXT,
+        "from_state" TEXT NOT NULL,
+        "to_state" TEXT NOT NULL,
+        "transition_result" JSONB,
+        "transition_reason" TEXT,
+        "transition_count" INTEGER NOT NULL DEFAULT 0,
+        "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        "created_by" TEXT DEFAULT CURRENT_USER,
+        "elaboration" JSONB,
+        PRIMARY KEY ("migration_routine_name", "from_state", "to_state", "transition_count"),
+        UNIQUE ("migration_version", "from_state", "to_state", "transition_count"),
+        FOREIGN KEY ("scxml_id") REFERENCES "info_schema_lifecycle"."islm_infrastructure_artifact"("artifact_id")
+    );
+
+    COMMENT ON TABLE "info_schema_lifecycle"."islm_governance" IS 'Table to manage schema migrations and their governance lifecycle';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_routine_name" IS 'The primary stored function/procedure name for this migration version';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_version" IS 'The version part of the migration routine name (vYYYY_MM_DD_HH_MM)';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_reason" IS 'The reason for performing the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."is_idempotent" IS 'Indicates whether the migration is idempotent (true) or stateful (false)';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_undo_routine_name" IS 'Optional "undo" routine';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."migration_status_routine_name" IS 'Optional "status" routine that would allow checking of whether or not the migration was done based on the content of what was expected (could also run a pgTAP routine)';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."scxml_id" IS 'Optional foreign key to the SCXML state chart in islm_infrastructure_artifact';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."from_state" IS 'The SCXML state for the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."to_state" IS 'The SCXML state for the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."transition_result" IS 'The SCXML state transition for the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."transition_reason" IS 'The SCXML state transition reason for the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."transition_count" IS 'The count of transitions for the same migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."created_at" IS 'When the migration was done';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."created_by" IS 'Who, at the database level, did the migration';
+    COMMENT ON COLUMN "info_schema_lifecycle"."islm_governance"."elaboration" IS 'Any optional extra metadata or "elaboration"';
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'An error occurred: %', SQLERRM;
+        ROLLBACK;
+END;
+$$;
+
+COMMENT ON PROCEDURE "info_schema_lifecycle"."islm_bootstrap_idempotent" IS 'Bootstrap ISLM by creating governance tables and other objects required by stored routines.';
+
+-- Run islm_bootstrap_idempotent to ensure tables and schema are created
+DO
+$$
+BEGIN
+    CALL "info_schema_lifecycle"."islm_bootstrap_idempotent"();
+END;
+$$;
+
+/**
+ * `migration_routine_candidate` dynamically discovers migration routines and their related routines (undo and status) within a specified schema.
+ * This function searches for stored procedures in the specified schema (defaulting to 'info_schema_lifecycle') that match the naming convention for migration routines.
+ * The expected naming conventions are:
+ * - migrate_vYYYY_MM_DD_HH_MM_stateful_XYZ
+ * - migrate_vYYYY_MM_DD_HH_MM_idempotent_XYZ
+ * 
+ * Parameters:
+ * - schema_name (TEXT): The schema to search for migration routines. Defaults to 'info_schema_lifecycle'.
+ * 
+ * Returns:
+ * - TABLE with columns:
+ *   - migration_routine_name (TEXT): The name of the migration routine found.
+ *   - migration_version (TEXT): The version part of the migration routine name (vYYYY_MM_DD_HH_MM).
+ *   - migration_reason (TEXT): The optional descriptive part after the version in the migration routine name (XYZ).
+ *   - is_idempotent (BOOLEAN): True if the routine name contains 'idempotent', otherwise False.
+ *   - migration_undo_routine_name (TEXT): The corresponding undo routine if found (name with '_undo' appended).
+ *   - migration_status_routine_name (TEXT): The corresponding status routine if found (name with '_status' appended).
+ * 
+ * Dependencies:
+ * - None. This function does not require any extensions or additional dependencies beyond the standard PostgreSQL setup.
+ */
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_routine_candidate"(schema_name TEXT DEFAULT 'info_schema_lifecycle')
+RETURNS TABLE (
+    migration_routine_name TEXT,
+    migration_version TEXT,
+    migration_reason TEXT,
+    is_idempotent BOOLEAN,
+    migration_undo_routine_name TEXT,
+    migration_status_routine_name TEXT
+) 
+LANGUAGE plpgsql AS 
+$$
+BEGIN
+    RETURN QUERY
+    WITH routines_cte AS (
+        SELECT
+            p.routine_name::text,
+            regexp_matches(p.routine_name::text, 'migrate_v(\d{4}_\d{2}_\d{2}_\d{2}_\d{2})_(stateful|idempotent)_(.*)') AS matches
+        FROM
+            information_schema.routines p
+        WHERE
+            p.specific_schema = schema_name
+            AND p.routine_name ~ '^migrate_v\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_(stateful|idempotent)(_.*)?$'
+            AND p.routine_name NOT LIKE '%_undo%'
+            AND p.routine_name NOT LIKE '%_status%'
+    )
+    SELECT
+        r.routine_name AS migration_routine_name,
+        r.matches[1] AS migration_version,
+        COALESCE(r.matches[3], '') AS migration_reason,
+        r.routine_name LIKE '%idempotent%' AS is_idempotent,
+        (SELECT p.routine_name::text
+         FROM information_schema.routines p
+         WHERE p.specific_schema = schema_name
+           AND p.routine_name = r.routine_name || '_undo'
+         LIMIT 1) AS migration_undo_routine_name,
+        (SELECT p.routine_name::text
+         FROM information_schema.routines p
+         WHERE p.specific_schema = schema_name
+           AND p.routine_name = r.routine_name || '_status'
+         LIMIT 1) AS migration_status_routine_name
+    FROM
+        routines_cte r
+    ORDER BY
+        r.matches[1];
+END;
+$$;
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."migration_routine_candidate" IS 'Searches for stored routines in the specified schema that match the naming convention for migration scripts and returns relevant information about them.';
+
+/**
+ * `migration_routine_state` provides the migration status for each candidate routine within the specified schema.
+ * It uses migration_routine_candidate and joins it with the islm_governance table to provide migration status information.
+ * 
+ * Parameters:
+ * - schema_name (TEXT): The schema to search for migration routines. Defaults to 'info_schema_lifecycle'.
+ * 
+ * Returns:
+ * - TABLE with columns:
+ *   - migration_routine_name (TEXT): The name of the migration routine found.
+ *   - migration_version (TEXT): The version part of the migration routine name (vYYYY_MM_DD_HH_MM).
+ *   - migration_reason (TEXT): The optional descriptive part after the version in the migration routine name (XYZ).
+ *   - is_idempotent (BOOLEAN): True if the routine name contains 'idempotent', otherwise False.
+ *   - migration_undo_routine_name (TEXT): The corresponding undo routine if found (name with '_undo' appended).
+ *   - migration_status_routine_name (TEXT): The corresponding status routine if found (name with '_status' appended).
+ *   - is_migrated (BOOLEAN): True if the migration_routine_name was found in islm_governance, otherwise False.
+ *   - from_state (TEXT): The starting state of the migration.
+ *   - to_state (TEXT): The ending state of the migration.
+ *   - transition_result (JSONB): The result of the state transition.
+ *   - transition_reason (TEXT): The reason for the state transition.
+ *   - migrated_at (TIMESTAMPTZ): The timestamp when the migration was done.
+ *   - migrated_by (TEXT): The user who performed the migration.
+ *   - transition_count (INTEGER): The count of transitions for the same migration.
+ * 
+ * Dependencies:
+ * - Requires the migration_routine_candidate function.
+ */
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."migration_routine_state"(schema_name TEXT DEFAULT 'info_schema_lifecycle')
+RETURNS TABLE (
+    migration_routine_name TEXT,
+    migration_version TEXT,
+    migration_reason TEXT,
+    is_idempotent BOOLEAN,
+    migration_undo_routine_name TEXT,
+    migration_status_routine_name TEXT,
+    is_migrated BOOLEAN,
+    from_state TEXT,
+    to_state TEXT,
+    transition_result JSONB,
+    transition_reason TEXT,
+    migrated_at TIMESTAMPTZ,
+    migrated_by TEXT,
+    transition_count INTEGER
+) 
+LANGUAGE plpgsql AS 
+$$
+BEGIN
+    RETURN QUERY
+    SELECT
+        c.migration_routine_name,
+        c.migration_version,
+        c.migration_reason,
+        c.is_idempotent,
+        c.migration_undo_routine_name,
+        c.migration_status_routine_name,
+        g.migration_routine_name IS NOT NULL AS is_migrated,
+        g.from_state,
+        g.to_state,
+        g.transition_result,
+        g.transition_reason,
+        g.created_at AS migrated_at,
+        g.created_by AS migrated_by,
+        g.transition_count
+    FROM
+        "info_schema_lifecycle"."migration_routine_candidate"(schema_name) c
+    LEFT JOIN
+        "info_schema_lifecycle"."islm_governance" g
+    ON
+        c.migration_routine_name = g.migration_routine_name;
+END;
+$$;
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."migration_routine_state" IS 'Use migration_routine_candidate and join it with the islm_governance table to provide migration status information.';
+
+/**
+ * `islm_migration_instruction` discovers migration routines and generate instructions for their execution.
+ * Does not perform any migrations but returns a table with the tasks that should be performed based on the migration_routine_state function.
+ * 
+ * Parameters:
+ * - schema_name (TEXT): The schema to search for migration routines. Defaults to 'info_schema_lifecycle'.
+ * - rerun_idempotent (BOOLEAN): If true, idempotent routines are rerun even if already migrated. Defaults to true.
+ * 
+ * Returns:
+ * - TABLE with columns:
+ *   - action (TEXT): The action to be performed (e.g., 'CALL', 'INSERT').
+ *   - command (JSONB): The JSON command to be executed.
+ *   - comment (TEXT): Any comment related to the action.
+ * 
+ * Dependencies:
+ * - Requires the migration_routine_state function.
+ */
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_instruction"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+RETURNS TABLE (
+    action TEXT,
+    sql_stmt TEXT,
+    comment TEXT,
+    elaboration JSONB
+) 
+LANGUAGE plpgsql AS 
+$$
+DECLARE
+    rec RECORD;
+    insert_stmt TEXT;
+    insert_stmt_elaboration JSONB;
+    new_transition_count INT;
+BEGIN
+    FOR rec IN
+        SELECT
+            mrc.migration_routine_name,
+            mrc.migration_version,
+            mrc.migration_reason,
+            mrc.is_migrated,
+            mrc.is_idempotent,
+            mrc.migrated_at,
+            mrc.migrated_by,
+            g.from_state,
+            g.to_state,
+            g.transition_result,
+            g.transition_reason,
+            COALESCE(g.transition_count, 0) AS transition_count
+        FROM
+            info_schema_lifecycle.migration_routine_state(schema_name) mrc
+        LEFT JOIN
+            info_schema_lifecycle.islm_governance g
+        ON
+            mrc.migration_routine_name = g.migration_routine_name
+    LOOP
+        IF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
+            new_transition_count := rec.transition_count + 1;
+        ELSE
+            new_transition_count := 0;
+        END IF;
+
+        insert_stmt_elaboration := jsonb_build_object(
+            'migration_version', rec.migration_version,
+            'migration_routine_name', rec.migration_routine_name,
+            'from_state', CASE 
+                WHEN NOT rec.is_migrated THEN 'unapplied'
+                ELSE 'applied'
+            END,
+            'to_state', CASE 
+                WHEN NOT rec.is_migrated THEN 'applied'
+                ELSE 'reapplied'
+            END,
+            'transition_result', 'NULL',
+            'transition_reason', 'NULL',
+            'migration_reason', rec.migration_reason,
+            'transition_count', new_transition_count,
+            'created_at', 'CURRENT_TIMESTAMP',
+            'created_by', 'CURRENT_USER',
+            'is_idempotent', rec.is_idempotent,
+            'elaboration', 'NULL'
+        );
+
+        insert_stmt := 'INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES (' ||
+            quote_literal(insert_stmt_elaboration->>'migration_version') || ', ' ||
+            quote_literal(insert_stmt_elaboration->>'migration_routine_name') || ', ' ||
+            quote_literal(insert_stmt_elaboration->>'from_state') || ', ' ||
+            quote_literal(insert_stmt_elaboration->>'to_state') || ', ' ||
+            'NULL' || ', ' ||  -- transition_result
+            'NULL' || ', ' ||  -- transition_reason
+            quote_literal(insert_stmt_elaboration->>'migration_reason') || ', ' ||
+            new_transition_count || ', ' ||
+            'CURRENT_TIMESTAMP' || ', ' ||
+            'CURRENT_USER' || ', ' ||
+            (insert_stmt_elaboration->>'is_idempotent')::BOOLEAN || ', ' ||
+            'NULL' || ')';  -- elaboration
+
+        -- for debugging
+        -- RAISE NOTICE 'Elaboration: %', insert_stmt_elaboration;      
+        -- RAISE NOTICE 'Insert Statement: %', insert_stmt;
+        
+        IF NOT rec.is_migrated THEN
+            RETURN QUERY SELECT 
+                'CALL', 
+                'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()',
+                NULL, 
+                jsonb_build_object('routineName', rec.migration_routine_name);
+            RETURN QUERY SELECT 
+                'INSERT', 
+                insert_stmt, 
+                NULL, 
+                insert_stmt_elaboration;
+        ELSIF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
+            RETURN QUERY SELECT 
+                'CALL', 
+                'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()', 
+                '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' but is being run again since it is idempotent.', 
+                jsonb_build_object('routineName', rec.migration_routine_name);
+            RETURN QUERY SELECT 
+                'INSERT', 
+                insert_stmt, 
+                NULL, 
+                insert_stmt_elaboration;
+        ELSIF rec.is_migrated AND NOT rec.is_idempotent THEN
+            RETURN QUERY SELECT 
+                'COMMENT', 
+                NULL, 
+                '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' and will not be run again since it is stateful.', 
+                jsonb_build_object('routineName', rec.migration_routine_name);
+        END IF;
+    END LOOP;
+END;
+$$;
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_instruction" IS 'Returns a table with the instructions that should be performed based on the migration_routine_state function.';
+
+/**
+ * `islm_migration_script` generates a SQL script for executing migration routines within the specified schema.
+ * The generated SQL script is based on the instructions provided by the islm_migration_instruction function.
+ * 
+ * Parameters:
+ * - schema_name (TEXT): The schema to search for migration routines. Defaults to 'info_schema_lifecycle'.
+ * - rerun_idempotent (BOOLEAN): If true, idempotent routines are rerun even if already migrated. Defaults to true.
+ * 
+ * Returns:
+ * - TEXT: The generated SQL script.
+ * 
+ * Dependencies:
+ * - Requires the islm_migration_instruction function.
+ */
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_script"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+RETURNS TEXT 
+LANGUAGE plpgsql AS 
+$$
+DECLARE
+    result TEXT := '';
+    rec RECORD;
+BEGIN
+    FOR rec IN
+        SELECT action, sql_stmt, comment, elaboration
+        FROM info_schema_lifecycle.islm_migration_instruction(schema_name, rerun_idempotent)
+    LOOP
+        -- for debugging
+        -- RAISE NOTICE 'Action: %, SQL: %, Comment: %', rec.action, rec.sql_stmt, rec.comment;
+        result := result || rec.sql_stmt || ';' || E'\n';
+    END LOOP;
+
+    RETURN result;
+END;
+$$;
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_script" IS 'Generates a SQL script based on the instructions provided by the islm_migration_instruction function. The output can be executed manually or stored in a separate procedure.';
+
+
+/**
+ * `islm_migrate` executes the migration routines within the specified schema.
+ * The procedure executes the SQL script generated by the islm_migration_script function.
+ * 
+ * Parameters:
+ * - schema_name (TEXT): The schema to search for migration routines. Defaults to 'info_schema_lifecycle'.
+ * - rerun_idempotent (BOOLEAN): If true, idempotent routines are rerun even if already migrated. Defaults to true.
+ * 
+ * Dependencies:
+ * - Requires the islm_migration_script function.
+ */
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    migration_script TEXT;
+BEGIN
+    migration_script := "info_schema_lifecycle"."islm_migration_script"(schema_name, rerun_idempotent);
+    EXECUTE migration_script;
+END $$;
+
+COMMENT ON PROCEDURE "info_schema_lifecycle"."islm_migrate" IS 'Executes the migration routines based on the SQL script generated by the islm_migration_script function.';
+

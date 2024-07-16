@@ -1,0 +1,298 @@
+-- Drop and recreate the info_schema_lifecycle_assurance schema to ensure a clean environment
+DROP SCHEMA IF EXISTS info_schema_lifecycle_assurance CASCADE;
+CREATE SCHEMA info_schema_lifecycle_assurance;
+
+-- Create a custom testing function in the info_schema_lifecycle_assurance schema
+CREATE OR REPLACE FUNCTION info_schema_lifecycle_assurance.assert_equals(expected TEXT, actual TEXT, description TEXT)
+RETURNS void LANGUAGE plpgsql AS
+$$
+BEGIN
+    IF expected IS DISTINCT FROM actual THEN
+        RAISE LOG 'ASSERT: [FAIL] % - Expected: `%`, Actual: `%`', description, expected, actual;
+    ELSE
+        RAISE LOG 'ASSERT: [pass] %', description;
+    END IF;
+END;
+$$;
+
+-- Create the islm_test_structs procedure in the info_schema_lifecycle_assurance schema
+CREATE OR REPLACE PROCEDURE info_schema_lifecycle_assurance.islm_test_structs()
+LANGUAGE plpgsql AS
+$$
+BEGIN
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.tables WHERE table_schema = 'info_schema_lifecycle' AND table_name = 'islm_infrastructure_artifact')::TEXT,
+        'Table islm_infrastructure_artifact should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.tables WHERE table_schema = 'info_schema_lifecycle' AND table_name = 'islm_governance')::TEXT,
+        'Table islm_governance should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle' AND routine_name = 'islm_bootstrap_idempotent')::TEXT,
+        'Single non-overloaded function islm_bootstrap_idempotent should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle' AND routine_name = 'migration_routine_candidate')::TEXT,
+        'Single non-overloaded function migration_routine_candidate should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle' AND routine_name = 'migration_routine_state')::TEXT,
+        'Single non-overloaded function migration_routine_state should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle' AND routine_name = 'islm_migration_instruction')::TEXT,
+        'Single non-overloaded function islm_migration_instruction should exist in info_schema_lifecycle schema'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle' AND routine_name = 'islm_migration_script')::TEXT,
+        'Single non-overloaded function islm_migration_script should exist in info_schema_lifecycle schema'
+    );
+END;
+$$;
+
+-- Create the islm_test_candidates procedure in the info_schema_lifecycle_assurance schema
+CREATE OR REPLACE PROCEDURE info_schema_lifecycle_assurance.islm_test_candidates()
+LANGUAGE plpgsql AS
+$$
+BEGIN
+    -- Create test functions and procedures
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example_undo() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example_status() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_01_idempotent_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_01_idempotent_example_status() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_02_stateful_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    -- Test the migration routine candidates
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '3',
+        (SELECT COUNT(*)::TEXT FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance')),
+        'migration_routine_candidate should return 3 candidates'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '2024_07_14_12_00',
+        (SELECT migration_version FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_00_stateful_example'),
+        'migration_routine_candidate should return correct version "2024_07_14_12_00" for migrate_v2024_07_14_12_00_stateful_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'false',
+        (SELECT is_idempotent::TEXT FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_00_stateful_example'),
+        'migration_routine_candidate should return correct idempotent status "false" for migrate_v2024_07_14_12_00_stateful_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'example',
+        (SELECT migration_reason FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_00_stateful_example'),
+        'migration_routine_candidate should return correct reason "example" for migrate_v2024_07_14_12_00_stateful_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '2024_07_14_12_01',
+        (SELECT migration_version FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_01_idempotent_example'),
+        'migration_routine_candidate should return correct version "2024_07_14_12_01" for migrate_v2024_07_14_12_01_idempotent_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'true',
+        (SELECT is_idempotent::TEXT FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_01_idempotent_example'),
+        'migration_routine_candidate should return correct idempotent status "true" for migrate_v2024_07_14_12_01_idempotent_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'example',
+        (SELECT migration_reason FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_01_idempotent_example'),
+        'migration_routine_candidate should return correct reason "example" for migrate_v2024_07_14_12_01_idempotent_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '2024_07_14_12_02',
+        (SELECT migration_version FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_02_stateful_example'),
+        'migration_routine_candidate should return correct version "2024_07_14_12_02" for migrate_v2024_07_14_12_02_stateful_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'false',
+        (SELECT is_idempotent::TEXT FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_02_stateful_example'),
+        'migration_routine_candidate should return correct idempotent status "false" for migrate_v2024_07_14_12_02_stateful_example'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        'example',
+        (SELECT migration_reason FROM info_schema_lifecycle.migration_routine_candidate('info_schema_lifecycle_assurance') WHERE migration_routine_name = 'migrate_v2024_07_14_12_02_stateful_example'),
+        'migration_routine_candidate should return correct reason "example" for migrate_v2024_07_14_12_02_stateful_example'
+    );
+
+    -- Assert the existence of undo and status functions for migrate_v2024_07_14_12_00_stateful_example
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_00_stateful_example_undo')::TEXT,
+        'Undo function for migrate_v2024_07_14_12_00_stateful_example should exist'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_00_stateful_example_status')::TEXT,
+        'Status function for migrate_v2024_07_14_12_00_stateful_example should exist'
+    );
+
+    -- Assert the existence of status function for migrate_v2024_07_14_12_01_idempotent_example
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '0',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_01_idempotent_example_undo')::TEXT,
+        'Undo function for migrate_v2024_07_14_12_01_idempotent_example should not exist'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '1',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_01_idempotent_example_status')::TEXT,
+        'Status function for migrate_v2024_07_14_12_01_idempotent_example should exist'
+    );
+
+    -- Assert no undo or status functions for migrate_v2024_07_14_12_02_stateful_example
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '0',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_02_stateful_example_undo')::TEXT,
+        'Undo function for migrate_v2024_07_14_12_02_stateful_example should not exist'
+    );
+
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        '0',
+        (SELECT COUNT(*)::TEXT FROM information_schema.routines WHERE routine_schema = 'info_schema_lifecycle_assurance' AND routine_name = 'migrate_v2024_07_14_12_02_stateful_example_status')::TEXT,
+        'Status function for migrate_v2024_07_14_12_02_stateful_example should not exist'
+    );
+
+    -- Drop test functions and procedures
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example_undo" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example_status" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_01_idempotent_example" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_01_idempotent_example_status" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_02_stateful_example" CASCADE;
+END;
+$$;
+
+-- Create the islm_test_migrations_unapplied procedure in the info_schema_lifecycle_assurance schema
+CREATE OR REPLACE PROCEDURE info_schema_lifecycle_assurance.islm_test_migrations_unapplied()
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    migration_script TEXT;
+BEGIN
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example_undo() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_00_stateful_example_status() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_01_idempotent_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_01_idempotent_example_status() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    CREATE FUNCTION info_schema_lifecycle_assurance.migrate_v2024_07_14_12_02_stateful_example() 
+    RETURNS void LANGUAGE sql AS 
+    'SELECT 1';
+
+    -- Store the output of info_schema_lifecycle.islm_migration_script into a variable
+    migration_script := info_schema_lifecycle.islm_migration_script('info_schema_lifecycle_assurance', true);
+
+    -- for debugging
+    -- RAISE NOTICE 'Migration Script: %', migration_script;
+
+    -- Check that the variable matches expectations
+    PERFORM info_schema_lifecycle_assurance.assert_equals(
+        regexp_replace(
+            $expected$CALL migrate_v2024_07_14_12_00_stateful_example();
+            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_00', 'migrate_v2024_07_14_12_00_stateful_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, NULL);
+            CALL migrate_v2024_07_14_12_01_idempotent_example();
+            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_01', 'migrate_v2024_07_14_12_01_idempotent_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, true, NULL);
+            CALL migrate_v2024_07_14_12_02_stateful_example();
+            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_02', 'migrate_v2024_07_14_12_02_stateful_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, NULL);
+            $expected$, 
+            E'^[ \\t]+', '', 'gm'
+        ),
+        migration_script,
+        'islm_migration_script should return correct script for unapplied migrations'
+    );
+
+    -- Drop test functions and procedures
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example_undo" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_00_stateful_example_status" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_01_idempotent_example" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_01_idempotent_example_status" CASCADE;
+    DROP FUNCTION IF EXISTS "info_schema_lifecycle_assurance"."migrate_v2024_07_14_12_02_stateful_example" CASCADE;
+END;
+$$;
+
+-- Create the islm_test_prime procedure in the info_schema_lifecycle_assurance schema
+CREATE OR REPLACE PROCEDURE info_schema_lifecycle_assurance.islm_test_prime()
+LANGUAGE plpgsql AS
+$$
+BEGIN
+    -- Note: pgTAP does not support running in custom schemas, so we are using a custom test infrastructure.
+    -- Additionally, pgTAP requires the public schema which we do not allow.
+
+    CALL info_schema_lifecycle_assurance.islm_test_structs();
+    CALL info_schema_lifecycle_assurance.islm_test_candidates();
+    CALL info_schema_lifecycle_assurance.islm_test_migrations_unapplied();
+
+    -- TODO: add more test cases
+    -- CALL info_schema_lifecycle_assurance.islm_test_migrations_partial_applied();
+    -- CALL info_schema_lifecycle_assurance.islm_test_migrations_all_applied();
+    
+    -- Additional tests can be added here in future
+END;
+$$;
+
+-- Note: pgTAP does not support running in custom schemas, so we are using a custom test infrastructure.
+
+-- Run the islm_test_prime procedure to ensure tables and functions exist using the custom test infrastructure
+DO
+$$
+BEGIN
+    CALL info_schema_lifecycle_assurance.islm_test_prime();
+END;
+$$;
