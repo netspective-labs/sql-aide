@@ -301,25 +301,63 @@ DECLARE
     new_transition_count INT;
 BEGIN
     FOR rec IN
+        -- SELECT
+        --     mrc.migration_routine_name,
+        --     mrc.migration_version,
+        --     mrc.migration_reason,
+        --     mrc.is_migrated,
+        --     mrc.is_idempotent,
+        --     mrc.migrated_at,
+        --     mrc.migrated_by,
+        --     g.from_state,
+        --     g.to_state,
+        --     g.transition_result,
+        --     g.transition_reason,
+        --     COALESCE(g.transition_count, 0) AS transition_count
+        -- FROM
+        --     info_schema_lifecycle.migration_routine_state(schema_name) mrc
+        -- LEFT JOIN
+        --     info_schema_lifecycle.islm_governance g
+        -- ON
+        --     mrc.migration_routine_name = g.migration_routine_name
+        -- COMMENTED OUT THE ABOVE QUERY DUE TO ISSUE WITH GETTING SAME VERSION MULTIPLE TIMES WHILE LOOPING AND INSERTING
+        -- WHICH RESULTS IN UNIQUE KEY CONSTRAINT ERROR. UPDATE WITH BELOW QUERY
+        WITH ranked_migrations AS (
+            SELECT
+                mrc.migration_routine_name,
+                mrc.migration_version,
+                mrc.migration_reason,
+                mrc.is_migrated,
+                mrc.is_idempotent,
+                mrc.migrated_at,
+                mrc.migrated_by,
+                mrc.from_state,
+                mrc.to_state,
+                mrc.transition_result,
+                mrc.transition_reason,
+                COALESCE(mrc.transition_count, 0) AS transition_count,
+                ROW_NUMBER() OVER (PARTITION BY mrc.migration_version ORDER BY mrc.migrated_at DESC) AS rn
+            FROM
+                info_schema_lifecycle.migration_routine_state(schema_name) mrc
+        )
         SELECT
-            mrc.migration_routine_name,
-            mrc.migration_version,
-            mrc.migration_reason,
-            mrc.is_migrated,
-            mrc.is_idempotent,
-            mrc.migrated_at,
-            mrc.migrated_by,
-            g.from_state,
-            g.to_state,
-            g.transition_result,
-            g.transition_reason,
-            COALESCE(g.transition_count, 0) AS transition_count
+            migration_routine_name,
+            migration_version,
+            migration_reason,
+            is_migrated,
+            is_idempotent,
+            migrated_at,
+            migrated_by,
+            from_state,
+            to_state,
+            transition_result,
+            transition_reason,
+            transition_count
         FROM
-            info_schema_lifecycle.migration_routine_state(schema_name) mrc
-        LEFT JOIN
-            info_schema_lifecycle.islm_governance g
-        ON
-            mrc.migration_routine_name = g.migration_routine_name
+            ranked_migrations
+        WHERE
+            rn = 1
+        
     LOOP
         IF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
             new_transition_count := rec.transition_count + 1;
