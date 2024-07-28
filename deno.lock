@@ -120,6 +120,10 @@
       }
     }
   },
+  "redirects": {
+    "https://deno.land/std/assert/assert_equals.ts": "https://deno.land/std@0.224.0/assert/assert_equals.ts",
+    "https://deno.land/x/zod/mod.ts": "https://deno.land/x/zod@v3.23.8/mod.ts"
+  },
   "remote": {
     "https://deno.land/std@0.140.0/_util/assert.ts": "e94f2eb37cebd7f199952e242c77654e43333c1ac4c5c700e929ea3aa5489f74",
     "https://deno.land/std@0.140.0/_util/os.ts": "3b4c6e27febd119d36a416d7a97bd3b0251b77c88942c8f16ee5953ea13e2e49",
@@ -864,6 +868,7 @@
     "https://deno.land/std@0.213.0/yaml/stringify.ts": "580f8b2fa56e3233424520d8242f4fc0edf41ac54a6a6d2f6f8e0b6e99cd63c0",
     "https://deno.land/std@0.213.0/yaml/type.ts": "708dde5f20b01cc1096489b7155b6af79a217d585afb841128e78c3c2391eb5c",
     "https://deno.land/std@0.224.0/assert/_constants.ts": "a271e8ef5a573f1df8e822a6eb9d09df064ad66a4390f21b3e31f820a38e0975",
+    "https://deno.land/std@0.224.0/assert/assert.ts": "09d30564c09de846855b7b071e62b5974b001bb72a4b797958fe0660e7849834",
     "https://deno.land/std@0.224.0/assert/assert_equals.ts": "3bbca947d85b9d374a108687b1a8ba3785a7850436b5a8930d81f34a32cb8c74",
     "https://deno.land/std@0.224.0/assert/assertion_error.ts": "ba8752bd27ebc51f723702fac2f54d3e94447598f54264a6653d6413738a8917",
     "https://deno.land/std@0.224.0/assert/equal.ts": "bddf07bb5fc718e10bb72d5dc2c36c1ce5a8bdd3b647069b6319e07af181ac47",
@@ -1296,6 +1301,19 @@
     "https://deno.land/x/zod@v3.21.4/locales/en.ts": "a7a25cd23563ccb5e0eed214d9b31846305ddbcdb9c5c8f508b108943366ab4c",
     "https://deno.land/x/zod@v3.21.4/mod.ts": "64e55237cb4410e17d968cd08975566059f27638ebb0b86048031b987ba251c4",
     "https://deno.land/x/zod@v3.21.4/types.ts": "b5d061babea250de14fc63764df5b3afa24f2b088a1d797fc060ba49a0ddff28",
+    "https://deno.land/x/zod@v3.23.0/ZodError.ts": "528da200fbe995157b9ae91498b103c4ef482217a5c086249507ac850bd78f52",
+    "https://deno.land/x/zod@v3.23.0/errors.ts": "5285922d2be9700cc0c70c95e4858952b07ae193aa0224be3cbd5cd5567eabef",
+    "https://deno.land/x/zod@v3.23.0/external.ts": "a6cfbd61e9e097d5f42f8a7ed6f92f93f51ff927d29c9fbaec04f03cbce130fe",
+    "https://deno.land/x/zod@v3.23.0/helpers/enumUtil.ts": "54efc393cc9860e687d8b81ff52e980def00fa67377ad0bf8b3104f8a5bf698c",
+    "https://deno.land/x/zod@v3.23.0/helpers/errorUtil.ts": "7a77328240be7b847af6de9189963bd9f79cab32bbc61502a9db4fe6683e2ea7",
+    "https://deno.land/x/zod@v3.23.0/helpers/parseUtil.ts": "c14814d167cc286972b6e094df88d7d982572a08424b7cd50f862036b6fcaa77",
+    "https://deno.land/x/zod@v3.23.0/helpers/partialUtil.ts": "998c2fe79795257d4d1cf10361e74492f3b7d852f61057c7c08ac0a46488b7e7",
+    "https://deno.land/x/zod@v3.23.0/helpers/typeAliases.ts": "0fda31a063c6736fc3cf9090dd94865c811dfff4f3cb8707b932bf937c6f2c3e",
+    "https://deno.land/x/zod@v3.23.0/helpers/util.ts": "19fe29646e50fa6fcc64d1ecff2829e5c4625ed37de8bc954259957f10968869",
+    "https://deno.land/x/zod@v3.23.0/index.ts": "d27aabd973613985574bc31f39e45cb5d856aa122ef094a9f38a463b8ef1a268",
+    "https://deno.land/x/zod@v3.23.0/locales/en.ts": "a7a25cd23563ccb5e0eed214d9b31846305ddbcdb9c5c8f508b108943366ab4c",
+    "https://deno.land/x/zod@v3.23.0/mod.ts": "ec6e2b1255c1a350b80188f97bd0a6bac45801bb46fc48f50b9763aa66046039",
+    "https://deno.land/x/zod@v3.23.0/types.ts": "82afa26e3ae2998dc8a7fe30c4992a9604a99e61e36574822804bd999a8622ef",
     "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.9/deps.ts": "233dfb7208ed7327d133c434a513397680b2466d05456b32e5459a84aadbeba7",
     "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.9/lib/universal/record.ts": "68dc9f234e49b98878ba66ec00076a7e0545c209b0ebc2c18a8abc1084d0643f",
     "https://raw.githubusercontent.com/netspective-labs/sql-aide/v0.0.9/lib/universal/safety.ts": "bb01f4fbddf4977c39f8da8a81160458e309af220e546a420f990c23fbd81270",
