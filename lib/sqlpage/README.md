@@ -55,15 +55,14 @@ directly within SQLPage applications.
 
 ## SQLPageAide class
 
-SQLPageAide is a utility class designed to facilitate the creation of upsert
-statements for the SQLPage low-code tool. SQLPage expects a table called
-`sqlpage_files` with columns `path` and `contents` to define pages that it can
-serve via HTTP. The `path` column serves as a unique identifier for each page or
-API endpoint, while the `contents` column holds the SQL statements or other
-content that define the page's response.
+`SQLPageAide` is a utility class designed to facilitate the creation of upsert
+statements for inserting records into `sqlpage_files` table. `SQLPageAide` does
+not operate on a database, it just generates SQL.
 
 ## Key Features
 
+- **No Dependencies**: Does not depend on SQLa or any other library but can use
+  all of SQLa if desired.
 - **Structured Definitions**: Define SQL page paths and contents using classes
   or objects.
 - **Convenience Functions**:

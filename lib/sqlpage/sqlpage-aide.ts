@@ -81,14 +81,30 @@ interface PathContentsSupplier<Source> {
  */
 interface ContentsArgsSupplier<
   Source,
-  CandidateContentArg extends Any[],
-  ContentArg extends Any[],
+  CandidateContentArgs extends Any[],
+  ContentArgs extends Any[],
 > {
   (
     sp: SourcePaths<Source>,
     sqlPagePath: string,
-    ...candidateArgs: CandidateContentArg
-  ): ContentArg;
+    ...candidateArgs: CandidateContentArgs
+  ): ContentArgs;
+}
+
+/**
+ * A function type that supplies a SQL handler when a SQL method returns something
+ * other than a string or string[]
+ */
+interface UnknownContentsTypeHandler<
+  Source,
+  ContentArgs extends Any[],
+> {
+  (
+    contentsResult: unknown,
+    sp: SourcePaths<Source>,
+    sqlPagePath: string,
+    args?: ContentArgs,
+  ): string;
 }
 
 function sourcePaths<T>(candidate: Any, ...args: Any[]): SourcePaths<T> {
@@ -178,12 +194,18 @@ export class SQLPageAide<
   CandidateContentArgs extends Any[],
   ContentArgs extends Any[],
 > {
+  protected formattedSQL = false;
   protected sqlPagesSources: SourcePaths<Source>[] = [];
   protected includePatterns: PathPattern[] = [];
   protected excludePatterns: PathPattern[] = [];
   protected contentsArgsSupplier?: ContentsArgsSupplier<
     Source,
     CandidateContentArgs,
+    ContentArgs
+  >;
+  protected defaultContentsArgs?: ContentArgs;
+  protected unknownContentsTypeHandler?: UnknownContentsTypeHandler<
+    Source,
     ContentArgs
   >;
   protected pathContentsSupplier: PathContentsSupplier<Source> = (
@@ -213,6 +235,11 @@ export class SQLPageAide<
    */
   constructor(...defaultSqlPagesSources: Source[]) {
     this.sources(...defaultSqlPagesSources);
+  }
+
+  emitformattedSQL(formatted = true) {
+    this.formattedSQL = formatted;
+    return this;
   }
 
   /**
@@ -249,13 +276,22 @@ export class SQLPageAide<
   }
 
   /**
+   * Sets the default contents arguments passed to each SQL Method.
+   * @param contentsArgs - The contents arguments supplier function.
+   * @returns The SQLPageAide instance.
+   */
+  withContentsArgs(contentsArgs?: ContentArgs): this {
+    this.defaultContentsArgs = contentsArgs;
+    return this;
+  }
+
+  /**
    * Sets the contents arguments supplier function and its arguments.
    * The contents arguments supplier provides additional arguments to the SQL methods.
    * @param contentsArgsSupplier - The contents arguments supplier function.
-   * @param contentsArgs - The arguments for the contents supplier.
    * @returns The SQLPageAide instance.
    */
-  withContentsArgs(
+  withContentsArgsSupplier(
     contentsArgsSupplier: ContentsArgsSupplier<
       Source,
       CandidateContentArgs,
@@ -263,6 +299,19 @@ export class SQLPageAide<
     >,
   ): this {
     this.contentsArgsSupplier = contentsArgsSupplier;
+    return this;
+  }
+
+  /**
+   * Sets the contents handler function if the SQL methods return non-string result.
+   * @param handler - The contents arguments supplier function.
+   * @param contentsArgs - The arguments for the contents supplier.
+   * @returns The SQLPageAide instance.
+   */
+  onNonStringContents(
+    unknownContentsTypeHandler: UnknownContentsTypeHandler<Source, ContentArgs>,
+  ): this {
+    this.unknownContentsTypeHandler = unknownContentsTypeHandler;
     return this;
   }
 
@@ -331,13 +380,30 @@ export class SQLPageAide<
             this.contentsArgsSupplier(source, method, ...args),
           );
         } else {
-          sqlStatement = this.execPathContentsFn(source, method);
+          sqlStatement = this.execPathContentsFn(
+            source,
+            method,
+            this.defaultContentsArgs,
+          );
         }
 
         if (typeof sqlStatement === "string") {
           upsertFiles.push({ path: method, content: sqlStatement });
         } else if (Array.isArray(sqlStatement)) {
           upsertFiles.push({ path: method, content: sqlStatement.join("\n") });
+        } else if (this.unknownContentsTypeHandler) {
+          const ucthArgs = this.contentsArgsSupplier
+            ? this.contentsArgsSupplier(source, method, ...args)
+            : this.defaultContentsArgs;
+          upsertFiles.push({
+            path: method,
+            content: this.unknownContentsTypeHandler(
+              sqlStatement,
+              source,
+              method,
+              ucthArgs,
+            ),
+          });
         } else {
           upsertFiles.push({
             path: method,
@@ -363,7 +429,9 @@ export class SQLPageAide<
     return upsertFiles.map(({ path, content }) => {
       const escapedPath = path.replace(/'/g, "''");
       const escapedContent = content.replace(/'/g, "''");
-      return `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('${escapedPath}', '${escapedContent}', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents=excluded.contents, last_modified=CURRENT_TIMESTAMP);`;
+      return this.formattedSQL == false
+        ? `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('${escapedPath}', '${escapedContent}', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`
+        : `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES (\n      '${escapedPath}',\n      '${escapedContent}',\n      CURRENT_TIMESTAMP)\n  ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`;
     });
   }
 }

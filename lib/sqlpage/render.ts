@@ -31,11 +31,9 @@ export class ComponentRenderer {
       const functionName = `${component.component}SQL`;
       // deno-lint-ignore no-explicit-any
       const renderComponentFn = (c as any)[functionName];
-      console.log({ functionName, renderComponentFn });
 
       if (typeof renderComponentFn === "function") {
         const result = renderComponentFn(component);
-        console.log({ result });
         if (typeof result === "object" && result.SQL) {
           const candidate = result.SQL;
           if (typeof candidate === "string") {
