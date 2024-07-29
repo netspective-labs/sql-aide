@@ -132,7 +132,7 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
       // optionally rename/define these specific fields differently than defaults
       address: {
         zipcode: {
-          asSqlSelectName: "postal_code",
+          name: "postal_code",
         },
       },
     })
@@ -161,18 +161,18 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
                 data ->> 'id' AS id,
                 data ->> 'name' AS name,
                 data ->> 'age' AS age,
-                data -> 'address' ->> 'street' AS street,
-                data -> 'address' ->> 'city' AS city,
+                data -> 'address' ->> 'street' AS address_street,
+                data -> 'address' ->> 'city' AS address_city,
                 data -> 'address' ->> 'zipcode' AS postal_code,
-                data -> 'address' -> 'geo' ->> 'lat' AS lat,
-                data -> 'address' -> 'geo' ->> 'lng' AS lng,
-                data ->> 'isActive' AS isActive,
-                data -> 'metadata' ->> 'createdAt' AS createdAt,
-                data -> 'metadata' ->> 'updatedAt' AS updatedAt,
-                data -> 'metadata' -> 'history' ->> 'date' AS date,
-                data -> 'metadata' -> 'history' ->> 'action' AS action,
-                data -> 'preferences' -> 'notifications' ->> 'email' AS email,
-                data -> 'preferences' -> 'notifications' ->> 'sms' AS sms
+                data -> 'address' -> 'geo' ->> 'lat' AS address_geo_lat,
+                data -> 'address' -> 'geo' ->> 'lng' AS address_geo_lng,
+                data ->> 'isActive' AS is_active,
+                data -> 'metadata' ->> 'createdAt' AS metadata_created_at,
+                data -> 'metadata' ->> 'updatedAt' AS metadata_updated_at,
+                data -> 'metadata' -> 'history' ->> 'date' AS metadata_history_date,
+                data -> 'metadata' -> 'history' ->> 'action' AS metadata_history_action,
+                data -> 'preferences' -> 'notifications' ->> 'email' AS preferences_notifications_email,
+                data -> 'preferences' -> 'notifications' ->> 'sms' AS preferences_notifications_sms
             FROM jsonSupplierCTE;`),
   );
 });

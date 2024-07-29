@@ -266,25 +266,12 @@ export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
   }
 
   /**
-   * Generates SQL view creation and deletion statements.
-   * @param viewName - The name of the SQL view.
-   * @param jsonSupplierCTE - The CTE SQL for JSON data.
-   * @param jsonColumnNameInCTE - The name of the JSON column within the CTE.
-   * @param isMaterialized - If true, creates a materialized view.
-   * @returns An object with `dropDDL` and `createDDL` methods for SQL view management.
+   * Generates SQL column definitions for the JSON schema.
+   * @returns An array of ExtendedTabularJsonColumn objects representing the SQL columns.
    */
-  tabularSqlView(
-    viewName: string,
-    jsonSupplierCTE: string,
-    jsonColumnNameInCTE: string,
-    isMaterialized = false,
-  ): { readonly dropDDL: () => string; readonly createDDL: () => string } {
-    if (!this.shapeSchema) {
-      throw new Error("Shape schema must be defined");
-    }
-
-    const viewType = isMaterialized ? "MATERIALIZED VIEW" : "VIEW";
-    const columns: string[] = [];
+  tabularSqlColumns(jsonColumnAccessSQL: string) {
+    const columns:
+      (TabularJsonColumn<ZodTypeAny> & { columnExprSQL: string })[] = [];
 
     const recurse = (
       shape: ZodObject<Any> | ZodArray<Any>,
@@ -300,26 +287,27 @@ export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
           const column = this.jsonFieldColumn([...fieldsPath, currentField]);
           if (!column?.isEmittable) continue;
 
+          const fieldPath = fieldsPath.map((f) => `'${f.name}'`).join(" -> ");
+          let columnExprSQL = column.sqlAccessJsonField
+            ? column.sqlAccessJsonField(jsonColumnAccessSQL, [
+              ...fieldsPath,
+              currentField,
+            ])
+            : `${jsonColumnAccessSQL}${
+              fieldPath ? ` -> ${fieldPath}` : ""
+            } ->> '${currentField.name}'`;
+
+          if (column.sqlWrapExpr) {
+            columnExprSQL = column.sqlWrapExpr(columnExprSQL);
+          }
+
           if (field instanceof ZodObject || field instanceof z.ZodArray) {
             recurse(field, [...fieldsPath, currentField]);
           } else {
-            const fieldPath = fieldsPath.map((f) => `'${f.name}'`).join(" -> ");
-            let columnExprSQL = column.sqlAccessJsonField
-              ? column.sqlAccessJsonField(jsonColumnNameInCTE, [
-                ...fieldsPath,
-                currentField,
-              ])
-              : `${jsonColumnNameInCTE}${
-                fieldPath ? ` -> ${fieldPath}` : ""
-              } ->> '${currentField.name}'`;
-
-            if (column.sqlWrapExpr) {
-              columnExprSQL = column.sqlWrapExpr(columnExprSQL);
-            }
-
-            columns.push(
-              `${columnExprSQL} AS ${column.asSqlSelectName ?? key}`,
-            );
+            columns.push({
+              ...column,
+              columnExprSQL,
+            });
           }
         }
       } else if (shape instanceof z.ZodArray) {
@@ -331,17 +319,41 @@ export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
     };
 
     recurse(this.shapeSchema);
+    return columns;
+  }
+
+  /**
+   * Generates SQL view creation and deletion statements.
+   * @param viewName - The name of the SQL view.
+   * @param jsonSupplierCTE - The CTE SQL for JSON data.
+   * @param jsonColumnNameInCTE - The name of the JSON column within the CTE.
+   * @param isMaterialized - If true, creates a materialized view.
+   * @returns An object with `dropDDL` and `createDDL` methods for SQL view management.
+   */
+  tabularSqlView(
+    viewName: string,
+    jsonSupplierCTE: string,
+    jsonColumnNameInCTE: string,
+    isMaterialized = false,
+  ) {
+    if (!this.shapeSchema) {
+      throw new Error("Shape schema must be defined");
+    }
+
+    const viewType = isMaterialized ? "MATERIALIZED VIEW" : "VIEW";
+    const columns = this.tabularSqlColumns(jsonColumnNameInCTE);
 
     return {
       dropDDL: () => `DROP VIEW IF EXISTS ${viewName};`,
       createDDL: () =>
+        // deno-fmt-ignore
         unindentWhitespace(`
           CREATE ${viewType} ${viewName} AS
               WITH jsonSupplierCTE AS (
                   ${jsonSupplierCTE.replaceAll("\n", "\n              ")}
               )
               SELECT
-                  ${columns.join(",\n                  ")}
+                  ${columns.map((col) => `${col.columnExprSQL} AS ${col.asSqlSelectName ?? col.name}`).join(",\n                  ")}
               FROM jsonSupplierCTE;`),
     };
   }
