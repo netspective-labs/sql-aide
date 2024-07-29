@@ -61,35 +61,60 @@ export type JsonFieldAccessSqlSupplier = (
 ) => string;
 
 /**
- * Default supplier for PostgreSQL-dialect JSON field access SQL.
+ * Default supplier for PostgreSQL-dialect JSON field access SQL using arrow-style operators.
  */
-export const postgreSqlFieldAccessSqlSupplier: JsonFieldAccessSqlSupplier = (
+export const arrowStyleSqlFieldAccessSqlSupplier: JsonFieldAccessSqlSupplier = (
   jsonColumnName,
   fieldsPath,
   nullableDefaultSqlExpr,
 ) => {
-  // Build the path excluding the terminal field
-  const pathWithoutTerminal = fieldsPath.slice(0, -1).map((field, index) => {
+  // Initialize base path with the JSON column name
+  let fullPath = jsonColumnName;
+
+  // Iterate through all fields except the last one
+  fieldsPath.slice(0, -1).forEach((field) => {
     const optional = field.field instanceof z.ZodOptional ||
       field.field instanceof z.ZodNullable;
-    const pathPart = optional && nullableDefaultSqlExpr
-      ? `COALESCE(${jsonColumnName}${index > 0 ? ` -> ` : ""}'${field.name}', ${
-        nullableDefaultSqlExpr(field)
-      })`
-      : `${jsonColumnName}${index > 0 ? ` -> ` : ""}'${field.name}'`;
-    return pathPart;
-  }).join(" -> ");
+    const fieldAccess = `${fullPath} -> '${field.name}'`;
+
+    if (optional && nullableDefaultSqlExpr) {
+      fullPath = `COALESCE(${fieldAccess}, ${nullableDefaultSqlExpr(field)})`;
+    } else {
+      fullPath = fieldAccess;
+    }
+  });
 
   // Add the terminal field using ->> for text extraction
   const terminalField = fieldsPath[fieldsPath.length - 1];
   const terminalFieldPart = ` ->> '${terminalField.name}'`;
+  fullPath = `${fullPath}${terminalFieldPart}`;
 
-  // Construct the full path
-  const fullPath = pathWithoutTerminal
-    ? `${pathWithoutTerminal} -> ${jsonColumnName}${terminalFieldPart}`
-    : `${jsonColumnName}${terminalFieldPart}`;
+  return `${fullPath}`;
+};
 
-  return `(${fullPath})`;
+/**
+ * Supplier for dot-style JSON field access SQL.
+ * Uses the `$.x.y.z` style for JSON path extraction, compatible with PostgreSQL and SQLite.
+ */
+export const dotStyleSqlFieldAccessSqlSupplier: JsonFieldAccessSqlSupplier = (
+  jsonColumnName,
+  fieldsPath,
+  nullableDefaultSqlExpr,
+) => {
+  // Build the full JSON path in the $.x.y.z style
+  const jsonPath = fieldsPath.map((field) => `.${field.name}`).join("");
+
+  // Construct the SQL expression
+  let fullPath = `${jsonColumnName} ->> '$${jsonPath}'`;
+
+  // Apply COALESCE if nullableDefaultSqlExpr is provided
+  if (nullableDefaultSqlExpr) {
+    fullPath = `COALESCE(${fullPath}, ${
+      nullableDefaultSqlExpr(fieldsPath[fieldsPath.length - 1])
+    })`;
+  }
+
+  return fullPath;
 };
 
 /**
@@ -131,7 +156,7 @@ export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
    */
   constructor(schema: Shape) {
     this.shapeSchema = schema;
-    this.jsonFieldAccessSqlSupplier = postgreSqlFieldAccessSqlSupplier;
+    this.jsonFieldAccessSqlSupplier = dotStyleSqlFieldAccessSqlSupplier;
   }
 
   /**
@@ -287,15 +312,12 @@ export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
           const column = this.jsonFieldColumn([...fieldsPath, currentField]);
           if (!column?.isEmittable) continue;
 
-          const fieldPath = fieldsPath.map((f) => `'${f.name}'`).join(" -> ");
-          let columnExprSQL = column.sqlAccessJsonField
-            ? column.sqlAccessJsonField(jsonColumnAccessSQL, [
-              ...fieldsPath,
-              currentField,
-            ])
-            : `${jsonColumnAccessSQL}${
-              fieldPath ? ` -> ${fieldPath}` : ""
-            } ->> '${currentField.name}'`;
+          const jsonFieldAccessSupplier = column.sqlAccessJsonField ??
+            this.jsonFieldAccessSqlSupplier;
+          let columnExprSQL = jsonFieldAccessSupplier(jsonColumnAccessSQL, [
+            ...fieldsPath,
+            currentField,
+          ]);
 
           if (column.sqlWrapExpr) {
             columnExprSQL = column.sqlWrapExpr(columnExprSQL);

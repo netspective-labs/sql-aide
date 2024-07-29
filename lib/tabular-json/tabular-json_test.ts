@@ -1,7 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/assert_equals.ts";
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import {
-  postgreSqlFieldAccessSqlSupplier,
+  arrowStyleSqlFieldAccessSqlSupplier,
+  dotStyleSqlFieldAccessSqlSupplier,
   snakeCaseColumnSupplier,
   TabularJson,
 } from "./tabular-json.ts";
@@ -52,8 +53,7 @@ Deno.test("tabularJs - should handle flattenArrays option correctly", async (tc)
           name: "postal_code",
         },
       },
-    })
-    .jsonFieldAccessSql(postgreSqlFieldAccessSqlSupplier);
+    });
 
   const data = {
     id: "123",
@@ -124,7 +124,7 @@ Deno.test("tabularJs - should handle flattenArrays option correctly", async (tc)
   });
 });
 
-Deno.test("tabularSqlView - should generate correct SQL for complex shape", () => {
+Deno.test("tabularSqlView - should generate correct SQL for complex shape with arrow accessors", () => {
   // Initialize the TabularJson with the synthetic shape
   const tabularJson = new TabularJson(syntheticShape)
     .columnSupplier(snakeCaseColumnSupplier)
@@ -136,7 +136,7 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
         },
       },
     })
-    .jsonFieldAccessSql(postgreSqlFieldAccessSqlSupplier);
+    .jsonFieldAccessSql(arrowStyleSqlFieldAccessSqlSupplier);
 
   const viewName = "user_view";
   const sqlSelect = "SELECT * FROM users";
@@ -173,6 +173,59 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
                 data -> 'metadata' -> 'history' ->> 'action' AS metadata_history_action,
                 data -> 'preferences' -> 'notifications' ->> 'email' AS preferences_notifications_email,
                 data -> 'preferences' -> 'notifications' ->> 'sms' AS preferences_notifications_sms
+            FROM jsonSupplierCTE;`),
+  );
+});
+
+Deno.test("tabularSqlView - should generate correct SQL for complex shape with dot accessor", () => {
+  // Initialize the TabularJson with the synthetic shape
+  const tabularJson = new TabularJson(syntheticShape)
+    .columnSupplier(snakeCaseColumnSupplier)
+    .schemaColumns({
+      // optionally rename/define these specific fields differently than defaults
+      address: {
+        zipcode: {
+          name: "postal_code",
+        },
+      },
+    })
+    .jsonFieldAccessSql(dotStyleSqlFieldAccessSqlSupplier);
+
+  const viewName = "user_view";
+  const sqlSelect = "SELECT * FROM users";
+  const jsonColumnNameInCTE = "data";
+
+  const { createDDL, dropDDL } = tabularJson.tabularSqlView(
+    viewName,
+    sqlSelect,
+    jsonColumnNameInCTE,
+    false,
+  );
+
+  assertEquals(dropDDL(), "DROP VIEW IF EXISTS user_view;");
+  assertEquals(
+    createDDL(),
+    unindentWhitespace(`
+        CREATE VIEW user_view AS
+            WITH jsonSupplierCTE AS (
+                SELECT * FROM users
+            )
+            SELECT
+                data ->> '$.id' AS id,
+                data ->> '$.name' AS name,
+                data ->> '$.age' AS age,
+                data ->> '$.address.street' AS address_street,
+                data ->> '$.address.city' AS address_city,
+                data ->> '$.address.zipcode' AS postal_code,
+                data ->> '$.address.geo.lat' AS address_geo_lat,
+                data ->> '$.address.geo.lng' AS address_geo_lng,
+                data ->> '$.isActive' AS is_active,
+                data ->> '$.metadata.createdAt' AS metadata_created_at,
+                data ->> '$.metadata.updatedAt' AS metadata_updated_at,
+                data ->> '$.metadata.history.date' AS metadata_history_date,
+                data ->> '$.metadata.history.action' AS metadata_history_action,
+                data ->> '$.preferences.notifications.email' AS preferences_notifications_email,
+                data ->> '$.preferences.notifications.sms' AS preferences_notifications_sms
             FROM jsonSupplierCTE;`),
   );
 });
