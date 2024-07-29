@@ -4,7 +4,7 @@ import { TabularJson } from "../../lib/tabular-json/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-const syntheticShape = z.object({
+const demographicsShape = z.object({
   id: z.string(),
   name: z.string(),
   age: z.number(),
@@ -34,7 +34,7 @@ const syntheticShape = z.object({
   }),
 });
 
-const tabularJson = new TabularJson(syntheticShape)
+const tabularJson = new TabularJson(demographicsShape)
   .schemaColumns({
     id: { name: "identity" },
     address: {
