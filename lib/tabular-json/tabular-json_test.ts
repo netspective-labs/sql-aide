@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/assert_equals.ts";
-import { z } from "https://deno.land/x/zod@v3.23.0/mod.ts";
+import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import {
   postgreSqlFieldAccessSqlSupplier,
   snakeCaseColumnSupplier,
@@ -41,11 +41,18 @@ const syntheticShape = z.object({
   }),
 });
 
-Deno.test("tabularJs - should handle flattenArrays option correctly", () => {
-  // Initialize the TabularJson with the synthetic shape
-  const tabularJson = new TabularJson()
-    .jsonSchema(syntheticShape)
+Deno.test("tabularJs - should handle flattenArrays option correctly", async (tc) => {
+  const tabularJson = new TabularJson(syntheticShape)
     .columnSupplier(snakeCaseColumnSupplier)
+    .schemaColumns({
+      // rename/define these specific fields differently than defaults
+      id: { name: "identity" },
+      address: {
+        zipcode: {
+          name: "postal_code",
+        },
+      },
+    })
     .jsonFieldAccessSql(postgreSqlFieldAccessSqlSupplier);
 
   const data = {
@@ -79,10 +86,11 @@ Deno.test("tabularJs - should handle flattenArrays option correctly", () => {
     },
   };
 
-  Deno.test("flattenArrays: true", () => {
+  // deno-lint-ignore require-await
+  await tc.step("flattenArrays: true", async () => {
     const flattened = tabularJson.tabularJs({ flattenArrays: true })(data);
 
-    assertEquals(flattened["id"], "123");
+    assertEquals(flattened["identity"], "123"); // 'id' renamed 'identity'
     assertEquals(flattened["address_street"], "123 Main St");
     assertEquals(flattened["metadata_created_at"], "2021-01-01T00:00:00Z");
     assertEquals(flattened["hobbies_0"], "reading");
@@ -97,10 +105,11 @@ Deno.test("tabularJs - should handle flattenArrays option correctly", () => {
     assertEquals(flattened["preferences_notifications_sms"], false);
   });
 
-  Deno.test("flattenArrays: false", () => {
+  // deno-lint-ignore require-await
+  await tc.step("flattenArrays: false", async () => {
     const flattened = tabularJson.tabularJs({ flattenArrays: false })(data);
 
-    assertEquals(flattened["id"], "123");
+    assertEquals(flattened["identity"], "123"); // 'id' renamed 'identity'
     assertEquals(flattened["address_street"], "123 Main St");
     assertEquals(flattened["metadata_created_at"], "2021-01-01T00:00:00Z");
     assertEquals(flattened["hobbies"], ["reading", "gaming"]);
@@ -117,9 +126,16 @@ Deno.test("tabularJs - should handle flattenArrays option correctly", () => {
 
 Deno.test("tabularSqlView - should generate correct SQL for complex shape", () => {
   // Initialize the TabularJson with the synthetic shape
-  const tabularJson = new TabularJson()
-    .jsonSchema(syntheticShape)
+  const tabularJson = new TabularJson(syntheticShape)
     .columnSupplier(snakeCaseColumnSupplier)
+    .schemaColumns({
+      // optionally rename/define these specific fields differently than defaults
+      address: {
+        zipcode: {
+          asSqlSelectName: "postal_code",
+        },
+      },
+    })
     .jsonFieldAccessSql(postgreSqlFieldAccessSqlSupplier);
 
   const viewName = "user_view";
@@ -133,7 +149,6 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
     false,
   );
 
-  console.log(createDDL());
   assertEquals(dropDDL(), "DROP VIEW IF EXISTS user_view;");
   assertEquals(
     createDDL(),
@@ -148,7 +163,7 @@ Deno.test("tabularSqlView - should generate correct SQL for complex shape", () =
                 data ->> 'age' AS age,
                 data -> 'address' ->> 'street' AS street,
                 data -> 'address' ->> 'city' AS city,
-                data -> 'address' ->> 'zipcode' AS zipcode,
+                data -> 'address' ->> 'zipcode' AS postal_code,
                 data -> 'address' -> 'geo' ->> 'lat' AS lat,
                 data -> 'address' -> 'geo' ->> 'lng' AS lng,
                 data ->> 'isActive' AS isActive,

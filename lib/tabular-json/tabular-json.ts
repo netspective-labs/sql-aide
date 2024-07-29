@@ -2,8 +2,8 @@ import {
   ZodArray,
   ZodObject,
   ZodTypeAny,
-} from "https://deno.land/x/zod@v3.23.0/mod.ts";
-import { z } from "https://deno.land/x/zod@v3.23.0/mod.ts";
+} from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import { unindentWhitespace } from "../universal/whitespace.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -13,7 +13,6 @@ type Any = any;
  * Represents a field in the JSON structure.
  */
 export type TabularJsonShapeField<
-  Shape,
   FieldName extends string,
   Type extends ZodTypeAny,
 > = {
@@ -34,10 +33,19 @@ export type TabularJsonColumn<Type extends ZodTypeAny> = {
 };
 
 /**
+ * Given a shape, define optional column definitions
+ */
+export type TabularJsonColumns<Shape extends ZodObject<z.ZodRawShape>> = {
+  [Key in keyof Shape["shape"]]?: Shape["shape"][Key] extends
+    ZodObject<z.ZodRawShape> ? TabularJsonColumns<Shape["shape"][Key]>
+    : Partial<TabularJsonColumn<Shape["shape"][Key]>>;
+};
+
+/**
  * Function to supply column details for the given fields path and shape.
  */
 export type TabularJsonColumnSupplier<Shape> = (
-  fieldsPath: readonly TabularJsonShapeField<Shape, string, ZodTypeAny>[],
+  fieldsPath: TabularJsonShapeField<string, ZodTypeAny>[],
   shape: Shape,
 ) => TabularJsonColumn<ZodTypeAny>;
 
@@ -46,9 +54,9 @@ export type TabularJsonColumnSupplier<Shape> = (
  */
 export type JsonFieldAccessSqlSupplier = (
   jsonColumnName: string,
-  fieldsPath: readonly TabularJsonShapeField<Any, string, ZodTypeAny>[],
+  fieldsPath: TabularJsonShapeField<string, ZodTypeAny>[],
   nullableDefaultSqlExpr?: (
-    field: TabularJsonShapeField<Any, string, ZodTypeAny>,
+    field: TabularJsonShapeField<string, ZodTypeAny>,
   ) => string,
 ) => string;
 
@@ -112,16 +120,17 @@ export const snakeCaseColumnSupplier: TabularJsonColumnSupplier<Any> = (
 /**
  * Main class to handle JSON data, schema, and SQL view generation.
  */
-export class TabularJson<Shape extends ZodObject<Any>> {
-  protected shapeSchema?: Shape;
-  protected columnSupplierFunction: TabularJsonColumnSupplier<Shape>;
+export class TabularJson<Shape extends ZodObject<Any, Any, Any>> {
+  protected shapeSchema: Shape;
+  protected columnSupplierFunctions: TabularJsonColumnSupplier<Shape>[] = [];
+  protected shapeColumnsSearch: TabularJsonColumns<Shape>[] = [];
   protected jsonFieldAccessSqlSupplier: JsonFieldAccessSqlSupplier;
 
   /**
    * Initializes the TabularJson.
    */
-  constructor() {
-    this.columnSupplierFunction = snakeCaseColumnSupplier;
+  constructor(schema: Shape) {
+    this.shapeSchema = schema;
     this.jsonFieldAccessSqlSupplier = postgreSqlFieldAccessSqlSupplier;
   }
 
@@ -135,13 +144,18 @@ export class TabularJson<Shape extends ZodObject<Any>> {
     return this;
   }
 
+  schemaColumns(search: TabularJsonColumns<Shape>) {
+    this.shapeColumnsSearch.push(search);
+    return this;
+  }
+
   /**
-   * Sets the column supplier function.
+   * Adds a column supplier function.
    * @param supplier - The function supplying column details.
    * @returns The TabularJson instance for chaining.
    */
   columnSupplier(supplier: TabularJsonColumnSupplier<Shape>): this {
-    this.columnSupplierFunction = supplier;
+    this.columnSupplierFunctions.push(supplier);
     return this;
   }
 
@@ -156,6 +170,40 @@ export class TabularJson<Shape extends ZodObject<Any>> {
   }
 
   /**
+   * Returns the first non-undefined value from the list of column supplier functions.
+   * @param fieldsPath - The fields path to use for the column.
+   * @returns The first non-undefined TabularJsonColumn or the default snake_case column.
+   */
+  jsonFieldColumn(
+    fieldsPath: TabularJsonShapeField<string, ZodTypeAny>[],
+  ): TabularJsonColumn<ZodTypeAny> | undefined {
+    let result: TabularJsonColumn<ZodTypeAny> | undefined;
+    for (const supplier of this.columnSupplierFunctions) {
+      const column = supplier(fieldsPath, this.shapeSchema);
+      if (column) break;
+    }
+    if (!result) result = snakeCaseColumnSupplier(fieldsPath, this.shapeSchema);
+
+    for (const search of this.shapeColumnsSearch) {
+      let foundColumnDefn: Any = search;
+      for (const field of fieldsPath) {
+        if (!foundColumnDefn) break;
+        foundColumnDefn = foundColumnDefn[field.name];
+      }
+
+      if (foundColumnDefn) {
+        result = {
+          ...result,
+          ...foundColumnDefn,
+        };
+        return result;
+      }
+    }
+
+    return result!;
+  }
+
+  /**
    * Generates a JavaScript function to process data according to the schema.
    * @returns A function that processes data and returns a flattened object.
    */
@@ -167,7 +215,7 @@ export class TabularJson<Shape extends ZodObject<Any>> {
     }
 
     return (data: unknown) => {
-      const parsedData = this.shapeSchema!.safeParse(data);
+      const parsedData = this.shapeSchema.safeParse(data);
       if (!parsedData.success) {
         throw new Error("Invalid data shape");
       }
@@ -176,24 +224,21 @@ export class TabularJson<Shape extends ZodObject<Any>> {
       const recurse = (
         obj: Any,
         fieldsPath: readonly TabularJsonShapeField<
-          Shape,
           string,
           ZodTypeAny
         >[] = [],
       ) => {
         for (const key in obj) {
-          const field = this.shapeSchema!.shape[key];
-          const currentField: TabularJsonShapeField<Shape, string, ZodTypeAny> =
-            { name: key, field };
-          const { name, isEmittable } = this.columnSupplierFunction([
-            ...fieldsPath,
-            currentField,
-          ], this.shapeSchema!);
-          if (!isEmittable) continue;
+          const field = this.shapeSchema.shape[key];
+          const currentField: TabularJsonShapeField<string, ZodTypeAny> = {
+            name: key,
+            field,
+          };
+          const column = this.jsonFieldColumn([...fieldsPath, currentField]);
+          if (!column?.isEmittable) continue;
 
           if (Array.isArray(obj[key])) {
             if (options.flattenArrays) {
-              // Handle array of objects
               obj[key].forEach((item: Any, index: number) => {
                 if (typeof item === "object" && item !== null) {
                   recurse(item, [
@@ -201,17 +246,16 @@ export class TabularJson<Shape extends ZodObject<Any>> {
                     { name: `${key}_${index}`, field },
                   ]);
                 } else {
-                  result[`${name}_${index}`] = item;
+                  result[`${column.name}_${index}`] = item;
                 }
               });
             } else {
-              result[name] = obj[key]; // Keep the array as-is
+              result[column.name] = obj[key];
             }
           } else if (typeof obj[key] === "object" && obj[key] !== null) {
-            // Recursively handle nested objects
             recurse(obj[key], [...fieldsPath, currentField]);
           } else {
-            result[name] = obj[key];
+            result[column.name] = obj[key];
           }
         }
       };
@@ -244,35 +288,24 @@ export class TabularJson<Shape extends ZodObject<Any>> {
 
     const recurse = (
       shape: ZodObject<Any> | ZodArray<Any>,
-      fieldsPath: readonly TabularJsonShapeField<Shape, string, ZodTypeAny>[] =
-        [],
+      fieldsPath: readonly TabularJsonShapeField<string, ZodTypeAny>[] = [],
     ) => {
       if (shape instanceof ZodObject) {
         for (const key in shape.shape) {
           const field = shape.shape[key];
-          const currentField: TabularJsonShapeField<Shape, string, ZodTypeAny> =
-            {
-              name: key,
-              field,
-            };
-          const {
-            isEmittable,
-            sqlWrapExpr,
-            sqlAccessJsonField,
-            asSqlSelectName,
-          } = this.columnSupplierFunction(
-            [...fieldsPath, currentField],
-            this.shapeSchema!,
-          );
-          if (!isEmittable) continue;
+          const currentField: TabularJsonShapeField<string, ZodTypeAny> = {
+            name: key,
+            field,
+          };
+          const column = this.jsonFieldColumn([...fieldsPath, currentField]);
+          if (!column?.isEmittable) continue;
 
           if (field instanceof ZodObject || field instanceof z.ZodArray) {
             recurse(field, [...fieldsPath, currentField]);
           } else {
-            // Construct the path excluding the final ->>'field'
             const fieldPath = fieldsPath.map((f) => `'${f.name}'`).join(" -> ");
-            let columnExprSQL = sqlAccessJsonField
-              ? sqlAccessJsonField(jsonColumnNameInCTE, [
+            let columnExprSQL = column.sqlAccessJsonField
+              ? column.sqlAccessJsonField(jsonColumnNameInCTE, [
                 ...fieldsPath,
                 currentField,
               ])
@@ -280,12 +313,12 @@ export class TabularJson<Shape extends ZodObject<Any>> {
                 fieldPath ? ` -> ${fieldPath}` : ""
               } ->> '${currentField.name}'`;
 
-            if (sqlWrapExpr) {
-              columnExprSQL = sqlWrapExpr(columnExprSQL);
+            if (column.sqlWrapExpr) {
+              columnExprSQL = column.sqlWrapExpr(columnExprSQL);
             }
 
             columns.push(
-              `${columnExprSQL} AS ${asSqlSelectName ?? key}`,
+              `${columnExprSQL} AS ${column.asSqlSelectName ?? key}`,
             );
           }
         }
@@ -297,7 +330,7 @@ export class TabularJson<Shape extends ZodObject<Any>> {
       }
     };
 
-    recurse(this.shapeSchema!);
+    recurse(this.shapeSchema);
 
     return {
       dropDDL: () => `DROP VIEW IF EXISTS ${viewName};`,

@@ -1,5 +1,8 @@
+import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import { TabularJson } from "../../lib/tabular-json/mod.ts";
-import { z } from "https://deno.land/x/zod@v3.23.0/mod.ts";
+
+// deno-lint-ignore no-explicit-any
+type Any = any;
 
 const syntheticShape = z.object({
   id: z.string(),
@@ -31,7 +34,16 @@ const syntheticShape = z.object({
   }),
 });
 
-const tabularJson = new TabularJson().jsonSchema(syntheticShape);
+const tabularJson = new TabularJson(syntheticShape)
+  .schemaColumns({
+    id: { name: "identity" },
+    address: {
+      zipcode: {
+        name: "postal_code",
+        asSqlSelectName: "postal_code",
+      },
+    },
+  });
 
 const flattenJs = tabularJson.tabularJs({ flattenArrays: true });
 const flatData = flattenJs({
