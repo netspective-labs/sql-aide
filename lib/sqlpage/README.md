@@ -67,8 +67,14 @@ not operate on a database, it just generates SQL.
   or objects.
 - **Convenience Functions**:
   - `sources()`: Specify the classes or objects containing SQL definitions.
-  - `include()`: Include specific patterns to match method names.
-  - `exclude()`: Exclude specific patterns from matching method names.
+  - `includeUpserts()`: Include specific patterns to match method names that
+    will generate Upsert content (defaults to /*.sql$/).
+  - `excludeUpserts()`: Exclude specific patterns from matching method names
+    that will generate Upsert content.
+  - `includeSql()`: Include specific patterns to match method names that will
+    generate general SQL statements to incorporate before upserts.
+  - `excludeSql()`: Exclude specific patterns from matching method names that
+    will generate general SQL statements to incorporate before upserts.
   - `withContentsArgs()`: Inject additional context or arguments into SQL
     methods for dynamic content.
   - `pathContents()`: Customize the method selection process for upserting into

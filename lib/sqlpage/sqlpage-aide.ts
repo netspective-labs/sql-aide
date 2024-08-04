@@ -196,30 +196,54 @@ export class SQLPageAide<
 > {
   protected formattedSQL = false;
   protected sqlPagesSources: SourcePaths<Source>[] = [];
-  protected includePatterns: PathPattern[] = [];
-  protected excludePatterns: PathPattern[] = [];
+  protected upsertIncludePatterns: PathPattern[] = [];
+  protected upsertExcludePatterns: PathPattern[] = [];
+  protected sqlIncludePatterns: PathPattern[] = [];
+  protected sqlExcludePatterns: PathPattern[] = [];
   protected contentsArgsSupplier?: ContentsArgsSupplier<
     Source,
     CandidateContentArgs,
     ContentArgs
   >;
   protected defaultContentsArgs?: ContentArgs;
-  protected unknownContentsTypeHandler?: UnknownContentsTypeHandler<
+  protected unknownUpsertContentsTypeHandler?: UnknownContentsTypeHandler<
     Source,
     ContentArgs
   >;
-  protected pathContentsSupplier: PathContentsSupplier<Source> = (
+  protected unknownSqlStmtTypeHandler?: UnknownContentsTypeHandler<
+    Source,
+    ContentArgs
+  >;
+  protected sqlStmtsSupplier: PathContentsSupplier<Source> = (
     sp,
     includePatterns,
     excludePatterns,
   ) => {
     return sp.paths.filter((name) => {
-      const matchesInclude = includePatterns.length === 0 ||
-        includePatterns.some((pattern) =>
-          typeof pattern === "string"
-            ? name.includes(pattern)
-            : pattern.test(name)
-        );
+      const matchesInclude = includePatterns.some((pattern) =>
+        typeof pattern === "string"
+          ? name.includes(pattern)
+          : pattern.test(name)
+      );
+      const matchesExclude = excludePatterns.some((pattern) =>
+        typeof pattern === "string"
+          ? name.includes(pattern)
+          : pattern.test(name)
+      );
+      return matchesInclude && !matchesExclude;
+    });
+  };
+  protected upsertPathContentsSupplier: PathContentsSupplier<Source> = (
+    sp,
+    includePatterns,
+    excludePatterns,
+  ) => {
+    return sp.paths.filter((name) => {
+      const matchesInclude = includePatterns.some((pattern) =>
+        typeof pattern === "string"
+          ? name.includes(pattern)
+          : pattern.test(name)
+      );
       const matchesExclude = excludePatterns.some((pattern) =>
         typeof pattern === "string"
           ? name.includes(pattern)
@@ -255,26 +279,50 @@ export class SQLPageAide<
   }
 
   /**
-   * Includes specific patterns to match method names.
+   * Includes specific patterns to match method names which will be upserted
+   * into sqlpage_files table.
    * If no patterns are provided, all methods will be considered.
    * @param patterns - The patterns to include method names.
    * @returns The SQLPageAide instance.
    */
-  include(...patterns: PathPattern[]): this {
-    this.includePatterns = patterns;
+  includeUpserts(...patterns: PathPattern[]): this {
+    this.upsertIncludePatterns = patterns;
     return this;
   }
 
   /**
-   * Excludes specific patterns from matching method names.
+   * Excludes specific patterns from matching method names whose function results
+   * will be upserted into sqlpage_files table.
    * @param patterns - The patterns to exclude method names.
    * @returns The SQLPageAide instance.
    */
-  exclude(...patterns: PathPattern[]): this {
-    this.excludePatterns = patterns;
+  excludeUpserts(...patterns: PathPattern[]): this {
+    this.upsertExcludePatterns = patterns;
     return this;
   }
 
+  /**
+   * Includes specific patterns to match method names which will be injected
+   * as SQL before upserting into sqlpage_files.
+   * If no patterns are provided, all methods will be considered.
+   * @param patterns - The patterns to include method names.
+   * @returns The SQLPageAide instance.
+   */
+  includeSql(...patterns: PathPattern[]): this {
+    this.sqlIncludePatterns = patterns;
+    return this;
+  }
+
+  /**
+   * Excludes specific patterns to match method names which will be injected
+   * as SQL before upserting into sqlpage_files.
+   * @param patterns - The patterns to exclude method names.
+   * @returns The SQLPageAide instance.
+   */
+  excludeSql(...patterns: PathPattern[]): this {
+    this.sqlExcludePatterns = patterns;
+    return this;
+  }
   /**
    * Sets the default contents arguments passed to each SQL Method.
    * @param contentsArgs - The contents arguments supplier function.
@@ -308,20 +356,45 @@ export class SQLPageAide<
    * @param contentsArgs - The arguments for the contents supplier.
    * @returns The SQLPageAide instance.
    */
-  onNonStringContents(
-    unknownContentsTypeHandler: UnknownContentsTypeHandler<Source, ContentArgs>,
+  onNonStringUpsertContents(
+    handler: UnknownContentsTypeHandler<Source, ContentArgs>,
   ): this {
-    this.unknownContentsTypeHandler = unknownContentsTypeHandler;
+    this.unknownUpsertContentsTypeHandler = handler;
     return this;
   }
 
   /**
-   * Sets the supplier function that determines which methods to process.
+   * Sets the contents handler function if the SQL methods return non-string result.
+   * @param handler - The contents arguments supplier function.
+   * @param contentsArgs - The arguments for the contents supplier.
+   * @returns The SQLPageAide instance.
+   */
+  onNonStringSqlStmt(
+    handler: UnknownContentsTypeHandler<Source, ContentArgs>,
+  ): this {
+    this.unknownSqlStmtTypeHandler = handler;
+    return this;
+  }
+
+  /**
+   * Sets the supplier function that determines which methods to process for
+   * providing upsert SQL contents.
    * @param pathContentsSupplier - The supplier function for selecting methods.
    * @returns The SQLPageAide instance.
    */
-  pathContents(pathContentsSupplier: PathContentsSupplier<Source>): this {
-    this.pathContentsSupplier = pathContentsSupplier;
+  upsertPathContents(pathContentsSupplier: PathContentsSupplier<Source>): this {
+    this.upsertPathContentsSupplier = pathContentsSupplier;
+    return this;
+  }
+
+  /**
+   * Sets the supplier function that determines which methods to process for
+   * SQL statements before upserting into sqlpage_files.
+   * @param sqlStmtsSupplier - The supplier function for selecting methods.
+   * @returns The SQLPageAide instance.
+   */
+  sqlStatementsSupplier(sqlStmtsSupplier: PathContentsSupplier<Source>): this {
+    this.sqlStmtsSupplier = sqlStmtsSupplier;
     return this;
   }
 
@@ -352,6 +425,69 @@ export class SQLPageAide<
   }
 
   /**
+   * Collects all matching SQL statements from the specified methods.
+   * The methods are selected based on the provided include and exclude patterns
+   * and the PathContentsSupplier function.
+   * If no patterns are provided, no methods in the source are processed.
+   *
+   * @param args - The arguments to pass to the contents arguments supplier and SQL methods.
+   * @returns An array of SQL page files, each containing a path and content.
+   */
+  sqlStmts(...args: CandidateContentArgs): string[] {
+    const sqlStmts: string[] = [];
+
+    for (const source of this.sqlPagesSources) {
+      const methods = this.sqlStmtsSupplier(
+        source,
+        this.sqlIncludePatterns,
+        this.sqlExcludePatterns,
+      );
+
+      for (const method of methods) {
+        let sqlStatement: unknown;
+
+        if (this.contentsArgsSupplier) {
+          sqlStatement = this.execPathContentsFn(
+            source,
+            method,
+            this.contentsArgsSupplier(source, method, ...args),
+          );
+        } else {
+          sqlStatement = this.execPathContentsFn(
+            source,
+            method,
+            this.defaultContentsArgs,
+          );
+        }
+
+        if (typeof sqlStatement === "string") {
+          sqlStmts.push(sqlStatement);
+        } else if (Array.isArray(sqlStatement)) {
+          sqlStmts.push(sqlStatement.join("\n"));
+        } else if (this.unknownSqlStmtTypeHandler) {
+          const ucthArgs = this.contentsArgsSupplier
+            ? this.contentsArgsSupplier(source, method, ...args)
+            : this.defaultContentsArgs;
+          sqlStmts.push(this.unknownSqlStmtTypeHandler(
+            sqlStatement,
+            source,
+            method,
+            ucthArgs,
+          ));
+        } else {
+          sqlStmts.push(
+            `\n/* '${method}' in '${
+              String(source.instance)
+            }' returned type ${typeof sqlStatement} instead of string or string[] */`,
+          );
+        }
+      }
+    }
+
+    return sqlStmts;
+  }
+
+  /**
    * Collects all matching SQL statements from the specified methods in the SQL pages.
    * The methods are selected based on the provided include and exclude patterns
    * and the PathContentsSupplier function.
@@ -364,10 +500,12 @@ export class SQLPageAide<
     const upsertFiles: SqlPagesFileRecord[] = [];
 
     for (const source of this.sqlPagesSources) {
-      const methods = this.pathContentsSupplier(
+      const methods = this.upsertPathContentsSupplier(
         source,
-        this.includePatterns,
-        this.excludePatterns,
+        this.upsertIncludePatterns.length == 0
+          ? [/.sql$/]
+          : this.upsertIncludePatterns,
+        this.upsertExcludePatterns,
       );
 
       for (const method of methods) {
@@ -391,13 +529,13 @@ export class SQLPageAide<
           upsertFiles.push({ path: method, content: sqlStatement });
         } else if (Array.isArray(sqlStatement)) {
           upsertFiles.push({ path: method, content: sqlStatement.join("\n") });
-        } else if (this.unknownContentsTypeHandler) {
+        } else if (this.unknownUpsertContentsTypeHandler) {
           const ucthArgs = this.contentsArgsSupplier
             ? this.contentsArgsSupplier(source, method, ...args)
             : this.defaultContentsArgs;
           upsertFiles.push({
             path: method,
-            content: this.unknownContentsTypeHandler(
+            content: this.unknownUpsertContentsTypeHandler(
               sqlStatement,
               source,
               method,
@@ -426,12 +564,15 @@ export class SQLPageAide<
    */
   SQL(...args: CandidateContentArgs): string[] {
     const upsertFiles = this.upsertValues(...args);
-    return upsertFiles.map(({ path, content }) => {
-      const escapedPath = path.replace(/'/g, "''");
-      const escapedContent = content.replace(/'/g, "''");
-      return this.formattedSQL == false
-        ? `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('${escapedPath}', '${escapedContent}', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`
-        : `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES (\n      '${escapedPath}',\n      '${escapedContent}',\n      CURRENT_TIMESTAMP)\n  ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`;
-    });
+    return [
+      ...this.sqlStmts(...args),
+      ...upsertFiles.map(({ path, content }) => {
+        const escapedPath = path.replace(/'/g, "''");
+        const escapedContent = content.replace(/'/g, "''");
+        return this.formattedSQL == false
+          ? `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('${escapedPath}', '${escapedContent}', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`
+          : `INSERT INTO sqlpage_files (path, contents, last_modified) VALUES (\n      '${escapedPath}',\n      '${escapedContent}',\n      CURRENT_TIMESTAMP)\n  ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;`;
+      }),
+    ];
   }
 }

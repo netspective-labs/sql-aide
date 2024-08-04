@@ -4,6 +4,10 @@ import { ComponentsRenderer, SQLPageAide } from "./mod.ts";
 Deno.test("SQLPageAide with SQL pages class", () => {
   // Define a class with SQL methods
   class MySqlPages {
+    nonUpsertSQL() {
+      return "-- this will not be part of upsert, just SQL";
+    }
+
     "index.sql"() {
       return "SELECT * FROM users;";
     }
@@ -13,16 +17,22 @@ Deno.test("SQLPageAide with SQL pages class", () => {
     }
   }
 
-  const sqlAide = new SQLPageAide(MySqlPages);
+  // by default SQLPageAide includes all "*.sql" methods as upsert SQL
+  // and we specify an extra method to include for general SQL
+  const sqlAide = new SQLPageAide(MySqlPages).includeSql("nonUpsertSQL");
   const sqlStatements = sqlAide.SQL();
 
-  assertEquals(sqlStatements.length, 2);
+  assertEquals(sqlStatements.length, 3);
   assertEquals(
     sqlStatements[0],
-    "INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('index.sql', 'SELECT * FROM users;', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;",
+    "-- this will not be part of upsert, just SQL",
   );
   assertEquals(
     sqlStatements[1],
+    "INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('index.sql', 'SELECT * FROM users;', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;",
+  );
+  assertEquals(
+    sqlStatements[2],
     "INSERT INTO sqlpage_files (path, contents, last_modified) VALUES ('page1.sql', 'INSERT INTO users (name, email) VALUES (''John Doe'', ''john@example.com'');', CURRENT_TIMESTAMP) ON CONFLICT(path) DO UPDATE SET contents = EXCLUDED.contents, last_modified = CURRENT_TIMESTAMP;",
   );
 });
@@ -110,7 +120,7 @@ Deno.test("SQLPageAide with SQL pages object and custom args", () => {
     },
   })
     .withContentsArgs(["John Doe", "john@example.com"])
-    .onNonStringContents((result) =>
+    .onNonStringUpsertContents((result) =>
       isSpecialSQL(result) ? result.SQL() : `/* Bad result ${typeof result} */`
     );
 
