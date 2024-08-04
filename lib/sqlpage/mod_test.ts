@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/assert_equals.ts";
-import { ComponentRenderer, SQLPageAide } from "./mod.ts";
+import { ComponentsRenderer, SQLPageAide } from "./mod.ts";
 
 Deno.test("SQLPageAide with SQL pages class", () => {
   // Define a class with SQL methods
@@ -30,7 +30,7 @@ Deno.test("SQLPageAide with SQL pages class", () => {
 Deno.test("SQLPageAide with MySqlPages custom instance and custom args", () => {
   // Define a class with SQL methods
   class MySqlPages {
-    constructor(readonly cr: ComponentRenderer) {
+    constructor(readonly cr: ComponentsRenderer) {
     }
     "index.sql"(user: string) {
       return this.cr.component({
@@ -41,7 +41,7 @@ Deno.test("SQLPageAide with MySqlPages custom instance and custom args", () => {
   }
 
   // Define a contentsArgsSupplier function
-  const sqlPageAide = new SQLPageAide(new MySqlPages(new ComponentRenderer()))
+  const sqlPageAide = new SQLPageAide(new MySqlPages(new ComponentsRenderer()))
     .withContentsArgsSupplier((_source, _path, user) => [user]);
 
   const sqlStatements = sqlPageAide.SQL("John Doe");

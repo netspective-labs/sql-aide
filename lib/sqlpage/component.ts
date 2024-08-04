@@ -1,27 +1,24 @@
-export interface Component {
-  readonly component: string;
+export interface Component<Identity> {
+  readonly component: Identity;
   readonly title?: string;
 }
 
-export interface RenderedComponent<T extends Component> {
+export interface RenderedComponent<T extends Component<string>> {
   readonly component: T;
   readonly SQL: (() => string) | string | string[];
 }
 
-export interface Alert extends Component {
-  readonly component: "alert";
+export interface Alert extends Component<"alert"> {
   readonly message: string;
   readonly type?: "info" | "warning" | "error";
 }
 
-export interface Authentication extends Component {
-  readonly component: "authentication";
+export interface Authentication extends Component<"authentication"> {
   readonly link: string;
   readonly token?: string;
 }
 
-export interface Breadcrumb extends Component {
-  readonly component: "breadcrumb";
+export interface Breadcrumb extends Component<"breadcrumb"> {
   readonly items: readonly BreadcrumbItem[];
 }
 
@@ -30,8 +27,7 @@ export interface BreadcrumbItem {
   readonly link: string;
 }
 
-export interface Button extends Component {
-  readonly component: "button";
+export interface Button extends Component<"button"> {
   readonly buttons: readonly ButtonItem[];
 }
 
@@ -41,8 +37,7 @@ export interface ButtonItem {
   readonly style?: "primary" | "secondary" | "danger";
 }
 
-export interface Card extends Component {
-  readonly component: "card";
+export interface Card extends Component<"card"> {
   readonly items: readonly CardItem[];
 }
 
@@ -53,8 +48,7 @@ export interface CardItem {
   readonly link?: string;
 }
 
-export interface Carousel extends Component {
-  readonly component: "carousel";
+export interface Carousel extends Component<"carousel"> {
   readonly images: readonly CarouselImage[];
 }
 
@@ -63,8 +57,7 @@ export interface CarouselImage {
   readonly alt?: string;
 }
 
-export interface Chart extends Component {
-  readonly component: "chart";
+export interface Chart extends Component<"chart"> {
   readonly type: "line" | "bar" | "pie" | "area";
   readonly data: readonly ChartDataPoint[];
 }
@@ -74,28 +67,24 @@ export interface ChartDataPoint {
   readonly y: number;
 }
 
-export interface Code extends Component {
-  readonly component: "code";
+export interface Code extends Component<"code"> {
   readonly language: string;
   readonly code: string;
 }
 
-export interface Cookie extends Component {
-  readonly component: "cookie";
+export interface Cookie extends Component<"cookie"> {
   readonly name: string;
   readonly value: string;
   readonly path?: string;
   readonly expires?: string;
 }
 
-export interface Csv extends Component {
-  readonly component: "csv";
+export interface Csv extends Component<"csv"> {
   readonly filename: string;
   readonly columns: readonly string[];
 }
 
-export interface DataGrid extends Component {
-  readonly component: "datagrid";
+export interface DataGrid extends Component<"datagrid"> {
   readonly items: readonly DataGridItem[];
 }
 
@@ -104,23 +93,19 @@ export interface DataGridItem {
   readonly value: string;
 }
 
-export interface Debug extends Component {
-  readonly component: "debug";
+export interface Debug extends Component<"debug"> {
   readonly data: unknown;
 }
 
-export interface Divider extends Component {
-  readonly component: "divider";
+export interface Divider extends Component<"divider"> {
   readonly style?: string;
 }
 
-export interface Dynamic extends Component {
-  readonly component: "dynamic";
+export interface Dynamic extends Component<"dynamic"> {
   readonly content: string;
 }
 
-export interface Form extends Component {
-  readonly component: "form";
+export interface Form extends Component<"form"> {
   readonly fields: readonly FormField[];
   readonly action: string;
 }
@@ -153,31 +138,26 @@ export interface FormField {
   readonly checked?: boolean;
 }
 
-export interface Hero extends Component {
-  readonly component: "hero";
+export interface Hero extends Component<"hero"> {
   readonly description?: string;
   readonly image?: string;
   readonly link?: string;
   readonly linkText?: string;
 }
 
-export interface Html extends Component {
-  readonly component: "html";
+export interface Html extends Component<"html"> {
   readonly content: string;
 }
 
-export interface HttpHeader extends Component {
-  readonly component: "http_header";
+export interface HttpHeader extends Component<"http_header"> {
   readonly headers: Record<string, string>;
 }
 
-export interface Json extends Component {
-  readonly component: "json";
+export interface Json extends Component<"json"> {
   readonly data: unknown;
 }
 
-export interface List extends Component {
-  readonly component: "list";
+export interface List extends Component<"list"> {
   readonly items: readonly ListItem[];
 }
 
@@ -194,8 +174,7 @@ export interface ListItem {
   readonly view_link?: string;
 }
 
-export interface Map extends Component {
-  readonly component: "map";
+export interface Map extends Component<"map"> {
   readonly markers: readonly MapMarker[];
 }
 
@@ -205,20 +184,17 @@ export interface MapMarker {
   readonly label?: string;
 }
 
-export interface Redirect extends Component {
-  readonly component: "redirect";
+export interface Redirect extends Component<"redirect"> {
   readonly url: string;
 }
 
-export interface Rss extends Component {
-  readonly component: "rss";
+export interface Rss extends Component<"rss"> {
   readonly url: string;
   readonly title: string;
   readonly description?: string;
 }
 
-export interface Shell extends Component {
-  readonly component: "shell";
+export interface Shell extends Component<"shell"> {
   readonly layout?: "boxed" | "horizontal" | "fluid";
   readonly css?: string;
   readonly favicon?: string;
@@ -243,8 +219,7 @@ export interface MenuItem {
   readonly link: string;
 }
 
-export interface Steps extends Component {
-  readonly component: "steps";
+export interface Steps extends Component<"steps"> {
   readonly steps: readonly StepItem[];
 }
 
@@ -253,8 +228,7 @@ export interface StepItem {
   readonly link: string;
 }
 
-export interface Tab extends Component {
-  readonly component: "tab";
+export interface Tab extends Component<"tab"> {
   readonly tabs: readonly TabItem[];
 }
 
@@ -264,30 +238,22 @@ export interface TabItem {
   readonly active?: boolean;
 }
 
-export interface Table extends Component {
-  readonly component: "table";
+export interface Table extends Component<"table"> {
   readonly columns: readonly TableColumn[];
-  readonly data: readonly TableDataRow[];
-  readonly sort?: number;
-  readonly search?: number;
+  readonly sort?: boolean;
+  readonly search?: boolean;
 }
 
 export interface TableColumn {
   readonly name: string;
-  readonly label?: string;
+  readonly label?: "markdown" | string;
 }
 
-export interface TableDataRow {
-  readonly [key: string]: string | number | boolean | null;
-}
-
-export interface Text extends Component {
-  readonly component: "text";
+export interface Text extends Component<"text"> {
   readonly content: string;
 }
 
-export interface Timeline extends Component {
-  readonly component: "timeline";
+export interface Timeline extends Component<"timeline"> {
   readonly events: readonly TimelineEvent[];
 }
 
@@ -296,14 +262,12 @@ export interface TimelineEvent {
   readonly description: string;
 }
 
-export interface Title extends Component {
-  readonly component: "title";
-  readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-  readonly text: string;
+export interface Title extends Component<"title"> {
+  readonly level?: 1 | 2 | 3 | 4 | 5 | 6;
+  readonly contents: string;
 }
 
-export interface Tracking extends Component {
-  readonly component: "tracking";
+export interface Tracking extends Component<"tracking"> {
   readonly logs: readonly TrackingLog[];
 }
 
@@ -712,14 +676,7 @@ export function tableSQL(component: Table): RenderedComponent<Table> {
         component.sort ? `, ${component.sort} AS sort` : ""
       }${component.search ? `, ${component.search} AS search` : ""};`,
       ...component.columns.map((column) =>
-        `SELECT '${column.name}' AS name${
-          column.label ? `, '${column.label}' AS label` : ""
-        };`
-      ),
-      ...component.data.map((row) =>
-        `SELECT ${
-          Object.keys(row).map((key) => `'${row[key]}' AS ${key}`).join(", ")
-        };`
+        `'${column.name}'${column.label ? `, ' AS ${column.label}'` : ""};`
       ),
     ],
   };
@@ -750,7 +707,9 @@ export function titleSQL(component: Title): RenderedComponent<Title> {
   return {
     component,
     SQL: [
-      `SELECT '${component.component}' AS component, '${component.text}' AS text, ${component.level} AS level;`,
+      `SELECT '${component.component}' AS component, '${component.contents}' AS contents, ${
+        component.level ?? 1
+      } AS level;`,
     ],
   };
 }
