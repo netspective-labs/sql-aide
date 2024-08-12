@@ -244,12 +244,9 @@ BEGIN
     -- Check that the variable matches expectations
     PERFORM info_schema_lifecycle_assurance.assert_equals(
         regexp_replace(
-            $expected$CALL migrate_v2024_07_14_12_00_stateful_example();
-            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_00', 'migrate_v2024_07_14_12_00_stateful_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, NULL);
-            CALL migrate_v2024_07_14_12_01_idempotent_example();
-            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_01', 'migrate_v2024_07_14_12_01_idempotent_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, true, NULL);
-            CALL migrate_v2024_07_14_12_02_stateful_example();
-            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_02', 'migrate_v2024_07_14_12_02_stateful_example', 'unapplied', 'applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, NULL);
+            $expected$INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_00', 'migrate_v2024_07_14_12_00_stateful_example', 'unapplied', 'lint_applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, $elab${"migration_lint": null}$elab$);
+            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_01', 'migrate_v2024_07_14_12_01_idempotent_example', 'unapplied', 'lint_applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, true, $elab${"migration_lint": null}$elab$);
+            INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES ('2024_07_14_12_02', 'migrate_v2024_07_14_12_02_stateful_example', 'unapplied', 'lint_applied', NULL, NULL, 'example', 0, CURRENT_TIMESTAMP, CURRENT_USER, false, $elab${"migration_lint": null}$elab$);
             $expected$, 
             E'^[ \\t]+', '', 'gm'
         ),
