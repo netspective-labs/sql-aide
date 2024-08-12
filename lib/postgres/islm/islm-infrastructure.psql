@@ -302,6 +302,7 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."migration_routine_state" IS 'Use mi
  * Dependencies:
  * - Requires the migration_routine_state function.
  */
+DROP FUNCTION IF EXISTS "info_schema_lifecycle"."islm_migration_instruction"(text, boolean);
 CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_instruction"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck boolean DEFAULT false)
 RETURNS TABLE (
     action TEXT,
@@ -524,6 +525,7 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_instruction" IS 'Ret
  * Dependencies:
  * - Requires the islm_migration_instruction function.
  */
+DROP FUNCTION IF EXISTS "info_schema_lifecycle"."islm_migration_script"(text, boolean);
 CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_script"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck boolean DEFAULT false)
 RETURNS TEXT 
 LANGUAGE plpgsql AS 
@@ -559,6 +561,7 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_script" IS 'Generate
  * Dependencies:
  * - Requires the islm_migration_script function.
  */
+DROP FUNCTION IF EXISTS "info_schema_lifecycle"."islm_migrate"(text, boolean);
 CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck BOOLEAN DEFAULT true)
 LANGUAGE plpgsql
 AS $$

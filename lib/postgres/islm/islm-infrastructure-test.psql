@@ -236,7 +236,7 @@ BEGIN
     'SELECT 1';
 
     -- Store the output of info_schema_lifecycle.islm_migration_script into a variable
-    migration_script := info_schema_lifecycle.islm_migration_script('info_schema_lifecycle_assurance', true);
+    migration_script := info_schema_lifecycle.islm_migration_script('info_schema_lifecycle_assurance', true, true);
 
     -- for debugging
     -- RAISE NOTICE 'Migration Script: %', migration_script;
