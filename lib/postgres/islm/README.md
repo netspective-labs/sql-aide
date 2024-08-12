@@ -28,6 +28,9 @@ Benefits:
   evoluation can be revisioned via Git.
 - Focus on Documentation: ISLM's design allows teams to focus on clear and
   thorough documentation of database schema evolution.
+- Code Quality with plpgsql_check: ISLM integrates with the plpgsql_check
+  extension to ensure that all PL/pgSQL functions are linted, catching common
+  issues and promoting best practices in your migration routines.
 
 There is an ISLM "Control Plane" Deno TypeScript CLI utility called
 `islmctl.ts`, which is essentially a convenience wrapper around `psql` and all
@@ -60,6 +63,13 @@ the ISLM stored procedures.
   - **`islm_migration_script`**: Generates a SQL script for executing migration
     routines, based on the instructions from `islm_migration_instruction`.
     `islm_migration_script` will be the script you use most often.
+
+- **Linting and Quality Assurance**:
+  - **`plpgsql_check` Integration**: ISLM integrates with the plpgsql_check
+    extension to lint PL/pgSQL functions. This ensures that all migration
+    routines are of high quality and free of common issues. Functions like
+    migration_lint_lifecycle and migration_lint provide comprehensive linting
+    checks, returning results in a structured JSONB format.
 
 ## Usage
 

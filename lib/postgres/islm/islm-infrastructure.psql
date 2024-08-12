@@ -33,6 +33,23 @@
 -- DROP SCHEMA IF EXISTS "info_schema_lifecycle" CASCADE;
 CREATE SCHEMA IF NOT EXISTS "info_schema_lifecycle";
 
+DO $$
+BEGIN
+    -- Attempt to create the extension
+    PERFORM 1 FROM pg_extension WHERE extname = 'plpgsql_check';
+    IF NOT FOUND THEN
+        -- The "plpgsql_check" extension provides a set of functions for linting and analyzing PL/pgSQL code.
+        -- It helps to identify issues, enforce coding standards, and improve the quality of PL/pgSQL routines.
+        CREATE EXTENSION IF NOT EXISTS "plpgsql_check" SCHEMA "info_schema_lifecycle";
+    END IF;
+EXCEPTION
+    WHEN others THEN
+        -- Ignore the error if the extension cannot be created
+        RAISE NOTICE 'Could not create the plpgsql_check extension.';
+END;
+$$;
+
+
 /**
  * `islm_bootstrap_idempotent` bootstraps the Information Schema Lifecycle Management (ISLM)
  * package by creating governance tables and other objects required by stored
@@ -285,7 +302,7 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."migration_routine_state" IS 'Use mi
  * Dependencies:
  * - Requires the migration_routine_state function.
  */
-CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_instruction"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_instruction"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck boolean DEFAULT false)
 RETURNS TABLE (
     action TEXT,
     sql_stmt TEXT,
@@ -299,6 +316,9 @@ DECLARE
     insert_stmt TEXT;
     insert_stmt_elaboration JSONB;
     new_transition_count INT;
+    plpgsql_check_rec RECORD;
+    insert_stmt_lint TEXT;
+    insert_stmt_lint_elaboration JSONB;
 BEGIN
     FOR rec IN
         -- SELECT
@@ -359,80 +379,131 @@ BEGIN
             rn = 1
         
     LOOP
-        IF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
-            new_transition_count := rec.transition_count + 1;
-        ELSE
-            new_transition_count := 0;
-        END IF;
+        IF lint_plpgcheck THEN
+	    	-- raise notice 'islm_migration_instruction - Lint Step1';
+            BEGIN
+                SELECT * INTO plpgsql_check_rec FROM info_schema_lifecycle.migration_lint(rec.migration_routine_name);
+                --raise notice 'islm_migration_instruction - Lint Step1.1 - %', plpgsql_check_rec;
+                insert_stmt_lint_elaboration := jsonb_build_object(
+                    'migration_version', rec.migration_version,
+                    'migration_routine_name', rec.migration_routine_name,
+                    'from_state', CASE 
+                        WHEN NOT rec.is_migrated THEN 'unapplied'
+                        ELSE 'applied'
+                    END,
+                    'to_state', 'lint_applied',
+                    'transition_result', 'NULL',
+                    'transition_reason', 'NULL',
+                    'migration_reason', rec.migration_reason,
+                    'transition_count', rec.transition_count,
+                    'created_at', 'CURRENT_TIMESTAMP',
+                    'created_by', 'CURRENT_USER',
+                    'is_idempotent', rec.is_idempotent,
+                    'elaboration', plpgsql_check_rec
+                );
+                --raise notice 'islm_migration_instruction - Lint Step2 - %', insert_stmt_lint_elaboration;
+                insert_stmt_lint := 'INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES (' ||
+                    quote_literal(insert_stmt_lint_elaboration->>'migration_version') || ', ' ||
+                    quote_literal(insert_stmt_lint_elaboration->>'migration_routine_name') || ', ' ||
+                    quote_literal(insert_stmt_lint_elaboration->>'from_state') || ', ' ||
+                    quote_literal(insert_stmt_lint_elaboration->>'to_state') || ', ' ||
+                    'NULL' || ', ' ||  -- transition_result
+                    'NULL' || ', ' ||  -- transition_reason
+                    quote_literal(insert_stmt_lint_elaboration->>'migration_reason') || ', ' ||
+                    rec.transition_count || ', ' ||
+                    'CURRENT_TIMESTAMP' || ', ' ||
+                    'CURRENT_USER' || ', ' ||
+                    (insert_stmt_lint_elaboration->>'is_idempotent')::BOOLEAN || ', ' || '$elab$' ||
+                    (insert_stmt_lint_elaboration->>'elaboration')::JSONB || '$elab$' || ')';  -- elaboration
+                --raise notice '%', coalesce(insert_stmt_lint,'**********HERE'); 
+                RETURN QUERY SELECT 
+                    'INSERT', 
+                    insert_stmt_lint, 
+                    NULL, 
+                    insert_stmt_lint_elaboration;	
+            EXCEPTION
+                WHEN others THEN
+                    -- Ignore the error if the extension cannot be created
+                    RAISE NOTICE 'plpgsql_check extension not found.';
+            END;                  
+	        
+			            
+		ELSE
+            IF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
+                new_transition_count := rec.transition_count + 1;
+            ELSE
+                new_transition_count := 0;
+            END IF;
 
-        insert_stmt_elaboration := jsonb_build_object(
-            'migration_version', rec.migration_version,
-            'migration_routine_name', rec.migration_routine_name,
-            'from_state', CASE 
-                WHEN NOT rec.is_migrated THEN 'unapplied'
-                ELSE 'applied'
-            END,
-            'to_state', CASE 
-                WHEN NOT rec.is_migrated THEN 'applied'
-                ELSE 'reapplied'
-            END,
-            'transition_result', 'NULL',
-            'transition_reason', 'NULL',
-            'migration_reason', rec.migration_reason,
-            'transition_count', new_transition_count,
-            'created_at', 'CURRENT_TIMESTAMP',
-            'created_by', 'CURRENT_USER',
-            'is_idempotent', rec.is_idempotent,
-            'elaboration', 'NULL'
-        );
+            insert_stmt_elaboration := jsonb_build_object(
+                'migration_version', rec.migration_version,
+                'migration_routine_name', rec.migration_routine_name,
+                'from_state', CASE 
+                    WHEN NOT rec.is_migrated THEN 'unapplied'
+                    ELSE 'applied'
+                END,
+                'to_state', CASE 
+                    WHEN NOT rec.is_migrated THEN 'applied'
+                    ELSE 'reapplied'
+                END,
+                'transition_result', 'NULL',
+                'transition_reason', 'NULL',
+                'migration_reason', rec.migration_reason,
+                'transition_count', new_transition_count,
+                'created_at', 'CURRENT_TIMESTAMP',
+                'created_by', 'CURRENT_USER',
+                'is_idempotent', rec.is_idempotent,
+                'elaboration', 'NULL'
+            );
 
-        insert_stmt := 'INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES (' ||
-            quote_literal(insert_stmt_elaboration->>'migration_version') || ', ' ||
-            quote_literal(insert_stmt_elaboration->>'migration_routine_name') || ', ' ||
-            quote_literal(insert_stmt_elaboration->>'from_state') || ', ' ||
-            quote_literal(insert_stmt_elaboration->>'to_state') || ', ' ||
-            'NULL' || ', ' ||  -- transition_result
-            'NULL' || ', ' ||  -- transition_reason
-            quote_literal(insert_stmt_elaboration->>'migration_reason') || ', ' ||
-            new_transition_count || ', ' ||
-            'CURRENT_TIMESTAMP' || ', ' ||
-            'CURRENT_USER' || ', ' ||
-            (insert_stmt_elaboration->>'is_idempotent')::BOOLEAN || ', ' ||
-            'NULL' || ')';  -- elaboration
+            insert_stmt := 'INSERT INTO info_schema_lifecycle.islm_governance (migration_version, migration_routine_name, from_state, to_state, transition_result, transition_reason, migration_reason, transition_count, created_at, created_by, is_idempotent, elaboration) VALUES (' ||
+                quote_literal(insert_stmt_elaboration->>'migration_version') || ', ' ||
+                quote_literal(insert_stmt_elaboration->>'migration_routine_name') || ', ' ||
+                quote_literal(insert_stmt_elaboration->>'from_state') || ', ' ||
+                quote_literal(insert_stmt_elaboration->>'to_state') || ', ' ||
+                'NULL' || ', ' ||  -- transition_result
+                'NULL' || ', ' ||  -- transition_reason
+                quote_literal(insert_stmt_elaboration->>'migration_reason') || ', ' ||
+                new_transition_count || ', ' ||
+                'CURRENT_TIMESTAMP' || ', ' ||
+                'CURRENT_USER' || ', ' ||
+                (insert_stmt_elaboration->>'is_idempotent')::BOOLEAN || ',' ||
+                'NULL' || ')';  -- elaboration
 
-        -- for debugging
-        -- RAISE NOTICE 'Elaboration: %', insert_stmt_elaboration;      
-        -- RAISE NOTICE 'Insert Statement: %', insert_stmt;
-        
-        IF NOT rec.is_migrated THEN
-            RETURN QUERY SELECT 
-                'CALL', 
-                'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()',
-                NULL, 
-                jsonb_build_object('routineName', rec.migration_routine_name);
-            RETURN QUERY SELECT 
-                'INSERT', 
-                insert_stmt, 
-                NULL, 
-                insert_stmt_elaboration;
-        ELSIF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
-            RETURN QUERY SELECT 
-                'CALL', 
-                'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()', 
-                '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' but is being run again since it is idempotent.', 
-                jsonb_build_object('routineName', rec.migration_routine_name);
-            RETURN QUERY SELECT 
-                'INSERT', 
-                insert_stmt, 
-                NULL, 
-                insert_stmt_elaboration;
-        ELSIF rec.is_migrated AND NOT rec.is_idempotent THEN
-            RETURN QUERY SELECT 
-                'COMMENT', 
-                NULL, 
-                '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' and will not be run again since it is stateful.', 
-                jsonb_build_object('routineName', rec.migration_routine_name);
-        END IF;
+            -- for debugging
+            -- RAISE NOTICE 'Elaboration: %', insert_stmt_elaboration;      
+            -- RAISE NOTICE 'Insert Statement: %', insert_stmt;
+            
+            IF NOT rec.is_migrated THEN
+                RETURN QUERY SELECT 
+                    'CALL', 
+                    'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()',
+                    NULL, 
+                    jsonb_build_object('routineName', rec.migration_routine_name);
+                RETURN QUERY SELECT 
+                    'INSERT', 
+                    insert_stmt, 
+                    NULL, 
+                    insert_stmt_elaboration;
+            ELSIF rec.is_migrated AND rec.is_idempotent AND rerun_idempotent THEN
+                RETURN QUERY SELECT 
+                    'CALL', 
+                    'CALL "' || schema_name || '"."' || rec.migration_routine_name || '"()', 
+                    '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' but is being run again since it is idempotent.', 
+                    jsonb_build_object('routineName', rec.migration_routine_name);
+                RETURN QUERY SELECT 
+                    'INSERT', 
+                    insert_stmt, 
+                    NULL, 
+                    insert_stmt_elaboration;
+            ELSIF rec.is_migrated AND NOT rec.is_idempotent THEN
+                RETURN QUERY SELECT 
+                    'COMMENT', 
+                    NULL, 
+                    '-- Routine ' || rec.migration_routine_name || ' was run on ' || rec.migrated_at || ' by ' || rec.migrated_by || ' and will not be run again since it is stateful.', 
+                    jsonb_build_object('routineName', rec.migration_routine_name);
+            END IF;
+        END IF;            
     END LOOP;
 END;
 $$;
@@ -453,7 +524,7 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_instruction" IS 'Ret
  * Dependencies:
  * - Requires the islm_migration_instruction function.
  */
-CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_script"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+CREATE OR REPLACE FUNCTION "info_schema_lifecycle"."islm_migration_script"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck boolean DEFAULT false)
 RETURNS TEXT 
 LANGUAGE plpgsql AS 
 $$
@@ -463,7 +534,7 @@ DECLARE
 BEGIN
     FOR rec IN
         SELECT action, sql_stmt, comment, elaboration
-        FROM info_schema_lifecycle.islm_migration_instruction(schema_name, rerun_idempotent)
+        FROM info_schema_lifecycle.islm_migration_instruction(schema_name, rerun_idempotent, lint_plpgcheck)
     LOOP
         -- for debugging
         -- RAISE NOTICE 'Action: %, SQL: %, Comment: %', rec.action, rec.sql_stmt, rec.comment;
@@ -488,15 +559,146 @@ COMMENT ON FUNCTION "info_schema_lifecycle"."islm_migration_script" IS 'Generate
  * Dependencies:
  * - Requires the islm_migration_script function.
  */
-CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true)
+CREATE OR REPLACE PROCEDURE "info_schema_lifecycle"."islm_migrate"(schema_name TEXT DEFAULT 'info_schema_lifecycle', rerun_idempotent BOOLEAN DEFAULT true, lint_plpgcheck BOOLEAN DEFAULT true)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     migration_script TEXT;
+    lint_script TEXT;
 BEGIN
-    migration_script := "info_schema_lifecycle"."islm_migration_script"(schema_name, rerun_idempotent);
+    migration_script := quote_literal(schema_name) || ', ' || quote_literal(rerun_idempotent);
+    EXECUTE format('SELECT "info_schema_lifecycle"."islm_migration_script"(%s)', migration_script) INTO migration_script;
     EXECUTE migration_script;
+   	IF lint_plpgcheck THEN
+   		lint_script := quote_literal(schema_name) || ', ' || quote_literal(rerun_idempotent);
+    	EXECUTE 'SELECT "info_schema_lifecycle"."islm_migration_script"('|| lint_script ||','|| lint_plpgcheck ||')' INTO lint_script;
+    	EXECUTE lint_script;
+    END IF;
 END $$;
 
 COMMENT ON PROCEDURE "info_schema_lifecycle"."islm_migrate" IS 'Executes the migration routines based on the SQL script generated by the islm_migration_script function.';
+
+/**
+ * `migration_lint_lifecycle` performs a comprehensive linting check on all PL/pgSQL functions
+ * within the `info_schema_lifecycle` schema and returns the results as a JSONB object.
+ * 
+ * The function analyzes all PL/pgSQL functions in the `info_schema_lifecycle` schema by invoking
+ * the `info_schema_lifecycle.plpgsql_check_function` for each function. It aggregates the linting
+ * results into a JSONB structure that includes:
+ * - The name of each function (`proname`)
+ * - The detailed linting results (`plpgsql_check_function`) for each function
+ * 
+ * Returns:
+ * - JSONB object containing an array of linting results for all functions in the schema.
+ * 
+ * JSON Structure:
+ * - proname: The name of the PL/pgSQL function.
+ * - plpgsql_check_function: JSONB object containing the detailed results of the linting process
+ *   for the function, which includes any identified issues, warnings, or errors.
+ * 
+ * 
+ * The function can be used as part of a migration or quality assurance process to ensure that
+ * all PL/pgSQL functions in the `info_schema_lifecycle` schema adhere to best practices and
+ * are free from common issues.
+ */
+CREATE OR REPLACE FUNCTION info_schema_lifecycle.migration_lint_lifecycle()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+declare 
+plpgsql_check_result jsonb;
+begin
+    WITH function_data AS (
+        SELECT
+            jsonb_agg(
+                jsonb_build_object(
+                    'proname', p.proname,
+                    'plpgsql_check_function', pc.plpgsql_check_function
+                )
+            ) AS issues_agg
+        FROM
+            pg_catalog.pg_namespace n
+        JOIN pg_catalog.pg_proc p ON pronamespace = n.oid
+        JOIN pg_catalog.pg_language l ON p.prolang = l.oid
+        JOIN LATERAL (
+            SELECT info_schema_lifecycle.plpgsql_check_function(p.oid, format := 'json', all_warnings := false)::jsonb AS plpgsql_check_function
+        ) pc ON true
+        WHERE
+            l.lanname = 'plpgsql'
+            AND p.prorettype <> 2279
+            AND n.nspname = 'info_schema_lifecycle'
+    )
+    SELECT
+        fd.issues_agg INTO plpgsql_check_result
+    FROM
+        function_data fd;
+	return plpgsql_check_result;       
+END;
+$function$
+; 
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."migration_lint_lifecycle" IS 'This function performs a comprehensive linting check on all PL/pgSQL functions within the info_schema_lifecycle schema and returns the results as a JSONB object. The function analyzes each function using the plpgsql_check_function and aggregates the linting results, including the function name (proname) and detailed linting information (plpgsql_check_function) for each function.';
+
+/**
+ * `migration_lint` performs a comprehensive linting check on the given PL/pgSQL function
+ * within the `info_schema_lifecycle` schema and returns the results as a JSONB object.
+ * 
+ * The function analyzes the given PL/pgSQL function in the `info_schema_lifecycle` schema by invoking
+ * the `info_schema_lifecycle.plpgsql_check_function` for each function. It aggregates the linting
+ * results into a JSONB structure that includes:
+ * - The name of each function (`proname`)
+ * - The detailed linting results (`plpgsql_check_function`) for each function
+ * 
+ * Returns:
+ * - JSONB object containing an array of linting results for all functions in the schema.
+ * 
+ * JSON Structure:
+ * - proname: The name of the PL/pgSQL function.
+ * - plpgsql_check_function: JSONB object containing the detailed results of the linting process
+ *   for the function, which includes any identified issues, warnings, or errors.
+ * 
+ * 
+ * The function can be used as part of a migration or quality assurance process to ensure that
+ * the given PL/pgSQL function in the `info_schema_lifecycle` schema adhere to best practices and
+ * are free from common issues.
+ */
+
+CREATE OR REPLACE FUNCTION info_schema_lifecycle.migration_lint(routine_name text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+declare 
+plpgsql_check_result jsonb;
+begin
+    WITH function_data AS (
+        SELECT
+            jsonb_agg(
+                jsonb_build_object(
+                    'proname', p.proname,
+                    'plpgsql_check_function', pc.plpgsql_check_function
+                )
+            ) AS issues_agg
+        FROM
+            pg_catalog.pg_namespace n
+        JOIN pg_catalog.pg_proc p ON pronamespace = n.oid
+        JOIN pg_catalog.pg_language l ON p.prolang = l.oid
+        JOIN LATERAL (
+            SELECT info_schema_lifecycle.plpgsql_check_function(p.oid, format := 'json', all_warnings := false)::jsonb AS plpgsql_check_function
+        ) pc ON true
+        WHERE
+            l.lanname = 'plpgsql'
+            AND p.prorettype <> 2279
+            AND n.nspname = 'info_schema_lifecycle'
+            AND p.proname = routine_name
+    )
+    SELECT
+        fd.issues_agg INTO plpgsql_check_result
+    FROM
+        function_data fd;   
+	return plpgsql_check_result;       
+END;
+$function$
+;
+
+COMMENT ON FUNCTION "info_schema_lifecycle"."migration_lint" IS 'This function performs a comprehensive linting check on the given PL/pgSQL functions within the info_schema_lifecycle schema and returns the results as a JSONB object. The function analyzes the given function using the plpgsql_check_function and aggregates the linting results, detailed linting information (plpgsql_check_function) for the given function.';
 
