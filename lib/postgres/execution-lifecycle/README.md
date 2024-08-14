@@ -149,9 +149,14 @@ Finally, it details the development of actionable performance improvement plans,
   - Provides configuration recommendations.
   - Helps to optimize PostgreSQL performance settings.
 
+### SQL DB Design Checklist
+
+For a comprehensive overview of best practices in SQL database design, including detailed recommendations on data types, indexing, normalization, and query optimization, please visit the [SQL DB Design Checklist](https://www.sql-aide.com/dcp/sql/sql-db-design-checklist/). This resource provides valuable insights to enhance your database schema and performance.
+
+
 #### Summary
 
-By leveraging these tools, we can thoroughly analyze and monitor the performance of the database, ensuring it meets business requirements and performs efficiently. Regular monitoring and analysis help in identifying and addressing performance issues proactively.
+By leveraging these tools and following the best practices outlined in the SQL DB Design Checklist, we can thoroughly analyze and monitor the performance of the database, ensuring it meets business requirements and performs efficiently. Regular monitoring and analysis help in identifying and addressing performance issues proactively.
 
 ---
 
@@ -323,7 +328,7 @@ By following these steps, ensure data accuracy and integrity, providing reliable
    - **Action:** If performance issues persist, consider redesigning table structures.
    - **Examples:** Denormalization, changing table storage parameters.
 
-### Specifically Denormalized Table Performance
+#### Specifically Denormalized Table Performance
 
 1. **Identify Key Tables and Relationships**
    - **Action:** Determine which tables and relationships are critical for denormalization.
