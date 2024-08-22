@@ -143,7 +143,14 @@ export function callables<T, R>(instance: T) {
           filter,
         },
         callable: name,
-        call: (...args: unknown[]) => {
+        call: async (...args: unknown[]) => {
+          const method = searched[name] as unknown as (...args: unknown[]) => R;
+          if (nature === CallablesNature.CLASS) {
+            return await method.apply(instance, args);
+          }
+          return await method(...args);
+        },
+        callSync: (...args: unknown[]) => {
           const method = searched[name] as unknown as (...args: unknown[]) => R;
           if (nature === CallablesNature.CLASS) {
             return method.apply(instance, args);
