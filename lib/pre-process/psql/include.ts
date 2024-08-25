@@ -72,7 +72,7 @@ export function includeMetaCmd(
 
   // the \2 refers to starting quotation, if any
   // this regex is used across invocations, be careful and don't include `/g`
-  const regex = /^\s*\\(i|ir|include)\s+(['"])?((?:[^\2]|\\.)*)\2\s*$/;
+  const regex = /^\s*\\(i|ir|include)\s+(['"])?((?:[^'"]|\\.)*)\2?\s*$/;
 
   return {
     metaCommand: "include",

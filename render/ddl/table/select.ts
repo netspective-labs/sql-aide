@@ -110,7 +110,10 @@ export function tableSelectFactory<
             : true
         ).map((d) => d.identity) as FilterableColumnName[];
       }, tdrfOptions?.defaultFcpOptions),
-      tdrfOptions?.defaultSspOptions,
+      // TODO: figure out why we get this error below in Deno 1.46+ if `as Any` is removed
+      //       - TS2345 [ERROR]: Argument of type is not assignable to parameter of type...
+      //         Type 'undefined' is not assignable to type 'string | number | symbol'.
+      tdrfOptions?.defaultSspOptions as Any,
     ),
   };
 }
