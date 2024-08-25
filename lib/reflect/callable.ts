@@ -27,13 +27,23 @@ export type CallablesOfType<T, R> = {
 export type CallableFilterPattern<T, R> =
   | string
   | RegExp
-  | ((callable: CallablesOfType<T, R>) => boolean);
+  | ((
+    callable: CallablesOfType<T, R>,
+    instance: T,
+    searched: unknown,
+  ) => boolean);
 
 /**
  * Identifiers, nature, and filter for callable methods in a given object
  * or class type `T` that return a specific type `R`.
  */
 export type Callables<T, R> = ReturnType<typeof callables<T, R>>;
+
+/**
+ * A single callable method/function in a given object or class type `T` that
+ * return a specific type `R`.
+ */
+export type Callable<T, R> = ReturnType<Callables<T, R>["filter"]>[number];
 
 /**
  * Returns method names ("identifiers"), type information, and a filter function for the provided instance.
@@ -101,63 +111,67 @@ export function callables<T, R>(instance: T) {
       ? (Array.isArray(options.exclude) ? options.exclude : [options.exclude])
       : undefined;
 
-    return identifiers
-      .filter((nameSupplied) => {
-        const name = String(nameSupplied);
-        if (include && include.length > 0) {
-          const includeMatch = include.some((pattern) => {
-            if (typeof pattern === "string" && name.includes(pattern)) {
-              return true;
-            }
-            if (pattern instanceof RegExp && pattern.test(name)) return true;
-            if (typeof pattern === "function" && pattern(nameSupplied)) {
-              return true;
-            }
-            return false;
-          });
-          if (!includeMatch) return false;
-        }
+    return identifiers.filter((nameSupplied) => {
+      const name = String(nameSupplied);
+      if (exclude && exclude.length > 0) {
+        const excludeMatch = exclude.some((pattern) => {
+          if (typeof pattern === "string" && name.includes(pattern)) {
+            return true;
+          }
+          if (pattern instanceof RegExp && pattern.test(name)) return true;
+          if (
+            typeof pattern === "function" &&
+            pattern(nameSupplied, instance, searched)
+          ) {
+            return true;
+          }
+          return false;
+        });
+        if (excludeMatch) return false;
+      }
 
-        if (exclude && exclude.length > 0) {
-          const excludeMatch = exclude.some((pattern) => {
-            if (typeof pattern === "string" && name.includes(pattern)) {
-              return true;
-            }
-            if (pattern instanceof RegExp && pattern.test(name)) return true;
-            if (typeof pattern === "function" && pattern(nameSupplied)) {
-              return true;
-            }
-            return false;
-          });
-          if (excludeMatch) return false;
+      if (include && include.length > 0) {
+        const includeMatch = include.some((pattern) => {
+          if (typeof pattern === "string" && name.includes(pattern)) {
+            return true;
+          }
+          if (pattern instanceof RegExp && pattern.test(name)) return true;
+          if (
+            typeof pattern === "function" &&
+            pattern(nameSupplied, instance, searched)
+          ) {
+            return true;
+          }
+          return false;
+        });
+        if (!includeMatch) return false;
+      }
+      return true;
+    }).map((name) => ({
+      source: {
+        // if you modify this list, update `return` value below, too
+        identifiers,
+        searched,
+        instance,
+        nature,
+        filter,
+      },
+      callable: name,
+      call: async (...args: unknown[]) => {
+        const method = searched[name] as unknown as (...args: unknown[]) => R;
+        if (nature === CallablesNature.CLASS) {
+          return await method.apply(instance, args);
         }
-        return true;
-      })
-      .map((name) => ({
-        source: {
-          // if you modify this list, update `return` value below, too
-          identifiers,
-          searched,
-          instance,
-          nature,
-          filter,
-        },
-        callable: name,
-        call: async (...args: unknown[]) => {
-          const method = searched[name] as unknown as (...args: unknown[]) => R;
-          if (nature === CallablesNature.CLASS) {
-            return await method.apply(instance, args);
-          }
-          return await method(...args);
-        },
-        callSync: (...args: unknown[]) => {
-          const method = searched[name] as unknown as (...args: unknown[]) => R;
-          if (nature === CallablesNature.CLASS) {
-            return method.apply(instance, args);
-          }
-          return method(...args);
-        },
-      }));
+        return await method(...args);
+      },
+      callSync: (...args: unknown[]) => {
+        const method = searched[name] as unknown as (...args: unknown[]) => R;
+        if (nature === CallablesNature.CLASS) {
+          return method.apply(instance, args);
+        }
+        return method(...args);
+      },
+    }));
   };
 
   return {
