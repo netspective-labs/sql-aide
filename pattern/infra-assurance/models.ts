@@ -825,16 +825,12 @@ export const certificate = gm.textPkTable("certificate", {
 
 export const device = gm.textPkTable("device", {
   device_id: udm.ulidPrimaryKey(),
-  device_name: udm.text(),
-  short_name: udm.text(),
-  barcode: udm.text(),
-  model: udm.text(),
-  serial_number: udm.text(),
-  firmware: udm.text(),
-  data_center: udm.text(),
-  location: udm.text(),
-  purpose: udm.text(),
-  description: udm.text(),
+  name: udm.text(),
+  state: udm.text(),
+  boundary: udm.text(),
+  segmentation: udm.text(),
+  state_sysinfo: udm.jsonTextNullable(),
+  elaboration: udm.jsonTextNullable(),
   ...gm.housekeeping.columns,
 });
 
