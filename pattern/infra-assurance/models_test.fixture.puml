@@ -863,16 +863,12 @@
   entity "device" as device {
     * **device_id**: TEXT
     --
-    * device_name: TEXT
-    * short_name: TEXT
-    * barcode: TEXT
-    * model: TEXT
-    * serial_number: TEXT
-    * firmware: TEXT
-    * data_center: TEXT
-    * location: TEXT
-    * purpose: TEXT
-    * description: TEXT
+    * name: TEXT
+    * state: TEXT
+    * boundary: TEXT
+    * segmentation: TEXT
+      state_sysinfo: TEXT
+      elaboration: TEXT
       created_at: TIMESTAMPTZ
       created_by: TEXT
       updated_at: TIMESTAMPTZ
