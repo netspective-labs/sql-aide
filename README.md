@@ -2,6 +2,8 @@
 
 [![codecov](https://codecov.io/gh/netspective-labs/sql-aide/branch/main/graph/badge.svg?token=DPJICL8F4O)](https://codecov.io/gh/netspective-labs/sql-aide)
 
+![Repository Logo](support/logo.png)
+
 SQL Aide (`SQLa`) is a suite of Deno TypeScript modules which use the power of
 JavaScript functions and
 [Template literals (Template strings)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals)
