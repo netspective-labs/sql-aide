@@ -12,6 +12,10 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "SQL Aide (SQLa) Documentation",
+      logo: {
+        src: "./src/assets/sql_aide.png",
+        replacesTitle: true,
+      },
       social: {
         github: "https://github.com/netspective-labs/sql-aide",
       },
