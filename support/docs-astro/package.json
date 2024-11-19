@@ -10,8 +10,8 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.28.3",
-    "astro": "^4.16.7",
+    "@astrojs/starlight": "^0.29.0",
+    "astro": "^4.16.13",
     "markdown-it-mermaid": "^0.2.5",
     "mermaid": "^10.2.4",
     "sharp": "^0.32.1"
