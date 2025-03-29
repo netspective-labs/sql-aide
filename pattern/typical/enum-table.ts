@@ -4,10 +4,18 @@ import * as SQLa from "../../render/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any; // make it easier on Deno linting
+interface ForeignKeyReference<Context extends SQLa.SqlEmitContext> {
+  tableName: string;
+  columnName: string;
+  constraints?: string;
+}
 
 export interface EnumTableDefn<Context extends SQLa.SqlEmitContext> {
   readonly enumTableNature: "text" | "numeric";
   readonly seedDML: string | SQLa.SqlTextSupplier<Context>[];
+  references: {
+    code: () => ForeignKeyReference<Context>;
+  }
 }
 
 export function isEnumTableDefn<Context extends SQLa.SqlEmitContext>(
@@ -138,6 +146,14 @@ export function ordinalEnumTable<
     seedDML: seedRows && seedRows.length > 0
       ? seedRows.map((s) => tdrf.insertDML(s as Any))
       : `-- no ${tableName} seed rows`,
+    references: {
+      code: () => {
+        return {
+          tableName: tableName,
+          columnName: 'code',
+        };
+      }
+    }
   };
   const td = SQLa.tableDefinition(tableName, columnsShape, tdOptions);
   return {
