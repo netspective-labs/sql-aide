@@ -618,10 +618,10 @@ export const raciMatrixActivity = gm.textPkTable("raci_matrix_activity", {
  * Reference URL: https://docs.microfocus.com/UCMDB/11.0/cp-docs/docs/eng/class_model/html/index.html
  */
 
+// boundary_id: boundary.references.boundary_id().optional(),
 export const asset = gm.textPkTable("asset", {
   asset_id: udm.ulidPrimaryKey(),
   organization_id: udm.organization.references.organization_id(),
-  boundary_id: boundary.references.boundary_id().optional(),
   asset_retired_date: udm.dateNullable(),
   asset_status_id: assetStatus.references.asset_status_id(),
   asset_tag: udm.text(),
@@ -643,6 +643,13 @@ export const asset = gm.textPkTable("asset", {
   asymmetric_keys_encryption_enabled: udm.textNullable(),
   cryptographic_key_encryption_enabled: udm.textNullable(),
   symmetric_keys_encryption_enabled: udm.textNullable(),
+  ...gm.housekeeping.columns,
+});
+
+export const assetBoundary = gm.textPkTable("asset_boundary", {
+  asset_boundary_id: udm.ulidPrimaryKey(),
+  asset_id: asset.references.asset_id(),
+  boundary_id: boundary.references.boundary_id(),
   ...gm.housekeeping.columns,
 });
 
@@ -1243,6 +1250,7 @@ export const allContentTables: SQLa.TableDefinition<
   raciMatrixSubjectBoundary,
   raciMatrixActivity,
   asset,
+  assetBoundary,
   assetService,
   vulnerabilitySource,
   vulnerability,
