@@ -198,3 +198,6 @@ pick up the location of Java and any other ASDF-based executables:
 ```bash
 export PATH=$PATH:$HOME/.asdf/shims
 ```
+
+
+<!-- Security scan triggered at 2025-09-02 00:50:09 -->
